@@ -11,8 +11,8 @@ namespace ArArchives
         public void Test1()
         {
             var fileStream = new FileStream("C:\\Users\\JMN\\Desktop\\Archivo.ar", FileMode.Create);
-            var entry = FileEntry.Create("Archive", new MemoryStream("Hola"u8.ToArray()));
-            WriteArFixed(fileStream);
+            var entry = FileEntry.Create("Archive.txt", new MemoryStream("Hola"u8.ToArray()));
+            WriteAr(fileStream, entry.Value);
         }
 
         [Theory]
@@ -55,7 +55,8 @@ namespace ArArchives
                 writer.Write("100644  ");
                 writer.Write(entryValue.Stream.Length.ToString().ToFixed(10));
                 writer.Write("`\n");
-                writer.Write("Hola");
+
+                writer.Flush();
 
                 entryValue.Stream.CopyTo(fileStream);
 
