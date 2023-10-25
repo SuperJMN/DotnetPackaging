@@ -3,7 +3,7 @@ using Archiver;
 
 namespace Archive.Tests
 {
-    public class IntegrationTests
+    public class ArchiverFileTests
     {
         [Fact]
         public void Create_AR_file()
@@ -50,7 +50,5 @@ namespace Archive.Tests
                 writer.Write("Hola");
             }
         }
-
-        
     }
 }
