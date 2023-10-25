@@ -60,7 +60,7 @@ namespace ArArchives
         {
             //
             writer.Write(entry.Name.ToFixed(16));
-            writer.Write("1342943816  ");
+            writer.Write(entry.DateTimeOffset.ToUnixTimeSeconds().ToString().ToFixed(12));  // Modification timestamp
             writer.Write("0     ");
             writer.Write("0     ");
 
