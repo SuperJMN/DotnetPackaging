@@ -8,11 +8,12 @@ namespace ArArchives
     public class UnitTest1
     {
         [Fact]
-        public void Test1()
+        public void Create_AR_file()
         {
             var fileStream = new FileStream("C:\\Users\\JMN\\Desktop\\Archivo.ar", FileMode.Create);
-            var entry = FileEntry.Create("Archive.txt", new MemoryStream("Hola"u8.ToArray()));
-            WriteAr(fileStream, entry.Value);
+            var entry1 = FileEntry.Create("Archive1.txt", new MemoryStream("Hola"u8.ToArray()), DateTimeOffset.Now);
+            var entry2 = FileEntry.Create("Archive2.txt", new MemoryStream("Salud y buenos alimentos"u8.ToArray()), DateTimeOffset.Now);
+            WriteAr(fileStream, entry1.Value, entry2.Value);
         }
 
         [Theory]
@@ -32,44 +33,44 @@ namespace ArArchives
             str.ToFixed(length).Should().Be(expected);
         }
         
-        private static void WriteAr(Stream fileStream, FileEntry entryValue)
+        private static void WriteAr(Stream fileStream, params FileEntry[] entryValue)
         {
             var streamWriter = new StreamWriter(fileStream, Encoding.ASCII) { NewLine = "\n" };
             using (var writer = streamWriter)
             {
-                writer.WriteLine("!<arch>");
-                writer.Write("debian-binary   ");
-                writer.Write("1342943816  ");
-                writer.Write("0     ");
-                writer.Write("0     ");
-                writer.Write("100644  ");
-                writer.Write("4         ");
-                writer.Write("`\n");
-                writer.WriteLine("2.0");
-
-                //
-                writer.Write(entryValue.Name.ToFixed(16));
-                writer.Write("1342943816  ");
-                writer.Write("0     ");
-                writer.Write("0     ");
-                writer.Write("100644  ");
-                writer.Write(entryValue.Stream.Length.ToString().ToFixed(10));
-                writer.Write("`\n");
-
-                writer.Flush();
-
-                entryValue.Stream.CopyTo(fileStream);
-
-                //
-                writer.Write("file2.txt       ");
-                writer.Write("1342943816  ");
-                writer.Write("0     ");
-                writer.Write("0     ");
-                writer.Write("100644  ");
-                writer.Write("4         ");
-                writer.Write("`\n");
-                writer.Write("Hola");
+                WriteHeader(writer);
+                entryValue.ToList().ForEach(entry => WriteEntry(fileStream, entry, writer));
             }
+        }
+
+        private static void WriteHeader(StreamWriter writer)
+        {
+            writer.WriteLine("!<arch>");
+            writer.Write("debian-binary   ");
+            writer.Write("1342943816  ");
+            writer.Write("0     ");
+            writer.Write("0     ");
+            writer.Write("100644  ");
+            writer.Write("4         ");
+            writer.Write("`\n");
+            writer.WriteLine("2.0");
+        }
+
+        private static void WriteEntry(Stream fileStream, FileEntry entry, StreamWriter writer)
+        {
+            //
+            writer.Write(entry.Name.ToFixed(16));
+            writer.Write("1342943816  ");
+            writer.Write("0     ");
+            writer.Write("0     ");
+
+            writer.Write("100644  ");
+            writer.Write(entry.Stream.Length.ToString().ToFixed(10));
+            writer.Write("`\n");
+
+            writer.Flush();
+
+            entry.Stream.CopyTo(fileStream);
         }
 
         private static void WriteArFixed(Stream fileStream)
@@ -116,16 +117,18 @@ namespace ArArchives
     {
         public string Name { get; }
         public Stream Stream { get; }
+        public DateTimeOffset DateTimeOffset { get; }
 
-        private FileEntry(string name, Stream stream)
+        private FileEntry(string name, Stream stream, DateTimeOffset dateTimeOffset)
         {
             Name = name;
             Stream = stream;
+            DateTimeOffset = dateTimeOffset;
         }
 
-        public static Result<FileEntry> Create(string name, Stream stream)
+        public static Result<FileEntry> Create(string name, Stream stream, DateTimeOffset dateTimeOffset)
         {
-            return Result.Success(new FileEntry(name, stream));
+            return Result.Success(new FileEntry(name, stream, dateTimeOffset));
         }
     }
 }
