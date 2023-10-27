@@ -8,7 +8,7 @@ namespace Archive.Tests;
 
 public static class Mixin
 {
-    public static IObservable<T> Pack<T>(this IObservable<T> sequence, int blockSize, T paddingItem)
+    public static IObservable<T> PaddedBlocks<T>(this IObservable<T> sequence, int blockSize, T paddingItem)
     {
         return sequence
             .Buffer(blockSize)
@@ -28,29 +28,42 @@ public static class Mixin
 public class Tar
 {
     private readonly Stream output;
+    private readonly int blockSize = 512;
 
     public Tar(Stream output)
     {
         this.output = output;
     }
 
-    public Result Build()
+    public void Write(string name, Stream contents)
     {
-        var header = WriteHeader()
-            .Pack<byte>(512, 0);
+        var header = WriteHeader(name)
+            .PaddedBlocks<byte>(blockSize, 0);
 
-        header.Sum(b => b).Subscribe(i => {  });
-
-        var content = Content().Pack<byte>(512, 0);
+        var content = Content(contents).PaddedBlocks<byte>(blockSize, 0);
 
         header.Concat(content)
             .DumpTo(output)
             .Subscribe();
+    }
+
+    public Result Build(string name, Stream contents)
+    {
+        Write(name, contents);
+
+        //var header = WriteHeader("control")
+        //    .PaddedBlocks<byte>(blockSize, 0);
+
+        //var content = Content().PaddedBlocks<byte>(blockSize, 0);
+
+        //header.Concat(content)
+        //    .DumpTo(output)
+        //    .Subscribe();
 
         return Result.Success();
     }
 
-    private IObservable<byte> WriteHeader()
+    private IObservable<byte> WriteHeader(string name)
     {
         return 
             Header(ChecksumPlaceholder())
@@ -83,6 +96,29 @@ public class Tar
     /// <summary>
     /// From 512 Content 
     /// </summary>
+
+    private IObservable<byte> Content(Stream stream)
+    {
+        var content = """
+                      Package: avaloniasyncer
+                      Priority: optional
+                      Section: utils
+                      Maintainer: SuperJMN
+                      Version: 2.0.4
+                      Homepage: http://www.superjmn.com
+                      Vcs-Git: git://github.com/zkSNACKs/WalletWasabi.git
+                      Vcs-Browser: https://github.com/zkSNACKs/WalletWasabi
+                      Architecture: amd64
+                      License: MIT
+                      Installed-Size: 207238
+                      Recommends: policykit-1
+                      Description: open-source, non-custodial, privacy focused Bitcoin wallet
+                        Built-in Tor, coinjoin, payjoin and coin control features.
+
+                      """.FromCrLfToLf();
+
+        return ToAscii(content);
+    }
 
     private IObservable<byte> Content()
     {
