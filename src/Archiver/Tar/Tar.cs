@@ -39,10 +39,10 @@ public class Tar
     private IObservable<byte> WriteHeader(string name)
     {
         return
-            Header(ChecksumPlaceholder())
+            Header(name, ChecksumPlaceholder())
                 .ToList()
                 .Select(list => list.Sum(b => b))
-                .SelectMany(checksum => Header(Checksum(checksum)));
+                .SelectMany(checksum => Header(name, Checksum(checksum)));
     }
 
     private IObservable<byte> Checksum(int checksum)
@@ -52,9 +52,9 @@ public class Tar
         return bytes.ToObservable();
     }
 
-    private IObservable<byte> Header(IObservable<byte> checksum) => Observable.Concat
+    private IObservable<byte> Header(string name, IObservable<byte> checksum) => Observable.Concat
     (
-        Filename("control"),
+        Filename(name),
         FileMode(),
         Owner(),
         Group(),
