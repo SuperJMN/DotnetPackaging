@@ -20,7 +20,7 @@ public class TarFileTests
     public void Create()
     {
         var rawStream = new MemoryStream();
-        new TarData(new LoggingByteWriter(new ByteWriter(rawStream), logger)).Build();
+        new Tar(rawStream).Build();
 
         var copy = new byte[2048];
         rawStream.ToArray().CopyTo(copy, 0);
