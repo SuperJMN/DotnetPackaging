@@ -11,7 +11,8 @@ namespace Archive.Tests
             using var stream = new FileStream("C:\\Users\\JMN\\Desktop\\Archivo.ar", FileMode.Create);
             var entry1 = FileEntry.Create("Archive1.txt", new MemoryStream("Hola"u8.ToArray()), DateTimeOffset.Now);
             var entry2 = FileEntry.Create("Archive2.txt", new MemoryStream("Salud y buenos alimentos"u8.ToArray()), DateTimeOffset.Now);
-            ArchiverFile.Write(stream, entry1.Value, entry2.Value);
+            var entry3 = FileEntry.Create("Archive3.txt", new MemoryStream("Jojojo"u8.ToArray()), DateTimeOffset.Now);
+            ArchiverFile.Write(stream, entry1.Value, entry2.Value, entry3.Value);
         }
 
         private static void WriteArFixed(Stream fileStream)

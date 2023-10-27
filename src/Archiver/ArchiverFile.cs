@@ -1,17 +1,21 @@
 using System.Text;
+using CSharpFunctionalExtensions;
 
 namespace Archiver;
 
 public class ArchiverFile
 {
-    public static void Write(Stream fileStream, params FileEntry[] entryValue)
+    public static Result Write(Stream fileStream, params FileEntry[] entryValue)
     {
-        var streamWriter = new StreamWriter(fileStream, Encoding.ASCII) { NewLine = "\n" };
-        using (var writer = streamWriter)
+        return Result.Try(() =>
         {
-            WriteHeader(writer);
-            entryValue.ToList().ForEach(entry => WriteEntry(fileStream, entry, writer));
-        }
+            var streamWriter = new StreamWriter(fileStream, Encoding.ASCII) { NewLine = "\n" };
+            using (var writer = streamWriter)
+            {
+                WriteHeader(writer);
+                entryValue.ToList().ForEach(entry => WriteEntry(fileStream, entry, writer));
+            }
+        });
     }
 
     private static void WriteHeader(StreamWriter writer)
