@@ -1,4 +1,5 @@
 ﻿using Archiver;
+using Archiver.Tar;
 using FluentAssertions;
 using Serilog;
 using Xunit.Abstractions;
