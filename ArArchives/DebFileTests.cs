@@ -13,7 +13,7 @@ public class DebFileTests
     public async Task Create()
     {
         var fs = new LocalFileSystem(new FileSystem(), Maybe<ILogger>.None);
-        var result =await fs
+        var result = await fs
             .GetDirectory("D:/Binarios/Portables/AvaloniaSynchronizer")
             .Bind(directory =>
             {
@@ -24,7 +24,8 @@ public class DebFileTests
                     License = "MIT",
                 };
 
-                return DebFile.Create(File.Create("c:\\users\\jmn\\Desktop\\file.deb"), directory, metadata);
+                using var fileStream = File.Create("c:\\users\\jmn\\Desktop\\file.deb");
+                return new DebFile(metadata).Write(fileStream, directory);
             });
         result.Should().Succeed();
     }
