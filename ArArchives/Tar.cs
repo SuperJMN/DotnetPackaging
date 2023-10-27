@@ -52,19 +52,33 @@ public class Tar
 
     private IObservable<byte> WriteHeader()
     {
-        return Observable.Concat
-        (
-            Filename("control"),
-            FileMode(),
-            Owner(),
-            Group(),
-            FileSize(),
-            LastModification(),
-            ChecksumPlaceholder(),
-            LinkIndicator(),
-            NameOfLinkedFile()
-        );
+        return 
+            Header(ChecksumPlaceholder())
+            .ToList()
+            .Select(list => list.Sum(b => b))
+            .SelectMany(checksum => Header(Checksum(checksum)));
     }
+
+    private IObservable<byte> Checksum(int checksum)
+    {
+        var chars = Convert.ToString(checksum, 8).PadLeft(7).PadRight(8);
+        var bytes = Encoding.ASCII.GetBytes(chars);
+        return bytes.ToObservable();
+    }
+
+    private IObservable<byte> Header(IObservable<byte> checksum) => Observable.Concat
+    (
+        Filename("control"),
+        FileMode(),
+        Owner(),
+        Group(),
+        FileSize(),
+        LastModification(),
+        checksum,
+        LinkIndicator(),
+        NameOfLinkedFile()
+    );
+
 
     /// <summary>
     /// From 512 Content 
