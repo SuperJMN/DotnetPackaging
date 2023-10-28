@@ -25,8 +25,9 @@ public class TarFileTests
         new Tar(rawStream).Build("control", new MemoryStream(Content().ToAscii()));
 
         var copy = new byte[2048];
-        rawStream.ToArray().CopyTo(copy, 0);
-        copy.Should().BeEquivalentTo(File.ReadAllBytes("control.tar"));
+        var result = rawStream.ToArray();
+        result.CopyTo(copy, 0);
+        result.Should().BeEquivalentTo(File.ReadAllBytes("control.tar"));
     }
 
     public string Content()

@@ -22,10 +22,12 @@ public class Tar
 
         var content = Content(contents).BlocksWithPadding<byte>(blockSize, 0);
 
-        header.Concat(content)
+        header.Concat(content).Concat(EndOfFile)
             .DumpTo(output)
             .Subscribe();
     }
+
+    private IObservable<byte> EndOfFile => new byte[blockSize].ToObservable().Repeat(2);
 
     public Result Build(string name, Stream contents)
     {
