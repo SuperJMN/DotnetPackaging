@@ -1,9 +1,12 @@
 ﻿using System.Reactive.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
+using MoreLinq;
 using Zafiro.IO;
 
 namespace Archiver.Tar;
+
+public record Entry(string Name, Stream Contents);
 
 public class Tar
 {
@@ -29,10 +32,9 @@ public class Tar
 
     private IObservable<byte> EndOfFile => new byte[blockSize].ToObservable().Repeat(2);
 
-    public Result Build(string name, Stream contents)
+    public Result Build(params Entry[] entries)
     {
-        Write(name, contents);
-
+        entries.ForEach(entry => Write(entry.Name, entry.Contents));
         return Result.Success();
     }
 
@@ -112,15 +114,28 @@ public class Tar
         return new byte[] { 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30, 0x00 }.ToObservable();
     }
 
+    /// <summary>
+    /// From 100 to 108
+    /// </summary>
+    /// <returns></returns>
     private IObservable<byte> FileMode()
     {
         return new byte[] { 0x20, 0x20, 0x20, 0x20, 0x37, 0x37, 0x37, 0x0 }.ToObservable();
     }
 
+    /// <summary>
+    /// From 116 to 124
+    /// </summary>
+    /// <returns></returns>
     private IObservable<byte> Owner()
     {
         return new byte[] { 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30, 0x00 }.ToObservable();
     }
 
+    /// <summary>
+    /// From 0 to 100
+    /// </summary>
+    /// <param name="filename"></param>
+    /// <returns></returns>
     private IObservable<byte> Filename(string filename) => ToAscii(filename.ToFixed(100));
 }
