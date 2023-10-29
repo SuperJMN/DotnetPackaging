@@ -1,7 +1,7 @@
 ﻿using System.Reactive.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
-using MoreLinq;
+using Serilog;
 using Zafiro.IO;
 
 namespace Archiver.Tar;
@@ -10,31 +10,59 @@ public record Entry(string Name, Stream Contents);
 
 public class Tar
 {
-    private readonly int blockSize = 512;
+    private const int BlockingFactor = 20 * BlockSize;
+    private const int BlockSize = 512;
     private readonly Stream output;
+    private readonly Maybe<ILogger> logger;
 
-    public Tar(Stream output)
+    public Tar(Stream output, Maybe<ILogger> logger)
     {
         this.output = output;
+        this.logger = logger;
     }
 
-    public void Write(string name, Stream contents)
+    public IObservable<byte> Write(string name, Stream contents)
     {
         var header = WriteHeader(name)
-            .BlocksWithPadding<byte>(blockSize, 0);
+            .AsBlocks<byte>(BlockSize, 0);
 
-        var content = Content(contents).BlocksWithPadding<byte>(blockSize, 0);
+        Log("Header", header);
 
-        header.Concat(content).Concat(EndOfFile)
-            .DumpTo(output)
-            .Subscribe();
+        var content = Content(contents).AsBlocks<byte>(BlockSize, 0);
+
+        Log("Content", content);
+
+        var endOfFile = EndOfFile;
+
+        Log("EOF", endOfFile);
+
+        return header.Concat(content).Concat(endOfFile);
     }
 
-    private IObservable<byte> EndOfFile => new byte[blockSize].ToObservable().Repeat(2);
+    private void Log(string name, IObservable<byte> header)
+    {
+        logger.Execute(l =>
+        {
+            header.ToList()
+                .Take(1)
+                .Do(list => l.Debug("{Item}: Size = {Bytes}", name, list.Count))
+                .Subscribe();
+        });
+    }
+
+    private IObservable<byte> EndOfFile => Observable.Repeat<byte>(0x00, BlockSize * 2);
 
     public Result Build(params Entry[] entries)
     {
-        entries.ForEach(entry => Write(entry.Name, entry.Contents));
+        var rawFile = entries
+            .Select(entry => Write(entry.Name, entry.Contents))
+            .Concat();
+
+        var tarContents =
+            rawFile
+            .AsBlocks<byte>(BlockSize, 0x00);
+                tarContents.DumpTo(output).Subscribe();
+
         return Result.Success();
     }
 

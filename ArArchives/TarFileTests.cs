@@ -3,6 +3,8 @@ using Archiver.Tar;
 using FluentAssertions;
 using MoreLinq;
 using Serilog;
+using System;
+using Serilog.Events;
 using Xunit.Abstractions;
 using Logger = Serilog.Core.Logger;
 
@@ -15,7 +17,8 @@ public class TarFileTests
     public TarFileTests(ITestOutputHelper output)
     {
         logger = new LoggerConfiguration()
-            .WriteTo.TestOutput(output)
+            .MinimumLevel.Debug()
+            .WriteTo.TestOutput(output, LogEventLevel.Debug)
             .CreateLogger();
     }
 
@@ -23,7 +26,7 @@ public class TarFileTests
     public void Create1()
     {
         var rawStream = new MemoryStream();
-        new Tar(rawStream).Build(new Entry("control", new MemoryStream("""
+        new Tar(rawStream, logger).Build(new Entry("control", new MemoryStream("""
                                                                        Package: avaloniasyncer
                                                                        Priority: optional
                                                                        Section: utils
@@ -50,7 +53,7 @@ public class TarFileTests
     public void Simple()
     {
         var rawStream = new MemoryStream();
-        new Tar(rawStream).Build(
+        new Tar(rawStream, logger).Build(
             new Entry("File1.txt", new MemoryStream("Hola".ToAscii())));
 
         var result = rawStream.ToArray();
@@ -65,7 +68,7 @@ public class TarFileTests
     public void Complex()
     {
         var rawStream = new MemoryStream();
-        new Tar(rawStream).Build(
+        new Tar(rawStream, logger).Build(
             new Entry("File1.txt", new MemoryStream("Hola".ToAscii())),
             new Entry("File2.txt", new MemoryStream("Adiós".ToAscii()))
         );
@@ -81,13 +84,21 @@ public class TarFileTests
 
     private void LogComparison(byte[] result, byte[] expectedBytes)
     {
-        result.AsEnumerable()
-            .Zip(expectedBytes)
-            .Select((tuple, i) => new { tuple, i })
-            .ForEach(tuple =>
+        logger.Debug("Result: {Length} items. Expected: {Length} bytes", result.Length, expectedBytes.Length);
+
+        var comparison = result.Cast<byte?>()
+            .ZipLongest(expectedBytes.Cast<byte?>(), (one, another) => new { one, another })
+            .Select((x, i) => new { x.one, x.another, i, isMatch = Equals(x.one, x.another) })
+            .ToList();
+
+        var matches = comparison.Count(x => x.isMatch);
+        var total = comparison.Count;
+        logger.Information("Matched {Matches} out of {Total} ({Percent:P})", matches, total, (double)matches/total);
+
+        comparison
+            .ForEach(x =>
             {
-                var isMatch = tuple.tuple.First == tuple.tuple.Second ? "X" : " ";
-                logger.Information("[{Position}] [{Result}] Expecting: {Expected} - Got: {Actual}", tuple.i, isMatch, tuple.tuple.First, tuple.tuple.Second);
+                logger.Information("[{Position}] [{Result}] Expecting: {Expected} - Got: {Actual}", x.i, x.isMatch ? "X" : " ", x.one, x.another);
             });
     }
 }

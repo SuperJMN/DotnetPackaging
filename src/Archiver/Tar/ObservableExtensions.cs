@@ -4,7 +4,7 @@ namespace Archiver.Tar;
 
 public static class ObservableExtensions
 {
-    public static IObservable<T> BlocksWithPadding<T>(this IObservable<T> sequence, int blockSize, T paddingItem)
+    public static IObservable<T> AsBlocks<T>(this IObservable<T> sequence, int blockSize, T paddingItem)
     {
         return sequence
             .Buffer(blockSize)
