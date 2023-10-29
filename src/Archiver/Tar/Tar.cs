@@ -6,7 +6,7 @@ using Zafiro.IO;
 
 namespace Archiver.Tar;
 
-public record Entry(string Name, Stream Contents);
+public record Entry(string Name, DateTimeOffset LastModification, Stream Contents);
 
 public class Tar
 {
@@ -21,9 +21,9 @@ public class Tar
         this.logger = logger;
     }
 
-    public IObservable<byte> Write(string name, Stream contents)
+    public IObservable<byte> Write(string name, DateTimeOffset entryLastModification, Stream contents)
     {
-        var header = WriteHeader(name)
+        var header = WriteHeader(name, entryLastModification, contents)
             .AsBlocks<byte>(BlockSize, 0);
 
         Log("Header", header);
@@ -55,12 +55,12 @@ public class Tar
     public Result Build(params Entry[] entries)
     {
         var rawFile = entries
-            .Select(entry => Write(entry.Name, entry.Contents))
+            .Select(entry => Write(entry.Name, entry.LastModification, entry.Contents))
             .Concat();
 
         var tarContents =
             rawFile
-            .AsBlocks<byte>(BlockSize, 0x00);
+            .AsBlocks<byte>(BlockingFactor, 0x00);
                 tarContents.DumpTo(output).Subscribe();
 
         return Result.Success();
@@ -68,13 +68,13 @@ public class Tar
 
     private static IObservable<byte> ToAscii(string content) => Encoding.ASCII.GetBytes(content).ToObservable();
 
-    private IObservable<byte> WriteHeader(string name)
+    private IObservable<byte> WriteHeader(string name, DateTimeOffset lastModification, Stream contents)
     {
         return
-            Header(name, ChecksumPlaceholder())
+            Header(name, lastModification, contents, ChecksumPlaceholder())
                 .ToList()
                 .Select(list => list.Sum(b => b))
-                .SelectMany(checksum => Header(name, Checksum(checksum)));
+                .SelectMany(checksum => Header(name, lastModification, contents, Checksum(checksum)));
     }
 
     private IObservable<byte> Checksum(int checksum)
@@ -84,14 +84,14 @@ public class Tar
         return bytes.ToObservable();
     }
 
-    private IObservable<byte> Header(string name, IObservable<byte> checksum) => Observable.Concat
+    private IObservable<byte> Header(string name, DateTimeOffset lastModification, Stream contents, IObservable<byte> checksum) => Observable.Concat
     (
         Filename(name),
         FileMode(),
         Owner(),
         Group(),
-        FileSize(),
-        LastModification(),
+        FileSize(contents),
+        LastModification(lastModification),
         checksum,
         LinkIndicator(),
         NameOfLinkedFile()
@@ -121,17 +121,19 @@ public class Tar
     /// <summary>
     ///     From 124 to 136 (in octal)
     /// </summary>
-    private IObservable<byte> FileSize()
+    /// <param name="contents"></param>
+    private IObservable<byte> FileSize(Stream contents)
     {
-        return new byte[] { 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x36, 0x37, 0x37, 0x00 }.ToObservable();
+        return contents.Length.ToOctalField().GetAsciiBytes().ToObservable();
     }
 
     /// <summary>
     ///     From 136 to 148 Last modification time in numeric Unix time format (octal)
     /// </summary>
-    private IObservable<byte> LastModification()
+    /// <param name="lastModification"></param>
+    private IObservable<byte> LastModification(DateTimeOffset lastModification)
     {
-        return new byte[] { 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30, 0x00 }.ToObservable();
+        return lastModification.ToUnixTimeSeconds().ToOctalField().GetAsciiBytes().ToObservable();
     }
 
     /// <summary>
