@@ -116,7 +116,7 @@ public class Entry
     /// </summary>
     private IObservable<byte> Group()
     {
-        return new byte[] { 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30, 0x00 }.ToObservable();
+        return 1000L.ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
     }
 
     /// <summary>
