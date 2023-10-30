@@ -19,6 +19,6 @@ public class DemoTests
                     LastModification = DateTimeOffset.Now,
                     OwnerId = 1000,
                     OwnerUsername = "jmn"
-                }, File.OpenRead("D:\\5 - Unimportant\\Descargas\\recordatorioCita.pdf")));
+                }, () => File.OpenRead("D:\\5 - Unimportant\\Descargas\\recordatorioCita.pdf")));
     }
 }

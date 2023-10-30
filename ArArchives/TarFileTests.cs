@@ -68,7 +68,7 @@ public class TarFileTests
                     OwnerId = 1000,
                     GroupId = 1000,
                 },
-                new MemoryStream("Hola\n".GetAsciiBytes())));
+                () => new MemoryStream("Hola\n".GetAsciiBytes())));
 
         var result = rawStream.ToArray();
         var expectedBytes = File.ReadAllBytes("TestFiles\\Sample.tar");

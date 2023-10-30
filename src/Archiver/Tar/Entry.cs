@@ -25,7 +25,7 @@ public class Entry
         {
             var header = Header()
                 .AsBlocks<byte>(BlockSize, 0);
-            var content = Content().AsBlocks<byte>(BlockSize, 0);
+            var content = Contents().AsBlocks<byte>(BlockSize, 0);
             var bytes = header.Concat(content);
             return bytes;
         }
@@ -77,10 +77,10 @@ public class Entry
         Ustar(),
         UstarVersion(),
         OwnerUsername(),
-        GroupUsername("jmn")
+        GroupUsername()
     );
 
-    private IObservable<byte> GroupUsername(string groupname)
+    private IObservable<byte> GroupUsername()
     {
         return entryData.Properties.GroupName
             .Map(s => s.PadRight(32, '\0').GetAsciiBytes().ToObservable())
@@ -104,9 +104,9 @@ public class Entry
         return "ustar".PadRight(6, ' ').GetAsciiBytes().ToObservable();
     }
 
-    private IObservable<byte> Content()
+    private IObservable<byte> Contents()
     {
-        return entryData.Contents.ToObservable();
+        return entryData.Contents().ToObservable();
     }
 
     /// <summary>
@@ -130,13 +130,11 @@ public class Entry
     /// <summary>
     ///     From 124 to 136 (in octal)
     /// </summary>
-    /// <param name="contents"></param>
-    private IObservable<byte> FileSize() => entryData.Contents.Length.ToOctalField().GetAsciiBytes().ToObservable();
+    private IObservable<byte> FileSize() => entryData.Contents().Length.ToOctalField().GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     From 136 to 148 Last modification time in numeric Unix time format (octal)
     /// </summary>
-    /// <param name="lastModification"></param>
     private IObservable<byte> LastModification() => entryData.Properties.LastModification.ToUnixTimeSeconds().ToOctalField().GetAsciiBytes().ToObservable();
 
     /// <summary>
