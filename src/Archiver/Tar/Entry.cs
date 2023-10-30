@@ -66,7 +66,7 @@ public class Entry
     private IObservable<byte> Header(IObservable<byte> checksum) => Observable.Concat
     (
         Filename(),
-        FileModeObs(),
+        FileMode(),
         Owner(),
         Group(),
         FileSize(),
@@ -76,18 +76,22 @@ public class Entry
         NameOfLinkedFile(),
         Ustar(),
         UstarVersion(),
-        OwnerUsername("jmn"),
+        OwnerUsername(),
         GroupUsername("jmn")
     );
 
     private IObservable<byte> GroupUsername(string groupname)
     {
-        return groupname.PadRight(32, '\0').GetAsciiBytes().ToObservable();
+        return entryData.Properties.GroupName
+            .Map(s => s.PadRight(32, '\0').GetAsciiBytes().ToObservable())
+            .GetValueOrDefault(() => Observable.Repeat<byte>(0x00, 32));
     }
 
-    private IObservable<byte> OwnerUsername(string username)
+    private IObservable<byte> OwnerUsername()
     {
-        return username.PadRight(32, '\0').GetAsciiBytes().ToObservable();
+        return entryData.Properties.OwnerUsername
+            .Map(s => s.PadRight(32, '\0').GetAsciiBytes().ToObservable())
+            .GetValueOrDefault(() => Observable.Repeat<byte>(0x00, 32));
     }
 
     private IObservable<byte> UstarVersion()
@@ -136,29 +140,29 @@ public class Entry
     private IObservable<byte> LastModification() => entryData.Properties.LastModification.ToUnixTimeSeconds().ToOctalField().GetAsciiBytes().ToObservable();
 
     /// <summary>
-    ///     From 116 to 124
-    /// </summary>
-    private IObservable<byte> Group()
-    {
-        return 1000L.ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
-    }
-
-    /// <summary>
     ///     From 100 to 108
     /// </summary>
     /// <returns></returns>
-    private IObservable<byte> FileModeObs()
+    private IObservable<byte> FileMode()
     {
         return entryData.Properties.FileModes.ToString().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
     }
 
     /// <summary>
-    ///     From 116 to 124
+    ///     From 8 to 116
     /// </summary>
     /// <returns></returns>
     private IObservable<byte> Owner()
     {
-        return 1000L.ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
+        return entryData.Properties.OwnerId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
+    }
+
+    /// <summary>
+    ///     From 116 to 124
+    /// </summary>
+    private IObservable<byte> Group()
+    {
+        return entryData.Properties.GroupId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
     }
 
     /// <summary>

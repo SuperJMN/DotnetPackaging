@@ -1,5 +1,4 @@
 ﻿using System.Reactive.Linq;
-using System.Text;
 using CSharpFunctionalExtensions;
 using Serilog;
 using Zafiro.IO;

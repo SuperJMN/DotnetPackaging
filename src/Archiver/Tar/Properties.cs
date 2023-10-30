@@ -1,13 +1,13 @@
-﻿namespace Archiver.Tar;
+﻿using CSharpFunctionalExtensions;
+
+namespace Archiver.Tar;
 
 public class Properties
 {
-    public Properties(DateTimeOffset lastModification, FileModes fileModes)
-    {
-        LastModification = lastModification;
-        FileModes = fileModes;
-    }
-
-    public DateTimeOffset LastModification { get; }
-    public FileModes FileModes { get; }
+    public required DateTimeOffset LastModification { get; init; }
+    public required FileModes FileModes { get; init; }
+    public required Maybe<string> OwnerUsername { get; init; }
+    public required Maybe<string> GroupName { get; init; }
+    public required Maybe<int> OwnerId { get; init; }
+    public required Maybe<int> GroupId { get; init; }
 }
