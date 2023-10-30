@@ -125,6 +125,8 @@ public class Entry
     /// <returns></returns>
     private IObservable<byte> FileMode()
     {
+        //return "664".NullTerminated().GetAsciiBytes().ToObservable();
+
         return new byte[] { 0x20, 0x20, 0x20, 0x20, 0x37, 0x37, 0x37, 0x0 }.ToObservable();
     }
 

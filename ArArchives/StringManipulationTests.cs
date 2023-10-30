@@ -21,4 +21,11 @@ public class StringManipulationTests
     {
         str.ToFixed(length).Should().Be(expected);
     }
+
+    [Theory]
+    [InlineData("664", 8, "0000664\0")]
+    public void NullTerminatedPaddedField(string str, int length, string expected)
+    {
+        str.NullTerminatedPaddedField(length).Should().Be(expected);
+    } 
 }

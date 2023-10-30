@@ -102,7 +102,7 @@ public class TarFileTests
         logger.Information("Matched {Matches} out of {Total} ({Percent:P})", matches, total, (double)matches/total);
 
         comparison
-            .Where(arg => !arg.isMatch)
+            //.Where(arg => !arg.isMatch)
             .ForEach(x =>
             {
                 logger.Information("[{Position}] [{Result}] Expected: {Expected} - Actual: {Actual}", x.i, x.isMatch ? "X" : " ", x.one, x.another);
