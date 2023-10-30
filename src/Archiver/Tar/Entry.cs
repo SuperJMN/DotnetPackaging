@@ -126,8 +126,6 @@ public class Entry
     private IObservable<byte> FileMode()
     {
         return "664".NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
-
-        return new byte[] { 0x20, 0x20, 0x20, 0x20, 0x37, 0x37, 0x37, 0x0 }.ToObservable();
     }
 
     /// <summary>
@@ -136,7 +134,7 @@ public class Entry
     /// <returns></returns>
     private IObservable<byte> Owner()
     {
-        return new byte[] { 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x30, 0x00 }.ToObservable();
+        return 1000L.ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
     }
 
     /// <summary>

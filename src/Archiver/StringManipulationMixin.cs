@@ -9,6 +9,9 @@ public static class StringManipulationMixin
     public static string FromCrLfToLf(this string str) => str.Replace("\r\n", "\n");
     public static byte[] GetAsciiBytes(this string str) => Encoding.ASCII.GetBytes(str);
 
+    public static string ToOctal(this int number) => Convert.ToString(number, 8);
+    public static string ToOctal(this long number) => Convert.ToString(number, 8);
+
     public static string ToOctalField(this long number) => Convert.ToString(number, 8).NullTerminatedPaddedField(12);
 
     public static string PaddedField(this string str, int size) => str.PadLeft(size - 1, '0');
