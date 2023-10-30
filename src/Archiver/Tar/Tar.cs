@@ -2,18 +2,29 @@
 using System.Text;
 using CSharpFunctionalExtensions;
 using Serilog;
+using SharpCompress.Common;
 using Zafiro.IO;
 
 namespace Archiver.Tar;
 
-public record Entry(string Name, DateTimeOffset LastModification, Stream Contents);
+public record Entry(string Name, Properties Properties, Stream Contents);
+
+public class Properties
+{
+    public Properties(DateTimeOffset lastModification)
+    {
+        LastModification = lastModification;
+    }
+
+    public DateTimeOffset LastModification { get; private set; }
+}
 
 public class Tar
 {
     private const int BlockingFactor = 20 * BlockSize;
     private const int BlockSize = 512;
-    private readonly Stream output;
     private readonly Maybe<ILogger> logger;
+    private readonly Stream output;
 
     public Tar(Stream output, Maybe<ILogger> logger)
     {
@@ -21,14 +32,16 @@ public class Tar
         this.logger = logger;
     }
 
-    public IObservable<byte> Write(string name, DateTimeOffset entryLastModification, Stream contents)
+    private IObservable<byte> EndOfFile => Observable.Repeat<byte>(0x00, BlockSize * 2);
+
+    public IObservable<byte> Write(Entry entry)
     {
-        var header = WriteHeader(name, entryLastModification, contents)
+        var header = WriteHeader(entry)
             .AsBlocks<byte>(BlockSize, 0);
 
         Log("Header", header);
 
-        var content = Content(contents).AsBlocks<byte>(BlockSize, 0);
+        var content = Content(entry).AsBlocks<byte>(BlockSize, 0);
 
         Log("Content", content);
 
@@ -38,6 +51,22 @@ public class Tar
 
         return header.Concat(content).Concat(endOfFile);
     }
+
+    public Result Build(params Entry[] entries)
+    {
+        var rawFile = entries
+            .Select(entry => Write(entry))
+            .Concat();
+
+        var tarContents =
+            rawFile
+                .AsBlocks<byte>(BlockingFactor, 0x00);
+        tarContents.DumpTo(output).Subscribe();
+
+        return Result.Success();
+    }
+
+    private static IObservable<byte> ToAscii(string content) => Encoding.ASCII.GetBytes(content).ToObservable();
 
     private void Log(string name, IObservable<byte> header)
     {
@@ -50,31 +79,13 @@ public class Tar
         });
     }
 
-    private IObservable<byte> EndOfFile => Observable.Repeat<byte>(0x00, BlockSize * 2);
-
-    public Result Build(params Entry[] entries)
-    {
-        var rawFile = entries
-            .Select(entry => Write(entry.Name, entry.LastModification, entry.Contents))
-            .Concat();
-
-        var tarContents =
-            rawFile
-            .AsBlocks<byte>(BlockingFactor, 0x00);
-                tarContents.DumpTo(output).Subscribe();
-
-        return Result.Success();
-    }
-
-    private static IObservable<byte> ToAscii(string content) => Encoding.ASCII.GetBytes(content).ToObservable();
-
-    private IObservable<byte> WriteHeader(string name, DateTimeOffset lastModification, Stream contents)
+    private IObservable<byte> WriteHeader(Entry entry)
     {
         return
-            Header(name, lastModification, contents, ChecksumPlaceholder())
+            Header(entry, ChecksumPlaceholder())
                 .ToList()
                 .Select(list => list.Sum(b => b))
-                .SelectMany(checksum => Header(name, lastModification, contents, Checksum(checksum)));
+                .SelectMany(checksum => Header(entry, Checksum(checksum)));
     }
 
     private IObservable<byte> Checksum(int checksum)
@@ -84,20 +95,20 @@ public class Tar
         return bytes.ToObservable();
     }
 
-    private IObservable<byte> Header(string name, DateTimeOffset lastModification, Stream contents, IObservable<byte> checksum) => Observable.Concat
+    private IObservable<byte> Header(Entry entry, IObservable<byte> checksum) => Observable.Concat
     (
-        Filename(name),
+        Filename(entry),
         FileMode(),
         Owner(),
         Group(),
-        FileSize(contents),
-        LastModification(lastModification),
+        FileSize(entry),
+        LastModification(entry),
         checksum,
         LinkIndicator(),
         NameOfLinkedFile()
     );
 
-    private IObservable<byte> Content(Stream stream) => stream.ToObservable();
+    private IObservable<byte> Content(Entry entry) => entry.Contents.ToObservable();
 
     /// <summary>
     ///     From 156 to 157 Link indicator (file type)
@@ -122,19 +133,13 @@ public class Tar
     ///     From 124 to 136 (in octal)
     /// </summary>
     /// <param name="contents"></param>
-    private IObservable<byte> FileSize(Stream contents)
-    {
-        return contents.Length.ToOctalField().GetAsciiBytes().ToObservable();
-    }
+    private IObservable<byte> FileSize(Entry entry) => entry.Contents.Length.ToOctalField().GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     From 136 to 148 Last modification time in numeric Unix time format (octal)
     /// </summary>
     /// <param name="lastModification"></param>
-    private IObservable<byte> LastModification(DateTimeOffset lastModification)
-    {
-        return lastModification.ToUnixTimeSeconds().ToOctalField().GetAsciiBytes().ToObservable();
-    }
+    private IObservable<byte> LastModification(Entry entry) => entry.Properties.LastModification.ToUnixTimeSeconds().ToOctalField().GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     From 116 to 124
@@ -145,7 +150,7 @@ public class Tar
     }
 
     /// <summary>
-    /// From 100 to 108
+    ///     From 100 to 108
     /// </summary>
     /// <returns></returns>
     private IObservable<byte> FileMode()
@@ -154,7 +159,7 @@ public class Tar
     }
 
     /// <summary>
-    /// From 116 to 124
+    ///     From 116 to 124
     /// </summary>
     /// <returns></returns>
     private IObservable<byte> Owner()
@@ -163,9 +168,9 @@ public class Tar
     }
 
     /// <summary>
-    /// From 0 to 100
+    ///     From 0 to 100
     /// </summary>
-    /// <param name="filename"></param>
+    /// <param name="entry"></param>
     /// <returns></returns>
-    private IObservable<byte> Filename(string filename) => ToAscii(filename.ToFixed(100));
+    private IObservable<byte> Filename(Entry entry) => ToAscii(entry.Name.ToFixed(100));
 }
