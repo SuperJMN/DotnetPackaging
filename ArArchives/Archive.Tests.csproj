@@ -21,19 +21,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <ProjectReference Include="E:\Repos\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Local\Zafiro.FileSystem.Local.csproj" Version="4.0.34">
-      <Temp>Zafiro.FileSystem.Local</Temp>
-      <Name>Zafiro.FileSystem.Local</Name>
-    </ProjectReference>
+    <PackageReference Include="Zafiro.FileSystem.Local" Version="4.0.34" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\src\Archiver\Archiver.csproj" />
-    <ProjectReference Include="E:\Repos\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem\Zafiro.FileSystem.csproj">
-      <Temp>Zafiro.FileSystem</Temp>
-    </ProjectReference>
-    <ProjectReference Include="E:\Repos\SuperJMN-Zafiro\Zafiro\src\Zafiro\Zafiro.csproj">
-      <Temp>Zafiro</Temp>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Update="TestFiles\**">
