@@ -59,7 +59,7 @@ public class TarFileTests
         var rawStream = new MemoryStream();
         new Tar(rawStream, logger).Build(
             new EntryData("File1.txt", 
-                new Properties(new DateTimeOffset(2023, 10, 28, 22, 37, 5, TimeSpan.Zero)),
+                new Properties(new DateTimeOffset(2023, 10, 28, 22, 37, 5, TimeSpan.Zero), FileModes.Parse("664")),
                 new MemoryStream("Hola\n".GetAsciiBytes())));
 
         var result = rawStream.ToArray();

@@ -2,7 +2,6 @@
 using System.Text;
 using CSharpFunctionalExtensions;
 using Serilog;
-using Zafiro;
 using Zafiro.IO;
 
 namespace Archiver.Tar;
@@ -67,7 +66,7 @@ public class Entry
     private IObservable<byte> Header(IObservable<byte> checksum) => Observable.Concat
     (
         Filename(),
-        FileMode(),
+        FileModeObs(),
         Owner(),
         Group(),
         FileSize(),
@@ -148,9 +147,9 @@ public class Entry
     ///     From 100 to 108
     /// </summary>
     /// <returns></returns>
-    private IObservable<byte> FileMode()
+    private IObservable<byte> FileModeObs()
     {
-        return "664".NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
+        return entryData.Properties.FileModes.ToString().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
     }
 
     /// <summary>
