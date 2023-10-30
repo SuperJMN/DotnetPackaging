@@ -25,19 +25,9 @@ public class Entry
         {
             var header = Header()
                 .AsBlocks<byte>(BlockSize, 0);
-
-            Log("Header", header);
-
             var content = Content().AsBlocks<byte>(BlockSize, 0);
-
-            Log("Content", content);
-
-            var observable = header.Concat(content);
-
-            content.ToList().Take(1).Subscribe(list => { });
-
-            Log("Full", observable);
-            return observable;
+            var bytes = header.Concat(content);
+            return bytes;
         }
     }
 
@@ -85,8 +75,20 @@ public class Entry
         LastModification(),
         checksum,
         LinkIndicator(),
-        NameOfLinkedFile()
+        NameOfLinkedFile(),
+        Ustar()
+        //UstarVersion()
     );
+
+    private IObservable<byte> UstarVersion()
+    {
+        return new byte []{ 0x20, 0x00 }.ToObservable();
+    }
+
+    private IObservable<byte> Ustar()
+    {
+        return "ustar".PadRight(6, ' ').NullTerminated().GetAsciiBytes().ToObservable();
+    }
 
     private IObservable<byte> Content()
     {

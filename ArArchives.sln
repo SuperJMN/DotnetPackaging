@@ -7,6 +7,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Archive.Tests", "ArArchives
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Archiver", "src\Archiver\Archiver.csproj", "{DB38B9A6-6749-4469-927A-ECAFA98D45BC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Temporary", "Temporary", "{D6CCE224-5E5B-49CB-B61D-CB3235EAF981}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zafiro", "E:\Repos\SuperJMN-Zafiro\Zafiro\src\Zafiro\Zafiro.csproj", "{F048D450-AA5F-422D-AEAB-E576835363AD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zafiro.FileSystem", "E:\Repos\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem\Zafiro.FileSystem.csproj", "{DD61D6A7-EC73-4B0E-8A0E-758D99F7159F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zafiro.FileSystem.Local", "E:\Repos\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Local\Zafiro.FileSystem.Local.csproj", "{34A4BD85-9712-460E-96BD-1F7CB4184130}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,11 +29,28 @@ Global
 		{DB38B9A6-6749-4469-927A-ECAFA98D45BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DB38B9A6-6749-4469-927A-ECAFA98D45BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DB38B9A6-6749-4469-927A-ECAFA98D45BC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F048D450-AA5F-422D-AEAB-E576835363AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F048D450-AA5F-422D-AEAB-E576835363AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F048D450-AA5F-422D-AEAB-E576835363AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F048D450-AA5F-422D-AEAB-E576835363AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DD61D6A7-EC73-4B0E-8A0E-758D99F7159F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DD61D6A7-EC73-4B0E-8A0E-758D99F7159F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DD61D6A7-EC73-4B0E-8A0E-758D99F7159F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DD61D6A7-EC73-4B0E-8A0E-758D99F7159F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34A4BD85-9712-460E-96BD-1F7CB4184130}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34A4BD85-9712-460E-96BD-1F7CB4184130}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34A4BD85-9712-460E-96BD-1F7CB4184130}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34A4BD85-9712-460E-96BD-1F7CB4184130}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1D869DF1-9147-472D-A3D9-D519518A6951}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F048D450-AA5F-422D-AEAB-E576835363AD} = {D6CCE224-5E5B-49CB-B61D-CB3235EAF981}
+		{DD61D6A7-EC73-4B0E-8A0E-758D99F7159F} = {D6CCE224-5E5B-49CB-B61D-CB3235EAF981}
+		{34A4BD85-9712-460E-96BD-1F7CB4184130} = {D6CCE224-5E5B-49CB-B61D-CB3235EAF981}
 	EndGlobalSection
 EndGlobal
