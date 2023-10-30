@@ -32,7 +32,12 @@ public class Entry
 
             Log("Content", content);
 
-            return header.Concat(content);
+            var observable = header.Concat(content);
+
+            content.ToList().Take(1).Subscribe(list => { });
+
+            Log("Full", observable);
+            return observable;
         }
     }
 
@@ -58,6 +63,11 @@ public class Entry
                 .SelectMany(checksum => Header(Checksum(checksum)));
     }
 
+    /// <summary>
+    /// From 148 to 156 [8]
+    /// </summary>
+    /// <param name="checksum"></param>
+    /// <returns></returns>
     private IObservable<byte> Checksum(int checksum)
     {
         var chars = Convert.ToString(checksum, 8).PadLeft(7).PadRight(8);
@@ -78,21 +88,23 @@ public class Entry
         NameOfLinkedFile()
     );
 
-    private IObservable<byte> Content() => entryData.Contents.ToObservable();
+    private IObservable<byte> Content()
+    {
+        return entryData.Contents.ToObservable();
+    }
 
     /// <summary>
     ///     From 156 to 157 Link indicator (file type)
     /// </summary>
     private IObservable<byte> LinkIndicator()
     {
-        return new byte[] { 0x00 }.ToObservable();
+        return "0".GetAsciiBytes().ToObservable();
     }
 
     /// <summary>
     ///     From 157 to 257 Link indicator (file type)
     /// </summary>
-    private IObservable<byte> NameOfLinkedFile() => ToAscii("".ToFixed(100));
-
+    private IObservable<byte> NameOfLinkedFile() => Observable.Repeat<byte>(0x00, 100);
 
     private IObservable<byte> ChecksumPlaceholder()
     {

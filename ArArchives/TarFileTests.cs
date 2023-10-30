@@ -67,6 +67,8 @@ public class TarFileTests
 
         LogComparison(result, expectedBytes);
 
+        new MemoryStream(result).CopyTo(File.Open("C:\\Users\\JMN\\Desktop\\TestFile.tar", FileMode.Create));
+
         result.Should().BeEquivalentTo(expectedBytes);
     }
 
