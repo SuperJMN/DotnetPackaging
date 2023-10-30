@@ -2,6 +2,7 @@
 using System.Text;
 using CSharpFunctionalExtensions;
 using Serilog;
+using Zafiro;
 using Zafiro.IO;
 
 namespace Archiver.Tar;
@@ -60,9 +61,7 @@ public class Entry
     /// <returns></returns>
     private IObservable<byte> Checksum(int checksum)
     {
-        var chars = Convert.ToString(checksum, 8).PadLeft(7).PadRight(8);
-        var bytes = Encoding.ASCII.GetBytes(chars);
-        return bytes.ToObservable();
+        return (checksum.ToOctal().PadLeft(6, '0').NullTerminated() + " ").GetAsciiBytes().ToObservable();
     }
 
     private IObservable<byte> Header(IObservable<byte> checksum) => Observable.Concat
@@ -76,9 +75,21 @@ public class Entry
         checksum,
         LinkIndicator(),
         NameOfLinkedFile(),
-        Ustar()
-        //UstarVersion()
+        Ustar(),
+        UstarVersion(),
+        OwnerUsername("jmn"),
+        GroupUsername("jmn")
     );
+
+    private IObservable<byte> GroupUsername(string groupname)
+    {
+        return groupname.PadRight(32, '\0').GetAsciiBytes().ToObservable();
+    }
+
+    private IObservable<byte> OwnerUsername(string username)
+    {
+        return username.PadRight(32, '\0').GetAsciiBytes().ToObservable();
+    }
 
     private IObservable<byte> UstarVersion()
     {
@@ -87,7 +98,7 @@ public class Entry
 
     private IObservable<byte> Ustar()
     {
-        return "ustar".PadRight(6, ' ').NullTerminated().GetAsciiBytes().ToObservable();
+        return "ustar".PadRight(6, ' ').GetAsciiBytes().ToObservable();
     }
 
     private IObservable<byte> Content()
