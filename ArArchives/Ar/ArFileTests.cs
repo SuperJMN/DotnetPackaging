@@ -12,7 +12,7 @@ public class ArFileTests
     public async Task Write()
     {
         ArFile ar;
-        await using (var output = File.OpenWrite("C:\\Users\\JMN\\Desktop\\Sample.ar"))
+        await using (var output = File.OpenWrite("C:\\Users\\JMN\\Desktop\\Actual.ar"))
         {
             ar = new ArFile(output);
 
@@ -29,9 +29,11 @@ public class ArFileTests
 
                           """;
 
-            var entryData = new EntryData("debian-binary", properties, () => new MemoryStream(contents.GetAsciiBytes()));
+            var entry1 = new EntryData("debian-binary", properties, () => new MemoryStream(contents.GetAsciiBytes()));
+            var entry2 = new EntryData("Archive1.txt", properties, () => new MemoryStream("Hola".GetAsciiBytes()));
+            var entry3 = new EntryData("Archive1.txt", properties, () => new MemoryStream("Salud y buenos alimentos".GetAsciiBytes()));
 
-            await ar.Build(entryData);
+            await ar.Build(entry1, entry2, entry3);
         }
     }
 }
