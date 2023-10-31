@@ -1,5 +1,4 @@
 ﻿using System.Reactive.Linq;
-using Zafiro.IO;
 
 namespace Archiver.Ar;
 
@@ -67,7 +66,7 @@ public class Entry
     /// <returns></returns>
     private IObservable<byte> FileSize()
     {
-        return Observable.Using(() => entryData.Contents(), stream => stream.Length.ToString().PadRight(10).GetAsciiBytes().ToObservable());
+        return entryData.Properties.Length.ToString().PadRight(10).GetAsciiBytes().ToObservable();
     }
 
     /// <summary>
@@ -78,6 +77,6 @@ public class Entry
 
     private IObservable<byte> Contents()
     {
-        return Observable.Using(() => entryData.Contents(), stream => stream.ToObservable());
+        return entryData.Contents();
     }
 }

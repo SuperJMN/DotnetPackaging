@@ -1,5 +1,7 @@
-﻿using Archiver;
+﻿using System.Reactive.Linq;
+using Archiver;
 using Archiver.Ar;
+using Zafiro.IO;
 using EntryData = Archiver.Ar.EntryData;
 using Properties = Archiver.Ar.Properties;
 
@@ -10,26 +12,27 @@ public class ArFileTests
     [Fact]
     public async Task Write()
     {
-        await using var output = File.Create("C:\\Users\\JMN\\Desktop\\Actual.ar");
-        var ar = new ArFile(output);
+        var contents ="""
+                      2.0
+
+                      """.FromCrLfToLf();
 
         var properties = new Properties()
         {
             FileMode   = FileMode.Parse("644"),
             GroupId = 0,
             OwnerId = 0,
-            LastModification = DateTimeOffset.Now
+            LastModification = DateTimeOffset.Now,
+            Length = contents.Length,
         };
 
-        var contents ="""
-                      2.0
+        var entry1 = new EntryData("debian-binary", properties, () => contents.GetAsciiBytes().ToObservable());
+        var entry2 = new EntryData("Archive1.txt", properties, () => "Hola".GetAsciiBytes().ToObservable());
+        var entry3 = new EntryData("Archive1.txt", properties, () => "Salud y buenos alimentos".GetAsciiBytes().ToObservable());
 
-                      """.FromCrLfToLf();
+        var ar = new ArFile(entry1, entry2, entry3);
 
-        var entry1 = new EntryData("debian-binary", properties, () => new MemoryStream(contents.GetAsciiBytes()));
-        var entry2 = new EntryData("Archive1.txt", properties, () => new MemoryStream("Hola".GetAsciiBytes()));
-        var entry3 = new EntryData("Archive1.txt", properties, () => new MemoryStream("Salud y buenos alimentos".GetAsciiBytes()));
-
-        await ar.Build(entry1, entry2, entry3);
+        await using var output = File.Create("C:\\Users\\JMN\\Desktop\\Actual.ar");
+        await ar.Bytes.DumpTo(output);
     }
 }

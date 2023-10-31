@@ -1,3 +1,3 @@
 ﻿namespace Archiver.Ar;
 
-public record EntryData(string Name, Properties Properties, Func<Stream> Contents);
+public record EntryData(string Name, Properties Properties, Func<IObservable<byte>> Contents);

@@ -1,25 +1,36 @@
 ﻿using System.Reactive.Linq;
-using Zafiro.IO;
 
 namespace Archiver.Ar;
 
 public class ArFile
 {
-    private readonly Stream output;
+    private readonly EntryData[] entries;
 
-    public ArFile(Stream output)
+    public ArFile(params EntryData[] entries)
     {
-        this.output = output;
+        this.entries = entries;
     }
 
-    public async Task Build(params EntryData[] entries)
+    public IObservable<byte> Bytes
     {
-        var arContents = entries
-            .Select(entry => new Entry(entry).Bytes)
-            .Concat();
+        get
+        {
+            var arContents = entries
+                .Select(entry => new Entry(entry).Bytes)
+                .Concat();
 
-        await Signature.Concat(arContents).DumpTo(output);
+            return Signature.Concat(arContents);
+        }
     }
+
+    //public async Task Build(params EntryData[] entries)
+    //{
+    //    var arContents = entries
+    //        .Select(entry => new Entry(entry).Bytes)
+    //        .Concat();
+
+    //    await Signature.Concat(arContents).DumpTo(output);
+    //}
 
     private IObservable<byte> Signature => "!<arch>\n".GetAsciiBytes().ToObservable();
 }

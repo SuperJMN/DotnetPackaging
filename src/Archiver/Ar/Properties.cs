@@ -8,4 +8,5 @@ public class Properties
     public required FileMode FileMode { get; init; }
     public required Maybe<int> OwnerId { get; init; }
     public required Maybe<int> GroupId { get; init; }
+    public required long Length { get; init; }
 }
