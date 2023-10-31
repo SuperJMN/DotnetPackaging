@@ -8,7 +8,7 @@
     <PackageReference Include="CSharpFunctionalExtensions" Version="2.40.3" />
     <PackageReference Include="SharpCompress" Version="0.34.1" />
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
-    <PackageReference Include="Zafiro" Version="4.0.10" />
+    <PackageReference Include="Zafiro" Version="4.0.12" />
     <PackageReference Include="Zafiro.FileSystem" Version="4.0.34" />
   </ItemGroup>
 </Project>

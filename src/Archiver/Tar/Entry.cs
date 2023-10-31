@@ -12,11 +12,11 @@ public class Entry
     private readonly EntryData entryData;
     private readonly Maybe<ILogger> logger;
 
-    public Entry(EntryData entryData, Maybe<int> blockSize, Maybe<ILogger> logger)
+    public Entry(EntryData entryData, Maybe<ILogger> logger, int blockSize = 512)
     {
-        BlockSize = blockSize.GetValueOrDefault(512);
         this.entryData = entryData;
         this.logger = logger;
+        BlockSize = blockSize;
     }
 
     public IObservable<byte> Bytes
@@ -106,7 +106,7 @@ public class Entry
 
     private IObservable<byte> Contents()
     {
-        return entryData.Contents().ToObservable();
+        return Observable.Using(() => entryData.Contents(), stream => stream.ToObservable());
     }
 
     /// <summary>
@@ -130,7 +130,7 @@ public class Entry
     /// <summary>
     ///     From 124 to 136 (in octal)
     /// </summary>
-    private IObservable<byte> FileSize() => entryData.Contents().Length.ToOctalField().GetAsciiBytes().ToObservable();
+    private IObservable<byte> FileSize() => Observable.Using(() => entryData.Contents(), stream => stream.Length.ToOctalField().GetAsciiBytes().ToObservable());
 
     /// <summary>
     ///     From 136 to 148 Last modification time in numeric Unix time format (octal)
