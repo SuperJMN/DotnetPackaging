@@ -2,19 +2,10 @@
 
 public class Metadata
 {
-    public Metadata(string applicationName, string packageName, string maintainer)
-    {
-        ApplicationName = applicationName;
-        PackageName = packageName;
-        Maintainer = maintainer;
-    }
-
-    public string Maintainer { get; }
-
-    public string PackageName { get; }
-
-    public string ApplicationName { get; }
-    public string Architecture { get; set; }
-    public string Homepage { get; set; }
-    public string License { get; set; }
+    public required string Maintainer { get; init; }
+    public required string PackageName { get; init; }
+    public required string ApplicationName { get; init; }
+    public required string Architecture { get; init; }
+    public required string Homepage { get; init; }
+    public required string License { get; init; }
 }
