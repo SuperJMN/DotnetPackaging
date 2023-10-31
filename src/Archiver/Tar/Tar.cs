@@ -5,14 +5,14 @@ using Zafiro.IO;
 
 namespace Archiver.Tar;
 
-public class Tar
+public class TarFile
 {
     private const int BlockingFactor = 20 * BlockSize;
     private const int BlockSize = 512;
     private readonly Maybe<ILogger> logger;
     private readonly Stream output;
 
-    public Tar(Stream output, Maybe<ILogger> logger)
+    public TarFile(Stream output, Maybe<ILogger> logger)
     {
         this.output = output;
         this.logger = logger;

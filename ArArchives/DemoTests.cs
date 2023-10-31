@@ -10,7 +10,7 @@ public class DemoTests
     public async Task Demo()
     {
         await using var fileStream = File.Create("C:\\Users\\jmn\\Desktop\\Demo.tar");
-        var tarFile = new Tar(fileStream, Maybe<ILogger>.None);
+        var tarFile = new TarFile(fileStream, Maybe<ILogger>.None);
 
         var entry1 = new EntryData("recordatorioCita.pdf", new Properties
         {

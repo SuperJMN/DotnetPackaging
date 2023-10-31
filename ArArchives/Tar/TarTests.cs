@@ -8,13 +8,13 @@ using Serilog.Events;
 using Xunit.Abstractions;
 using Logger = Serilog.Core.Logger;
 
-namespace Archive.Tests;
+namespace Archive.Tests.Tar;
 
-public class TarFileTests
+public class TarTests
 {
     private readonly Logger logger;
 
-    public TarFileTests(ITestOutputHelper output)
+    public TarTests(ITestOutputHelper output)
     {
         logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
@@ -57,8 +57,8 @@ public class TarFileTests
     public void Simple()
     {
         var rawStream = new MemoryStream();
-        new Tar(rawStream, logger).Build(
-            new EntryData("File1.txt", 
+        new TarFile(rawStream, logger).Build(
+            new EntryData("File1.txt",
                 new Properties
                 {
                     LastModification = new DateTimeOffset(2023, 10, 28, 22, 37, 5, TimeSpan.Zero),
@@ -109,7 +109,7 @@ public class TarFileTests
 
         var matches = comparison.Count(x => x.isMatch);
         var total = comparison.Count;
-        logger.Information("Matched {Matches} out of {Total} ({Percent:P})", matches, total, (double)matches/total);
+        logger.Information("Matched {Matches} out of {Total} ({Percent:P})", matches, total, (double)matches / total);
 
         comparison
             //.Where(arg => !arg.isMatch)
