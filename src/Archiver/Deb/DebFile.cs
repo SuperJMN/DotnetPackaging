@@ -1,29 +1,23 @@
 ﻿using System.Reactive.Linq;
 using Archiver.Ar;
+using SharpCompress;
 
 namespace Archiver.Deb;
 
 public class DebFile
 {
     private readonly Metadata metadata;
+    private readonly Contents contents;
 
-    public DebFile(Metadata metadata)
+    public DebFile(Metadata metadata, Contents contents)
     {
         this.metadata = metadata;
+        this.contents = contents;
     }
 
-    public IObservable<byte> Bytes
-    {
-        get
-        {
-            var debEntry = DebEntry();
-            var control = Control();
+    public IObservable<byte> Bytes => new ArFile(DebEntry(), Control(), Data()).Bytes;
 
-            return Observable.Concat(debEntry.Bytes, control.Bytes);
-        }
-    }
-
-    private Entry Control()
+    private EntryData Control()
     {
         var data = $"""
                         Package: {metadata.PackageName.ToLower()}
@@ -52,7 +46,7 @@ public class DebFile
             Length = data.Length,
         };
         
-        return new Entry(new EntryData("control.tar", arProperties, () =>
+        return new EntryData("control.tar", arProperties, () =>
         {
             var tarProperties = new Tar.Properties
             {
@@ -66,25 +60,40 @@ public class DebFile
             };
 
             return new Tar.TarFile(new Tar.EntryData("control", tarProperties, () => data.GetAsciiBytes().ToObservable())).Bytes;
-        }));
+        });
     }
 
-    private Entry Data()
+    private EntryData Data()
     {
-        throw new NotImplementedException();
+        var entries = contents.Entries.Select(tuple =>
+        {
+            return new Tar.EntryData(tuple.Item1, new Tar.Properties()
+            {
+                GroupName = "root",
+                OwnerUsername = "root",
+                Length = tuple.Item2().AsEnumerable().Count(),
+                FileMode = FileMode.Parse("644"),
+                GroupId = 1000,
+                LastModification = DateTimeOffset.Now,
+                OwnerId = 1000,
+            }, tuple.Item2);
+        });
 
-        //var properties = new Properties
-        //{
-        //    FileMode   = FileMode.Parse("644"),
-        //    GroupId = 0,
-        //    OwnerId = 0,
-        //    LastModification = DateTimeOffset.Now
-        //};
+        var tarEntry = new Tar.TarFile(entries.ToArray());
 
-        //return new Entry(new EntryData("data.tar", properties, () => new Tar.TarFile())));
+        var properties = new Properties()
+        {
+            Length = tarEntry.Bytes.ToEnumerable().Count(),
+            FileMode = FileMode.Parse("644"),
+            GroupId = 1000,
+            OwnerId = 1000,
+            LastModification = DateTimeOffset.Now,
+        };
+
+        return new EntryData("data.tar", properties, () => tarEntry.Bytes);
     }
 
-    private Entry DebEntry()
+    private EntryData DebEntry()
     {
         var data = "debian-binary";
 
@@ -102,6 +111,6 @@ public class DebFile
 
                       """.FromCrLfToLf();
         
-        return new Entry(new EntryData(data, properties, () => contents.GetAsciiBytes().ToObservable()));
+        return new EntryData(data, properties, () => contents.GetAsciiBytes().ToObservable());
     }
 }
