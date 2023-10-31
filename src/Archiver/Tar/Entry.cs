@@ -1,7 +1,6 @@
 ﻿using System.Reactive.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
-using Serilog;
 using Zafiro.IO;
 
 namespace Archiver.Tar;
@@ -10,12 +9,10 @@ public class Entry
 {
     public int BlockSize { get; }
     private readonly EntryData entryData;
-    private readonly Maybe<ILogger> logger;
 
-    public Entry(EntryData entryData, Maybe<ILogger> logger, int blockSize = 512)
+    public Entry(EntryData entryData, int blockSize = 512)
     {
         this.entryData = entryData;
-        this.logger = logger;
         BlockSize = blockSize;
     }
 
@@ -32,17 +29,6 @@ public class Entry
     }
 
     private static IObservable<byte> ToAscii(string content) => Encoding.ASCII.GetBytes(content).ToObservable();
-
-    private void Log(string name, IObservable<byte> header)
-    {
-        logger.Execute(l =>
-        {
-            header.ToList()
-                .Take(1)
-                .Do(list => l.Debug("{Item}: Size = {Bytes}", name, list.Count))
-                .Subscribe();
-        });
-    }
 
     private IObservable<byte> Header()
     {
@@ -106,7 +92,7 @@ public class Entry
 
     private IObservable<byte> Contents()
     {
-        return Observable.Using(() => entryData.Contents(), stream => stream.ToObservable());
+        return entryData.Contents();
     }
 
     /// <summary>
@@ -130,7 +116,7 @@ public class Entry
     /// <summary>
     ///     From 124 to 136 (in octal)
     /// </summary>
-    private IObservable<byte> FileSize() => Observable.Using(() => entryData.Contents(), stream => stream.Length.ToOctalField().GetAsciiBytes().ToObservable());
+    private IObservable<byte> FileSize() => entryData.Properties.Length.ToOctalField().GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     From 136 to 148 Last modification time in numeric Unix time format (octal)
