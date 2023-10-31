@@ -3,16 +3,15 @@ using Archiver.Tar;
 using CSharpFunctionalExtensions;
 using FluentAssertions;
 using Serilog;
-using Zafiro.IO;
 
 namespace Archive.Tests;
 
-public class FileModesTests
+public class FileModeTests
 {
     [Fact]
     public void Test()
     {
-        var fileModes = FileModes.Parse("764");
+        var fileModes = FileMode.Parse("764");
         
         var str = fileModes.ToString();
         str.Should().Be("764");
@@ -23,7 +22,7 @@ public class FileModesTests
     {
         var properties = new Properties()
         {
-            FileModes = FileModes.Parse("777"),
+            FileMode = FileMode.Parse("777"),
             GroupName = Maybe<string>.None,
             GroupId = Maybe<int>.None,
             LastModification = DateTimeOffset.Now,

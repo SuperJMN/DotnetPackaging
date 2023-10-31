@@ -1,14 +1,14 @@
-﻿namespace Archiver.Tar;
+﻿namespace Archiver.Common;
 
-public record FileModes()
+public record FileMode()
 {
-    public required Permissions User { get; init; } 
+    public required Permissions User { get; init; }
     public required Permissions Group { get; init; }
     public required Permissions Others { get; init; }
-    
+
     public override string ToString() => $"{User}{Group}{Others}";
 
-    public static FileModes Parse(string octalString)
+    public static FileMode Parse(string octalString)
     {
         if (octalString.Length != 3)
             throw new ArgumentException("La cadena octal debe tener exactamente 3 caracteres.", nameof(octalString));
@@ -32,6 +32,6 @@ public record FileModes()
             others = Permissions.Get(othersValue);
         }
 
-        return new FileModes { User = user, Group = group, Others = others };
+        return new FileMode { User = user, Group = group, Others = others };
     }
 }

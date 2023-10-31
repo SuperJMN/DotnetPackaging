@@ -1,4 +1,4 @@
-﻿namespace Archiver.Tar;
+﻿namespace Archiver.Common;
 
 public class Permissions
 {
@@ -13,7 +13,7 @@ public class Permissions
     public static Permissions Read { get; } = new(4);
 
     private int Value { get; }
-    
+
     public static implicit operator int(Permissions permission) => permission.Value;
 
     public static Permissions Combine(Permissions permission1, Permissions permission2)

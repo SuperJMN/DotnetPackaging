@@ -14,7 +14,7 @@ public class DemoTests
 
         var entry1 = new EntryData("recordatorioCita.pdf", new Properties
         {
-            FileModes = FileModes.Parse("644"),
+            FileMode = FileMode.Parse("644"),
             GroupId = 1000,
             GroupName = "jmn",
             LastModification = DateTimeOffset.Now,
@@ -24,7 +24,7 @@ public class DemoTests
 
         var entry2 = new EntryData("wasabi.deb", new Properties
         {
-            FileModes = FileModes.Parse("644"),
+            FileMode = FileMode.Parse("644"),
             GroupId = 1000,
             GroupName = "jmn",
             LastModification = DateTimeOffset.Now,

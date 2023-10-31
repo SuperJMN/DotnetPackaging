@@ -3,18 +3,17 @@ using Archiver.Tar;
 using FluentAssertions;
 using MoreLinq;
 using Serilog;
-using System;
 using Serilog.Events;
 using Xunit.Abstractions;
 using Logger = Serilog.Core.Logger;
 
 namespace Archive.Tests.Tar;
 
-public class TarTests
+public class TarFileTests
 {
     private readonly Logger logger;
 
-    public TarTests(ITestOutputHelper output)
+    public TarFileTests(ITestOutputHelper output)
     {
         logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
@@ -62,7 +61,7 @@ public class TarTests
                 new Properties
                 {
                     LastModification = new DateTimeOffset(2023, 10, 28, 22, 37, 5, TimeSpan.Zero),
-                    FileModes = FileModes.Parse("664"),
+                    FileMode = FileMode.Parse("664"),
                     OwnerUsername = "jmn",
                     GroupName = "jmn",
                     OwnerId = 1000,
@@ -75,7 +74,7 @@ public class TarTests
 
         LogComparison(result, expectedBytes);
 
-        new MemoryStream(result).CopyTo(File.Open("C:\\Users\\JMN\\Desktop\\TestFile.tar", FileMode.Create));
+        new MemoryStream(result).CopyTo(File.Open("C:\\Users\\JMN\\Desktop\\TestFile.tar", System.IO.FileMode.Create));
 
         result.Should().BeEquivalentTo(expectedBytes);
     }

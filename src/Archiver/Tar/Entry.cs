@@ -143,7 +143,7 @@ public class Entry
     /// <returns></returns>
     private IObservable<byte> FileMode()
     {
-        return entryData.Properties.FileModes.ToString().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
+        return entryData.Properties.FileMode.ToString().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
     }
 
     /// <summary>
