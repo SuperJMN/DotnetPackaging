@@ -15,7 +15,7 @@ public class ArFileTests
 
         var properties = new Properties()
         {
-            FileMode   = FileMode.Parse("777"),
+            FileMode   = FileMode.Parse("644"),
             GroupId = 0,
             OwnerId = 0,
             LastModification = DateTimeOffset.Now

@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Archiver.Deb;
 using CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 

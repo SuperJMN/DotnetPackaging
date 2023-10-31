@@ -1,9 +1,10 @@
 ﻿using System.IO.Abstractions;
-using Archiver;
+using Archiver.Deb;
 using CSharpFunctionalExtensions;
 using FluentAssertions;
 using Serilog;
 using Zafiro.FileSystem.Local;
+using DebFile = Archiver.DebFile;
 
 namespace Archive.Tests;
 
