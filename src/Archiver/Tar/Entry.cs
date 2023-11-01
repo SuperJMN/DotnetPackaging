@@ -133,7 +133,7 @@ public class Entry
     }
 
     /// <summary>
-    ///     From 8 to 116
+    ///     From 108 to 116
     /// </summary>
     /// <returns></returns>
     private IObservable<byte> Owner()

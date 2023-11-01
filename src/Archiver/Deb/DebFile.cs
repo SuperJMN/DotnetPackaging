@@ -1,6 +1,10 @@
 ﻿using System.Reactive.Linq;
 using Archiver.Ar;
+using Archiver.Tar;
 using SharpCompress;
+using Zafiro.FileSystem;
+using EntryData = Archiver.Ar.EntryData;
+using Properties = Archiver.Ar.Properties;
 
 namespace Archiver.Deb;
 
@@ -19,23 +23,7 @@ public class DebFile
 
     private EntryData Control()
     {
-        var data = $"""
-                        Package: {metadata.PackageName.ToLower()}
-                        Priority: optional
-                        Section: utils
-                        Maintainer: {metadata.Maintainer}
-                        Version: 2.0.4
-                        Homepage: {metadata.Homepage}
-                        Vcs-Git: git://github.com/zkSNACKs/WalletWasabi.git
-                        Vcs-Browser: https://github.com/zkSNACKs/WalletWasabi
-                        Architecture: {metadata.Architecture}
-                        License: {metadata.License}
-                        Installed-Size: 207238
-                        Recommends: policykit-1
-                        Description: open-source, non-custodial, privacy focused Bitcoin wallet
-                          Built-in Tor, coinjoin, payjoin and coin control features.
-
-                        """.FromCrLfToLf();
+        var tarFile = GetControlTarFile();
 
         var arProperties = new Ar.Properties
         {
@@ -43,35 +31,61 @@ public class DebFile
             GroupId = 0,
             OwnerId = 0,
             LastModification = DateTimeOffset.Now,
-            Length = data.Length,
+            Length = tarFile.Length,
         };
-        
-        return new EntryData("control.tar", arProperties, () =>
-        {
-            var tarProperties = new Tar.Properties
-            {
-                FileMode = FileMode.Parse("644"),
-                GroupId = 1000,
-                OwnerId = 1000,
-                LastModification = DateTimeOffset.Now,
-                Length = data.Length,
-                GroupName = "root",
-                OwnerUsername = "root"
-            };
 
-            return new Tar.TarFile(new Tar.EntryData("control", tarProperties, () => data.GetAsciiBytes().ToObservable())).Bytes;
-        });
+        return new EntryData("control.tar", arProperties, () => tarFile.Bytes);
+    }
+
+    private TarFile GetControlTarFile()
+    {
+        var data = $"""
+                    Package: {metadata.PackageName.ToLower()}
+                    Priority: optional
+                    Section: utils
+                    Maintainer: {metadata.Maintainer}
+                    Version: 2.0.4
+                    Homepage: {metadata.Homepage}
+                    Vcs-Git: git://github.com/zkSNACKs/WalletWasabi.git
+                    Vcs-Browser: https://github.com/zkSNACKs/WalletWasabi
+                    Architecture: {metadata.Architecture}
+                    License: {metadata.License}
+                    Installed-Size: 207238
+                    Recommends: policykit-1
+                    Description: open-source, non-custodial, privacy focused Bitcoin wallet
+                      Built-in Tor, coinjoin, payjoin and coin control features.
+
+                    """.FromCrLfToLf();
+
+        var tarProperties = new Tar.Properties
+        {
+            FileMode = FileMode.Parse("644"),
+            GroupId = 1000,
+            OwnerId = 1000,
+            LastModification = DateTimeOffset.Now,
+            Length = data.Length,
+            GroupName = "root",
+            OwnerUsername = "root"
+        };
+
+        var dir = new Tar.EntryData("./", new Tar.Properties()
+        {
+            Length = 0, GroupName = "root", OwnerUsername = "root", GroupId = 1000, OwnerId = 1000, FileMode = FileMode.Parse("644"), LastModification = DateTimeOffset.Now
+        }, Observable.Empty<byte>);
+        return new TarFile(dir, new Tar.EntryData("./control", tarProperties, () => data.GetAsciiBytes().ToObservable()));
     }
 
     private EntryData Data()
     {
         var entries = contents.Entries.Select(tuple =>
         {
-            return new Tar.EntryData(tuple.Item1, new Tar.Properties()
+            var path = ZafiroPath.Create($"./usr/local/bin/{metadata.PackageName}").Value.Combine(tuple.Item1);
+
+            return new Tar.EntryData(path, new Tar.Properties()
             {
                 GroupName = "root",
                 OwnerUsername = "root",
-                Length = tuple.Item2().AsEnumerable().Count(),
+                Length = tuple.Item2().ToEnumerable().Count(),
                 FileMode = FileMode.Parse("644"),
                 GroupId = 1000,
                 LastModification = DateTimeOffset.Now,
@@ -97,19 +111,19 @@ public class DebFile
     {
         var data = "debian-binary";
 
+        var contents = """
+                       2.0
+
+                       """.FromCrLfToLf();
+
         var properties = new Properties
         {
             FileMode = FileMode.Parse("644"),
             GroupId = 0,
             OwnerId = 0,
             LastModification = DateTimeOffset.Now,
-            Length = data.Length,
+            Length = contents.Length,
         };
-
-        var contents = """
-                      2.0
-
-                      """.FromCrLfToLf();
         
         return new EntryData(data, properties, () => contents.GetAsciiBytes().ToObservable());
     }

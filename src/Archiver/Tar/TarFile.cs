@@ -1,7 +1,4 @@
 ﻿using System.Reactive.Linq;
-using CSharpFunctionalExtensions;
-using Serilog;
-using Zafiro.IO;
 
 namespace Archiver.Tar;
 
@@ -29,4 +26,6 @@ public class TarFile
     }
 
     private IObservable<byte> EndOfFile => Observable.Repeat<byte>(0x00, BlockSize * 2);
+
+    public long Length => Bytes.ToEnumerable().Count();
 }

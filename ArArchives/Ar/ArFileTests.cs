@@ -52,8 +52,16 @@ public class ArFileTests
         };
 
         var entry = new EntryData("File.tar", properties, () => TarFile().Bytes);
+        var entry2 = new EntryData("Greetings.txt", new Properties()
+        {
+            FileMode   = FileMode.Parse("644"),
+            GroupId = 0,
+            OwnerId = 0,
+            LastModification = DateTimeOffset.Now,
+            Length = "Saludos cordiales".GetAsciiBytes().Length,
+        }, () => "Saludos cordiales".GetAsciiBytes().ToObservable());
         await using var output = File.Create("C:\\Users\\JMN\\Desktop\\ArWithTarInside.ar");
-        await new ArFile(entry).Bytes.DumpTo(output);
+        await new ArFile(entry, entry2).Bytes.DumpTo(output);
     }
 
     public TarFile TarFile()
