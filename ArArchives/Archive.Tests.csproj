@@ -21,7 +21,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Zafiro.FileSystem.Local" Version="4.0.34" />
+    <PackageReference Include="Zafiro.FileSystem.Local" Version="4.0.35" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\src\Archiver\Archiver.csproj" />
@@ -30,8 +30,5 @@
     <None Update="Tar\TestFiles\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Deb\" />
   </ItemGroup>
 </Project>

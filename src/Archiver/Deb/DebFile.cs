@@ -3,6 +3,7 @@ using Archiver.Ar;
 using Archiver.Tar;
 using SharpCompress;
 using Zafiro.FileSystem;
+using Zafiro.Trees;
 using EntryData = Archiver.Ar.EntryData;
 using Properties = Archiver.Ar.Properties;
 
@@ -68,16 +69,18 @@ public class DebFile
             OwnerUsername = "root"
         };
 
-        var dir = new Tar.EntryData("./", new Tar.Properties()
-        {
-            Length = 0, GroupName = "root", OwnerUsername = "root", GroupId = 1000, OwnerId = 1000, FileMode = FileMode.Parse("644"), LastModification = DateTimeOffset.Now
-        }, Observable.Empty<byte>);
+        var dir = DirEntry("./");
         return new TarFile(dir, new Tar.EntryData("./control", tarProperties, () => data.GetAsciiBytes().ToObservable()));
     }
 
+    private static Tar.EntryData DirEntry(string path) => new(path, new Tar.Properties()
+    {
+        Length = 0, GroupName = "root", OwnerUsername = "root", GroupId = 1000, OwnerId = 1000, FileMode = FileMode.Parse("644"), LastModification = DateTimeOffset.Now
+    }, Observable.Empty<byte>);
+
     private EntryData Data()
     {
-        var entries = contents.Entries.Select(tuple =>
+        var fileEntries = contents.Entries.Select(tuple =>
         {
             var path = ZafiroPath.Create($"./usr/local/bin/{metadata.PackageName}").Value.Combine(tuple.Item1);
 
@@ -93,7 +96,13 @@ public class DebFile
             }, tuple.Item2);
         });
 
-        var tarEntry = new Tar.TarFile(entries.ToArray());
+        var dirEntries = new DebPaths(metadata.PackageName, contents.Entries.Select(x => x.Item1))
+            .Directories()
+            .Select(path => path + "/")
+            .OrderBy(x => x.Length)
+            .Select(DirEntry);
+        
+        var tarEntry = new Tar.TarFile(dirEntries.Concat(fileEntries).ToArray());
 
         var properties = new Properties()
         {
@@ -128,3 +137,4 @@ public class DebFile
         return new EntryData(data, properties, () => contents.GetAsciiBytes().ToObservable());
     }
 }
+
