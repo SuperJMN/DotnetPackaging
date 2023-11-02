@@ -10,7 +10,30 @@ namespace Archive.Tests.Deb;
 public class DebFileTests
 {
     [Fact]
-    public async Task Test()
+    public async Task FullDebTest()
+    {
+        var contents = new Contents(new Dictionary<ZafiroPath, Func<IObservable<byte>>>()
+        {
+            ["Contenido1.txt"] = () => "Soy pepito".GetAsciiBytes().ToObservable(),
+            ["Contenido2.txt"] = () => "Dale, Don, dale.".GetAsciiBytes().ToObservable()
+        });
+
+        var debFile = new DebFile(new Metadata()
+        {
+            PackageName = "AvaloniaSynchronizer",
+            ApplicationName = "AvaloniaSynchronizer",
+            Architecture = "amd64",
+            Homepage = "http://www.superjmn.com",
+            License = "MIT",
+            Maintainer = "SuperJMN"
+        }, contents);
+
+
+        await debFile.Bytes.DumpTo(File.Create("C:\\Users\\JMN\\Desktop\\Actual.deb"));
+    }
+
+    [Fact]
+    public async Task WriteDataTar()
     {
         var contents = new Contents(new Dictionary<ZafiroPath, Func<IObservable<byte>>>()
         {
@@ -28,7 +51,7 @@ public class DebFileTests
             Maintainer = "SuperJMN"
         }, contents);
 
-
-        await debFile.Bytes.DumpTo(File.Create("C:\\Users\\JMN\\Desktop\\Demo.deb"));
+        await using var output = File.Create("C:\\Users\\JMN\\Desktop\\data.tar");
+        await debFile.DataTar().Bytes.DumpTo(output);
     }
 }

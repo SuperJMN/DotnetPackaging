@@ -1,9 +1,7 @@
 ﻿using System.Reactive.Linq;
 using Archiver.Ar;
 using Archiver.Tar;
-using SharpCompress;
 using Zafiro.FileSystem;
-using Zafiro.Trees;
 using EntryData = Archiver.Ar.EntryData;
 using Properties = Archiver.Ar.Properties;
 
@@ -41,7 +39,7 @@ public class DebFile
     private TarFile GetControlTarFile()
     {
         var data = $"""
-                    Package: {metadata.PackageName.ToLower()}
+                    Package: {metadata.PackageName}
                     Priority: optional
                     Section: utils
                     Maintainer: {metadata.Maintainer}
@@ -80,6 +78,22 @@ public class DebFile
 
     private EntryData Data()
     {
+        var dataTar = DataTar();
+
+        var properties = new Properties()
+        {
+            Length = dataTar.Bytes.ToEnumerable().Count(),
+            FileMode = FileMode.Parse("644"),
+            GroupId = 1000,
+            OwnerId = 1000,
+            LastModification = DateTimeOffset.Now,
+        };
+
+        return new EntryData("data.tar", properties, () => dataTar.Bytes);
+    }
+
+    public TarFile DataTar()
+    {
         var fileEntries = contents.Entries.Select(tuple =>
         {
             var path = ZafiroPath.Create($"./usr/local/bin/{metadata.PackageName}").Value.Combine(tuple.Item1);
@@ -102,18 +116,7 @@ public class DebFile
             .OrderBy(x => x.Length)
             .Select(DirEntry);
         
-        var tarEntry = new Tar.TarFile(dirEntries.Concat(fileEntries).ToArray());
-
-        var properties = new Properties()
-        {
-            Length = tarEntry.Bytes.ToEnumerable().Count(),
-            FileMode = FileMode.Parse("644"),
-            GroupId = 1000,
-            OwnerId = 1000,
-            LastModification = DateTimeOffset.Now,
-        };
-
-        return new EntryData("data.tar", properties, () => tarEntry.Bytes);
+        return new TarFile(dirEntries.Concat(fileEntries).ToArray());
     }
 
     private EntryData DebEntry()
@@ -137,4 +140,3 @@ public class DebFile
         return new EntryData(data, properties, () => contents.GetAsciiBytes().ToObservable());
     }
 }
-
