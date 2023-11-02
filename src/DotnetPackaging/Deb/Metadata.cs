@@ -8,4 +8,5 @@ public class Metadata
     public required string Architecture { get; init; }
     public required string Homepage { get; init; }
     public required string License { get; init; }
+    public required string Description { get; init; }
 }

@@ -52,8 +52,7 @@ public class DebFile
                     License: {metadata.License}
                     Installed-Size: 207238
                     Recommends: policykit-1
-                    Description: open-source, non-custodial, privacy focused Bitcoin wallet
-                      Built-in Tor, coinjoin, payjoin and coin control features.
+                    Description: {metadata.Description}
 
                     """.FromCrLfToLf();
 
