@@ -110,13 +110,13 @@ public class DebFile
             {
                 GroupName = "root",
                 OwnerUsername = "root",
-                Length = tuple.Item2().ToEnumerable().Count(),
+                Length = tuple.Item2.Bytes().ToEnumerable().Count(),
                 FileMode = FileMode.Parse("644"),
                 GroupId = 1000,
                 LastModification = DateTimeOffset.Now,
                 OwnerId = 1000,
                 LinkIndicator = 0
-            }, tuple.Item2);
+            }, tuple.Item2.Bytes);
         });
 
         var dirEntries = new DebPaths(metadata.PackageName, contents.Entries.Select(x => x.Item1))

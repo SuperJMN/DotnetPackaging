@@ -21,3 +21,10 @@ public class DebPaths
 
     public IEnumerable<ZafiroPath> Directories() => DebPackagePaths().SelectMany(x => x.Parents()).Distinct();
 }
+
+public class DataTar
+{
+    public DataTar(Contents contents)
+    {
+    }
+}

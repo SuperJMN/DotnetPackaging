@@ -37,10 +37,10 @@ public class DebFileTests
 
     private static DebFile DebFile()
     {
-        var contents = new Contents(new Dictionary<ZafiroPath, Func<IObservable<byte>>>
+        var contents = new Contents(new Dictionary<ZafiroPath, Content>
         {
-            ["Contenido1.txt"] = () => "Soy pepito".GetAsciiBytes().ToObservable(),
-            ["Contenido2.txt"] = () => "Dale, Don, dale.".GetAsciiBytes().ToObservable()
+            ["Contenido1.txt"] = new Content(() => "Soy pepito".GetAsciiBytes().ToObservable()),
+            ["Contenido2.txt"] = new Content(() => "Dale, Don, dale.".GetAsciiBytes().ToObservable())
         });
 
         var debFile = new DebFile(new Metadata
