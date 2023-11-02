@@ -21,7 +21,9 @@ public class TarFile
                 entries
                     .Select(entry => new Entry(entry).Bytes)
                     .Concat()
-                    .AsBlocks<byte>(BlockingFactor, 0x00);
+                    .AsBlocks<byte>(BlockingFactor, 0x00)
+                    ;
+                    //.Concat(EndOfFile);
         }
     }
 

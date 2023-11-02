@@ -19,7 +19,8 @@ public class DemoTests
             LastModification = DateTimeOffset.Now,
             OwnerId = 1000,
             OwnerUsername = "jmn",
-            Length = new FileInfo("D:\\5 - Unimportant\\Descargas\\recordatorioCita.pdf").Length
+            Length = new FileInfo("D:\\5 - Unimportant\\Descargas\\recordatorioCita.pdf").Length,
+            LinkIndicator = 0,
         }, () => Observable.Using(() => File.OpenRead("D:\\5 - Unimportant\\Descargas\\recordatorioCita.pdf"), stream => stream.ToObservable()));
 
         var entry2 = new EntryData("wasabi.deb", new Properties
@@ -30,7 +31,9 @@ public class DemoTests
             LastModification = DateTimeOffset.Now,
             OwnerId = 1000,
             OwnerUsername = "jmn",
-            Length = new FileInfo("D:\\5 - Unimportant\\Descargas\\Wasabi-2.0.4.deb").Length
+            Length = new FileInfo("D:\\5 - Unimportant\\Descargas\\Wasabi-2.0.4.deb").Length,
+            LinkIndicator = 0,
+            
         }, () => Observable.Using(() => File.OpenRead("D:\\5 - Unimportant\\Descargas\\Wasabi-2.0.4.deb"), stream => stream.ToObservable()));
 
         var tarFile = new TarFile(entry1, entry2);

@@ -22,7 +22,7 @@ public class DebFile
 
     private EntryData Control()
     {
-        var tarFile = GetControlTarFile();
+        var tarFile = ControlTar();
 
         var arProperties = new Ar.Properties
         {
@@ -36,7 +36,7 @@ public class DebFile
         return new EntryData("control.tar", arProperties, () => tarFile.Bytes);
     }
 
-    private TarFile GetControlTarFile()
+    public TarFile ControlTar()
     {
         var data = $"""
                     Package: {metadata.PackageName}
@@ -64,7 +64,8 @@ public class DebFile
             LastModification = DateTimeOffset.Now,
             Length = data.Length,
             GroupName = "root",
-            OwnerUsername = "root"
+            OwnerUsername = "root",
+            LinkIndicator = 0,
         };
 
         var dir = DirEntry("./");
@@ -73,7 +74,14 @@ public class DebFile
 
     private static Tar.EntryData DirEntry(string path) => new(path, new Tar.Properties()
     {
-        Length = 0, GroupName = "root", OwnerUsername = "root", GroupId = 1000, OwnerId = 1000, FileMode = FileMode.Parse("644"), LastModification = DateTimeOffset.Now
+        Length = 0,
+        GroupName = "root",
+        OwnerUsername = "root",
+        GroupId = 1000,
+        OwnerId = 1000,
+        FileMode = FileMode.Parse("644"),
+        LastModification = DateTimeOffset.Now,
+        LinkIndicator = 5,
     }, Observable.Empty<byte>);
 
     private EntryData Data()
@@ -107,6 +115,7 @@ public class DebFile
                 GroupId = 1000,
                 LastModification = DateTimeOffset.Now,
                 OwnerId = 1000,
+                LinkIndicator = 0
             }, tuple.Item2);
         });
 

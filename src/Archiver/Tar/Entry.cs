@@ -1,6 +1,8 @@
 ﻿using System.Reactive.Linq;
 using System.Text;
+using Archiver.Ar;
 using CSharpFunctionalExtensions;
+using Zafiro.FileSystem;
 using Zafiro.IO;
 
 namespace Archiver.Tar;
@@ -100,7 +102,7 @@ public class Entry
     /// </summary>
     private IObservable<byte> LinkIndicator()
     {
-        return "0".GetAsciiBytes().ToObservable();
+        return entryData.Properties.LinkIndicator.ToString().GetAsciiBytes().ToObservable();
     }
 
     /// <summary>
@@ -154,4 +156,58 @@ public class Entry
     /// </summary>
     /// <returns></returns>
     private IObservable<byte> Filename() => ToAscii(entryData.Name.ToFixed(100));
+
+    public static Ar.EntryData FromStream(string name, Func<FileStream> openRead)
+    {
+        var length = openRead().Length;
+
+        var properties = new Ar.Properties()
+        {
+            Length = length,
+            FileMode = Common.FileMode.Parse("644"),
+            GroupId = 1000,
+            LastModification = DateTimeOffset.Now,
+            OwnerId = 1000,
+        };
+
+        return new Ar.EntryData(name, properties, () => Observable.Using(openRead, stream => stream.ToObservable()));
+    }
+
+    public static Ar.EntryData FromString(string name, string str)
+    {
+        var length = str.Length;
+
+        var properties = new Ar.Properties()
+        {
+            Length = length,
+            FileMode = Common.FileMode.Parse("644"),
+            GroupId = 1000,
+            LastModification = DateTimeOffset.Now,
+            OwnerId = 1000,
+        };
+
+        return new Ar.EntryData(name, properties, () => str.GetAsciiBytes().ToObservable());
+    }
+
+    public static Task<Result<Ar.EntryData>> FromFile(IZafiroFile file)
+    {
+        return FromFile(file.Path.Name(), file);
+    }
+
+    public static Task<Result<Ar.EntryData>> FromFile(string name, IZafiroFile file)
+    {
+        var length = file.Size();
+
+        return from size in file.Size()
+            from data in file.GetContents()
+            
+            select new Ar.EntryData(name, new Ar.Properties()
+            {
+                Length = size,
+                FileMode = Common.FileMode.Parse("644"),
+                GroupId = 1000,
+                LastModification = DateTimeOffset.Now,
+                OwnerId = 1000,
+            }, () => data.ToObservable());
+    }
 }

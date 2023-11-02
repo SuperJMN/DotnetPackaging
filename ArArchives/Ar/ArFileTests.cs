@@ -3,6 +3,7 @@ using Archiver;
 using Archiver.Ar;
 using Archiver.Tar;
 using Zafiro.IO;
+using Entry = Archiver.Tar.Entry;
 using EntryData = Archiver.Ar.EntryData;
 using Properties = Archiver.Ar.Properties;
 
@@ -13,14 +14,14 @@ public class ArFileTests
     [Fact]
     public async Task Regular_file()
     {
-        var contents ="""
+        var contents = """
                       2.0
 
                       """.FromCrLfToLf();
 
         var properties = new Properties()
         {
-            FileMode   = FileMode.Parse("644"),
+            FileMode = FileMode.Parse("644"),
             GroupId = 0,
             OwnerId = 0,
             LastModification = DateTimeOffset.Now,
@@ -44,7 +45,7 @@ public class ArFileTests
 
         var properties = new Properties()
         {
-            FileMode   = FileMode.Parse("644"),
+            FileMode = FileMode.Parse("644"),
             GroupId = 0,
             OwnerId = 0,
             LastModification = DateTimeOffset.Now,
@@ -54,7 +55,7 @@ public class ArFileTests
         var entry = new EntryData("File.tar", properties, () => TarFile().Bytes);
         var entry2 = new EntryData("Greetings.txt", new Properties()
         {
-            FileMode   = FileMode.Parse("644"),
+            FileMode = FileMode.Parse("644"),
             GroupId = 0,
             OwnerId = 0,
             LastModification = DateTimeOffset.Now,
@@ -62,6 +63,33 @@ public class ArFileTests
         }, () => "Saludos cordiales".GetAsciiBytes().ToObservable());
         await using var output = File.Create("C:\\Users\\JMN\\Desktop\\ArWithTarInside.ar");
         await new ArFile(entry, entry2).Bytes.DumpTo(output);
+    }
+
+    [Fact]
+    public async Task DebFromFiles()
+    {
+        var deb = GetDeb();
+        var control = GetControl();
+        var data = GetData();
+
+        var arFile = new ArFile(deb, control, data);
+        await using var output = File.Create("C:\\Users\\JMN\\Desktop\\Testing\\CraftedFromIndividualFiles.deb");
+        await arFile.Bytes.DumpTo(output);
+    }
+
+    private EntryData GetData()
+    {
+        return Entry.FromStream("data.tar", () => File.OpenRead(@"C:\Users\JMN\Desktop\Testing\Deb\data.tar"));
+    }
+
+    private EntryData GetControl()
+    {
+        return Entry.FromStream("control.tar", () => File.OpenRead(@"C:\Users\JMN\Desktop\Testing\Deb\control.tar"));
+    }
+
+    private EntryData GetDeb()
+    {
+        return Entry.FromStream("debian-binary", () => File.OpenRead(@"C:\Users\JMN\Desktop\Testing\Deb\debian-binary"));
     }
 
     public TarFile TarFile()
@@ -74,7 +102,8 @@ public class ArFileTests
             LastModification = DateTimeOffset.Now,
             OwnerId = 1000,
             OwnerUsername = "jmn",
-            Length = new FileInfo("D:\\5 - Unimportant\\Descargas\\recordatorioCita.pdf").Length
+            Length = new FileInfo("D:\\5 - Unimportant\\Descargas\\recordatorioCita.pdf").Length,
+            LinkIndicator = 0,
         }, () => Observable.Using(() => File.OpenRead("D:\\5 - Unimportant\\Descargas\\recordatorioCita.pdf"), stream => stream.ToObservable()));
 
         var entry2 = new Archiver.Tar.EntryData("wasabi.deb", new Archiver.Tar.Properties
@@ -85,7 +114,8 @@ public class ArFileTests
             LastModification = DateTimeOffset.Now,
             OwnerId = 1000,
             OwnerUsername = "jmn",
-            Length = new FileInfo("D:\\5 - Unimportant\\Descargas\\Wasabi-2.0.4.deb").Length
+            Length = new FileInfo("D:\\5 - Unimportant\\Descargas\\Wasabi-2.0.4.deb").Length,
+            LinkIndicator = 0,
         }, () => Observable.Using(() => File.OpenRead("D:\\5 - Unimportant\\Descargas\\Wasabi-2.0.4.deb"), stream => stream.ToObservable()));
 
         return new TarFile(entry1, entry2);

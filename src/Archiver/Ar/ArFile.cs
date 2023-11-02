@@ -22,15 +22,6 @@ public class ArFile
             return Signature.Concat(arContents);
         }
     }
-
-    //public async Task Build(params EntryData[] entries)
-    //{
-    //    var arContents = entries
-    //        .Select(entry => new Entry(entry).Bytes)
-    //        .Concat();
-
-    //    await Signature.Concat(arContents).DumpTo(output);
-    //}
-
+    
     private IObservable<byte> Signature => "!<arch>\n".GetAsciiBytes().ToObservable();
 }

@@ -29,7 +29,8 @@ public class DebFileTests
         }, contents);
 
 
-        await debFile.Bytes.DumpTo(File.Create("C:\\Users\\JMN\\Desktop\\Actual.deb"));
+        await using var fileStream = File.OpenWrite("C:\\Users\\JMN\\Desktop\\Testing\\FullDebTest.deb");
+        await debFile.Bytes.DumpTo(fileStream);
     }
 
     [Fact]
@@ -53,5 +54,28 @@ public class DebFileTests
 
         await using var output = File.Create("C:\\Users\\JMN\\Desktop\\data.tar");
         await debFile.DataTar().Bytes.DumpTo(output);
+    }
+
+    [Fact]
+    public async Task WriteControlTar()
+    {
+        var contents = new Contents(new Dictionary<ZafiroPath, Func<IObservable<byte>>>()
+        {
+            ["Contenido1.txt"] = () => "Soy pepito".GetAsciiBytes().ToObservable(),
+            ["Contenido2.txt"] = () => "Dale, Don, dale.".GetAsciiBytes().ToObservable()
+        });
+
+        var debFile = new DebFile(new Metadata()
+        {
+            PackageName = "AvaloniaSynchronizer",
+            ApplicationName = "AvaloniaSynchronizer",
+            Architecture = "amd64",
+            Homepage = "www.blablabla.com",
+            License = "MIT",
+            Maintainer = "SuperJMN"
+        }, contents);
+
+        await using var output = File.Create("C:\\Users\\JMN\\Desktop\\control.tar");
+        await debFile.ControlTar().Bytes.DumpTo(output);
     }
 }
