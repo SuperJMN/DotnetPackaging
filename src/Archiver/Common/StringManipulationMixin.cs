@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace DotnetPackaging;
+namespace DotnetPackaging.Common;
 
 public static class StringManipulationMixin
 {

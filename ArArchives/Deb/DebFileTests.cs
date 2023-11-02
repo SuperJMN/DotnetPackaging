@@ -1,4 +1,5 @@
 ﻿using System.Reactive.Linq;
+using DotnetPackaging.Common;
 using DotnetPackaging.Deb;
 using Zafiro.FileSystem;
 using Zafiro.IO;
@@ -16,7 +17,7 @@ public class DebFileTests
             ["Contenido2.txt"] = () => "Dale, Don, dale.".GetAsciiBytes().ToObservable()
         });
 
-        var debFile = new DotnetPackaging.Deb.DebFile(new Metadata()
+        var debFile = new DebFile(new Metadata()
         {
             PackageName = "AvaloniaSynchronizer",
             ApplicationName = "AvaloniaSynchronizer",
@@ -40,7 +41,7 @@ public class DebFileTests
             ["Contenido2.txt"] = () => "Dale, Don, dale.".GetAsciiBytes().ToObservable()
         });
 
-        var debFile = new DotnetPackaging.Deb.DebFile(new Metadata()
+        var debFile = new DebFile(new Metadata()
         {
             PackageName = "AvaloniaSynchronizer",
             ApplicationName = "AvaloniaSynchronizer",
@@ -63,7 +64,7 @@ public class DebFileTests
             ["Contenido2.txt"] = () => "Dale, Don, dale.".GetAsciiBytes().ToObservable()
         });
 
-        var debFile = new DotnetPackaging.Deb.DebFile(new Metadata()
+        var debFile = new DebFile(new Metadata()
         {
             PackageName = "AvaloniaSynchronizer",
             ApplicationName = "AvaloniaSynchronizer",

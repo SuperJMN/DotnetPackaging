@@ -1,3 +1,4 @@
+using DotnetPackaging.Common;
 using FluentAssertions;
 
 namespace DotnetPackaging.Tests;

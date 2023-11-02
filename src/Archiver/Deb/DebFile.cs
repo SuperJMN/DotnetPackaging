@@ -1,5 +1,6 @@
 ﻿using System.Reactive.Linq;
 using DotnetPackaging.Ar;
+using DotnetPackaging.Common;
 using DotnetPackaging.Tar;
 using Zafiro.FileSystem;
 using EntryData = DotnetPackaging.Ar.EntryData;

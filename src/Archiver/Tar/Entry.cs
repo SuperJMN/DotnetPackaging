@@ -1,6 +1,7 @@
 ﻿using System.Reactive.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Common;
 using Zafiro.FileSystem;
 using Zafiro.IO;
 
