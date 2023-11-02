@@ -1,8 +1,8 @@
 ﻿using System.Reactive.Linq;
-using Archiver.Tar;
+using DotnetPackaging.Tar;
 using Zafiro.IO;
 
-namespace Archive.Tests.Tar;
+namespace DotnetPackaging.Tests.Tar;
 
 public class DemoTests
 {

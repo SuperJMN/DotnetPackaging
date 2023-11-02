@@ -1,6 +1,6 @@
 ﻿using System.Reactive.Linq;
 
-namespace Archiver.Tar;
+namespace DotnetPackaging.Tar;
 
 public class TarFile
 {

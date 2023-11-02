@@ -1,7 +1,6 @@
-using Archiver;
 using FluentAssertions;
 
-namespace Archive.Tests;
+namespace DotnetPackaging.Tests;
 
 public class StringManipulationTests
 {
@@ -12,14 +11,6 @@ public class StringManipulationTests
     public void Truncate(string str, int length, string expected)
     {
         str.Truncate(length).Should().Be(expected);
-    }
-
-    [Theory]
-    [InlineData("Hola", 3, "Hol")]
-    [InlineData("Hola", 10, "Hola      ")]
-    public void ToFixed(string str, int length, string expected)
-    {
-        str.ToFixed(length).Should().Be(expected);
     }
 
     [Theory]

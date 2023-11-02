@@ -1,7 +1,6 @@
-﻿using Archiver.Common;
-using CSharpFunctionalExtensions;
+﻿using CSharpFunctionalExtensions;
 
-namespace Archiver.Tar;
+namespace DotnetPackaging.Tar;
 
 public class Properties
 {

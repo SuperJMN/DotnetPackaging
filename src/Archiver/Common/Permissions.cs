@@ -1,4 +1,4 @@
-﻿namespace Archiver.Common;
+﻿namespace DotnetPackaging.Common;
 
 public class Permissions
 {

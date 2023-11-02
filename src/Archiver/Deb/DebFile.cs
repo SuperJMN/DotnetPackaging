@@ -1,11 +1,11 @@
 ﻿using System.Reactive.Linq;
-using Archiver.Ar;
-using Archiver.Tar;
+using DotnetPackaging.Ar;
+using DotnetPackaging.Tar;
 using Zafiro.FileSystem;
-using EntryData = Archiver.Ar.EntryData;
-using Properties = Archiver.Ar.Properties;
+using EntryData = DotnetPackaging.Ar.EntryData;
+using Properties = DotnetPackaging.Ar.Properties;
 
-namespace Archiver.Deb;
+namespace DotnetPackaging.Deb;
 
 public class DebFile
 {

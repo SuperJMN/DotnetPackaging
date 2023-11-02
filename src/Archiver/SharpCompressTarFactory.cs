@@ -1,6 +1,6 @@
 ﻿using SharpCompress.Archives.Tar;
 
-namespace Archiver;
+namespace DotnetPackaging;
 
 public class SharpCompressTarFactory : ITarFactory
 {

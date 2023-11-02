@@ -1,4 +1,4 @@
-﻿namespace Archiver.Deb;
+﻿namespace DotnetPackaging.Deb;
 
 public class Metadata
 {

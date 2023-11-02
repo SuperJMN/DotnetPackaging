@@ -1,6 +1,6 @@
 ﻿using FluentAssertions;
 
-namespace Archive.Tests;
+namespace DotnetPackaging.Tests;
 
 public class FileModeTests
 {

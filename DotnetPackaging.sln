@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34202.233
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Archive.Tests", "ArArchives\Archive.Tests.csproj", "{60FA1F84-6050-470C-A1D3-054D370AF45A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Tests", "ArArchives\DotnetPackaging.Tests.csproj", "{60FA1F84-6050-470C-A1D3-054D370AF45A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Archiver", "src\Archiver\Archiver.csproj", "{DB38B9A6-6749-4469-927A-ECAFA98D45BC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging", "src\Archiver\DotnetPackaging.csproj", "{DB38B9A6-6749-4469-927A-ECAFA98D45BC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

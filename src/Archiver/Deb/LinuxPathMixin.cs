@@ -1,6 +1,6 @@
 ﻿using Zafiro.FileSystem;
 
-namespace Archiver.Deb;
+namespace DotnetPackaging.Deb;
 
 public class DebPaths
 {

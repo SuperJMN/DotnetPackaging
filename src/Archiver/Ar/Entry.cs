@@ -1,6 +1,6 @@
 ﻿using System.Reactive.Linq;
 
-namespace Archiver.Ar;
+namespace DotnetPackaging.Ar;
 
 public class Entry
 {

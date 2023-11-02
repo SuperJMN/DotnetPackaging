@@ -1,6 +1,6 @@
 using CSharpFunctionalExtensions;
 
-namespace Archiver;
+namespace DotnetPackaging;
 
 public interface ITarFile
 {

@@ -1,8 +1,8 @@
-﻿using Archiver.Deb;
+﻿using DotnetPackaging.Deb;
 using FluentAssertions;
 using Zafiro.FileSystem;
 
-namespace Archive.Tests.Deb;
+namespace DotnetPackaging.Tests.Deb;
 
 public class PathGeneratorTests
 {

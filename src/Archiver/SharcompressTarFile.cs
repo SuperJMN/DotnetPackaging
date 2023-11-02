@@ -3,7 +3,7 @@ using SharpCompress.Archives.Tar;
 using SharpCompress.Common;
 using SharpCompress.Writers.Tar;
 
-namespace Archiver;
+namespace DotnetPackaging;
 
 internal class SharcompressTarFile : ITarFile
 {

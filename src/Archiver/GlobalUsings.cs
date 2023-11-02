@@ -1,1 +1,1 @@
-global using FileMode = Archiver.Common.FileMode;
+global using FileMode = DotnetPackaging.Common.FileMode;

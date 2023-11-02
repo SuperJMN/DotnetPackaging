@@ -1,11 +1,10 @@
 ﻿using System.Reactive.Linq;
 using System.Text;
-using Archiver.Ar;
 using CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 using Zafiro.IO;
 
-namespace Archiver.Tar;
+namespace DotnetPackaging.Tar;
 
 public class Entry
 {
@@ -155,7 +154,7 @@ public class Entry
     ///     From 0 to 100
     /// </summary>
     /// <returns></returns>
-    private IObservable<byte> Filename() => ToAscii(entryData.Name.ToFixed(100));
+    private IObservable<byte> Filename() => ToAscii(entryData.Name.Truncate(100).PadRight(100, '\0'));
 
     public static Ar.EntryData FromStream(string name, Func<FileStream> openRead)
     {

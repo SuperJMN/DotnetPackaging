@@ -1,13 +1,12 @@
 ﻿using System.Reactive.Linq;
-using Archiver;
-using Archiver.Ar;
-using Archiver.Tar;
+using DotnetPackaging.Ar;
+using DotnetPackaging.Tar;
 using Zafiro.IO;
-using Entry = Archiver.Tar.Entry;
-using EntryData = Archiver.Ar.EntryData;
-using Properties = Archiver.Ar.Properties;
+using Entry = DotnetPackaging.Tar.Entry;
+using EntryData = DotnetPackaging.Ar.EntryData;
+using Properties = DotnetPackaging.Ar.Properties;
 
-namespace Archive.Tests.Ar;
+namespace DotnetPackaging.Tests.Ar;
 
 public class ArFileTests
 {
@@ -94,7 +93,7 @@ public class ArFileTests
 
     public TarFile TarFile()
     {
-        var entry1 = new Archiver.Tar.EntryData("recordatorioCita.pdf", new Archiver.Tar.Properties
+        var entry1 = new DotnetPackaging.Tar.EntryData("recordatorioCita.pdf", new DotnetPackaging.Tar.Properties
         {
             FileMode = FileMode.Parse("644"),
             GroupId = 1000,
@@ -106,7 +105,7 @@ public class ArFileTests
             LinkIndicator = 0,
         }, () => Observable.Using(() => File.OpenRead("D:\\5 - Unimportant\\Descargas\\recordatorioCita.pdf"), stream => stream.ToObservable()));
 
-        var entry2 = new Archiver.Tar.EntryData("wasabi.deb", new Archiver.Tar.Properties
+        var entry2 = new DotnetPackaging.Tar.EntryData("wasabi.deb", new DotnetPackaging.Tar.Properties
         {
             FileMode = FileMode.Parse("644"),
             GroupId = 1000,

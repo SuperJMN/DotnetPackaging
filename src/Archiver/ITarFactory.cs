@@ -1,6 +1,4 @@
-﻿using CSharpFunctionalExtensions;
-
-namespace Archiver;
+﻿namespace DotnetPackaging;
 
 public interface ITarFactory
 {

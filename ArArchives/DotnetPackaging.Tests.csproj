@@ -24,7 +24,7 @@
     <PackageReference Include="Zafiro.FileSystem.Local" Version="4.0.35" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\src\Archiver\Archiver.csproj" />
+    <ProjectReference Include="..\src\Archiver\DotnetPackaging.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Tar\TestFiles\**">
