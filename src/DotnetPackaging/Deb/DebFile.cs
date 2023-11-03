@@ -2,6 +2,8 @@
 using DotnetPackaging.Ar;
 using DotnetPackaging.Common;
 using DotnetPackaging.Tar;
+using Zafiro.FileSystem;
+using Entry = DotnetPackaging.Tar.Entry;
 using EntryData = DotnetPackaging.Ar.EntryData;
 using Properties = DotnetPackaging.Ar.Properties;
 
@@ -11,16 +13,21 @@ public class DebFile
 {
     private readonly Metadata metadata;
     private readonly Contents contents;
-    private readonly IconResources iconResources;
 
-    public DebFile(Metadata metadata, Contents contents, IconResources iconResources)
+    public DebFile(Metadata metadata, Contents contents)
     {
         this.metadata = metadata;
         this.contents = contents;
-        this.iconResources = iconResources;
     }
 
-    public IObservable<byte> Bytes => new ArFile(DebEntry(), Control(), Data()).Bytes;
+    public IObservable<byte> Bytes
+    {
+        get
+        {
+            var fileEntries = new[] { DebEntry(), Control(), Data() };
+            return new ArFile(fileEntries).Bytes;
+        }
+    }
 
     private EntryData Control()
     {
@@ -87,7 +94,7 @@ public class DebFile
 
     private EntryData Data()
     {
-        var dataTar = new DataTar(metadata, iconResources, contents).Tar;
+        var dataTar = new DataTar(metadata, contents).Tar;
 
         var properties = new Properties()
         {
