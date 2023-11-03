@@ -15,6 +15,6 @@ public class ImageTests
         });
 
         await using var output = File.Create("C:\\Users\\JMN\\Desktop\\Testing\\resizedicon.png");
-        await iconData.Bytes().DumpTo(output);
+        await iconData.IconBytes().DumpTo(output);
     }
 }

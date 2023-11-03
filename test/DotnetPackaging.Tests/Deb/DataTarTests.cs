@@ -18,7 +18,7 @@ public class DataTarTests
             ["Program.Desktop"] = new Content(() => "Binary data. Irrelevant for the test.".GetAsciiBytes().ToObservable()) { IsExecutable = true }
         });
 
-        var resources = IconResources.Create((32, new IconData(32, () => Observable.Using(() => File.OpenRead("Tar\\TestFiles\\icon.png"), stream => stream.ToObservable()))));
+        var resources = IconResources.Create(new IconData(32, () => Observable.Using(() => File.OpenRead("Tar\\TestFiles\\icon.png"), stream => stream.ToObservable())));
         var dataTar = new DataTar("Test", resources.Value, contents);
         await using var output = File.Create("C:\\Users\\JMN\\Desktop\\Testing\\data.tar");
         await dataTar.Tar.Bytes.DumpTo(output);

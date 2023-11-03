@@ -1,21 +1,12 @@
 ﻿using System.Reactive.Linq;
 using DotnetPackaging.Deb;
 using DotnetPackaging.Tar;
-using FluentAssertions;
-using ICSharpCode.SharpZipLib.Tar;
-using JetBrains.dotMemoryUnit;
-using Xunit.Abstractions;
 using Zafiro.IO;
 
 namespace DotnetPackaging.Tests.Tar;
 
 public class DemoTests
 {
-    public DemoTests(ITestOutputHelper output)
-    {
-        JetBrains.dotMemoryUnit.DotMemoryUnitTestOutput.SetOutputMethod(s => output.WriteLine(s));
-    }
-
     [Fact]
     public async Task Demo()
     {
@@ -62,7 +53,7 @@ public class DemoTests
 
         var properties = new Properties()
         {
-            Length = iconData.Bytes().ToEnumerable().Count(),
+            Length = iconData.IconBytes().ToEnumerable().Count(),
             FileMode = FileMode.Parse("777"),
             LinkIndicator = 0,
             GroupId = 1000,
@@ -72,7 +63,7 @@ public class DemoTests
             OwnerUsername = "root"
         };
 
-        var iconEntry = new EntryData("Icon.png", properties, iconData.Bytes);
+        var iconEntry = new EntryData("Icon.png", properties, iconData.IconBytes);
         var entry = new Entry(iconEntry);
         await using var output = File.Create("C:\\Users\\jmn\\Desktop\\Testing\\TarIcon.tar");
         

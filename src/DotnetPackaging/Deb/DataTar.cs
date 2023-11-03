@@ -1,7 +1,6 @@
 ﻿using System.Reactive.Linq;
 using DotnetPackaging.Common;
 using DotnetPackaging.Tar;
-using SixLabors.ImageSharp.Formats.Png;
 using Zafiro.FileSystem;
 
 namespace DotnetPackaging.Deb;
@@ -27,15 +26,15 @@ public class DataTar
 
     public IEnumerable<EntryData> Entries() => Explicit().Concat(Executables()).Concat(Metadata());
 
-    private IEnumerable<EntryData> Metadata() => iconResources.Icons.Select(pair => CreateIconEntry(pair.Item1, pair.Item2));
+    private IEnumerable<EntryData> Metadata() => iconResources.Icons.Select(CreateIconEntry);
 
-    private EntryData CreateIconEntry(int size, IconData iconData)
+    private EntryData CreateIconEntry(IconData iconData)
     {
-        var path = IconsRoot.Combine($"{size}x{size}/apps/{packageName}.png");
+        var path = IconsRoot.Combine($"{iconData.TargetSize}x{iconData.TargetSize}/apps/{packageName}.png");
         var properties = new Properties
         {
-            FileMode = FileMode.Parse("777"),
-            Length = iconData.Bytes().ToEnumerable().Count(),
+            FileMode = FileMode.Parse("775"),
+            Length = iconData.IconBytes().ToEnumerable().Count(),
             GroupId = 1000,
             GroupName = "root",
             LastModification = DateTimeOffset.Now,
@@ -43,7 +42,7 @@ public class DataTar
             OwnerId = 1000,
             OwnerUsername = "root"
         };
-        return new EntryData(path, properties, iconData.Bytes);
+        return new EntryData(path, properties, iconData.IconBytes);
     }
 
     private IEnumerable<EntryData> Executables()

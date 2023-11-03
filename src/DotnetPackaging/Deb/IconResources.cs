@@ -11,11 +11,11 @@ public class IconResources
         this.iconsDatas = iconsDatas;
     }
 
-    public IEnumerable<(int, IconData)> Icons => iconsDatas.Select(pair => (pair.Key, pair.Value));
+    public IEnumerable<IconData> Icons => iconsDatas.Values;
 
-    public static Result<IconResources> Create(params (int, IconData)[] iconsDatas)
+    public static Result<IconResources> Create(params IconData[] iconsDatas)
     {
-        var dic = iconsDatas.ToDictionary(data => data.Item1, data => data.Item2);
+        var dic = iconsDatas.ToDictionary(data => data.TargetSize, data => data);
 
         return new IconResources(dic);
     }
