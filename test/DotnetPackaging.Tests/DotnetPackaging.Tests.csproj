@@ -27,7 +27,7 @@
     <ProjectReference Include="..\..\src\DotnetPackaging\DotnetPackaging.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="Tar\TestFiles\**">
+    <None Update="TestFiles\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

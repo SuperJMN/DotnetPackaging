@@ -12,11 +12,13 @@ public class DebFile
 {
     private readonly Metadata metadata;
     private readonly Contents contents;
+    private readonly IconResources iconResources;
 
-    public DebFile(Metadata metadata, Contents contents)
+    public DebFile(Metadata metadata, Contents contents, IconResources iconResources)
     {
         this.metadata = metadata;
         this.contents = contents;
+        this.iconResources = iconResources;
     }
 
     public IObservable<byte> Bytes => new ArFile(DebEntry(), Control(), Data()).Bytes;
@@ -86,7 +88,7 @@ public class DebFile
 
     private EntryData Data()
     {
-        var dataTar = DataTar();
+        var dataTar = new DataTar(metadata.PackageName, iconResources, contents).Tar;
 
         var properties = new Properties()
         {

@@ -53,11 +53,13 @@ public class DataTar
                 // TODO: Optimize length retrieval
                 var path = ZafiroPath.Create(Root).Value.Combine(tuple.Item1);
 
+                var length = GetExecEntry(tuple.Item1).ToEnumerable().Count();
+
                 return new EntryData(path, new Properties
                 {
                     GroupName = "root",
                     OwnerUsername = "root",
-                    Length = GetExecEntry(tuple.Item1).ToEnumerable().Count(),
+                    Length = length,
                     FileMode = FileMode.Parse("755"),
                     GroupId = 1000,
                     LastModification = DateTimeOffset.Now,
@@ -86,11 +88,13 @@ public class DataTar
         {
             var path = ZafiroPath.Create(PackageRoot).Value.Combine(tuple.Item1);
 
+            var length = tuple.Item2.Bytes().ToEnumerable().Count();
+
             return new EntryData(path, new Properties
             {
                 GroupName = "root",
                 OwnerUsername = "root",
-                Length = tuple.Item2.Bytes().ToEnumerable().Count(),
+                Length = length,
                 FileMode = FileMode.Parse("644"),
                 GroupId = 1000,
                 LastModification = DateTimeOffset.Now,

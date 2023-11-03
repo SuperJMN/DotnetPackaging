@@ -8,6 +8,7 @@ public static class ImageMixin
     {
         var memoryStream = new MemoryStream();
         image.SaveAsPngAsync(memoryStream);
+        memoryStream.Position = 0;
         return memoryStream.ToObservable();
     }
 

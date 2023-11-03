@@ -18,20 +18,11 @@ public class DebFileTests
     }
 
     [Fact]
-    public async Task WriteDataTar()
-    {
-        var debFile = DebFile();
-
-        await using var output = File.Create("C:\\Users\\JMN\\Desktop\\data.tar");
-        await debFile.DataTar().Bytes.DumpTo(output);
-    }
-
-    [Fact]
     public async Task WriteControlTar()
     {
         var debFile = DebFile();
 
-        await using var output = File.Create("C:\\Users\\JMN\\Desktop\\control.tar");
+        await using var output = File.Create("C:\\Users\\JMN\\Desktop\\Testing\\control.tar");
         await debFile.ControlTar().Bytes.DumpTo(output);
     }
 
@@ -40,9 +31,11 @@ public class DebFileTests
         var contents = new Contents(new Dictionary<ZafiroPath, Content>
         {
             ["Contenido1.txt"] = new Content(() => "Soy pepito".GetAsciiBytes().ToObservable()),
-            ["Contenido2.txt"] = new Content(() => "Dale, Don, dale.".GetAsciiBytes().ToObservable())
+            ["Contenido2.txt"] = new Content(() => "Dale, Don, dale.".GetAsciiBytes().ToObservable()),
+            ["Contenido.Desktop"] = new Content(() => "Dale, Don, dale.".GetAsciiBytes().ToObservable()) { IsExecutable = true }
         });
 
+        var iconResources = IconResources.Create(new IconData(64, () => Observable.Using(() => File.OpenRead("TestFiles\\icon.png"), stream => stream.ToObservable())));
         var debFile = new DebFile(new Metadata
         {
             PackageName = "AvaloniaSynchronizer",
@@ -52,7 +45,7 @@ public class DebFileTests
             License = "MIT",
             Maintainer = "SuperJMN",
             Description = "The file manager you always wanted to have"
-        }, contents);
+        }, contents, iconResources.Value);
         return debFile;
     }
 }
