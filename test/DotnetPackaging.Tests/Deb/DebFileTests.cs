@@ -28,14 +28,15 @@ public class DebFileTests
 
     private static DebFile DebFile()
     {
+        var iconResources = IconResources.Create(new IconData(64, () => Observable.Using(() => File.OpenRead("TestFiles\\icon.png"), stream => stream.ToObservable())));
+
         var contents = new Contents(new Dictionary<ZafiroPath, Content>
         {
-            ["Contenido1.txt"] = new Content(() => "Soy pepito".GetAsciiBytes().ToObservable()),
-            ["Contenido2.txt"] = new Content(() => "Dale, Don, dale.".GetAsciiBytes().ToObservable()),
-            ["Contenido.Desktop"] = new Content(() => "Dale, Don, dale.".GetAsciiBytes().ToObservable()) { IsExecutable = true }
+            ["Contenido1.txt"] = new RegularContent(() => "Soy pepito".GetAsciiBytes().ToObservable()),
+            ["Contenido2.txt"] = new RegularContent(() => "Dale, Don, dale.".GetAsciiBytes().ToObservable()),
+            ["Contenido.Desktop"] = new ExecutableContent(() => "Dale, Don, dale.".GetAsciiBytes().ToObservable(), iconResources.Value),
         });
-
-        var iconResources = IconResources.Create(new IconData(64, () => Observable.Using(() => File.OpenRead("TestFiles\\icon.png"), stream => stream.ToObservable())));
+        
         var debFile = new DebFile(new Metadata
         {
             PackageName = "AvaloniaSynchronizer",
@@ -46,6 +47,7 @@ public class DebFileTests
             Maintainer = "SuperJMN",
             Description = "The file manager you always wanted to have"
         }, contents, iconResources.Value);
+
         return debFile;
     }
 }

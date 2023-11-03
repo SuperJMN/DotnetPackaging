@@ -24,7 +24,7 @@ public class DataTar
 
     public TarFile Tar => new(Entries().ToArray());
 
-    public IEnumerable<EntryData> Entries() => Explicit().Concat(Executables()).Concat(Metadata());
+    public IEnumerable<EntryData> Entries() => Explicit().Concat(RootExecutables()).Concat(Metadata());
 
     private IEnumerable<EntryData> Metadata() => iconResources.Icons.Select(CreateIconEntry);
 
@@ -45,9 +45,9 @@ public class DataTar
         return new EntryData(path, properties, iconData.IconBytes);
     }
 
-    private IEnumerable<EntryData> Executables()
+    private IEnumerable<EntryData> RootExecutables()
     {
-        var entryDatas = contents.Entries.Where(tuple => tuple.Item2.IsExecutable)
+        var entryDatas = contents.Entries.Where(t => t.Item2 is ExecutableContent)
             .Select(tuple =>
             {
                 // TODO: Optimize length retrieval
