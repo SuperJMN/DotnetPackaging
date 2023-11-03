@@ -1,28 +1,36 @@
-﻿namespace DotnetPackaging.Deb;
+﻿using Zafiro.FileSystem;
+
+namespace DotnetPackaging.Deb;
 
 public abstract class Content
 {
-    public Content(Func<IObservable<byte>> bytes)
+    public Content(ZafiroPath path, Func<IObservable<byte>> bytes)
     {
         Bytes = bytes;
+        Path = path;
     }
+
+    public ZafiroPath Path { get; }
 
     public Func<IObservable<byte>> Bytes { get; }
 }
 
 public class RegularContent : Content
 {
-    public RegularContent(Func<IObservable<byte>> bytes) : base(bytes)
+    public RegularContent(ZafiroPath path, Func<IObservable<byte>> bytes) : base(path, bytes)
     {
     }
 }
 
 public class ExecutableContent : Content
 {
-    public ExecutableContent(Func<IObservable<byte>> bytes, IconResources icons) : base(bytes)
+    public string StartupWMClass;
+
+    public ExecutableContent(ZafiroPath path, Func<IObservable<byte>> bytes, IconResources resources) : base(path, bytes)
     {
-        Icons = icons;
+        Resources = resources;
     }
 
-    public IconResources Icons { get; }
+    public IconResources Resources { get; }
+    public string Name { get; set; }
 }

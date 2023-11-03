@@ -30,12 +30,12 @@ public class DebFileTests
     {
         var iconResources = IconResources.Create(new IconData(64, () => Observable.Using(() => File.OpenRead("TestFiles\\icon.png"), stream => stream.ToObservable())));
 
-        var contents = new Contents(new Dictionary<ZafiroPath, Content>
+        var contents = new Contents
         {
-            ["Contenido1.txt"] = new RegularContent(() => "Soy pepito".GetAsciiBytes().ToObservable()),
-            ["Contenido2.txt"] = new RegularContent(() => "Dale, Don, dale.".GetAsciiBytes().ToObservable()),
-            ["Contenido.Desktop"] = new ExecutableContent(() => "Dale, Don, dale.".GetAsciiBytes().ToObservable(), iconResources.Value),
-        });
+            new RegularContent("Contenido1.txt", () => "Soy pepito".GetAsciiBytes().ToObservable()),
+            new RegularContent("Contenido2.txt", () => "Dale, Don, dale.".GetAsciiBytes().ToObservable()),
+            new ExecutableContent("Contenido.Desktop", () => "Dale, Don, dale.".GetAsciiBytes().ToObservable(), iconResources.Value),
+        };
         
         var debFile = new DebFile(new Metadata
         {
