@@ -1,10 +1,18 @@
-﻿namespace DotnetPackaging.Tests.Tar;
+﻿using System.Reactive.Linq;
+
+namespace DotnetPackaging.Tests.Tar;
 
 public static class TestMixin
 {
-    public static void DumpTo(this IEnumerable<byte> bytes, string path)
+    public static async Task DumpTo(this IEnumerable<byte> bytes, string path)
     {
-        using var stream = File.Create(path);
-        stream.Write(bytes.ToArray());
+        await using var stream = File.Create(path);
+        await stream.WriteAsync(bytes.ToArray());
+    }
+
+    public static async Task DumpTo(this IObservable<byte> bytes, string path)
+    {
+        await using var stream = File.Create(path);
+        await stream.WriteAsync(bytes.ToEnumerable().ToArray());
     }
 }

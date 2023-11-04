@@ -4,5 +4,11 @@ namespace DotnetPackaging.Deb;
 
 public class Contents : Collection<Content>
 {
-    public IEnumerable<Content> Entries => this;
+    public Contents()
+    {
+    }
+
+    public Contents(IEnumerable<Content> contents) : base(contents.ToList())
+    {
+    }
 }

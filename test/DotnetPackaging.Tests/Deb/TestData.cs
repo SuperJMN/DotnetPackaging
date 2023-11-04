@@ -20,18 +20,29 @@ public static class TestData
 
     public static Contents Contents()
     {
-        var resources = IconResources.Create(new IconData(32, () => Observable.Using(() => File.OpenRead("TestFiles\\icon.png"), stream => stream.ToObservable())));
+        var desktopEntry = DesktopEntry();
 
         var contents = new Contents
         {
             new RegularContent("Contenido1.txt", () => "Soy pepito".GetAsciiBytes().ToObservable()),
             new RegularContent("Contenido2.txt", () => "Dale, Don, dale.".GetAsciiBytes().ToObservable()),
-            new ExecutableContent("Program.Desktop", () => "Binary data. Irrelevant for the test.".GetAsciiBytes().ToObservable(), resources.Value)
-            {
-                Name = "Program",
-                StartupWmClass = "My program",
-            },
+            new ExecutableContent("Program.Desktop", () => "Binary data. Irrelevant for the test.".GetAsciiBytes().ToObservable())
+            { 
+                DesktopEntry = desktopEntry,
+            }
         };
         return contents;
+    }
+
+    public static DesktopEntry DesktopEntry()
+    {
+        var desktopEntry = new DesktopEntry
+        {
+            Name = "Program",
+            Icons = IconResources.Create(new IconData(32, () => Observable.Using(() => File.OpenRead("TestFiles\\icon.png"), stream => stream.ToObservable()))).Value,
+            StartupWmClass = "My program",
+            Keywords = new[] { "test" },
+        };
+        return desktopEntry;
     }
 }

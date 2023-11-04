@@ -1,4 +1,5 @@
 ﻿using System.Reactive.Linq;
+using CSharpFunctionalExtensions;
 using DotnetPackaging.Common;
 using DotnetPackaging.Tar;
 using Zafiro;
@@ -28,9 +29,11 @@ public class DataTar
         {
             var entries = GetAllEntries(FileEntries());
             var entryDatas = entries.ToArray();
-            return new(entryDatas);
+            return new TarFile(entryDatas);
         }
     }
+
+    public IEnumerable<EntryData> FileEntries() => PackageContents().Concat(ApplicationEntries());
 
     private static IEnumerable<EntryData> GetAllEntries(IEnumerable<EntryData> fileEntries)
     {
@@ -46,40 +49,56 @@ public class DataTar
         return filePath.Parents().Select(path => DirectoryEntry(path));
     }
 
-    public IEnumerable<EntryData> FileEntries() => PackageContents().Concat(ApplicationEntries());
-
-    private IEnumerable<EntryData> ApplicationEntries()
+    private static EntryData DirectoryEntry(string path) => new(path, new Properties
     {
-        return contents.Entries
-            .OfType<ExecutableContent>()
-            .SelectMany(GetDesktopEntries);
-    }
+        Length = 0,
+        GroupName = "root",
+        OwnerUsername = "root",
+        GroupId = 1000,
+        OwnerId = 1000,
+        FileMode = FileMode.Parse("644"),
+        LastModification = DateTimeOffset.Now,
+        LinkIndicator = 5
+    }, Observable.Empty<byte>);
+
+    private IEnumerable<EntryData> ApplicationEntries() => contents
+        .OfType<ExecutableContent>()
+        .SelectMany(GetDesktopEntries);
 
     private IEnumerable<EntryData> GetDesktopEntries(ExecutableContent executableContent)
     {
-        var desktopEntry = DesktopEntry(executableContent);
+        var desktopEntry = executableContent.DesktopEntry.Map(entry => ExecutableEntries(executableContent, entry)).GetValueOrDefault(Enumerable.Empty<EntryData>());
         var appEntry = RootExecutable(executableContent);
-        var iconEntries = executableContent.Icons.Icons.Select(data => CreateIconEntry(executableContent, data));
 
-        return new[] { desktopEntry, appEntry }.Concat(iconEntries);
+        return new[] { appEntry }.Concat(desktopEntry);
     }
 
-    private EntryData DesktopEntry(ExecutableContent executableContent)
+    private IEnumerable<EntryData> ExecutableEntries(ExecutableContent executableContent, DesktopEntry desktopEntry)
     {
-        var path = ApplicationsRoot.Combine(executableContent.Name + ".desktop");
+        return new[] { DesktopEntry(executableContent, desktopEntry) }.Concat(IconEntries(desktopEntry));
+    }
+
+    private IEnumerable<EntryData> IconEntries(DesktopEntry entry)
+    {
+        return entry.Icons.Icons.Select(data => IconEntry(entry, data));
+    }
+
+    private EntryData DesktopEntry(ExecutableContent executableContent, DesktopEntry entry)
+    {
+        var path = ApplicationsRoot.Combine(executableContent.DesktopEntry + ".desktop");
 
         var shortcut = $"""
                         [Desktop Entry]
                         Type=Application
-                        Name={executableContent.Name}
-                        StartupWMClass={executableContent.StartupWmClass}
-                        GenericName={executableContent.StartupWmClass}
+                        Name={entry.Name}
+                        StartupWMClass={entry.StartupWmClass}
+                        GenericName={entry.StartupWmClass}
                         Comment=Privacy focused Bitcoin wallet.
-                        Icon={metadata.PackageName}
+                        Icon={entry.Name}
                         Terminal=false
                         Exec={executableContent.Path}
                         Categories=Office;Finance;
-                        Keywords=bitcoin;wallet;crypto;blockchain;wasabi;privacy;anon;awesome;
+                        Keywords={entry.Keywords};
                         """.FromCrLfToLf();
 
         return new EntryData(path, new Properties
@@ -87,7 +106,7 @@ public class DataTar
             GroupName = "root",
             OwnerUsername = "root",
             Length = shortcut.Length,
-            FileMode = FileMode.Parse("755"),
+            FileMode = FileMode.Parse("644"),
             GroupId = 1000,
             LastModification = DateTimeOffset.Now,
             OwnerId = 1000,
@@ -95,9 +114,9 @@ public class DataTar
         }, () => shortcut.GetAsciiBytes().ToObservable());
     }
 
-    private EntryData CreateIconEntry(ExecutableContent executableContent, IconData iconData)
+    private EntryData IconEntry(DesktopEntry desktopEntry, IconData iconData)
     {
-        var path = IconsRoot.Combine($"{iconData.TargetSize}x{iconData.TargetSize}/apps/{executableContent.Name}.png");
+        var path = IconsRoot.Combine($"{iconData.TargetSize}x{iconData.TargetSize}/apps/{desktopEntry.Name}.png");
         var properties = new Properties
         {
             FileMode = FileMode.Parse("775"),
@@ -124,7 +143,7 @@ public class DataTar
             GroupName = "root",
             OwnerUsername = "root",
             Length = length,
-            FileMode = FileMode.Parse("755"),
+            FileMode = FileMode.Parse("777"),
             GroupId = 1000,
             LastModification = DateTimeOffset.Now,
             OwnerId = 1000,
@@ -145,7 +164,7 @@ public class DataTar
 
     private IEnumerable<EntryData> PackageContents()
     {
-        var entryDatas = contents.Entries.Select(content =>
+        var entryDatas = contents.Select(content =>
         {
             var length = content.Bytes().ToEnumerable().Count();
 
@@ -164,16 +183,4 @@ public class DataTar
 
         return entryDatas;
     }
-
-    private static Tar.EntryData DirectoryEntry(string path) => new(path, new Tar.Properties()
-    {
-        Length = 0,
-        GroupName = "root",
-        OwnerUsername = "root",
-        GroupId = 1000,
-        OwnerId = 1000,
-        FileMode = FileMode.Parse("644"),
-        LastModification = DateTimeOffset.Now,
-        LinkIndicator = 5,
-    }, Observable.Empty<byte>);
 }
