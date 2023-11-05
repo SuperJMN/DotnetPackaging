@@ -91,7 +91,7 @@ public class DataTar
                         [Desktop Entry]
                         Type=Application
                         Name={desktopEntry.Name}
-                        StartupWMClass={desktopEntry.StartupWmClass}
+                        StartupWMClass={executableContent.Path.Name()}
                         GenericName={desktopEntry.StartupWmClass}
                         Comment={desktopEntry.Comment}
                         Icon={desktopEntry.Name}
