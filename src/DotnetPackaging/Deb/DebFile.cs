@@ -2,7 +2,6 @@
 using DotnetPackaging.Ar;
 using DotnetPackaging.Common;
 using DotnetPackaging.Tar;
-using Zafiro.FileSystem;
 using EntryData = DotnetPackaging.Ar.EntryData;
 using Properties = DotnetPackaging.Ar.Properties;
 
@@ -19,7 +18,14 @@ public class DebFile
         this.contents = contents;
     }
 
-    public IObservable<byte> Bytes => new ArFile(DebEntry(), Control(), Data()).Bytes;
+    public IObservable<byte> Bytes
+    {
+        get
+        {
+            var fileEntries = new[] { DebEntry(), Control(), Data() };
+            return new ArFile(fileEntries).Bytes;
+        }
+    }
 
     private EntryData Control()
     {
@@ -44,7 +50,7 @@ public class DebFile
                     Priority: optional
                     Section: utils
                     Maintainer: {metadata.Maintainer}
-                    Version: 2.0.4
+                    Version: {metadata.Version}
                     Homepage: {metadata.Homepage}
                     Vcs-Git: git://github.com/zkSNACKs/WalletWasabi.git
                     Vcs-Browser: https://github.com/zkSNACKs/WalletWasabi
@@ -86,7 +92,7 @@ public class DebFile
 
     private EntryData Data()
     {
-        var dataTar = DataTar();
+        var dataTar = new DataTar(metadata, contents).Tar;
 
         var properties = new Properties()
         {
@@ -98,34 +104,6 @@ public class DebFile
         };
 
         return new EntryData("data.tar", properties, () => dataTar.Bytes);
-    }
-
-    public TarFile DataTar()
-    {
-        var fileEntries = contents.Entries.Select(tuple =>
-        {
-            var path = ZafiroPath.Create($"./usr/local/bin/{metadata.PackageName}").Value.Combine(tuple.Item1);
-
-            return new Tar.EntryData(path, new Tar.Properties()
-            {
-                GroupName = "root",
-                OwnerUsername = "root",
-                Length = tuple.Item2().ToEnumerable().Count(),
-                FileMode = FileMode.Parse("644"),
-                GroupId = 1000,
-                LastModification = DateTimeOffset.Now,
-                OwnerId = 1000,
-                LinkIndicator = 0
-            }, tuple.Item2);
-        });
-
-        var dirEntries = new DebPaths(metadata.PackageName, contents.Entries.Select(x => x.Item1))
-            .Directories()
-            .Select(path => path + "/")
-            .OrderBy(x => x.Length)
-            .Select(DirEntry);
-        
-        return new TarFile(dirEntries.Concat(fileEntries).ToArray());
     }
 
     private EntryData DebEntry()

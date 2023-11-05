@@ -8,7 +8,7 @@ public static class ObservableExtensions
     {
         return sequence
             .Buffer(blockSize)
-            .SelectMany(block =>
+            .Select(block =>
             {
                 int paddingCount = blockSize - block.Count;
                 if (paddingCount > 0)
@@ -17,6 +17,6 @@ public static class ObservableExtensions
                     return block.Concat(paddingBlock).ToObservable();
                 }
                 return block.ToObservable();
-            });
+            }).Concat();
     }
 }

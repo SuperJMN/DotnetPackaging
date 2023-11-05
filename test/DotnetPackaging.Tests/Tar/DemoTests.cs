@@ -1,4 +1,5 @@
 ﻿using System.Reactive.Linq;
+using DotnetPackaging.Deb;
 using DotnetPackaging.Tar;
 using Zafiro.IO;
 
@@ -40,5 +41,32 @@ public class DemoTests
 
 
         await tarFile.Bytes.DumpTo(output);
+    }
+
+    [Fact]
+    public async Task TarIcon()
+    {
+        var iconData = new IconData(64, () =>
+        {
+            return Observable.Using(() => File.OpenRead("Tar\\TestFiles\\icon.png"), stream => stream.ToObservable());
+        });
+
+        var properties = new Properties()
+        {
+            Length = iconData.IconBytes().ToEnumerable().Count(),
+            FileMode = FileMode.Parse("777"),
+            LinkIndicator = 0,
+            GroupId = 1000,
+            GroupName = "root",
+            LastModification = DateTimeOffset.Now,
+            OwnerId = 1000,
+            OwnerUsername = "root"
+        };
+
+        var iconEntry = new EntryData("Icon.png", properties, iconData.IconBytes);
+        var entry = new Entry(iconEntry);
+        await using var output = File.Create("C:\\Users\\jmn\\Desktop\\Testing\\TarIcon.tar");
+        
+        await entry.Bytes.DumpTo(output);
     }
 }

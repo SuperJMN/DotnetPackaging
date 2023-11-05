@@ -1,15 +1,14 @@
-﻿using Zafiro.FileSystem;
+﻿using System.Collections.ObjectModel;
 
 namespace DotnetPackaging.Deb;
 
-public class Contents
+public class Contents : Collection<Content>
 {
-    private readonly Dictionary<ZafiroPath, Func<IObservable<byte>>> dictionary;
-
-    public Contents(Dictionary<ZafiroPath, Func<IObservable<byte>>> dictionary)
+    public Contents()
     {
-        this.dictionary = dictionary;
     }
 
-    public IEnumerable<(ZafiroPath, Func<IObservable<byte>>)> Entries => dictionary.AsEnumerable().Select(a => (a.Key, a.Value));
+    public Contents(IEnumerable<Content> contents) : base(contents.ToList())
+    {
+    }
 }

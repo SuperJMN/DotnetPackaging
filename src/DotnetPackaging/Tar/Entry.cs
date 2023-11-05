@@ -24,7 +24,8 @@ public class Entry
         {
             var header = Header()
                 .AsBlocks<byte>(BlockSize, 0);
-            var content = Contents().AsBlocks<byte>(BlockSize, 0);
+            var content = entryData.Contents()
+                .AsBlocks<byte>(BlockSize, 0);
             var bytes = header.Concat(content);
             return bytes;
         }
@@ -93,7 +94,7 @@ public class Entry
     }
 
     private IObservable<byte> Contents()
-    {
+    { 
         return entryData.Contents();
     }
 
