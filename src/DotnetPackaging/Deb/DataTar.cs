@@ -67,13 +67,13 @@ public class DataTar
 
     private IEnumerable<EntryData> GetDesktopEntries(ExecutableContent executableContent)
     {
-        var desktopEntry = executableContent.DesktopEntry.Map(entry => ExecutableEntries(executableContent, entry)).GetValueOrDefault(Enumerable.Empty<EntryData>());
+        var desktopEntries = executableContent.DesktopEntry.Map(entry => DesktopEntries(executableContent, entry)).GetValueOrDefault(Enumerable.Empty<EntryData>());
         var appEntry = RootExecutable(executableContent);
 
-        return new[] { appEntry }.Concat(desktopEntry);
+        return new[] { appEntry }.Concat(desktopEntries);
     }
 
-    private IEnumerable<EntryData> ExecutableEntries(ExecutableContent executableContent, DesktopEntry desktopEntry)
+    private IEnumerable<EntryData> DesktopEntries(ExecutableContent executableContent, DesktopEntry desktopEntry)
     {
         return new[] { DesktopEntry(executableContent, desktopEntry) }.Concat(IconEntries(desktopEntry));
     }
@@ -83,22 +83,22 @@ public class DataTar
         return entry.Icons.Icons.Select(data => IconEntry(entry, data));
     }
 
-    private EntryData DesktopEntry(ExecutableContent executableContent, DesktopEntry entry)
+    private EntryData DesktopEntry(ExecutableContent executableContent, DesktopEntry desktopEntry)
     {
-        var path = ApplicationsRoot.Combine(entry.Name + ".desktop");
+        var path = ApplicationsRoot.Combine(desktopEntry.Name + ".desktop");
 
         var shortcut = $"""
                         [Desktop Entry]
                         Type=Application
-                        Name={entry.Name}
-                        StartupWMClass={entry.StartupWmClass}
-                        GenericName={entry.StartupWmClass}
-                        Comment=Privacy focused Bitcoin wallet.
-                        Icon={entry.Name}
+                        Name={desktopEntry.Name}
+                        StartupWMClass={desktopEntry.StartupWmClass}
+                        GenericName={desktopEntry.StartupWmClass}
+                        Comment={desktopEntry.Comment}
+                        Icon={desktopEntry.Name}
                         Terminal=false
-                        Exec={executableContent.Path}
-                        Categories=Office;Finance;
-                        Keywords={string.Join(";", entry.Keywords)};
+                        Exec={executableContent.CommandName}
+                        Categories={string.Join(";", desktopEntry.Categories)};
+                        Keywords={string.Join(";", desktopEntry.Keywords)};
                         """.FromCrLfToLf();
 
         return new EntryData(path, new Properties
@@ -136,7 +136,8 @@ public class DataTar
         // TODO: Optimize length retrieval
         var path = ZafiroPath.Create(Root).Value.Combine(executableContent.CommandName);
 
-        var length = GetExecEntry(executableContent.CommandName).ToEnumerable().Count();
+        var execEntry = GetExecEntry(executableContent);
+        var length = execEntry.ToEnumerable().Count();
 
         return new EntryData(path, new Properties
         {
@@ -148,20 +149,22 @@ public class DataTar
             LastModification = DateTimeOffset.Now,
             OwnerId = 1000,
             LinkIndicator = 0
-        }, () => GetExecEntry(executableContent.Path));
+        }, () => execEntry);
     }
 
-    private IObservable<byte> GetExecEntry(string commandName)
+    private IObservable<byte> GetExecEntry(ExecutableContent executableContent)
     {
         var dotLessPackageRootPath = PackageRoot.ToString()[1..];
+        var fullExePath = $"{dotLessPackageRootPath}/{executableContent.Path}";
 
         var text = $"""
                     #!/usr/bin/env sh
-                    {dotLessPackageRootPath}/{commandName} $@
+                    {fullExePath} $@
 
                     """.FromCrLfToLf();
 
-        return text.GetAsciiBytes().ToObservable();
+        var asciiBytes = text.GetAsciiBytes();
+        return asciiBytes.ToObservable();
     }
 
     private IEnumerable<EntryData> PackageContents()

@@ -39,10 +39,12 @@ public static class TestData
     {
         var desktopEntry = new DesktopEntry
         {
-            Name = "Program",
+            Name = "Test Program",
             Icons = IconResources.Create(new IconData(32, () => Observable.Using(() => File.OpenRead("TestFiles\\icon.png"), stream => stream.ToObservable()))).Value,
             StartupWmClass = "My program",
             Keywords = new[] { "test" },
+            Categories = new[] { "Utilities" },
+            Comment = "This is just a test"
         };
         return desktopEntry;
     }

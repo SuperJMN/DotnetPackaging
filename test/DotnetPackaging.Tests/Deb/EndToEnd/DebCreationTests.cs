@@ -33,6 +33,8 @@ public class DebCreationTests
             Icons = IconResources.Create(new IconData(32, () => Observable.Using(() => File.OpenRead("TestFiles\\icon.png"), stream => stream.ToObservable()))).Value,
             StartupWmClass = "AvaloniaSyncer",
             Keywords = new[] { "file manager" },
+            Comment = "The best file explorer ever",
+            Categories = new [] { "FileManager", "Filesystem", "Utility", "FileTransfer", "Archiving"}
         };
 
         var dict = new Dictionary<ZafiroPath, ExecutableMetadata>()
