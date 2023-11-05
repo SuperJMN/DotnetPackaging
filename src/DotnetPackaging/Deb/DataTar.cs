@@ -21,7 +21,7 @@ public class DataTar
     private ZafiroPath Root => "./usr/local/bin";
     private ZafiroPath IconsRoot => "./usr/share/icons/hicolor";
     private ZafiroPath ApplicationsRoot => "./usr/share/applications";
-    private ZafiroPath PackageRoot => Root.Combine(metadata.PackageName);
+    private ZafiroPath PackageRoot => new ZafiroPath("./usr/share").Combine(metadata.PackageName);
 
     public TarFile Tar
     {

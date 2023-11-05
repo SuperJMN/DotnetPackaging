@@ -2,8 +2,6 @@
 using DotnetPackaging.Ar;
 using DotnetPackaging.Common;
 using DotnetPackaging.Tar;
-using Zafiro.FileSystem;
-using Entry = DotnetPackaging.Tar.Entry;
 using EntryData = DotnetPackaging.Ar.EntryData;
 using Properties = DotnetPackaging.Ar.Properties;
 
@@ -52,7 +50,7 @@ public class DebFile
                     Priority: optional
                     Section: utils
                     Maintainer: {metadata.Maintainer}
-                    Version: 2.0.4
+                    Version: {metadata.Version}
                     Homepage: {metadata.Homepage}
                     Vcs-Git: git://github.com/zkSNACKs/WalletWasabi.git
                     Vcs-Browser: https://github.com/zkSNACKs/WalletWasabi
