@@ -16,7 +16,7 @@ public class DebCreationTests
     [Fact]
     public async Task Create()
     {
-        var metadata = new Metadata()
+        var metadata = new Metadata
         {
             PackageName = "AvaloniaSyncer",
             Description = "Best file explorer you'll ever find",
@@ -24,20 +24,20 @@ public class DebCreationTests
             Architecture = "amd64",
             Homepage = "https://www.something.com",
             License = "MIT",
-            Maintainer = "Me"
+            Maintainer = "SuperJMN@outlook.com"
         };
 
         var desktopEntry = new DesktopEntry()
         {
             Name = "Avalonia Syncer",
             Icons = IconResources.Create(new IconData(32, () => Observable.Using(() => File.OpenRead("TestFiles\\icon.png"), stream => stream.ToObservable()))).Value,
-            StartupWmClass = "Avalonia Syncer",
+            StartupWmClass = "AvaloniaSyncer",
             Keywords = new[] { "file manager" },
         };
 
-        var dict = new Dictionary<ZafiroPath, DesktopEntry>()
+        var dict = new Dictionary<ZafiroPath, ExecutableMetadata>()
         {
-            ["AvaloniaSyncer.Desktop"] = desktopEntry,
+            ["AvaloniaSyncer.Desktop"] = new("avaloniasyncer", desktopEntry),
         };
 
         var fs = new LocalFileSystem(new FileSystem(), Maybe<ILogger>.None);
@@ -50,30 +50,31 @@ public class DebCreationTests
         result.Should().Succeed();
     }
 
-    private Task<Result<IEnumerable<Content>>> GetContents(IZafiroDirectory directory, Dictionary<ZafiroPath, DesktopEntry> desktopEntries)
+    private Task<Result<IEnumerable<Content>>> GetContents(IZafiroDirectory directory, Dictionary<ZafiroPath, ExecutableMetadata> desktopEntries)
     {
-        return directory.GetFilesInTree().Map(files => files.Select(file => GetContent(file, desktopEntries)));
+        return directory.GetFilesInTree().Map(files => files.Select(file => GetContent(directory, file, desktopEntries)));
     }
 
-    private Content GetContent(IZafiroFile file, IReadOnlyDictionary<ZafiroPath, DesktopEntry> desktopEntries)
+    private Content GetContent(IZafiroDirectory zafiroDirectory, IZafiroFile file, IReadOnlyDictionary<ZafiroPath, ExecutableMetadata> desktopEntries)
     {
         return desktopEntries
             .TryFind(file.Path.Name())
             .Match(
-                entry => ExecutableContent(file, entry), 
-                () => RegularContent(file));
+                entry => ExecutableContent(zafiroDirectory, file, entry), 
+                () => RegularContent(zafiroDirectory, file));
     }
 
-    private RegularContent RegularContent(IZafiroFile file)
+    private RegularContent RegularContent(IZafiroDirectory zafiroDirectory, IZafiroFile file)
     {
-        return new RegularContent(file.Path, () =>  GetFileContents(file));
+        return new RegularContent(file.Path.MakeRelativeTo(zafiroDirectory.Path), () =>  GetFileContents(file));
     }
 
-    private Content ExecutableContent(IZafiroFile file, DesktopEntry entry)
+    private Content ExecutableContent(IZafiroDirectory zafiroDirectory, IZafiroFile file, ExecutableMetadata metadata)
     {
-        return new ExecutableContent(file.Path, () => GetFileContents(file))
+        return new ExecutableContent(file.Path.MakeRelativeTo(zafiroDirectory.Path), () => GetFileContents(file))
         {
-            DesktopEntry = entry,
+            DesktopEntry = metadata.DesktopEntry,
+            CommandName = metadata.CommandName,
         };
     }
 
@@ -82,3 +83,5 @@ public class DebCreationTests
         return Zafiro.Mixins.ObservableEx.Using(async () => (await file.GetContents()).Value, stream => stream.ToObservable());
     }
 }
+
+public record ExecutableMetadata(string CommandName, DesktopEntry DesktopEntry);

@@ -10,4 +10,5 @@ public class ExecutableContent : Content
     }
 
     public required Maybe<DesktopEntry> DesktopEntry { get; init; }
+    public required string CommandName { get; init; }
 }

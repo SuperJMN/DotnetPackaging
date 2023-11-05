@@ -56,7 +56,7 @@ public class DataTar
         OwnerUsername = "root",
         GroupId = 1000,
         OwnerId = 1000,
-        FileMode = FileMode.Parse("644"),
+        FileMode = FileMode.Parse("777"),
         LastModification = DateTimeOffset.Now,
         LinkIndicator = 5
     }, Observable.Empty<byte>);
@@ -85,7 +85,7 @@ public class DataTar
 
     private EntryData DesktopEntry(ExecutableContent executableContent, DesktopEntry entry)
     {
-        var path = ApplicationsRoot.Combine(executableContent.DesktopEntry + ".desktop");
+        var path = ApplicationsRoot.Combine(entry.Name + ".desktop");
 
         var shortcut = $"""
                         [Desktop Entry]
@@ -98,7 +98,7 @@ public class DataTar
                         Terminal=false
                         Exec={executableContent.Path}
                         Categories=Office;Finance;
-                        Keywords={entry.Keywords};
+                        Keywords={string.Join(";", entry.Keywords)};
                         """.FromCrLfToLf();
 
         return new EntryData(path, new Properties
@@ -134,9 +134,9 @@ public class DataTar
     private EntryData RootExecutable(ExecutableContent executableContent)
     {
         // TODO: Optimize length retrieval
-        var path = ZafiroPath.Create(Root).Value.Combine(executableContent.Path);
+        var path = ZafiroPath.Create(Root).Value.Combine(executableContent.CommandName);
 
-        var length = GetExecEntry(executableContent.Path).ToEnumerable().Count();
+        var length = GetExecEntry(executableContent.CommandName).ToEnumerable().Count();
 
         return new EntryData(path, new Properties
         {
@@ -151,11 +151,13 @@ public class DataTar
         }, () => GetExecEntry(executableContent.Path));
     }
 
-    private IObservable<byte> GetExecEntry(ZafiroPath pathToExecutable)
+    private IObservable<byte> GetExecEntry(string commandName)
     {
+        var dotLessPackageRootPath = PackageRoot.ToString()[1..];
+
         var text = $"""
                     #!/usr/bin/env sh
-                    {PackageRoot}/{pathToExecutable} $@
+                    {dotLessPackageRootPath}/{commandName} $@
 
                     """.FromCrLfToLf();
 
@@ -173,7 +175,7 @@ public class DataTar
                 GroupName = "root",
                 OwnerUsername = "root",
                 Length = length,
-                FileMode = FileMode.Parse("644"),
+                FileMode = content is RegularContent ? FileMode.Parse("644") : FileMode.Parse("751"),
                 GroupId = 1000,
                 LastModification = DateTimeOffset.Now,
                 OwnerId = 1000,

@@ -29,6 +29,7 @@ public static class TestData
             new ExecutableContent("Program.Desktop", () => "Binary data. Irrelevant for the test.".GetAsciiBytes().ToObservable())
             { 
                 DesktopEntry = desktopEntry,
+                CommandName = "myprogram",
             }
         };
         return contents;
