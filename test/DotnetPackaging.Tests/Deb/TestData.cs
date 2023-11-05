@@ -15,7 +15,8 @@ public static class TestData
         Architecture = "amd64",
         Homepage = "https://www.something.com",
         License = "MIT",
-        Maintainer = "Me"
+        Maintainer = "Me",
+        Version = "0.0.1"
     };
 
     public static Contents Contents()

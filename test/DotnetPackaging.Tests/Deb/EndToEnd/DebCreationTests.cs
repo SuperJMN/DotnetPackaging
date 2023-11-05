@@ -35,7 +35,8 @@ public class DebCreationTests
             Architecture = "amd64",
             Homepage = "https://www.something.com",
             License = "MIT",
-            Maintainer = "SuperJMN@outlook.com"
+            Maintainer = "SuperJMN@outlook.com",
+            Version = "v0.1.33"
         };
 
         var executableMetadatas = new Dictionary<ZafiroPath, ExecutableMetadata>()
