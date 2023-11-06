@@ -1,0 +1,54 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net7.0</TargetFramework>
+		<RootNamespace></RootNamespace>
+		<NoWarn>CS0649;CS0169</NoWarn>
+		<NukeRootDirectory>..</NukeRootDirectory>
+		<NukeScriptDirectory>..</NukeScriptDirectory>
+		<NukeTelemetryVersion>1</NukeTelemetryVersion>
+		<IsPackable>False</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Nuke.Common" Version="7.0.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageDownload Include="GitVersion.Tool" Version="[5.12.0]" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="..\.nuke\temp\build.2023-06-15_10-14-20.log" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="..\.nuke\temp\build.2023-06-15_10-15-22.log" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="..\.nuke\temp\build.2023-06-15_10-16-00.log" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="..\.nuke\temp\build.2023-07-27_15-50-07.log" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="..\.nuke\temp\build.2023-08-03_01-20-43.log" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="..\.nuke\temp\build.2023-09-20_15-35-28.log" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="..\.nuke\temp\build.log" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="..\.nuke\temp\build.2023-06-15_10-14-20.log" />
+	</ItemGroup>
+
+</Project>
