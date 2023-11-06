@@ -14,5 +14,6 @@
 		<PackageReference Include="SixLabors.ImageSharp" Version="3.0.2" />
 		<PackageReference Include="Zafiro" Version="4.0.12" />
 		<PackageReference Include="Zafiro.FileSystem" Version="4.0.35" />
+		<PackageReference Include="Zafiro.FileSystem.Local" Version="4.0.35" />
 	</ItemGroup>
 </Project>
