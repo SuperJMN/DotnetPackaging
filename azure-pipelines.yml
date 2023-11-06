@@ -1,0 +1,9 @@
+variables:
+  Agent.Source.Git.ShallowFetchDepth: 0
+
+steps:
+- checkout: self
+
+- powershell: .\build.ps1
+  env:
+    NuGetApiKey: $(NuGetApiKey)
