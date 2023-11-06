@@ -27,7 +27,7 @@ public class DebCreationTests
         Homepage = "https://www.something.com",
         License = "MIT",
         Maintainer = "SuperJMN@outlook.com",
-        Version = "v0.1.33"
+        Version = "0.1.33"
     };
 
     public Dictionary<ZafiroPath, ExecutableMetadata> ExecutableFiles => new()
@@ -46,18 +46,4 @@ public class DebCreationTests
 
         result.Should().Succeed();
     }
-
-    //[Fact]
-    //public async Task Create_deb_file_AvaloniaSyncer()
-    //{
-    //    var fs = new LocalFileSystem(new FileSystem(), Maybe<ILogger>.None);
-
-    //    var creation =
-    //        from contentDirectory in fs.GetDirectory("C:/Users/JMN/Desktop/Testing/AvaloniaSyncer")
-    //        from output in fs.GetFile("C:/Users/JMN/Desktop/Testing/AvaloniaSyncer.deb")
-    //        select new DebBuilder().Create(contentDirectory, Metadata, ExecutableFiles, output);
-
-    //    var result = await creation;
-    //    result.Should<Task<Result>>().Succeed();
-    //}
 }

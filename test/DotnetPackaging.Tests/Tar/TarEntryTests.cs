@@ -1,4 +1,5 @@
 ﻿using System.Reactive.Linq;
+using DotnetPackaging.Common;
 using DotnetPackaging.Tar;
 using FluentAssertions;
 using FluentAssertions.Extensions;

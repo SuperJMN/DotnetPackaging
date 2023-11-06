@@ -5,6 +5,7 @@ using Zafiro.IO;
 namespace DotnetPackaging.Deb;
 
 using System;
+using DotnetPackaging.Common;
 
 public class DebBuilder
 {

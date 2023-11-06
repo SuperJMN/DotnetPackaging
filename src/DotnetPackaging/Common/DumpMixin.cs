@@ -2,7 +2,7 @@
 using DotnetPackaging.Deb;
 using Zafiro.FileSystem;
 
-namespace DotnetPackaging;
+namespace DotnetPackaging.Common;
 
 public static class DumpMixin
 {
@@ -20,7 +20,7 @@ public static class DumpMixin
 
     public static async Task DumpTo(this IObservable<byte> bytes, IZafiroFile file)
     {
-        await using var stream = new ObservableStream(bytes);
-        await file.SetContents(stream);
+        await using var memoryStream = new MemoryStream(bytes.ToEnumerable().ToArray());
+        await file.SetContents(memoryStream);
     }
 }
