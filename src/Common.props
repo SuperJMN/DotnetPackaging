@@ -1,0 +1,25 @@
+<Project>
+	<PropertyGroup>
+		<AssemblyName>$(MSBuildProjectName)</AssemblyName>
+		<RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PackageId>$(MSBuildProjectName)</PackageId>
+		<Authors>SuperJMN</Authors>
+		<Description>Sweatless application distributing experience</Description>
+		<PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
+		<PackageReleaseNotes>Go all cremoso with and spread your bytes</PackageReleaseNotes>
+		<PackageTags>Avalonia AvaloniaUI Deb Debian Packaging Packager dpgk tar</PackageTags>
+		<Product>DotnetPackaging</Product>
+		<Company>José Manuel Nieto (@SuperJMN)</Company>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageIcon>icon.png</PackageIcon>
+		<PackageIconUrl />
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\..\icon.png" Pack="true" PackagePath=""/>
+	</ItemGroup>
+
+</Project>
