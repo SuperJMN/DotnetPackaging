@@ -2,6 +2,7 @@
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb;
 using Serilog;
+using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Local;
 
@@ -21,9 +22,11 @@ public static class Create
     {
         var fs = new LocalFileSystem(new FileSystem(), Maybe<ILogger>.None);
 
-        return await
-            from contentDirectory in fs.GetDirectory(contentsPath.ToZafiroPath())
-            from output in fs.GetFile(outputPathForDebFile.ToZafiroPath())
-            select new DebBuilder().Create(contentDirectory, metadata, executableFiles, output);
+        var result = await ResultFactory.CombineAndBind(
+            fs.GetDirectory(contentsPath.ToZafiroPath()),
+            fs.GetFile(outputPathForDebFile.ToZafiroPath()),
+            (contentDirectory, output) => new DebBuilder().Create(contentDirectory, metadata, executableFiles, output));
+
+        return result;
     }
 }
