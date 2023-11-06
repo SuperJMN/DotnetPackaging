@@ -1,21 +1,16 @@
-﻿using System.IO.Abstractions;
-using System.Reactive.Linq;
-using CSharpFunctionalExtensions;
-using DotnetPackaging.Deb;
-using DotnetPackaging.Tests.Tar;
-using FluentAssertions;
-using Serilog;
+﻿using CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
-using Zafiro.FileSystem.Local;
 using Zafiro.IO;
 
-namespace DotnetPackaging.Tests.Deb.EndToEnd;
+namespace DotnetPackaging.Deb;
+
+using System;
 
 public class DebBuilder
 {
     public async Task<Result> Create(IZafiroDirectory contentDirectory, Metadata metadata, Dictionary<ZafiroPath, ExecutableMetadata> dict, IZafiroFile debFile)
     {
-        var result = await AsyncResultExtensionsLeftOperand.Map<IEnumerable<Content>, DebFile>(GetContents(contentDirectory, dict), contents => new DebFile(metadata, new Contents(contents)));
+        var result = await GetContents(contentDirectory, dict).Map<IEnumerable<Content>, DebFile>(contents => new DebFile(metadata, new Contents(contents)));
         await result.Tap(deb => deb.Bytes.DumpTo(debFile));
         return result;
     }

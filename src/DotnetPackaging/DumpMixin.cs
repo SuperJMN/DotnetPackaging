@@ -1,9 +1,10 @@
 ﻿using System.Reactive.Linq;
+using DotnetPackaging.Deb;
 using Zafiro.FileSystem;
 
-namespace DotnetPackaging.Tests.Tar;
+namespace DotnetPackaging;
 
-public static class TestMixin
+public static class DumpMixin
 {
     public static async Task DumpTo(this IEnumerable<byte> bytes, string path)
     {
@@ -19,7 +20,7 @@ public static class TestMixin
 
     public static async Task DumpTo(this IObservable<byte> bytes, IZafiroFile file)
     {
-        await using var stream = new MemoryStream(bytes.ToEnumerable().ToArray());
+        await using var stream = new ObservableStream(bytes);
         await file.SetContents(stream);
     }
 }

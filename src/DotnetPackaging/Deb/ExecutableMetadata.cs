@@ -1,5 +1,3 @@
-﻿using DotnetPackaging.Deb;
-
-namespace DotnetPackaging.Tests.Deb.EndToEnd;
+﻿namespace DotnetPackaging.Deb;
 
 public record ExecutableMetadata(string CommandName, DesktopEntry DesktopEntry);

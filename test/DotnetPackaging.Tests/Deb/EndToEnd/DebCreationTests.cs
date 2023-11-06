@@ -1,55 +1,63 @@
-﻿using System.IO.Abstractions;
-using System.Reactive.Linq;
-using CSharpFunctionalExtensions;
+﻿using System.Reactive.Linq;
 using DotnetPackaging.Deb;
 using FluentAssertions;
-using Serilog;
 using Zafiro.FileSystem;
-using Zafiro.FileSystem.Local;
 using Zafiro.IO;
 
 namespace DotnetPackaging.Tests.Deb.EndToEnd;
 
 public class DebCreationTests
 {
-    [Fact]
-    public async Task Create_deb_file_AvaloniaSyncer()
+    public DesktopEntry DesktopEntry => new()
     {
-        var fs = new LocalFileSystem(new FileSystem(), Maybe<ILogger>.None);
+        Name = "Avalonia Syncer",
+        Icons = IconResources.Create(new IconData(32, () => Observable.Using(() => File.OpenRead("TestFiles\\icon.png"), stream => stream.ToObservable()))).Value,
+        StartupWmClass = "AvaloniaSyncer",
+        Keywords = new[] { "file manager" },
+        Comment = "The best file explorer ever",
+        Categories = new [] { "FileManager", "Filesystem", "Utility", "FileTransfer", "Archiving"}
+    };
 
-        var desktopEntry = new DesktopEntry()
-        {
-            Name = "Avalonia Syncer",
-            Icons = IconResources.Create(new IconData(32, () => Observable.Using(() => File.OpenRead("TestFiles\\icon.png"), stream => stream.ToObservable()))).Value,
-            StartupWmClass = "AvaloniaSyncer",
-            Keywords = new[] { "file manager" },
-            Comment = "The best file explorer ever",
-            Categories = new [] { "FileManager", "Filesystem", "Utility", "FileTransfer", "Archiving"}
-        };
+    public Metadata Metadata => new()
+    {
+        PackageName = "AvaloniaSyncer",
+        Description = "Best file explorer you'll ever find",
+        ApplicationName = "Avalonia Syncer",
+        Architecture = "amd64",
+        Homepage = "https://www.something.com",
+        License = "MIT",
+        Maintainer = "SuperJMN@outlook.com",
+        Version = "v0.1.33"
+    };
 
-        var metadata = new Metadata
-        {
-            PackageName = "AvaloniaSyncer",
-            Description = "Best file explorer you'll ever find",
-            ApplicationName = "Avalonia Syncer",
-            Architecture = "amd64",
-            Homepage = "https://www.something.com",
-            License = "MIT",
-            Maintainer = "SuperJMN@outlook.com",
-            Version = "v0.1.33"
-        };
+    public Dictionary<ZafiroPath, ExecutableMetadata> ExecutableFiles => new()
+    {
+        ["AvaloniaSyncer.Desktop"] = new("avaloniasyncer", DesktopEntry),
+    };
 
-        var executableMetadatas = new Dictionary<ZafiroPath, ExecutableMetadata>()
-        {
-            ["AvaloniaSyncer.Desktop"] = new("avaloniasyncer", desktopEntry),
-        };
+    [Fact]
+    public async Task Local_deb_builder()
+    {
+        var result  = await Create.Deb(
+            contentsPath: @"C:\Users\JMN\Desktop\Testing\AvaloniaSyncer", 
+            outputPathForDebFile: @"C:\Users\JMN\Desktop\Testing\AvaloniaSyncer.deb", 
+            metadata: Metadata,
+            executableFiles: ExecutableFiles);
 
-        var creation =
-            from contentDirectory in fs.GetDirectory("C:/Users/JMN/Desktop/Testing/AvaloniaSyncer")
-            from output in fs.GetFile("C:/Users/JMN/Desktop/Testing/AvaloniaSyncer.deb")
-            select new DebBuilder().Create(contentDirectory, metadata, executableMetadatas, output);
-
-        var result = await creation;
-        result.Should<Task<Result>>().Succeed();
+        result.Should().Succeed();
     }
+
+    //[Fact]
+    //public async Task Create_deb_file_AvaloniaSyncer()
+    //{
+    //    var fs = new LocalFileSystem(new FileSystem(), Maybe<ILogger>.None);
+
+    //    var creation =
+    //        from contentDirectory in fs.GetDirectory("C:/Users/JMN/Desktop/Testing/AvaloniaSyncer")
+    //        from output in fs.GetFile("C:/Users/JMN/Desktop/Testing/AvaloniaSyncer.deb")
+    //        select new DebBuilder().Create(contentDirectory, Metadata, ExecutableFiles, output);
+
+    //    var result = await creation;
+    //    result.Should<Task<Result>>().Succeed();
+    //}
 }
