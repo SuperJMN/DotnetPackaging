@@ -1,6 +1,13 @@
 ﻿using System.CommandLine;
+using CSharpFunctionalExtensions;
 using DotnetPackage.Console;
+using DotnetPackage.Console.Dtos;
 using DotnetPackaging;
+using Serilog;
+
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateLogger();
 
 var input = new Option<DirectoryInfo>(name: "--directory", description: "The input directory to create the package from") { IsRequired = true };
 var metadata = new Option<FileInfo>(name: "--metadata", description: "The metadata to include in the package") { IsRequired = true };
@@ -17,6 +24,13 @@ return await rootCommand.InvokeAsync(args);
 
 static async Task CreateDeb(DirectoryInfo input, FileInfo output, FileInfo metadataFile)
 {
-    var packaging = await Packaging.FromFile(metadataFile);
-    await Create.Deb(input.FullName, output.FullName, packaging.Metadata, packaging.ExecutableMappings);
+    var packagingDto = await Packaging.FromFile(metadataFile);
+    var packaging = packagingDto.ToModel();
+    Log.Logger.Information("Creating {Deb} from {Contents}", output.FullName, input.FullName);
+    Log.Logger.Verbose("Metadata for {Deb} is set to {Metadata}", output.FullName, packagingDto);
+    var result = await Create.Deb(input.FullName, output.FullName, packaging.Metadata, packaging.ExecutableMappings);
+
+    result
+        .Tap(() => Log.Information("Success"))
+        .TapError(Log.Error);
 }
