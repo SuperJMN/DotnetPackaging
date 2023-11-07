@@ -18,7 +18,8 @@ public class DebBuilder
 
     private Task<Result<IEnumerable<Content>>> GetContents(IZafiroDirectory directory, Dictionary<ZafiroPath, ExecutableMetadata> desktopEntries)
     {
-        return directory.GetFilesInTree().Map(files => files.Select<IZafiroFile, Content>(file => GetContent(directory, file, desktopEntries)));
+        return directory.GetFilesInTree()
+            .Map(files => files.Select(file => GetContent(directory, file, desktopEntries)));
     }
 
     private Content GetContent(IZafiroDirectory zafiroDirectory, IZafiroFile file, IReadOnlyDictionary<ZafiroPath, ExecutableMetadata> desktopEntries)
@@ -32,12 +33,12 @@ public class DebBuilder
 
     private RegularContent RegularContent(IZafiroDirectory zafiroDirectory, IZafiroFile file)
     {
-        return new RegularContent(file.Path.MakeRelativeTo(zafiroDirectory.Path), () =>  GetFileContents(file));
+        return new RegularContent(file.Path.MakeRelativeTo(zafiroDirectory.Path), file.ToByteStore().Result.Value);
     }
 
     private Content ExecutableContent(IZafiroDirectory zafiroDirectory, IZafiroFile file, ExecutableMetadata metadata)
     {
-        return new ExecutableContent(file.Path.MakeRelativeTo(zafiroDirectory.Path), () => GetFileContents(file))
+        return new ExecutableContent(file.Path.MakeRelativeTo(zafiroDirectory.Path), file.ToByteStore().Result.Value)
         {
             DesktopEntry = metadata.DesktopEntry,
             CommandName = metadata.CommandName,

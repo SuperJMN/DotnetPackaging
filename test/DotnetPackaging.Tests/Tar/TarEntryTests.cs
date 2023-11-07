@@ -13,7 +13,6 @@ public class TarEntryTests
     {
         var entryData = new EntryData("Icon.png", new Properties()
         {
-            Length = png.Length,
             FileMode = FileMode.Parse("777"),
             GroupId = 1000,
             OwnerId = 1000,
@@ -21,7 +20,7 @@ public class TarEntryTests
             LastModification = 1.January(2023),
             LinkIndicator = 0,
             OwnerUsername = "root"
-        }, () => png.ToObservable());
+        }, new ByteStore(png.ToObservable(), png.Length));
 
         var entry = new Entry(entryData);
 

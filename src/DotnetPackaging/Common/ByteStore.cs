@@ -1,4 +1,6 @@
-﻿namespace DotnetPackaging.Common;
+﻿using System.Reactive.Linq;
+
+namespace DotnetPackaging.Common;
 
 public interface IByteStore : IObservable<byte>
 {
@@ -17,4 +19,6 @@ public class ByteStore : IByteStore
     }
 
     public IDisposable Subscribe(IObserver<byte> observer) => inner.Subscribe(observer);
+
+    public static ByteStore Empty = new ByteStore(Observable.Empty<byte>(), 0);
 }

@@ -25,9 +25,9 @@ public static class TestData
 
         var contents = new Contents
         {
-            new RegularContent("Contenido1.txt", () => "Soy pepito".GetAsciiBytes().ToObservable()),
-            new RegularContent("Contenido2.txt", () => "Dale, Don, dale.".GetAsciiBytes().ToObservable()),
-            new ExecutableContent("Program.Desktop", () => "Binary data. Irrelevant for the test.".GetAsciiBytes().ToObservable())
+            new RegularContent("Contenido1.txt", "Soy pepito".ToByteStore()),
+            new RegularContent("Contenido2.txt", "Dale, Don, dale.".ToByteStore()),
+            new ExecutableContent("Program.Desktop", "Binary data. Irrelevant for the test.".ToByteStore())
             { 
                 DesktopEntry = desktopEntry,
                 CommandName = "myprogram",

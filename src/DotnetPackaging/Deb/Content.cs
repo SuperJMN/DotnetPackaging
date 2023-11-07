@@ -1,16 +1,16 @@
-﻿using Zafiro.FileSystem;
+﻿using DotnetPackaging.Common;
+using Zafiro.FileSystem;
 
 namespace DotnetPackaging.Deb;
 
 public abstract class Content
 {
-    public Content(ZafiroPath path, Func<IObservable<byte>> bytes)
+    public Content(ZafiroPath path, IByteStore byteStore)
     {
-        Bytes = bytes;
         Path = path;
+        ByteStore = byteStore;
     }
 
     public ZafiroPath Path { get; }
-
-    public Func<IObservable<byte>> Bytes { get; }
+    public IByteStore ByteStore { get; }
 }

@@ -51,7 +51,6 @@ public class DataTar
 
     private static EntryData DirectoryEntry(string path) => new(path, new Properties
     {
-        Length = 0,
         GroupName = "root",
         OwnerUsername = "root",
         GroupId = 1000,
@@ -59,7 +58,7 @@ public class DataTar
         FileMode = FileMode.Parse("777"),
         LastModification = DateTimeOffset.Now,
         LinkIndicator = 5
-    }, Observable.Empty<byte>);
+    }, new ByteStore(Observable.Empty<byte>(), 0));
 
     private IEnumerable<EntryData> ApplicationEntries() => contents
         .OfType<ExecutableContent>()
@@ -105,13 +104,12 @@ public class DataTar
         {
             GroupName = "root",
             OwnerUsername = "root",
-            Length = shortcut.Length,
             FileMode = FileMode.Parse("644"),
             GroupId = 1000,
             LastModification = DateTimeOffset.Now,
             OwnerId = 1000,
             LinkIndicator = 0
-        }, () => shortcut.GetAsciiBytes().ToObservable());
+        }, shortcut.ToByteStore());
     }
 
     private EntryData IconEntry(DesktopEntry desktopEntry, IconData iconData)
@@ -120,7 +118,6 @@ public class DataTar
         var properties = new Properties
         {
             FileMode = FileMode.Parse("775"),
-            Length = iconData.TargetedBytes.Length,
             GroupId = 1000,
             GroupName = "root",
             LastModification = DateTimeOffset.Now,
@@ -128,7 +125,7 @@ public class DataTar
             OwnerId = 1000,
             OwnerUsername = "root"
         };
-        return new EntryData(path, properties,() => iconData.TargetedBytes);
+        return new EntryData(path, properties, iconData.TargetedBytes);
     }
 
     private EntryData RootExecutable(ExecutableContent executableContent)
@@ -136,24 +133,6 @@ public class DataTar
         // TODO: Optimize length retrieval
         var path = ZafiroPath.Create(Root).Value.Combine(executableContent.CommandName);
 
-        var execEntry = GetExecEntry(executableContent);
-        var length = execEntry.ToEnumerable().Count();
-
-        return new EntryData(path, new Properties
-        {
-            GroupName = "root",
-            OwnerUsername = "root",
-            Length = length,
-            FileMode = FileMode.Parse("777"),
-            GroupId = 1000,
-            LastModification = DateTimeOffset.Now,
-            OwnerId = 1000,
-            LinkIndicator = 0
-        }, () => execEntry);
-    }
-
-    private IObservable<byte> GetExecEntry(ExecutableContent executableContent)
-    {
         var dotLessPackageRootPath = PackageRoot.ToString()[1..];
         var fullExePath = $"{dotLessPackageRootPath}/{executableContent.Path}";
 
@@ -162,28 +141,33 @@ public class DataTar
                     {fullExePath} $@
 
                     """.FromCrLfToLf();
-
-        var asciiBytes = text.GetAsciiBytes();
-        return asciiBytes.ToObservable();
+        
+        return new EntryData(path, new Properties
+        {
+            GroupName = "root",
+            OwnerUsername = "root",
+            FileMode = FileMode.Parse("777"),
+            GroupId = 1000,
+            LastModification = DateTimeOffset.Now,
+            OwnerId = 1000,
+            LinkIndicator = 0
+        }, text.ToByteStore());
     }
 
     private IEnumerable<EntryData> PackageContents()
     {
         var entryDatas = contents.Select(content =>
         {
-            var length = content.Bytes().ToEnumerable().Count();
-
             return new EntryData(PackageRoot.Combine(content.Path), new Properties
             {
                 GroupName = "root",
                 OwnerUsername = "root",
-                Length = length,
                 FileMode = content is RegularContent ? FileMode.Parse("644") : FileMode.Parse("751"),
                 GroupId = 1000,
                 LastModification = DateTimeOffset.Now,
                 OwnerId = 1000,
                 LinkIndicator = 0
-            }, content.Bytes);
+            }, content.ByteStore);
         });
 
         return entryDatas;

@@ -24,7 +24,7 @@ public class Entry
         {
             var header = Header()
                 .AsBlocks<byte>(BlockSize, 0);
-            var content = entryData.Contents()
+            var content = entryData.Contents
                 .AsBlocks<byte>(BlockSize, 0);
             var bytes = header.Concat(content);
             return bytes;
@@ -95,7 +95,7 @@ public class Entry
 
     private IObservable<byte> Contents()
     { 
-        return entryData.Contents();
+        return entryData.Contents;
     }
 
     /// <summary>
@@ -119,7 +119,7 @@ public class Entry
     /// <summary>
     ///     From 124 to 136 (in octal)
     /// </summary>
-    private IObservable<byte> FileSize() => entryData.Properties.Length.ToOctalField().GetAsciiBytes().ToObservable();
+    private IObservable<byte> FileSize() => entryData.Contents.Length.ToOctalField().GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     From 136 to 148 Last modification time in numeric Unix time format (octal)

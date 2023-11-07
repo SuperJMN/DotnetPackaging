@@ -1,10 +1,11 @@
-﻿using Zafiro.FileSystem;
+﻿using DotnetPackaging.Common;
+using Zafiro.FileSystem;
 
 namespace DotnetPackaging.Deb;
 
 public class RegularContent : Content
 {
-    public RegularContent(ZafiroPath path, Func<IObservable<byte>> bytes) : base(path, bytes)
+    public RegularContent(ZafiroPath path, IByteStore byteStore) : base(path, byteStore)
     {
     }
 }

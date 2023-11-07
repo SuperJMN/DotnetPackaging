@@ -1,3 +1,5 @@
-﻿namespace DotnetPackaging.Tar;
+﻿using DotnetPackaging.Common;
 
-public record EntryData(string Name, Properties Properties, Func<IObservable<byte>> Contents);
+namespace DotnetPackaging.Tar;
+
+public record EntryData(string Name, Properties Properties, IByteStore Contents);

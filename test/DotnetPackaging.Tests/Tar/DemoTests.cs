@@ -21,9 +21,8 @@ public class DemoTests
             LastModification = DateTimeOffset.Now,
             OwnerId = 1000,
             OwnerUsername = "jmn",
-            Length = new FileInfo("D:\\5 - Unimportant\\Descargas\\recordatorioCita.pdf").Length,
             LinkIndicator = 0,
-        }, () => Observable.Using(() => File.OpenRead("D:\\5 - Unimportant\\Descargas\\recordatorioCita.pdf"), stream => stream.ToObservable()));
+        }, new FileInfo("D:\\5 - Unimportant\\Descargas\\recordatorioCita.pdf").ToByteStore());
 
         var entry2 = new EntryData("wasabi.deb", new Properties
         {
@@ -33,10 +32,9 @@ public class DemoTests
             LastModification = DateTimeOffset.Now,
             OwnerId = 1000,
             OwnerUsername = "jmn",
-            Length = new FileInfo("D:\\5 - Unimportant\\Descargas\\Wasabi-2.0.4.deb").Length,
             LinkIndicator = 0,
             
-        }, () => Observable.Using(() => File.OpenRead("D:\\5 - Unimportant\\Descargas\\Wasabi-2.0.4.deb"), stream => stream.ToObservable()));
+        }, new FileInfo("D:\\5 - Unimportant\\Descargas\\Wasabi-2.0.4.deb").ToByteStore());
 
         var tarFile = new TarFile(entry1, entry2);
 
@@ -51,7 +49,6 @@ public class DemoTests
         
         var properties = new Properties()
         {
-            Length = iconData.TargetedBytes.Length,
             FileMode = FileMode.Parse("777"),
             LinkIndicator = 0,
             GroupId = 1000,
@@ -61,7 +58,7 @@ public class DemoTests
             OwnerUsername = "root"
         };
 
-        var iconEntry = new EntryData("Icon.png", properties, () => iconData.TargetedBytes);
+        var iconEntry = new EntryData("Icon.png", properties, iconData.TargetedBytes);
         var entry = new Entry(iconEntry);
         await using var output = File.Create("C:\\Users\\jmn\\Desktop\\Testing\\TarIcon.tar");
         

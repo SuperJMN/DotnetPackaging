@@ -102,9 +102,8 @@ public class ArFileTests
             LastModification = DateTimeOffset.Now,
             OwnerId = 1000,
             OwnerUsername = "jmn",
-            Length = new FileInfo("D:\\5 - Unimportant\\Descargas\\recordatorioCita.pdf").Length,
             LinkIndicator = 0,
-        }, () => Observable.Using(() => File.OpenRead("D:\\5 - Unimportant\\Descargas\\recordatorioCita.pdf"), stream => stream.ToObservable()));
+        }, new FileInfo("D:\\5 - Unimportant\\Descargas\\recordatorioCita.pdf").ToByteStore());
 
         var entry2 = new DotnetPackaging.Tar.EntryData("wasabi.deb", new DotnetPackaging.Tar.Properties
         {
@@ -114,9 +113,8 @@ public class ArFileTests
             LastModification = DateTimeOffset.Now,
             OwnerId = 1000,
             OwnerUsername = "jmn",
-            Length = new FileInfo("D:\\5 - Unimportant\\Descargas\\Wasabi-2.0.4.deb").Length,
             LinkIndicator = 0,
-        }, () => Observable.Using(() => File.OpenRead("D:\\5 - Unimportant\\Descargas\\Wasabi-2.0.4.deb"), stream => stream.ToObservable()));
+        }, new FileInfo("D:\\5 - Unimportant\\Descargas\\Wasabi-2.0.4.deb").ToByteStore());
 
         return new TarFile(entry1, entry2);
     }

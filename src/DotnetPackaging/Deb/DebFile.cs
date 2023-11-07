@@ -45,7 +45,7 @@ public class DebFile
 
     public TarFile ControlTar()
     {
-        var data = $"""
+        var controlText = $"""
                     Package: {metadata.PackageName}
                     Priority: optional
                     Section: utils
@@ -68,19 +68,17 @@ public class DebFile
             GroupId = 1000,
             OwnerId = 1000,
             LastModification = DateTimeOffset.Now,
-            Length = data.Length,
             GroupName = "root",
             OwnerUsername = "root",
             LinkIndicator = 0,
         };
 
         var dir = DirEntry("./");
-        return new TarFile(dir, new Tar.EntryData("./control", tarProperties, () => data.GetAsciiBytes().ToObservable()));
+        return new TarFile(dir, new Tar.EntryData("./control", tarProperties, controlText.ToByteStore()));
     }
 
     private static Tar.EntryData DirEntry(string path) => new(path, new Tar.Properties()
     {
-        Length = 0,
         GroupName = "root",
         OwnerUsername = "root",
         GroupId = 1000,
@@ -88,7 +86,7 @@ public class DebFile
         FileMode = FileMode.Parse("644"),
         LastModification = DateTimeOffset.Now,
         LinkIndicator = 5,
-    }, Observable.Empty<byte>);
+    }, ByteStore.Empty);
 
     private EntryData Data()
     {
