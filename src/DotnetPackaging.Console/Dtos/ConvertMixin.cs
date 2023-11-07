@@ -1,9 +1,12 @@
 ﻿using System.Reactive.Linq;
+using DotnetPackaging.Common;
 using DotnetPackaging.Deb;
 using Zafiro.FileSystem;
 using Zafiro.IO;
 
 namespace DotnetPackage.Console.Dtos;
+
+
 
 public static class ConvertMixin
 {
@@ -18,10 +21,7 @@ public static class ConvertMixin
 
     private static DesktopEntry ToModel(this DesktopEntryDto dto)
     {
-        var iconDatas = dto.Icons
-            .Select(
-                pair => new IconData(pair.Key,
-                    () => Observable.Using(() => File.OpenRead(pair.Value), stream => stream.ToObservable())));
+        var iconDatas = dto.Icons.Select(pair => new IconData(pair.Key, new FileInfo(pair.Value).ToByteStore()));
 
         var iconsResources = IconResources.Create(iconDatas.ToArray());
 

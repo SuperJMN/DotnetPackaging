@@ -120,7 +120,7 @@ public class DataTar
         var properties = new Properties
         {
             FileMode = FileMode.Parse("775"),
-            Length = iconData.IconBytes().ToEnumerable().Count(),
+            Length = iconData.TargetedBytes.Length,
             GroupId = 1000,
             GroupName = "root",
             LastModification = DateTimeOffset.Now,
@@ -128,7 +128,7 @@ public class DataTar
             OwnerId = 1000,
             OwnerUsername = "root"
         };
-        return new EntryData(path, properties, iconData.IconBytes);
+        return new EntryData(path, properties,() => iconData.TargetedBytes);
     }
 
     private EntryData RootExecutable(ExecutableContent executableContent)

@@ -41,7 +41,7 @@ public static class TestData
         var desktopEntry = new DesktopEntry
         {
             Name = "Test Program",
-            Icons = IconResources.Create(new IconData(32, () => Observable.Using(() => File.OpenRead("TestFiles\\icon.png"), stream => stream.ToObservable()))).Value,
+            Icons = IconResources.Create(new IconData(32, new FileInfo("TestFiles\\icon.png").ToByteStore())).Value,
             StartupWmClass = "My program",
             Keywords = new[] { "test" },
             Categories = new[] { "Utilities" },

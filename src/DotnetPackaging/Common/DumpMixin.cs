@@ -1,5 +1,4 @@
 ﻿using System.Reactive.Linq;
-using DotnetPackaging.Deb;
 using Zafiro.FileSystem;
 
 namespace DotnetPackaging.Common;
