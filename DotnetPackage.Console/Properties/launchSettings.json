@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "DotnetPackage.Console": {
-      "commandName": "Project",
-      "commandLineArgs": "--directory c:\\users\\jmn\\desktop\\testing\\vinay"
-    }
-  }
-}

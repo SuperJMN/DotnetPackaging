@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "DotnetPackage.Console": {
+      "commandName": "Project",
+      "commandLineArgs": "--directory c:\\users\\jmn\\desktop\\testing\\vinay --metadata C:\\Users\\JMN\\Desktop\\Testing\\metadata.deb.json --output c:\\users\\jmn\\desktop\\testing\\vinay.deb"
+    }
+  }
+}
