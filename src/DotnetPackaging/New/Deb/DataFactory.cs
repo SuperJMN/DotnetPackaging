@@ -25,11 +25,14 @@ public class DataFactory
     private ZafiroPath ApplicationsRoot => "./usr/share/applications";
     private ZafiroPath PackageRoot => new ZafiroPath("./usr/share").Combine(metadata.PackageName);
 
-    public TarFile Create()
+    public TarFile Tar
     {
-        var entries = GetAllEntries(FileEntries());
-        var array = entries.ToArray();
-        return new TarFile(array);
+        get
+        {
+            var entries = GetAllEntries(FileEntries());
+            var array = entries.ToArray();
+            return new TarFile(array);
+        }
     }
 
     public IEnumerable<Entry> FileEntries() => PackageContents().Concat(ApplicationEntries());

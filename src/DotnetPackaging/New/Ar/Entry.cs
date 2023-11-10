@@ -5,15 +5,15 @@ namespace DotnetPackaging.New.Ar;
 
 public class Entry : IByteFlow
 {
-    private readonly string name;
-    private readonly Properties properties;
-    private readonly ByteFlow byteFlow;
+    public string Name { get; }
+    public Properties Properties { get; }
+    private readonly IByteFlow byteFlow;
     private const int HeaderSize = 68;
 
-    public Entry(string name, Properties properties, ByteFlow byteFlow)
+    public Entry(string name, Properties properties, IByteFlow byteFlow)
     {
-        this.name = name;
-        this.properties = properties;
+        Name = name;
+        Properties = properties;
         this.byteFlow = byteFlow;
     }
 
@@ -42,31 +42,31 @@ public class Entry : IByteFlow
     ///     0	16	File identifier	ASCII
     /// </summary>
     /// <returns></returns>
-    private IObservable<byte> FileIdentifier() => name.PadRight(16).GetAsciiBytes().ToObservable();
+    private IObservable<byte> FileIdentifier() => Name.PadRight(16).GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     16	12	File modification timestamp (in seconds)	Decimal
     /// </summary>
     /// <returns></returns>
-    private IObservable<byte> FileModificationTimestamp() => properties.LastModification.ToUnixTimeSeconds().ToString().PadRight(12).GetAsciiBytes().ToObservable();
+    private IObservable<byte> FileModificationTimestamp() => Properties.LastModification.ToUnixTimeSeconds().ToString().PadRight(12).GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     28	6	Owner ID	Decimal
     /// </summary>
     /// <returns></returns>
-    private IObservable<byte> OwnerId() => properties.OwnerId.GetValueOrDefault().ToString().PadRight(6).GetAsciiBytes().ToObservable();
+    private IObservable<byte> OwnerId() => Properties.OwnerId.GetValueOrDefault().ToString().PadRight(6).GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     34	6	Group ID	Decimal
     /// </summary>
     /// <returns></returns>
-    private IObservable<byte> GroupId() => properties.GroupId.GetValueOrDefault().ToString().PadRight(6).GetAsciiBytes().ToObservable();
+    private IObservable<byte> GroupId() => Properties.GroupId.GetValueOrDefault().ToString().PadRight(6).GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     40	8	File mode (type and permission)	Octal
     /// </summary>
     /// <returns></returns>
-    private IObservable<byte> FileMode() => ("100" + properties.FileMode).PadRight(8).GetAsciiBytes().ToObservable();
+    private IObservable<byte> FileMode() => ("100" + Properties.FileMode).PadRight(8).GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     48	10	File size in bytes	Decimal
