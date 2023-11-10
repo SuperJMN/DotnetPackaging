@@ -16,7 +16,6 @@ public class IconResources
     public static Result<IconResources> Create(params IconData[] iconsDatas)
     {
         var dic = iconsDatas.ToDictionary(data => data.TargetSize, data => data);
-
         return new IconResources(dic);
     }
 }

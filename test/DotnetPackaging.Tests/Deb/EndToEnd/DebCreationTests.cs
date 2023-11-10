@@ -1,8 +1,7 @@
-﻿using System.Reactive.Linq;
-using DotnetPackaging.Old.Deb;
+﻿using DotnetPackaging.New.Deb;
 using FluentAssertions;
+using SixLabors.ImageSharp;
 using Zafiro.FileSystem;
-using Zafiro.IO;
 
 namespace DotnetPackaging.Tests.Deb.EndToEnd;
 
@@ -11,7 +10,7 @@ public class DebCreationTests
     public DesktopEntry DesktopEntry => new()
     {
         Name = "Avalonia Syncer",
-        Icons = IconResources.Create(new IconData(32, () => Observable.Using(() => File.OpenRead("TestFiles\\icon.png"), stream => stream.ToObservable()))).Value,
+        Icons = IconResources.Create(new IconData(32, Image.Load("TestFiles\\icon.png"))).Value,
         StartupWmClass = "AvaloniaSyncer",
         Keywords = new[] { "file manager" },
         Comment = "The best file explorer ever",
