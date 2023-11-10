@@ -1,6 +1,6 @@
 ﻿using System.Reactive.Linq;
 using DotnetPackaging.Common;
-using DotnetPackaging.Deb;
+using DotnetPackaging.Old.Deb;
 using Zafiro.FileSystem;
 using Zafiro.IO;
 

@@ -1,11 +1,11 @@
 ﻿using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Common;
-using DotnetPackaging.Tar;
+using DotnetPackaging.Old.Tar;
 using Zafiro;
 using Zafiro.FileSystem;
 
-namespace DotnetPackaging.Deb;
+namespace DotnetPackaging.Old.Deb;
 
 public class DataTar
 {

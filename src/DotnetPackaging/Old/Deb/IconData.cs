@@ -1,7 +1,7 @@
 ﻿using System.Reactive.Linq;
 using static Zafiro.Mixins.ObservableEx;
 
-namespace DotnetPackaging.Deb;
+namespace DotnetPackaging.Old.Deb;
 
 public class IconData
 {

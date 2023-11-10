@@ -1,6 +1,6 @@
 ﻿using System.Reactive.Linq;
-using DotnetPackaging.Deb;
-using DotnetPackaging.Tar;
+using DotnetPackaging.Old.Deb;
+using DotnetPackaging.Old.Tar;
 using FluentAssertions.Extensions;
 using Zafiro.IO;
 

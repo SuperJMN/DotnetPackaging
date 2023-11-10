@@ -1,11 +1,11 @@
 ﻿using System.Reactive.Linq;
-using DotnetPackaging.Ar;
 using DotnetPackaging.Common;
-using DotnetPackaging.Tar;
-using EntryData = DotnetPackaging.Ar.EntryData;
-using Properties = DotnetPackaging.Ar.Properties;
+using DotnetPackaging.Old.Ar;
+using DotnetPackaging.Old.Tar;
+using EntryData = DotnetPackaging.Old.Ar.EntryData;
+using Properties = DotnetPackaging.Old.Ar.Properties;
 
-namespace DotnetPackaging.Deb;
+namespace DotnetPackaging.Old.Deb;
 
 public class DebFile
 {

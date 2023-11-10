@@ -1,11 +1,13 @@
 ﻿using CSharpFunctionalExtensions;
+using DotnetPackaging.Common;
+using DotnetPackaging.Old.Deb;
 using Zafiro.FileSystem;
 
-namespace DotnetPackaging.Deb;
+namespace DotnetPackaging.New.Deb.Contents;
 
 public class ExecutableContent : Content
 {
-    public ExecutableContent(ZafiroPath path, Func<IObservable<byte>> bytes) : base(path, bytes)
+    public ExecutableContent(ZafiroPath path, ByteFlow bytes) : base(path, bytes)
     {
     }
 

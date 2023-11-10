@@ -1,6 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 
-namespace DotnetPackaging.Deb;
+namespace DotnetPackaging.Old.Deb;
 
 public class Contents : Collection<Content>
 {

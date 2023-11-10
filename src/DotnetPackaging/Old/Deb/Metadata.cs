@@ -1,4 +1,4 @@
-﻿namespace DotnetPackaging.Deb;
+﻿namespace DotnetPackaging.Old.Deb;
 
 public class Metadata
 {

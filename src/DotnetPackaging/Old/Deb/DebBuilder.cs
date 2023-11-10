@@ -1,11 +1,9 @@
 ﻿using CSharpFunctionalExtensions;
+using DotnetPackaging.Common;
 using Zafiro.FileSystem;
 using Zafiro.IO;
 
-namespace DotnetPackaging.Deb;
-
-using System;
-using DotnetPackaging.Common;
+namespace DotnetPackaging.Old.Deb;
 
 public class DebBuilder
 {

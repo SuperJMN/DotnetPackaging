@@ -1,7 +1,7 @@
 ﻿using System.Reactive.Linq;
 using DotnetPackaging.Common;
 
-namespace DotnetPackaging.Ar;
+namespace DotnetPackaging.Old.Ar;
 
 public class Entry
 {

@@ -1,4 +1,4 @@
-﻿using DotnetPackaging.Deb;
+﻿using DotnetPackaging.Old.Deb;
 using FluentAssertions;
 using Zafiro.FileSystem;
 

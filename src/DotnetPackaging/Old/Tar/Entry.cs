@@ -5,7 +5,7 @@ using DotnetPackaging.Common;
 using Zafiro.FileSystem;
 using Zafiro.IO;
 
-namespace DotnetPackaging.Tar;
+namespace DotnetPackaging.Old.Tar;
 
 public class Entry
 {

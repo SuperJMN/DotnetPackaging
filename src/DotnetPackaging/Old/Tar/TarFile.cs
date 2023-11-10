@@ -1,7 +1,7 @@
 ﻿using System.Reactive.Linq;
 using DotnetPackaging.Common;
 
-namespace DotnetPackaging.Tar;
+namespace DotnetPackaging.Old.Tar;
 
 public class TarFile
 {

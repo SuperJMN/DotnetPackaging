@@ -1,6 +1,6 @@
 ﻿using Zafiro.IO;
 
-namespace DotnetPackaging.Deb;
+namespace DotnetPackaging.Old.Deb;
 
 public static class ImageMixin
 {
