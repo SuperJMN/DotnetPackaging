@@ -13,6 +13,6 @@ public class EntryTests
     [Fact]
     public async Task Test_entry_data_length()
     {
-        (await EntryFactory.Create(fs, "TestFiles/icon.png")).Should().Succeed().And.Subject.Value.Length.Should().Be(101376 + 512);
+        (await EntryFactory.Create(fs, "TestFiles/icon.png", "Entry")).Should().Succeed().And.Subject.Value.Length.Should().Be(101376 + 512);
     }
 }

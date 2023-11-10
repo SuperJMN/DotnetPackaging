@@ -119,7 +119,7 @@ public class Entry : IByteFlow
     /// <summary>
     ///     From 124 to 136 (in octal)
     /// </summary>
-    private IObservable<byte> FileSize() => properties.Length.ToOctalField().GetAsciiBytes().ToObservable();
+    private IObservable<byte> FileSize() => byteFlow.Length.ToOctalField().GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     From 136 to 148 Last modification time in numeric Unix time format (octal)
