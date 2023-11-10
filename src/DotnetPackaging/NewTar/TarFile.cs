@@ -1,15 +1,15 @@
 ﻿using System.Reactive.Linq;
 using DotnetPackaging.Common;
 
-namespace DotnetPackaging.Tar;
+namespace DotnetPackaging.NewTar;
 
-public class TarFile
+public class TarFile : IByteFlow
 {
-    private readonly EntryData[] entries;
+    private readonly IByteFlow[] entries;
     private const int BlockingFactor = 20 * BlockSize;
     private const int BlockSize = 512;
 
-    public TarFile(params EntryData[] entries)
+    public TarFile(params IByteFlow[] entries)
     {
         this.entries = entries;
     }
@@ -20,13 +20,12 @@ public class TarFile
         {
             return 
                 entries
-                    .Select(entry => new Entry(entry).Bytes)
+                    .ToObservable()
+                    .Select(flow => flow.Bytes)
                     .Concat()
                     .AsBlocks<byte>(BlockingFactor, 0x00);
         }
     }
 
-    private IObservable<byte> EndOfFile => Observable.Repeat<byte>(0x00, BlockSize * 2);
-
-    public long Length => Bytes.ToEnumerable().Count();
+    public long Length => entries.Sum(e => e.Length).RoundUpToNearestMultiple(BlockingFactor);
 }

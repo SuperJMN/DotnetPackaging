@@ -1,11 +1,9 @@
 ﻿using System.IO.Abstractions;
-using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Common;
 using DotnetPackaging.NewTar;
 using FluentAssertions;
 using Serilog;
-using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Local;
 using IFileSystem = Zafiro.FileSystem.IFileSystem;

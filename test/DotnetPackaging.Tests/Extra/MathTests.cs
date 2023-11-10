@@ -1,4 +1,5 @@
-﻿using DotnetPackaging.Tar;
+﻿using DotnetPackaging.Common;
+using DotnetPackaging.Tar;
 using FluentAssertions;
 
 namespace DotnetPackaging.Tests.Extra;

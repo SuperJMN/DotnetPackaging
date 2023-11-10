@@ -1,4 +1,4 @@
-﻿namespace DotnetPackaging.Tar;
+﻿namespace DotnetPackaging.Common;
 
 public static class MathMixin
 {

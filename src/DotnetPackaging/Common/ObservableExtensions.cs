@@ -1,6 +1,6 @@
 ﻿using System.Reactive.Linq;
 
-namespace DotnetPackaging.Tar;
+namespace DotnetPackaging.Common;
 
 public static class ObservableExtensions
 {
