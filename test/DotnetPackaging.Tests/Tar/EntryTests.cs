@@ -14,7 +14,7 @@ public class EntryTests
     public async Task Test_entry_data_length()
     {
         var fs = new LocalFileSystem(new FileSystem(), Maybe<ILogger>.None);
-        var byteStream = await fs.GetFile("TestFiles/Content/icon.png")
+        var byteStream = await fs.GetFile("TestFiles/icon.png".ToZafiroPath())
             .Bind(file => file.ToByteStream())
             .Map(by => new Entry(new EntryData("Entry", new Properties()
             {

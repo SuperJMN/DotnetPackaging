@@ -1,3 +1,3 @@
 ﻿namespace DotnetPackaging.Tar;
 
-public record FiniteByteSequence(IObservable<byte> Contents, long Length);
+public record ByteFlow(IObservable<byte> Origin, long Length);

@@ -11,6 +11,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "build\_build.cspr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Console", "src\DotnetPackaging.Console\DotnetPackaging.Console.csproj", "{23FC6D0A-4385-45CC-947D-93A1FD3211D2}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Temporary", "Temporary", "{B6E4F1E3-FAE7-4BF8-A094-5C5422AA421E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zafiro", "..\..\SuperJMN-Zafiro\Zafiro\src\Zafiro\Zafiro.csproj", "{D31CD292-785C-438C-B6CD-7BBDB37F8500}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zafiro.FileSystem", "..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem\Zafiro.FileSystem.csproj", "{D9DB0A7E-605F-47A2-BE08-7FE0D53501AB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zafiro.FileSystem.Local", "..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Local\Zafiro.FileSystem.Local.csproj", "{FF0CEAB7-42C6-4A02-9D38-F5352D342070}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,11 +41,28 @@ Global
 		{23FC6D0A-4385-45CC-947D-93A1FD3211D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{23FC6D0A-4385-45CC-947D-93A1FD3211D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{23FC6D0A-4385-45CC-947D-93A1FD3211D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D31CD292-785C-438C-B6CD-7BBDB37F8500}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D31CD292-785C-438C-B6CD-7BBDB37F8500}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D31CD292-785C-438C-B6CD-7BBDB37F8500}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D31CD292-785C-438C-B6CD-7BBDB37F8500}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D9DB0A7E-605F-47A2-BE08-7FE0D53501AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9DB0A7E-605F-47A2-BE08-7FE0D53501AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9DB0A7E-605F-47A2-BE08-7FE0D53501AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9DB0A7E-605F-47A2-BE08-7FE0D53501AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FF0CEAB7-42C6-4A02-9D38-F5352D342070}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF0CEAB7-42C6-4A02-9D38-F5352D342070}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF0CEAB7-42C6-4A02-9D38-F5352D342070}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF0CEAB7-42C6-4A02-9D38-F5352D342070}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1D869DF1-9147-472D-A3D9-D519518A6951}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D31CD292-785C-438C-B6CD-7BBDB37F8500} = {B6E4F1E3-FAE7-4BF8-A094-5C5422AA421E}
+		{D9DB0A7E-605F-47A2-BE08-7FE0D53501AB} = {B6E4F1E3-FAE7-4BF8-A094-5C5422AA421E}
+		{FF0CEAB7-42C6-4A02-9D38-F5352D342070} = {B6E4F1E3-FAE7-4BF8-A094-5C5422AA421E}
 	EndGlobalSection
 EndGlobal

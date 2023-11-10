@@ -8,11 +8,11 @@ namespace DotnetPackaging.Tar;
 
 public static class ByteSeq 
 {
-    public static Task<Result<FiniteByteSequence>> ToByteStream(this IZafiroFile file)
+    public static Task<Result<ByteFlow>> ToByteStream(this IZafiroFile file)
     {
         return file.GetContents().CombineAndMap(file.Size(), (stream, l) =>
         {
-            return new FiniteByteSequence(Observable.Using(() => stream, s => s.ToObservable()), l);
+            return new ByteFlow(Observable.Using(() => stream, s => s.ToObservable()), l);
         });
     }
 }
