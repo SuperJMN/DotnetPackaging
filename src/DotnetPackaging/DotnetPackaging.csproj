@@ -23,7 +23,4 @@
       <Name>Zafiro.FileSystem.Local</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="NewTar\" />
-  </ItemGroup>
 </Project>

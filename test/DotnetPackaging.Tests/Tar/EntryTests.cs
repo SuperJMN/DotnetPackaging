@@ -2,7 +2,7 @@
 using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Common;
-using DotnetPackaging.Tar;
+using DotnetPackaging.NewTar;
 using FluentAssertions;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
@@ -26,7 +26,7 @@ public class EntryTests
     {
         return fs.GetFile(path)
             .Bind(file => file.ToByteStream())
-            .Map(by => new Entry(new EntryData("Entry", new Properties()
+            .Map(byteFlow => new Entry("Entry", new Properties()
             {
                 Length = 0,
                 FileMode = FileMode.Parse("555"),
@@ -36,6 +36,6 @@ public class EntryTests
                 LastModification = DateTimeOffset.Now,
                 LinkIndicator = 1,
                 OwnerUsername = "root"
-            }, () => Observable.Empty<byte>(), by)));
+            }, byteFlow));
     }
 }

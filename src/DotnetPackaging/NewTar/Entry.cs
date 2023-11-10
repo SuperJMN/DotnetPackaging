@@ -21,6 +21,7 @@ public class Entry : IByteFlow
         this.name = name;
         this.properties = properties;
         this.byteFlow = byteFlow;
+        BlockSize = blockSize;
     }
 
     public long Length => byteFlow.Length.RoundUpToNearestMultiple(BlockSize) + BlockSize;

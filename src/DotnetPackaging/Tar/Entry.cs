@@ -18,8 +18,6 @@ public class Entry
         BlockSize = blockSize;
     }
 
-    public long Length => entryData.ByteFlow.Length.RoundUpToNearestMultiple(BlockSize) + 512;
-
     public IObservable<byte> Bytes
     {
         get
