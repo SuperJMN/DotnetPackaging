@@ -5,7 +5,7 @@ namespace DotnetPackaging.New.Deb.Contents;
 
 public class RegularContent : Content
 {
-    public RegularContent(ZafiroPath path, ByteFlow byteFlow) : base(path, byteFlow)
+    public RegularContent(ZafiroPath path, IByteFlow byteFlow) : base(path, byteFlow)
     {
     }
 }

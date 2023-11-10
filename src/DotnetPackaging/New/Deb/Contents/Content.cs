@@ -5,9 +5,9 @@ namespace DotnetPackaging.New.Deb.Contents;
 
 public abstract class Content : IByteFlow
 {
-    private readonly ByteFlow byteFlow;
+    private readonly IByteFlow byteFlow;
 
-    public Content(ZafiroPath path, ByteFlow byteFlow)
+    public Content(ZafiroPath path, IByteFlow byteFlow)
     {
         this.byteFlow = byteFlow;
         Path = path;
