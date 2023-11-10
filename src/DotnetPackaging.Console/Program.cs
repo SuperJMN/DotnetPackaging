@@ -1,8 +1,8 @@
 ﻿using System.CommandLine;
 using CSharpFunctionalExtensions;
-using DotnetPackage.Console;
-using DotnetPackage.Console.Dtos;
 using DotnetPackaging;
+using DotnetPackaging.Console;
+using DotnetPackaging.Console.Dtos;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()

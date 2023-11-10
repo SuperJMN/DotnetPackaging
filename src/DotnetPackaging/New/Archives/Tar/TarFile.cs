@@ -1,7 +1,7 @@
 ﻿using System.Reactive.Linq;
 using DotnetPackaging.Common;
 
-namespace DotnetPackaging.New.Tar;
+namespace DotnetPackaging.New.Archives.Tar;
 
 public class TarFile : IByteFlow
 {

@@ -1,4 +1,4 @@
-﻿using DotnetPackaging.New.Deb;
+﻿using DotnetPackaging.New.Archives.Deb;
 using FluentAssertions;
 using SixLabors.ImageSharp;
 using Zafiro.FileSystem;

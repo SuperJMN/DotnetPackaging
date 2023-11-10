@@ -9,7 +9,7 @@ public static class ImageMixin
         var memoryStream = new MemoryStream();
         image.SaveAsPngAsync(memoryStream);
         memoryStream.Position = 0;
-        return memoryStream.ToObservable();
+        return StreamMixin.ToObservable(memoryStream);
     }
 
     public static Image Resize(this Image image, int width, int height)

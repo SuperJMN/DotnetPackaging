@@ -1,10 +1,8 @@
-﻿using System.Reactive.Linq;
-using DotnetPackaging.New.Deb;
+﻿using DotnetPackaging.New.Archives.Deb;
 using SixLabors.ImageSharp;
 using Zafiro.FileSystem;
-using Zafiro.IO;
 
-namespace DotnetPackage.Console.Dtos;
+namespace DotnetPackaging.Console.Dtos;
 
 public static class ConvertMixin
 {

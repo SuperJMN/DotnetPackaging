@@ -3,7 +3,7 @@ using System.Text;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Common;
 
-namespace DotnetPackaging.New.Tar;
+namespace DotnetPackaging.New.Archives.Tar;
 
 public class Entry : IByteFlow
 {

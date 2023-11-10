@@ -1,6 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 
-namespace DotnetPackaging.New.Deb;
+namespace DotnetPackaging.New.Archives.Deb;
 
 public class IconResources
 {

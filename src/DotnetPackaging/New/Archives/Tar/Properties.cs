@@ -1,6 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 
-namespace DotnetPackaging.New.Tar;
+namespace DotnetPackaging.New.Archives.Tar;
 
 public class Properties
 {

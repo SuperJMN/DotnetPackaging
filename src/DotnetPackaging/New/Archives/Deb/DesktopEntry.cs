@@ -1,4 +1,4 @@
-﻿namespace DotnetPackaging.New.Deb;
+﻿namespace DotnetPackaging.New.Archives.Deb;
 
 public class DesktopEntry
 {

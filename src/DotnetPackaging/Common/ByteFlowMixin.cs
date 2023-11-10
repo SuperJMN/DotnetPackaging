@@ -11,7 +11,7 @@ public static class ByteFlowMixin
 {
     public static Task<Result<ByteFlow>> ToByteFlow(this IZafiroFile file)
     {
-        return file.GetContents().CombineAndMap(file.Size(), (stream, l) => { return new ByteFlow(Observable.Using(() => stream, s => s.ToObservable()), l); });
+        return file.GetContents().CombineAndMap(file.Size(), (stream, l) => { return new ByteFlow(Observable.Using(() => stream, s => StreamMixin.ToObservable(s)), l); });
     }
 
     public static ByteFlow ToByteFlow(this string str, Encoding encoding)

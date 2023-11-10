@@ -1,7 +1,7 @@
 ﻿using System.Reactive.Linq;
 using DotnetPackaging.Common;
 
-namespace DotnetPackaging.New.Deb;
+namespace DotnetPackaging.New.Archives.Deb;
 
 public class IconData : IByteFlow
 {

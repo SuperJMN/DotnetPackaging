@@ -14,17 +14,5 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
-    <ProjectReference Include="E:\Repos\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Local\Zafiro.FileSystem.Local.csproj">
-      <Temp>Zafiro.FileSystem.Local</Temp>
-    </ProjectReference>
-    <ProjectReference Include="E:\Repos\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem\Zafiro.FileSystem.csproj">
-      <Temp>Zafiro.FileSystem</Temp>
-    </ProjectReference>
-    <ProjectReference Include="E:\Repos\SuperJMN-Zafiro\Zafiro\src\Zafiro\Zafiro.csproj">
-      <Temp>Zafiro</Temp>
-    </ProjectReference>
-    <ProjectReference Include="E:\Repos\SuperJMN\ArArchives\src\DotnetPackaging\DotnetPackaging.csproj">
-      <Temp>DotnetPackaging</Temp>
-    </ProjectReference>
   </ItemGroup>
 </Project>

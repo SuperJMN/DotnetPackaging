@@ -2,12 +2,12 @@
 using System.Text;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Common;
-using DotnetPackaging.New.Deb.Contents;
-using DotnetPackaging.New.Tar;
+using DotnetPackaging.New.Archives.Deb.Contents;
+using DotnetPackaging.New.Archives.Tar;
 using Zafiro;
 using Zafiro.FileSystem;
 
-namespace DotnetPackaging.New.Deb;
+namespace DotnetPackaging.New.Archives.Deb;
 
 public class DataFactory
 {

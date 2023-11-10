@@ -1,7 +1,7 @@
 ﻿using System.Reactive.Linq;
 using DotnetPackaging.Common;
 
-namespace DotnetPackaging.New.Ar;
+namespace DotnetPackaging.New.Archives.Ar;
 
 public class ArFile : IByteFlow
 {

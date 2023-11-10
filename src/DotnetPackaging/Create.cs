@@ -1,6 +1,7 @@
 ﻿using System.IO.Abstractions;
 using CSharpFunctionalExtensions;
-using DotnetPackaging.New.Deb;
+using DotnetPackaging.New.Archives.Deb;
+using DotnetPackaging.New.Build;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;

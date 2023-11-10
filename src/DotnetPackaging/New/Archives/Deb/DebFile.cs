@@ -1,13 +1,13 @@
 ﻿using System.Reactive.Linq;
 using System.Text;
 using DotnetPackaging.Common;
-using DotnetPackaging.New.Ar;
-using DotnetPackaging.New.Deb.Contents;
-using DotnetPackaging.New.Tar;
-using Entry = DotnetPackaging.New.Tar.Entry;
-using Properties = DotnetPackaging.New.Tar.Properties;
+using DotnetPackaging.New.Archives.Ar;
+using DotnetPackaging.New.Archives.Deb.Contents;
+using DotnetPackaging.New.Archives.Tar;
+using Entry = DotnetPackaging.New.Archives.Tar.Entry;
+using Properties = DotnetPackaging.New.Archives.Tar.Properties;
 
-namespace DotnetPackaging.New.Deb;
+namespace DotnetPackaging.New.Archives.Deb;
 
 public class DebFile : IByteFlow
 {
