@@ -4,9 +4,9 @@ using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 using Zafiro.IO;
 
-namespace DotnetPackaging.Tar;
+namespace DotnetPackaging.Common;
 
-public static class ByteSeq 
+public static class ByteFlowMixin 
 {
     public static Task<Result<ByteFlow>> ToByteStream(this IZafiroFile file)
     {
