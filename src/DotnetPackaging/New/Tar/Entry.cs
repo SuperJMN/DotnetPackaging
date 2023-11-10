@@ -9,14 +9,14 @@ public class Entry : IByteFlow
 {
     public int BlockSize { get; }
 
-    private readonly string name;
-    private readonly Properties properties;
-    private readonly ByteFlow byteFlow;
+    public string Name { get; }
+    public Properties Properties { get; }
+    private readonly IByteFlow byteFlow;
 
-    public Entry(string name, Properties properties, ByteFlow byteFlow, int blockSize = 512)
+    public Entry(string name, Properties properties, IByteFlow byteFlow, int blockSize = 512)
     {
-        this.name = name;
-        this.properties = properties;
+        this.Name = name;
+        this.Properties = properties;
         this.byteFlow = byteFlow;
         BlockSize = blockSize;
     }
@@ -76,14 +76,14 @@ public class Entry : IByteFlow
 
     private IObservable<byte> GroupUsername()
     {
-        return properties.GroupName
+        return Properties.GroupName
             .Map(s => s.PadRight(32, '\0').GetAsciiBytes().ToObservable())
             .GetValueOrDefault(() => Observable.Repeat<byte>(0x00, 32));
     }
 
     private IObservable<byte> OwnerUsername()
     {
-        return properties.OwnerUsername
+        return Properties.OwnerUsername
             .Map(s => s.PadRight(32, '\0').GetAsciiBytes().ToObservable())
             .GetValueOrDefault(() => Observable.Repeat<byte>(0x00, 32));
     }
@@ -103,7 +103,7 @@ public class Entry : IByteFlow
     /// </summary>
     private IObservable<byte> LinkIndicator()
     {
-        return properties.LinkIndicator.ToString().GetAsciiBytes().ToObservable();
+        return Properties.LinkIndicator.ToString().GetAsciiBytes().ToObservable();
     }
 
     /// <summary>
@@ -124,7 +124,7 @@ public class Entry : IByteFlow
     /// <summary>
     ///     From 136 to 148 Last modification time in numeric Unix time format (octal)
     /// </summary>
-    private IObservable<byte> LastModification() => properties.LastModification.ToUnixTimeSeconds().ToOctalField().GetAsciiBytes().ToObservable();
+    private IObservable<byte> LastModification() => Properties.LastModification.ToUnixTimeSeconds().ToOctalField().GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     From 100 to 108
@@ -132,7 +132,7 @@ public class Entry : IByteFlow
     /// <returns></returns>
     private IObservable<byte> FileMode()
     {
-        return properties.FileMode.ToString().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
+        return Properties.FileMode.ToString().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
     }
 
     /// <summary>
@@ -141,7 +141,7 @@ public class Entry : IByteFlow
     /// <returns></returns>
     private IObservable<byte> Owner()
     {
-        return properties.OwnerId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
+        return Properties.OwnerId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
     }
 
     /// <summary>
@@ -149,12 +149,12 @@ public class Entry : IByteFlow
     /// </summary>
     private IObservable<byte> Group()
     {
-        return properties.GroupId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
+        return Properties.GroupId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
     }
 
     /// <summary>
     ///     From 0 to 100
     /// </summary>
     /// <returns></returns>
-    private IObservable<byte> Filename() => ToAscii(name.Truncate(100).PadRight(100, '\0'));
+    private IObservable<byte> Filename() => ToAscii(Name.Truncate(100).PadRight(100, '\0'));
 }

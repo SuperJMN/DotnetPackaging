@@ -11,7 +11,7 @@ public class EntryFactory
     public static Task<Result<Entry>> Create(IFileSystem fs, ZafiroPath path, string name)
     {
         return fs.GetFile(path)
-            .Bind(file => file.ToByteStream())
+            .Bind(file => file.ToByteFlow())
             .Map(byteFlow => new Entry(name, new Properties()
             {
                 FileMode = FileMode.Parse("644"),
