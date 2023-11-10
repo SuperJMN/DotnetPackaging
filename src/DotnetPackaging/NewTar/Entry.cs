@@ -29,7 +29,7 @@ public class Entry : IByteFlow
         {
             var header = Header()
                 .AsBlocks<byte>(BlockSize, 0);
-            var content = byteFlow.Origin
+            var content = byteFlow.Bytes
                 .AsBlocks<byte>(BlockSize, 0);
             var bytes = header.Concat(content);
             return bytes;
