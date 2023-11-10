@@ -1,9 +1,9 @@
 ﻿using System.Reactive.Linq;
+using System.Text;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Common;
-using System.Text;
 
-namespace DotnetPackaging.NewTar;
+namespace DotnetPackaging.New.Tar;
 
 public class Entry : IByteFlow
 {

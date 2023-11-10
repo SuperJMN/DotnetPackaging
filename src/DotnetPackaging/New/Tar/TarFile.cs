@@ -1,15 +1,15 @@
 ﻿using System.Reactive.Linq;
 using DotnetPackaging.Common;
 
-namespace DotnetPackaging.NewTar;
+namespace DotnetPackaging.New.Tar;
 
 public class TarFile : IByteFlow
 {
-    private readonly IByteFlow[] entries;
+    private readonly Entry[] entries;
     private const int BlockingFactor = 20 * BlockSize;
     private const int BlockSize = 512;
 
-    public TarFile(params IByteFlow[] entries)
+    public TarFile(params Entry[] entries)
     {
         this.entries = entries;
     }
