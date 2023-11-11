@@ -9,9 +9,9 @@ public class IconData : IByteFlow
     {
         TargetSize = targetSize;
 
-        var imageObs = Observable.Defer(() => image.Resize(targetSize, TargetSize).EncodeAsObservable())
-            .Publish()
-            .RefCount();
+        var imageObs = Observable
+            .FromAsync(() => image.Resize(targetSize, TargetSize).ToBytes())
+            .SelectMany(bytes => bytes.ToObservable());
 
         Bytes = imageObs;
         Length = imageObs.ToEnumerable().Count();

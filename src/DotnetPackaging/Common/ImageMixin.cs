@@ -12,6 +12,15 @@ public static class ImageMixin
         return StreamMixin.ToObservable(memoryStream);
     }
 
+    public static async Task<byte[]> ToBytes(this Image image)
+    {
+        using (var memoryStream = new MemoryStream())
+        {
+            await image.SaveAsPngAsync(memoryStream);
+            return memoryStream.ToArray();
+        }
+    }
+
     public static Image Resize(this Image image, int width, int height)
     {
         image.Mutate(x => x.Resize(width, height));
