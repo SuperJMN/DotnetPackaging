@@ -1,24 +1,39 @@
-﻿using System.Reactive.Linq;
-using DotnetPackaging.Deb;
+﻿using DotnetPackaging.Archives.Deb;
 using FluentAssertions;
+using SixLabors.ImageSharp;
 using Zafiro.FileSystem;
-using Zafiro.IO;
 
 namespace DotnetPackaging.Tests.Deb.EndToEnd;
 
 public class DebCreationTests
 {
-    public DesktopEntry DesktopEntry => new()
+    [Fact]
+    public async Task Local_deb_builder()
+    {
+        var result  = await Create.Deb(
+            contentsPath: @"TestFiles\Content", 
+            outputPathForDebFile: @"C:\Users\JMN\Desktop\Testing\SampleOther.deb", 
+            metadata: TestData.Metadata,
+            executableFiles: TestData.ExecutableFiles);
+
+        result.Should().Succeed();
+    }
+
+}
+
+public static class TestData
+{
+    public static DesktopEntry DesktopEntry => new()
     {
         Name = "Avalonia Syncer",
-        Icons = IconResources.Create(new IconData(32, () => Observable.Using(() => File.OpenRead("TestFiles\\icon.png"), stream => stream.ToObservable()))).Value,
+        Icons = IconResources.Create(new IconData(32, Image.Load("TestFiles\\icon.png"))).Value,
         StartupWmClass = "AvaloniaSyncer",
         Keywords = new[] { "file manager" },
         Comment = "The best file explorer ever",
         Categories = new [] { "FileManager", "Filesystem", "Utility", "FileTransfer", "Archiving"}
     };
 
-    public Metadata Metadata => new()
+    public static Metadata Metadata => new()
     {
         PackageName = "AvaloniaSyncer",
         Description = "Best file explorer you'll ever find",
@@ -30,20 +45,8 @@ public class DebCreationTests
         Version = "0.1.33"
     };
 
-    public Dictionary<ZafiroPath, ExecutableMetadata> ExecutableFiles => new()
+    public static Dictionary<ZafiroPath, ExecutableMetadata> ExecutableFiles => new()
     {
-        ["AvaloniaSyncer.Desktop"] = new("avaloniasyncer", DesktopEntry),
+        ["TestDebpackage.Desktop"] = new("avaloniasyncer", DesktopEntry),
     };
-
-    [Fact]
-    public async Task Local_deb_builder()
-    {
-        var result  = await Create.Deb(
-            contentsPath: @"C:\Users\JMN\Desktop\Testing\AvaloniaSyncer", 
-            outputPathForDebFile: @"C:\Users\JMN\Desktop\Testing\AvaloniaSyncer.deb", 
-            metadata: Metadata,
-            executableFiles: ExecutableFiles);
-
-        result.Should().Succeed();
-    }
 }

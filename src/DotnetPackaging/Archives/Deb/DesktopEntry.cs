@@ -1,8 +1,8 @@
-﻿namespace DotnetPackaging.Console.Dtos;
+﻿namespace DotnetPackaging.Archives.Deb;
 
-public class DesktopEntryDto
+public class DesktopEntry
 {
-    public required IDictionary<int, string> Icons { get; init; }
+    public required IconResources Icons { get; init; }
     public required string Name { get; init; }
     public required string StartupWmClass { get; set; }
     public required IEnumerable<string> Keywords { get; init; }

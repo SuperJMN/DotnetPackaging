@@ -1,9 +1,9 @@
 ﻿using System.Text.Json;
-using DotnetPackage.Console.Dtos;
-using DotnetPackaging.Deb;
+using DotnetPackaging.Archives.Deb;
+using DotnetPackaging.Console.Dtos;
 using Zafiro.FileSystem;
 
-namespace DotnetPackage.Console;
+namespace DotnetPackaging.Console;
 
 public class Packaging
 {

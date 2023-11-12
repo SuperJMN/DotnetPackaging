@@ -1,6 +1,6 @@
 ﻿using System.Reactive.Linq;
+using DotnetPackaging.Archives.Tar;
 using DotnetPackaging.Common;
-using DotnetPackaging.Tar;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 
@@ -11,9 +11,8 @@ public class TarEntryTests
     [Fact]
     public void Test_png()
     {
-        var entryData = new EntryData("Icon.png", new Properties()
+        var entry = new Entry("Icon.png", new Properties()
         {
-            Length = png.Length,
             FileMode = FileMode.Parse("777"),
             GroupId = 1000,
             OwnerId = 1000,
@@ -21,9 +20,8 @@ public class TarEntryTests
             LastModification = 1.January(2023),
             LinkIndicator = 0,
             OwnerUsername = "root"
-        }, () => png.ToObservable());
+        }, new ByteFlow(png.ToObservable(), png.Length));
 
-        var entry = new Entry(entryData);
 
         var actual = entry.Bytes.ToEnumerable().ToList();
         var expectation = header.Concat(png)

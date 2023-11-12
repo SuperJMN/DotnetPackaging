@@ -1,9 +1,8 @@
-﻿using System.Reactive.Linq;
-using DotnetPackaging.Deb;
+﻿using DotnetPackaging.Archives.Deb;
+using SixLabors.ImageSharp;
 using Zafiro.FileSystem;
-using Zafiro.IO;
 
-namespace DotnetPackage.Console.Dtos;
+namespace DotnetPackaging.Console.Dtos;
 
 public static class ConvertMixin
 {
@@ -20,8 +19,7 @@ public static class ConvertMixin
     {
         var iconDatas = dto.Icons
             .Select(
-                pair => new IconData(pair.Key,
-                    () => Observable.Using(() => File.OpenRead(pair.Value), stream => stream.ToObservable())));
+                pair => new IconData(pair.Key, Image.Load(pair.Value)));
 
         var iconsResources = IconResources.Create(iconDatas.ToArray());
 

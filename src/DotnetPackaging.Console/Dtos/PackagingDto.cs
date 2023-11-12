@@ -1,4 +1,4 @@
-﻿namespace DotnetPackage.Console.Dtos;
+﻿namespace DotnetPackaging.Console.Dtos;
 
 public class PackagingDto
 {
