@@ -1,5 +1,4 @@
-﻿using DotnetPackaging.Old.Deb;
-using FluentAssertions;
+﻿using FluentAssertions;
 using Zafiro.FileSystem;
 
 namespace DotnetPackaging.Tests.Deb;
