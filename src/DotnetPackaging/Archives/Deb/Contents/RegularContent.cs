@@ -1,7 +1,7 @@
 ﻿using DotnetPackaging.Common;
 using Zafiro.FileSystem;
 
-namespace DotnetPackaging.New.Archives.Deb.Contents;
+namespace DotnetPackaging.Archives.Deb.Contents;
 
 public class RegularContent : Content
 {

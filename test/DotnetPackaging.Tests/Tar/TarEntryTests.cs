@@ -1,6 +1,6 @@
 ﻿using System.Reactive.Linq;
+using DotnetPackaging.Archives.Tar;
 using DotnetPackaging.Common;
-using DotnetPackaging.New.Archives.Tar;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 

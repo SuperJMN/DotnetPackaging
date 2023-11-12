@@ -1,11 +1,10 @@
 ﻿using System.Reactive.Linq;
 using System.Text;
 using DotnetPackaging.Common;
-using DotnetPackaging.New.Archives.Ar;
-using DotnetPackaging.New.Archives.Tar;
+using DotnetPackaging.Archives.Tar;
 using Zafiro.IO;
-using Entry = DotnetPackaging.New.Archives.Ar.Entry;
-using Properties = DotnetPackaging.New.Archives.Ar.Properties;
+using Entry = DotnetPackaging.Archives.Ar.Entry;
+using Properties = DotnetPackaging.Archives.Ar.Properties;
 
 namespace DotnetPackaging.Tests.Ar;
 

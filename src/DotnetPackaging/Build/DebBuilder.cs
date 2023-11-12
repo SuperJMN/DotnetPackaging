@@ -1,10 +1,10 @@
 ﻿using CSharpFunctionalExtensions;
+using DotnetPackaging.Archives.Deb;
+using DotnetPackaging.Archives.Deb.Contents;
 using DotnetPackaging.Common;
-using DotnetPackaging.New.Archives.Deb;
-using DotnetPackaging.New.Archives.Deb.Contents;
 using Zafiro.FileSystem;
 
-namespace DotnetPackaging.New.Build;
+namespace DotnetPackaging.Build;
 
 public class DebBuilder
 {

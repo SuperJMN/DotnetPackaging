@@ -1,13 +1,13 @@
 ﻿using System.Reactive.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Archives.Deb.Contents;
+using DotnetPackaging.Archives.Tar;
 using DotnetPackaging.Common;
-using DotnetPackaging.New.Archives.Deb.Contents;
-using DotnetPackaging.New.Archives.Tar;
 using Zafiro;
 using Zafiro.FileSystem;
 
-namespace DotnetPackaging.New.Archives.Deb;
+namespace DotnetPackaging.Archives.Deb;
 
 public class DataFactory
 {

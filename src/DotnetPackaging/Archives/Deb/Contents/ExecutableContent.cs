@@ -1,8 +1,9 @@
 ﻿using CSharpFunctionalExtensions;
+using DotnetPackaging.Archives.Deb;
 using DotnetPackaging.Common;
 using Zafiro.FileSystem;
 
-namespace DotnetPackaging.New.Archives.Deb.Contents;
+namespace DotnetPackaging.Archives.Deb.Contents;
 
 public class ExecutableContent : Content
 {

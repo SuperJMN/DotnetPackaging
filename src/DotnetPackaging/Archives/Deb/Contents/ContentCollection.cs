@@ -3,7 +3,7 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging.Common;
 using Zafiro.FileSystem;
 
-namespace DotnetPackaging.New.Archives.Deb.Contents;
+namespace DotnetPackaging.Archives.Deb.Contents;
 
 public class ContentCollection : Collection<Content>
 {
@@ -45,7 +45,7 @@ public class ContentCollection : Collection<Content>
     {
         return file
             .ToByteFlow()
-            .Map(flow => (Content) new ExecutableContent(file.Path.MakeRelativeTo(zafiroDirectory.Path), flow)
+            .Map(flow => (Content)new ExecutableContent(file.Path.MakeRelativeTo(zafiroDirectory.Path), flow)
             {
                 DesktopEntry = metadata.DesktopEntry,
                 CommandName = metadata.CommandName,

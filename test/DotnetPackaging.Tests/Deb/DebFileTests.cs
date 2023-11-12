@@ -1,10 +1,10 @@
 ﻿using System.IO.Abstractions;
 using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Archives.Deb.Contents;
 using DotnetPackaging.Common;
-using DotnetPackaging.New.Archives.Deb;
-using DotnetPackaging.New.Archives.Deb.Contents;
-using DotnetPackaging.New.Build;
+using DotnetPackaging.Archives.Deb;
+using DotnetPackaging.Build;
 using DotnetPackaging.Tests.Deb.EndToEnd;
 using FluentAssertions;
 using Serilog;

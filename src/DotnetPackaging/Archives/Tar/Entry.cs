@@ -3,7 +3,7 @@ using System.Text;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Common;
 
-namespace DotnetPackaging.New.Archives.Tar;
+namespace DotnetPackaging.Archives.Tar;
 
 public class Entry : IByteFlow
 {
@@ -15,8 +15,8 @@ public class Entry : IByteFlow
 
     public Entry(string name, Properties properties, IByteFlow byteFlow, int blockSize = 512)
     {
-        this.Name = name;
-        this.Properties = properties;
+        Name = name;
+        Properties = properties;
         this.byteFlow = byteFlow;
         BlockSize = blockSize;
     }
@@ -90,7 +90,7 @@ public class Entry : IByteFlow
 
     private IObservable<byte> UstarVersion()
     {
-        return new byte []{ 0x20, 0x00 }.ToObservable();
+        return new byte[] { 0x20, 0x00 }.ToObservable();
     }
 
     private IObservable<byte> Ustar()

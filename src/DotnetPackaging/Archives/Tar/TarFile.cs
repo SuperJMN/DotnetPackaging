@@ -1,7 +1,7 @@
 ﻿using System.Reactive.Linq;
 using DotnetPackaging.Common;
 
-namespace DotnetPackaging.New.Archives.Tar;
+namespace DotnetPackaging.Archives.Tar;
 
 public class TarFile : IByteFlow
 {
@@ -18,7 +18,7 @@ public class TarFile : IByteFlow
     {
         get
         {
-            return 
+            return
                 entries
                     .ToObservable()
                     .Select(flow => flow.Bytes)

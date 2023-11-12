@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
+using DotnetPackaging.Archives.Deb;
 using DotnetPackaging.Console.Dtos;
-using DotnetPackaging.New.Archives.Deb;
 using Zafiro.FileSystem;
 
 namespace DotnetPackaging.Console;
