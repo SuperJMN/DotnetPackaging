@@ -1,22 +1,30 @@
-﻿using System.Reactive.Linq;
+﻿using System.IO.Abstractions;
+using System.Reactive.Linq;
+using CSharpFunctionalExtensions;
 using DotnetPackaging.Common;
-using DotnetPackaging.Old.Deb;
-using Zafiro.FileSystem;
+using DotnetPackaging.New.Archives.Deb;
+using DotnetPackaging.New.Archives.Deb.Contents;
+using DotnetPackaging.New.Build;
+using DotnetPackaging.Tests.Deb.EndToEnd;
+using FluentAssertions;
+using Serilog;
+using Zafiro.FileSystem.Local;
 using Zafiro.IO;
 
 namespace DotnetPackaging.Tests.Deb;
 
 public class DebFileTests
 {
-    // TODO: Place some interesting tests here
-    //[Fact]
-    //public async Task FullDebTest()
-    //{
-    //    var debFile = DebFile();
-
-    //    await using var fileStream = File.Create("C:\\Users\\JMN\\Desktop\\Testing\\FullDebTest.deb");
-    //    await debFile.Bytes.DumpTo(fileStream);
-    //}
+    [Fact]
+    public async Task FullDebTest()
+    {
+        var fs = new LocalFileSystem(new FileSystem(), Maybe<ILogger>.None);
+        var result = await fs.GetDirectory("TestFiles/Content")
+            .Bind(dir => ContentCollection.From(dir, TestData.ExecutableFiles))
+            .Map(collection => new DebFile(TestData.Metadata, collection));
+        IEnumerable<byte> expectedBytes = await File.ReadAllBytesAsync("TestFiles\\Sample.deb");
+        result.Should().Succeed().And.Subject.Value.Bytes.ToEnumerable().Count().Should().Be(expectedBytes.Count());
+    }
 
     //[Fact]
     //public async Task WriteControlTar()

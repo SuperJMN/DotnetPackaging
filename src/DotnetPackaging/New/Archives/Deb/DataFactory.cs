@@ -41,7 +41,9 @@ public class DataFactory
     {
         return fileEntries
             .SelectMany(data => new[] { data }.Concat(DirectoryEntries(data.Name)))
-            .Distinct(new LambdaComparer<Entry>((a, b) => Equals(a.Name, b.Name)));
+            .Distinct(new LambdaComparer<Entry>((a, b) => Equals(a.Name, b.Name)))
+            .OrderByDescending(x => x.Properties.LinkIndicator)
+            .ThenBy(x => x.Name.Length);
     }
 
     private static IEnumerable<Entry> DirectoryEntries(ZafiroPath filePath)

@@ -26,7 +26,7 @@ public static class Create
         var result = await ResultFactory.CombineAndBind(
             fs.GetDirectory(contentsPath.ToZafiroPath()),
             fs.GetFile(outputPathForDebFile.ToZafiroPath()),
-            (contentDirectory, output) => new DebBuilder().Create(contentDirectory, metadata, executableFiles, output));
+            (contentDirectory, output) => new DebBuilder().Write(contentDirectory, metadata, executableFiles, output));
 
         return result;
     }
