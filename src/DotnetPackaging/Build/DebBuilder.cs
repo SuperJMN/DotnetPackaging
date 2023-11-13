@@ -8,10 +8,10 @@ namespace DotnetPackaging.Build;
 
 public class DebBuilder
 {
-    public async Task<Result> Write(IZafiroDirectory contentDirectory, Metadata metadata, Dictionary<ZafiroPath, ExecutableMetadata> dict, IZafiroFile debFile)
+    public async Task<Result> Write(IZafiroDirectory contentDirectory, PackageDefinition packageDefinition, IZafiroFile debFile)
     {
-        var result = await ContentCollection.From(contentDirectory, dict)
-            .Map(contents => new DebFile(metadata, new ContentCollection(contents)))
+        var result = await ContentCollection.From(contentDirectory, packageDefinition.ExecutableMappings)
+            .Map(contents => new DebFile(packageDefinition.Metadata, new ContentCollection(contents)))
             .Tap(deb => deb.Bytes.DumpTo(debFile));
 
         return result;
