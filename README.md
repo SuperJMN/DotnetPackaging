@@ -14,11 +14,49 @@ dotnet tool install --global DotnetPackaging.Console
 
 After the tool is installed, just invoke it with the appropirate arguments:
 
-
 Create you .deb packages for Debian based systems like Ubuntu and Debian itself.
 
 ```powershell
 dotnetpackaging --directory c:\repos\myapp\bin\Release\net7.0\publish\linux-x64 --metadata C:\Users\JMN\Desktop\Testing\metadata.deb.json --output c:\users\jmn\desktop\testing\myapp.1.0.0.x64.deb
+```
+
+# Metadata.deb.json
+
+You need to provide the metadata of your .deb package. Example here!
+
+```json
+{
+    "Executables": {
+      "MyApp.Desktop": {
+        "CommandName": "myapp",
+        "DesktopEntry": {
+          "Icons": {
+            "32": "C:\\Users\\JMN\\Desktop\\Testing\\icon32.png",
+            "64": "C:\\Users\\JMN\\Desktop\\Testing\\icon64.png"
+          },
+          "Name": "Sample application",
+          "StartupWmClass": "Sample",
+          "Keywords": [
+            "Sample"
+          ],
+          "Comment": "This is a test",
+          "Categories": [
+            "Financial"
+          ]
+        }
+      }
+    },
+    "PackageMetadata": {
+      "Maintainer": "Some avid programmer",
+      "PackageName": "SamplePackage",
+      "ApplicationName": "Sample",
+      "Architecture": "amd64",
+      "Homepage": "https://www.sample.com",
+      "License": "MIT",
+      "Description": "Sample",
+      "Version": "1.0.0"
+    }
+  }
 ```
 
 # Nuke Build system
