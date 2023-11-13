@@ -1,28 +1,39 @@
 # Distribute your aplications!
 
 Wondering how to distribute your wonderful .NET application to your fellow peeps? Bored to pack your stuff in a .zip that you hate as much as your users? You are in the correct place!
+With it, you can create your .deb packages for Debian based systems like Ubuntu and Debian itself. Woohoo!
 
-# Mission
+# Overview
 
-DotnetPackage has been created to give an answer to those that want to distribute their applications in a more convenient way. 
+One of the most flagrant annoyances of the .NET world is the absence of standardized ways to distribute "classic" applications, those that are for end users. Imagine that have a beautiful cross-platform application, like the ones created using [Avalonia UI](https://www.avaloniaui.net). Everything is fine until you need to distribute you apps. 
 
-One of the most flagrant annoyances of the .NET world is the absence of standardized ways to distribute "classic" applications, those that are for end users. Eg. You have an [Avalonia UI](https://www.avaloniaui.net) application you want to pack for Linux. You just need to install a .NET tool.
+**DotnetPackageing** has been created to give an answer to those that want to distribute their applications in a more convenient way. It's about time, uh?
+
+# How can I use this?
+
+The application can be used as a library or as a .NET tool.
+
+# Using it as a .NET Tool
+
+Easy peasy. Install the tool by executing this command:
 
 ```powershell
 dotnet tool install --global DotnetPackaging.Console
 ```
 
-After the tool is installed, just invoke it with the appropirate arguments:
-
-Create you .deb packages for Debian based systems like Ubuntu and Debian itself.
+After the tool is installed, just invoke it with the appropriate arguments:
 
 ```powershell
 dotnetpackaging --directory c:\repos\myapp\bin\Release\net7.0\publish\linux-x64 --metadata C:\Users\JMN\Desktop\Testing\metadata.deb.json --output c:\users\jmn\desktop\testing\myapp.1.0.0.x64.deb
 ```
 
-# Metadata.deb.json
+- Wait, wait! I understand the --directory and --output options, but what's the json file?
 
-You need to provide the metadata of your .deb package. Example here!
+it's a special file that you need to edit to customize the properties of your package.
+
+## Metadata.deb.json
+
+This is a sample file. Customize it to your needs.
 
 ```json
 {
@@ -59,39 +70,14 @@ You need to provide the metadata of your .deb package. Example here!
   }
 ```
 
-# Nuke Build system
+# Integrate it with Nuke Build system
 
-This is not only to use as a command line tool. We have you covered.
+AS I mentioned above, DotnetPackaging isn't just a tool, but a library, too. You can integrate it with [Nuke](https://nuke.build) very easily!
 
-Add the **DotnetPackaging**  Nuget package to your Nuke project and use a like like this:
+Take a looks to this example:
 
-```
-var desktopEntry = new DesktopEntry()
-{
-	Name = "Avalonia Syncer",
-	Icons = IconResources.Create(new IconData(32, await Image.LoadAsync("myapp.png"))).Value,
-	StartupWmClass = "AvaloniaSyncer",
-	Keywords = new[] { "file manager" },
-	Comment = "The best file explorer ever",
-	Categories = new[] { "FileManager", "Filesystem", "Utility", "FileTransfer", "Archiving" }
-};
+1. https://github.com/SuperJMN/AvaloniaSyncer/blob/26260a6d2cc7c611d60e5c1e5b821f8512877ba5/build/Build.cs#L46
+2. https://github.com/SuperJMN/AvaloniaSyncer/blob/26260a6d2cc7c611d60e5c1e5b821f8512877ba5/build/DebPackages.cs#L16
 
-var metadata = new Metadata
-{
-	PackageName = "AvaloniaSyncer",
-	Description = "Best file explorer you'll ever find",
-	ApplicationName = "Avalonia Syncer",
-	Architecture = "amd64",
-	Homepage = "https://www.something.com",
-	License = "MIT",
-	Maintainer = "SuperJMN@outlook.com",
-	Version = "0.1.33"
-};
-
-var executableFiles = new Dictionary<ZafiroPath, ExecutableMetadata>
-{
-	["MyApp.Desktop"] = new("avaloniasyncer", desktopEntry),    // You need this to **mark** a given file as executable. It created the desktop entry with its icons and so.
-};
-
-await Create.Deb(@"c:\repos\myapp\bin\Release\net7.0\publish\linux-x64", "output/myapp.deb", metadata, executableFiles);
-```
+Feel free to ask in the Discussions section of this repo.
+If this has been useful for you, please consider sponsoring this project. Thanks!
