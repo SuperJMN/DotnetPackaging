@@ -15,6 +15,31 @@ public static class PackageDefinitionMixin
     {
         await using var fileStream = metadataFile.OpenRead();
         var data = await JsonSerializer.DeserializeAsync<PackageDefinitionDto>(fileStream);
-        return data!;
+
+        var packageDefinitionDto = data! with
+        {
+            Executables = new Dictionary<string, ExecutableMetadataDto>(data.Executables.Select(pair =>
+            {
+                return new KeyValuePair<string, ExecutableMetadataDto>(pair.Key, pair.Value with
+                {
+                    DesktopEntry = pair.Value.DesktopEntry with
+                    {
+                        Icons = new Dictionary<int, string>(pair.Value.DesktopEntry.Icons.Select(valuePair =>
+                            new KeyValuePair<int, string>(valuePair.Key,
+                                Path.Combine(metadataFile.DirectoryName!, valuePair.Value))))
+                    }
+                });
+            }))
+        };
+
+        return packageDefinitionDto;
+    }
+
+    private static KeyValuePair<string, ExecutableMetadataDto> Remap(KeyValuePair<string, ExecutableMetadataDto> pair)
+    {
+        return new KeyValuePair<string, ExecutableMetadataDto>(pair.Key, pair.Value with
+        {
+            
+        });
     }
 }

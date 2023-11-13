@@ -10,7 +10,7 @@ public static class ConvertMixin
 
     private static Dictionary<ZafiroPath, ExecutableMetadata> ToModel(this IDictionary<string, ExecutableMetadataDto> dto)
     {
-        return dto.ToDictionary(x => (ZafiroPath)x.Key, x => x.Value.ToModel());
+        return dto.ToDictionary(x => (ZafiroPath) x.Key, x => x.Value.ToModel());
     }
 
     private static ExecutableMetadata ToModel(this ExecutableMetadataDto dto) => new(dto.CommandName, dto.DesktopEntry.ToModel());

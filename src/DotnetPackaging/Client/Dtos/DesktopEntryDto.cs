@@ -1,6 +1,6 @@
 ﻿namespace DotnetPackaging.Client.Dtos;
 
-public class DesktopEntryDto
+public record DesktopEntryDto
 {
     public required IDictionary<int, string> Icons { get; init; }
     public required string Name { get; init; }
