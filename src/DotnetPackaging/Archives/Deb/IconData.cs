@@ -13,8 +13,7 @@ public class IconData : IByteFlow
 
         imageBytesObs = Observable.FromAsync(() => image.Resize(targetSize, TargetSize).ToBytes())
             .SelectMany(b => b)
-            .FirstAsync()
-            .Publish()
+            .Replay()
             .RefCount();
     }
 
