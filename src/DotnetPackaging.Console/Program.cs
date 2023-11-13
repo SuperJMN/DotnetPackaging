@@ -24,11 +24,10 @@ return await rootCommand.InvokeAsync(args);
 
 static async Task CreateDeb(DirectoryInfo contents, FileInfo debFile, FileInfo metadataFile)
 {
-    var packagingDto = await metadataFile.ToPackageDefinition();
-    var packaging = packagingDto.ToModel();
+    var packagingDto = await metadataFile.ToDto();
     Log.Logger.Information("Creating {Deb} from {Contents}", debFile.FullName, contents.FullName);
     Log.Logger.Verbose("Metadata for {Deb} is set to {Metadata}", debFile.FullName, packagingDto);
-    var result = await Create.Deb(packaging, contents.FullName, debFile.FullName);
+    var result = await Create.Deb(packagingDto.ToModel(), contents.FullName, debFile.FullName);
 
     result
         .Tap(() => Log.Information("Success"))
