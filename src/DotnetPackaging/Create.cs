@@ -1,6 +1,6 @@
 ﻿using System.IO.Abstractions;
 using CSharpFunctionalExtensions;
-using DotnetPackaging.Build;
+using DotnetPackaging.Client;
 using DotnetPackaging.Common;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;

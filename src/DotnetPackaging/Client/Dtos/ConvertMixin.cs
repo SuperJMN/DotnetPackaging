@@ -1,13 +1,12 @@
 ﻿using DotnetPackaging.Archives.Deb;
 using DotnetPackaging.Common;
-using SixLabors.ImageSharp;
 using Zafiro.FileSystem;
 
-namespace DotnetPackaging.Console.Dtos;
+namespace DotnetPackaging.Client.Dtos;
 
 public static class ConvertMixin
 {
-    public static PackageDefinition ToModel(this PackagingDto dto) => new(dto.PackageMetadata.ToModel(), dto.Executables.ToModel());
+    public static PackageDefinition ToModel(this PackageDefinitionDto dto) => new(dto.PackageMetadata.ToModel(), dto.Executables.ToModel());
 
     private static Dictionary<ZafiroPath, ExecutableMetadata> ToModel(this IDictionary<string, ExecutableMetadataDto> dto)
     {

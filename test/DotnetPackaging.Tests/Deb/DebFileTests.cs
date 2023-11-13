@@ -2,14 +2,11 @@
 using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Archives.Deb.Contents;
-using DotnetPackaging.Common;
 using DotnetPackaging.Archives.Deb;
-using DotnetPackaging.Build;
 using DotnetPackaging.Tests.Deb.EndToEnd;
 using FluentAssertions;
 using Serilog;
 using Zafiro.FileSystem.Local;
-using Zafiro.IO;
 
 namespace DotnetPackaging.Tests.Deb;
 

@@ -4,7 +4,7 @@ using DotnetPackaging.Archives.Deb.Contents;
 using DotnetPackaging.Common;
 using Zafiro.FileSystem;
 
-namespace DotnetPackaging.Build;
+namespace DotnetPackaging.Client;
 
 public class DebBuilder
 {

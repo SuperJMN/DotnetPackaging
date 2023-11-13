@@ -1,4 +1,4 @@
-﻿namespace DotnetPackaging.Console.Dtos;
+﻿namespace DotnetPackaging.Client.Dtos;
 
 public class ExecutableMetadataDto
 {
