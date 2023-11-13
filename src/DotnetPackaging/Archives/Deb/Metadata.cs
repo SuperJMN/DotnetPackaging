@@ -1,6 +1,6 @@
 ﻿namespace DotnetPackaging.Archives.Deb;
 
-public class Metadata
+public record Metadata
 {
     public required string Maintainer { get; init; }
     public required string PackageName { get; init; }
