@@ -5,19 +5,27 @@ namespace DotnetPackaging.Archives.Deb;
 
 public class IconData : IByteFlow
 {
-    private readonly IObservable<byte> imageObs;
+    private readonly IObservable<byte> imageBytesObs;
 
     public IconData(int targetSize, Image image)
     {
         TargetSize = targetSize;
 
-        imageObs = Observable
-            .FromAsync(() => image.Resize(targetSize, TargetSize).ToBytes())
-            .SelectMany(bytes => bytes.ToObservable())
-            .FirstAsync();
+        imageBytesObs = Observable.FromAsync(() => image.Resize(targetSize, TargetSize).ToBytes())
+            .SelectMany(b => b)
+            .FirstAsync()
+            .Publish()
+            .RefCount();
     }
 
     public int TargetSize { get; }
-    public IObservable<byte> Bytes => imageObs;
-    public long Length => imageObs.ToEnumerable().Count();
+    public IObservable<byte> Bytes => imageBytesObs;
+    public long Length
+    {
+        get
+        {
+            var enumerable = imageBytesObs.ToEnumerable();
+            return enumerable.Count();
+        }
+    }
 }
