@@ -8,7 +8,7 @@ public static class PackageDefinitionMixin
     public static async Task<PackageDefinition> ToPackageDefinition(this FileInfo metadataFile)
     {
         var packageDefinitionDto = await metadataFile.ToDto();
-        return packageDefinitionDto.ToModel();
+        return await packageDefinitionDto.ToModel();
     }
 
     public static async Task<PackageDefinitionDto> ToDto(this FileInfo metadataFile)
@@ -33,13 +33,5 @@ public static class PackageDefinitionMixin
         };
 
         return packageDefinitionDto;
-    }
-
-    private static KeyValuePair<string, ExecutableMetadataDto> Remap(KeyValuePair<string, ExecutableMetadataDto> pair)
-    {
-        return new KeyValuePair<string, ExecutableMetadataDto>(pair.Key, pair.Value with
-        {
-            
-        });
     }
 }

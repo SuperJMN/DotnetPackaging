@@ -27,7 +27,7 @@ static async Task CreateDeb(DirectoryInfo contents, FileInfo debFile, FileInfo m
     var packagingDto = await metadataFile.ToDto();
     Log.Logger.Information("Creating {Deb} from {Contents}", debFile.FullName, contents.FullName);
     Log.Logger.Verbose("Metadata for {Deb} is set to {Metadata}", debFile.FullName, packagingDto);
-    var packageDefinition = packagingDto.ToModel();
+    var packageDefinition = await packagingDto.ToModel();
     var result = await Create.Deb(packageDefinition, contents.FullName, debFile.FullName);
 
     result

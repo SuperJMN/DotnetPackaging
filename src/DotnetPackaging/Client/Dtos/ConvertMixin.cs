@@ -6,22 +6,23 @@ namespace DotnetPackaging.Client.Dtos;
 
 public static class ConvertMixin
 {
-    public static PackageDefinition ToModel(this PackageDefinitionDto dto) => new(dto.PackageMetadata.ToModel(), dto.Executables.ToModel());
+    public static async Task<PackageDefinition> ToModel(this PackageDefinitionDto dto) => new(dto.PackageMetadata.ToModel(), await dto.Executables.ToModel());
 
-    private static Dictionary<ZafiroPath, ExecutableMetadata> ToModel(this IDictionary<string, ExecutableMetadataDto> dto)
+    private static async Task<Dictionary<ZafiroPath, ExecutableMetadata>> ToModel(this IDictionary<string, ExecutableMetadataDto> dto)
     {
-        return dto.ToDictionary(x => (ZafiroPath) x.Key, x => x.Value.ToModel());
+        var tasks = dto.Select(async x => new { x.Key, Model = await x.Value.ToModel() });
+        var results = await Task.WhenAll(tasks.ToArray());
+        return results.ToDictionary(x => (ZafiroPath)x.Key, x => x.Model);
     }
 
-    private static ExecutableMetadata ToModel(this ExecutableMetadataDto dto) => new(dto.CommandName, dto.DesktopEntry.ToModel());
+    private static async Task<ExecutableMetadata> ToModel(this ExecutableMetadataDto dto) => new(dto.CommandName, await dto.DesktopEntry.ToModel());
 
-    private static DesktopEntry ToModel(this DesktopEntryDto dto)
+    private static async Task<DesktopEntry> ToModel(this DesktopEntryDto dto)
     {
-        var iconDatas = dto.Icons
-            .Select(
-                pair => new IconData(pair.Key, Image.Load(pair.Value)));
+        var tasks = dto.Icons.Select(async pair => await IconData.Create(pair.Key, Image.Load(pair.Value)));
+        var iconDatas = await Task.WhenAll(tasks.ToArray());
 
-        var iconsResources = IconResources.Create(iconDatas.ToArray());
+        var iconsResources = IconResources.Create(iconDatas);
 
         return new DesktopEntry
         {

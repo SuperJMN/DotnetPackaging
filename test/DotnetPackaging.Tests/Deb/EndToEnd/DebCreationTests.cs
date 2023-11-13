@@ -8,7 +8,7 @@ public class DebCreationTests
     public async Task Local_deb_builder()
     {
         var result  = await Create.Deb(
-            TestData.PackageDefinition,
+            await TestData.GetPackageDefinition(),
             contentsPath: @"TestFiles\Content", 
             outputPathForDebFile: @"C:\Users\JMN\Desktop\Testing\SampleOther.deb");
 
