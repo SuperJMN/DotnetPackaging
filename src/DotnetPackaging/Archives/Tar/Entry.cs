@@ -1,4 +1,5 @@
-﻿using System.Reactive.Linq;
+﻿using System.Diagnostics;
+using System.Reactive.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Common;
@@ -7,10 +8,7 @@ namespace DotnetPackaging.Archives.Tar;
 
 public class Entry : IByteFlow
 {
-    public int BlockSize { get; }
-
-    public string Name { get; }
-    public Properties Properties { get; }
+    private const int HeaderSize = 257;
     private readonly IByteFlow byteFlow;
 
     public Entry(string name, Properties properties, IByteFlow byteFlow, int blockSize = 512)
@@ -19,18 +17,26 @@ public class Entry : IByteFlow
         Properties = properties;
         this.byteFlow = byteFlow;
         BlockSize = blockSize;
+        HeaderFullSize = blockSize;
     }
 
-    public long Length => byteFlow.Length.RoundUpToNearestMultiple(BlockSize) + BlockSize;
+    public int HeaderFullSize { get; }
+
+    public int BlockSize { get; }
+
+    public string Name { get; }
+    public Properties Properties { get; }
+
+    public long Length => byteFlow.Length.RoundUpToNearestMultiple(BlockSize) + HeaderFullSize;
 
     public IObservable<byte> Bytes
     {
         get
         {
             var header = Header()
-                .AsBlocks<byte>(BlockSize, 0);
+                .ConcatPadding(BlockSize - HeaderSize, 0x00);
             var content = byteFlow.Bytes
-                .AsBlocks<byte>(BlockSize, 0);
+                .ConcatPadding((int) (byteFlow.Length.RoundUpToNearestMultiple(BlockSize) - byteFlow.Length), 0x00);
             var bytes = header.Concat(content);
             return bytes;
         }
@@ -48,14 +54,11 @@ public class Entry : IByteFlow
     }
 
     /// <summary>
-    /// From 148 to 156 [8]
+    ///     From 148 to 156 [8]
     /// </summary>
     /// <param name="checksum"></param>
     /// <returns></returns>
-    private IObservable<byte> Checksum(int checksum)
-    {
-        return (checksum.ToOctal().PadLeft(6, '0').NullTerminated() + " ").GetAsciiBytes().ToObservable();
-    }
+    private IObservable<byte> Checksum(int checksum) => (checksum.ToOctal().PadLeft(6, '0').NullTerminated() + " ").GetAsciiBytes().ToObservable();
 
     private IObservable<byte> Header(IObservable<byte> checksum) => Observable.Concat
     (
@@ -68,8 +71,8 @@ public class Entry : IByteFlow
         checksum,
         LinkIndicator(),
         NameOfLinkedFile(),
-    Ustar(),
-    UstarVersion(),
+        Ustar(),
+        UstarVersion(),
         OwnerUsername(),
         GroupUsername()
     );
@@ -93,18 +96,12 @@ public class Entry : IByteFlow
         return new byte[] { 0x20, 0x00 }.ToObservable();
     }
 
-    private IObservable<byte> Ustar()
-    {
-        return "ustar".PadRight(6, ' ').GetAsciiBytes().ToObservable();
-    }
+    private IObservable<byte> Ustar() => "ustar".PadRight(6, ' ').GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     From 156 to 157 Link indicator (file type)
     /// </summary>
-    private IObservable<byte> LinkIndicator()
-    {
-        return Properties.LinkIndicator.ToString().GetAsciiBytes().ToObservable();
-    }
+    private IObservable<byte> LinkIndicator() => Properties.LinkIndicator.ToString().GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     From 157 to 257 Link indicator (file type)
@@ -130,27 +127,18 @@ public class Entry : IByteFlow
     ///     From 100 to 108
     /// </summary>
     /// <returns></returns>
-    private IObservable<byte> FileMode()
-    {
-        return Properties.FileMode.ToString().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
-    }
+    private IObservable<byte> FileMode() => Properties.FileMode.ToString().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     From 108 to 116
     /// </summary>
     /// <returns></returns>
-    private IObservable<byte> Owner()
-    {
-        return Properties.OwnerId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
-    }
+    private IObservable<byte> Owner() => Properties.OwnerId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     From 116 to 124
     /// </summary>
-    private IObservable<byte> Group()
-    {
-        return Properties.GroupId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
-    }
+    private IObservable<byte> Group() => Properties.GroupId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes().ToObservable();
 
     /// <summary>
     ///     From 0 to 100

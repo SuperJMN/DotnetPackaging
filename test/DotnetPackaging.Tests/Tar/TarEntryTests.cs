@@ -9,7 +9,7 @@ namespace DotnetPackaging.Tests.Tar;
 public class TarEntryTests
 {
     [Fact]
-    public void Test_png()
+    public async Task Test_png()
     {
         var entry = new Entry("Icon.png", new Properties()
         {
@@ -28,8 +28,8 @@ public class TarEntryTests
             .Concat(padding)
             .ToArray();
 
-        actual.DumpTo("C:\\Users\\JMN\\Desktop\\Testing\\actual.tar");
-        expectation.DumpTo("C:\\Users\\JMN\\Desktop\\Testing\\expected.tar");
+        await actual.DumpTo("C:\\Users\\JMN\\Desktop\\Testing\\actual.tar");
+        await expectation.DumpTo("C:\\Users\\JMN\\Desktop\\Testing\\expected.tar");
 
         actual.Should().BeEquivalentTo(expectation);
     }

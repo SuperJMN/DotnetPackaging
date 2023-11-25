@@ -13,7 +13,7 @@ namespace DotnetPackaging.Tests.Deb;
 public class DebFileTests
 {
     [Fact]
-    public async Task FullDebTest()
+    public async Task Sample_deb_file_length_are_equal()
     {
         var fs = new LocalFileSystem(new FileSystem(), Maybe<ILogger>.None);
         var result = await fs.GetDirectory("TestFiles/Content")
