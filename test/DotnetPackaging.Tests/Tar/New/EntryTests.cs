@@ -1,14 +1,12 @@
-﻿using System.IO.Abstractions;
-using CSharpFunctionalExtensions;
-using FluentAssertions;
-using Serilog;
+﻿using FluentAssertions;
+using Zafiro.FileSystem;
 using Zafiro.FileSystem.Local;
 
 namespace DotnetPackaging.Tests.Tar.New;
 
 public class EntryTests
 {
-    private readonly LocalFileSystem fs = new(new FileSystem(), Maybe<ILogger>.None);
+    private readonly IFileSystemRoot fs = new FileSystemRoot(new ObservableFileSystem(LocalFileSystem.Create()));
 
     [Fact]
     public async Task Test_entry_data_length()

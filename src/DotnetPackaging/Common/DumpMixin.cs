@@ -1,4 +1,5 @@
 ﻿using System.Reactive.Linq;
+using CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 
 namespace DotnetPackaging.Common;
@@ -17,9 +18,8 @@ public static class DumpMixin
         await stream.WriteAsync(bytes.ToEnumerable().ToArray());
     }
 
-    public static async Task DumpTo(this IObservable<byte> bytes, IZafiroFile file)
+    public static async Task<Result> DumpTo(this IObservable<byte> bytes, IZafiroFile file)
     {
-        await using var memoryStream = new MemoryStream(bytes.ToEnumerable().ToArray());
-        await file.SetContents(memoryStream);
+        return await file.SetContents(bytes);
     }
 }

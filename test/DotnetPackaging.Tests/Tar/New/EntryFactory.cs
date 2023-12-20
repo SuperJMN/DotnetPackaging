@@ -8,7 +8,7 @@ namespace DotnetPackaging.Tests.Tar.New;
 
 public class EntryFactory
 {
-    public static Task<Result<Entry>> Create(IFileSystem fs, ZafiroPath path, string name)
+    public static Task<Result<Entry>> Create(IFileSystemRoot fs, ZafiroPath path, string name)
     {
         return fs.GetFile(path)
             .Bind(file => file.ToByteFlow())
@@ -22,5 +22,18 @@ public class EntryFactory
                 LinkIndicator = 0,
                 OwnerUsername = "jmn"
             }, byteFlow));
+    }
+}
+
+public static class Mixin 
+{
+    public static TResult Bind<T, TResult>(this T obj, Func<T, TResult> func)
+    {
+        return func(obj);
+    }
+
+    public static TResult Map<T, TResult>(this T obj, Func<T, TResult> func)
+    {
+        return func(obj);
     }
 }
