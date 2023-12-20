@@ -21,7 +21,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Zafiro.FileSystem.Local" Version="4.0.35" />
+    <PackageReference Include="Zafiro.FileSystem.Local" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\DotnetPackaging\DotnetPackaging.csproj" />

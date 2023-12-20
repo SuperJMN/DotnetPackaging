@@ -12,7 +12,7 @@ public class DebBuilder
     {
         var result = await ContentCollection.From(contentDirectory, packageDefinition.ExecutableMappings)
             .Map(contents => new DebFile(packageDefinition.Metadata, new ContentCollection(contents)))
-            .Tap(deb => deb.Bytes.DumpTo(debFile));
+            .Bind(deb => deb.Bytes.DumpTo(debFile));
 
         return result;
     }

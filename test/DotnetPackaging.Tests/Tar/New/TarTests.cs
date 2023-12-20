@@ -6,7 +6,6 @@ using FluentAssertions;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem.Local;
-using IFileSystem = Zafiro.FileSystem.IFileSystem;
 
 namespace DotnetPackaging.Tests.Tar.New;
 
