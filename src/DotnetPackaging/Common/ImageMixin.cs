@@ -1,4 +1,4 @@
-﻿using Zafiro.IO;
+﻿using Zafiro.Reactive;
 
 namespace DotnetPackaging.Common;
 
