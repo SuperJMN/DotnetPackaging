@@ -1,5 +1,6 @@
 ﻿using System.Reactive.Linq;
 using DotnetPackaging.Common;
+using SixLabors.ImageSharp;
 
 namespace DotnetPackaging.Archives.Deb;
 

@@ -1,8 +1,4 @@
-﻿using System.Reactive.Linq;
-using DotnetPackaging.Common;
-using Zafiro.IO;
-
-namespace DotnetPackaging.Tests.Deb;
+﻿namespace DotnetPackaging.Tests.Deb;
 
 // TODO: Place some interesting tests here
 //public static class TestData

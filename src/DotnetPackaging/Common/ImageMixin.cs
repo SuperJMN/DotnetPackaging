@@ -1,4 +1,6 @@
-﻿using Zafiro.IO;
+﻿using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using Zafiro.Reactive;
 
 namespace DotnetPackaging.Common;
 

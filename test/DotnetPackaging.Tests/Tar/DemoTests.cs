@@ -1,8 +1,4 @@
-﻿using System.Reactive.Linq;
-using FluentAssertions.Extensions;
-using Zafiro.IO;
-
-namespace DotnetPackaging.Tests.Tar;
+﻿namespace DotnetPackaging.Tests.Tar;
 
 public class DemoTests
 {

@@ -1,7 +1,4 @@
-﻿using System.Reactive.Linq;
-using Zafiro.IO;
-
-namespace DotnetPackaging.Tests.Deb;
+﻿namespace DotnetPackaging.Tests.Deb;
 
 public class DataTarTests
 {

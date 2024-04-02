@@ -1,5 +1,6 @@
 ﻿using DotnetPackaging.Archives.Deb;
 using DotnetPackaging.Common;
+using SixLabors.ImageSharp;
 using Zafiro.FileSystem;
 
 namespace DotnetPackaging.Client.Dtos;

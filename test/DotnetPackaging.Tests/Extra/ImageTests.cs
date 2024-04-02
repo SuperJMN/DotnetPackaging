@@ -1,7 +1,4 @@
-﻿using System.Reactive.Linq;
-using Zafiro.IO;
-
-namespace DotnetPackaging.Tests.Extra;
+﻿namespace DotnetPackaging.Tests.Extra;
 
 public class ImageTests
 {

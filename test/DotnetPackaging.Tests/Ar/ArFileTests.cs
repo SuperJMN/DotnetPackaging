@@ -1,12 +1,4 @@
-﻿using System.Reactive.Linq;
-using System.Text;
-using DotnetPackaging.Common;
-using DotnetPackaging.Archives.Tar;
-using Zafiro.IO;
-using Entry = DotnetPackaging.Archives.Ar.Entry;
-using Properties = DotnetPackaging.Archives.Ar.Properties;
-
-namespace DotnetPackaging.Tests.Ar;
+﻿namespace DotnetPackaging.Tests.Ar;
 
 public class ArFileTests
 {
