@@ -19,7 +19,7 @@ namespace DotnetPackaging.AppImage.Tests
             return taskResult.Map((Func<IEnumerable<TInput>, IEnumerable<TResult>>)(inputs => inputs.Select<TInput, TResult>(selector)));
         }
 
-        public static async Task<Result<IEnumerable<TResult>>> MapMany3<TInput, TResult>(
+        public static async Task<Result<IEnumerable<TResult>>> MapAndCombine<TInput, TResult>(
             this Result<IEnumerable<Task<Result<TInput>>>> enumerableOfTaskResults,
             Func<TInput, TResult> selector)
         {
@@ -74,7 +74,7 @@ namespace DotnetPackaging.AppImage.Tests
                     }
                 })));
 
-            var r = await p.MapMany3(tuple =>
+            var r = await p.MapAndCombine(tuple =>
             {
                 if (tuple.Contents.Length == 0)
                 {
