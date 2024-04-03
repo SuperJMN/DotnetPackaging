@@ -1,0 +1,3 @@
+[submodule "nyaimagetool"]
+	path = nyaimagetool
+	url = https://github.com/teplofizik/nyaimagetool.git
