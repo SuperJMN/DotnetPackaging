@@ -1,141 +1,27 @@
 using System.IO.Abstractions;
-using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using NyaFs.Filesystem.SquashFs;
 using Zafiro.FileSystem;
-using Zafiro.FileSystem.Comparer;
 using Zafiro.FileSystem.Local;
 using Zafiro.Reactive;
 
-namespace DotnetPackaging.AppImage.Tests
+namespace DotnetPackaging.AppImage.Tests;
+
+public class UnitTest1
 {
-    public static class Mixin
+    [Fact]
+    public async Task SquashFS()
     {
-        public static Task<Result> ToFile(this Stream stream, IZafiroFile file)
-        {
-            return file.SetData(stream);
-        }
-        
-        public static Result<IEnumerable<TResult>> MapMany<TInput, TResult>(
-            this Result<IEnumerable<TInput>> taskResult,
-            Func<TInput, TResult> selector)
-        {
-            return taskResult.Map((Func<IEnumerable<TInput>, IEnumerable<TResult>>)(inputs => inputs.Select<TInput, TResult>(selector)));
-        }
+        var fs = new FileSystemRoot(new ObservableFileSystem(new WindowsZafiroFileSystem(new FileSystem())));
+        var root = fs.GetDirectory("c:/users/jmn/Desktop/AvaloniaSyncer.AppDir");
 
-        public static async Task<Result<IEnumerable<TResult>>> MapAndCombine<TInput, TResult>(
-            this Result<IEnumerable<Task<Result<TInput>>>> enumerableOfTaskResults,
-            Func<TInput, TResult> selector)
-        {
-            var result = await enumerableOfTaskResults.Map(async taskResults =>
+        await AppImage.SquashFS.Build(root)
+            .Tap(async stream =>
             {
-                var p = await Task.WhenAll(taskResults).ConfigureAwait(false);
-                return p.Select(x => x.Map(selector)).Combine();
-            }).ConfigureAwait(false);
-
-            return result;
-        }
-    }
-
-    public class UnitTest1
-    {
-        [Fact]
-        public async Task Task()
-        {
-            var fs = new FileSystemRoot(new ObservableFileSystem(new WindowsZafiroFileSystem(new FileSystem())));
-            var root = fs.GetDirectory("c:/users/jmn/Desktop/AvaloniaSyncer.AppDir");
-
-            await SquashFS.Build(root)
-                .Tap(async stream =>
+                await using (stream)
                 {
-                    await using (stream)
-                    {
-                        await stream.ToFile(fs.GetFile("c:/users/jmn/Desktop/Test.squashfs"));
-                    }
-                });
-        }
-
-        private async Task<Result<IEnumerable<IZafiroFile>>> CreateFiles(IEnumerable<IZafiroFile> files, IZafiroDirectory root, SquashFsBuilder squashFsBuilder)
-        {
-            var p = Result.Success()
-                .Map(() => files.Select(file => file.GetData().Map(async stream =>
-                {
-                    using (stream)
-                    {
-                        return (Contents: await stream.ReadBytes(), Path: file.Path);
-                    }
-                })));
-
-            var r = await p.MapAndCombine(tuple =>
-            {
-                if (tuple.Contents.Length == 0)
-                {
-                    return 1;
+                    await stream.ToFile(fs.GetFile("c:/users/jmn/Desktop/Test.squashfs"));
                 }
-                squashFsBuilder.File("/" + tuple.Path.MakeRelativeTo(root.Path), tuple.Contents, 0, 0, 491);
-                return 1;
             });
-
-            return r.Map(ints => files);
-        }
-
-        private Result<IEnumerable<IZafiroFile>> CreateDirs(IEnumerable<IZafiroFile> files, IZafiroDirectory root, SquashFsBuilder fs)
-        {
-            return Result.Try(() =>
-            {
-                var paths = files
-                    .SelectMany(x => x.Path.MakeRelativeTo(root.Path).Parents())
-                    .Concat(new[] { ZafiroPath.Empty, })
-                    .Distinct()
-                    .OrderBy(path => path.RouteFragments.Count());
-
-                foreach (var zafiroPath in paths)
-                {
-                    fs.Directory("/" + zafiroPath, 0, 0, 511);
-                }
-
-                return files;
-            });
-        }
-
-        [Fact]
-        public async Task Test1()
-        {
-            var fs = new FileSystemRoot(new ObservableFileSystem(new WindowsZafiroFileSystem(new FileSystem())));
-            var dir = fs.GetDirectory("C:/Users/JMN/Desktop/AvaloniaSyncer.AppDir");
-            var mem = new MemoryStream();
-            await AppImagePackager.CreatePayload(mem, dir);
-            await File.WriteAllBytesAsync("Salida.squashfs", mem.ToArray());
-        }
-
-        [Fact]
-        public async Task GetRuntime()
-        {
-            var stream = await RuntimeDownloader.GetRuntimeStream(Architecture.X64, new DefaultHttpClientFactory());
-            var fs = File.OpenWrite("Runtime");
-            await stream.CopyToAsync(fs);
-        }
-
-        [Fact]
-        public async Task FullTest()
-        {
-            var runtimeStream = await RuntimeDownloader.GetRuntimeStream(Architecture.X64, new DefaultHttpClientFactory());
-            var fs = new FileSystemRoot(new ObservableFileSystem(new WindowsZafiroFileSystem(new FileSystem())));
-            var dir = fs.GetDirectory("C:/Users/JMN/Desktop/AvaloniaSyncer.AppDir");
-
-            var payloadStream = new MemoryStream();
-            await AppImagePackager.CreatePayload(payloadStream, dir);
-            await File.WriteAllBytesAsync("Salida.squashfs", payloadStream.ToArray());
-
-            // Concatenate runtimeStream and payloadStream
-            var concatenatedStream = new MemoryStream();
-
-            payloadStream.Position = 0;
-
-            await runtimeStream.CopyToAsync(concatenatedStream);
-            await payloadStream.CopyToAsync(concatenatedStream);
-            // Write a file named "output.AppImage" with the resulting stream
-            await File.WriteAllBytesAsync("output.AppImage", concatenatedStream.ToArray());
-        }
     }
 }

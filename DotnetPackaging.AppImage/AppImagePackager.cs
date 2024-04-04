@@ -1,62 +1,35 @@
 ﻿using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
-using NyaFs.Filesystem.SquashFs.Types;
+using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
-using Zafiro.Reactive;
 
 namespace DotnetPackaging.AppImage;
 
 public class AppImagePackager
 {
-    public static async Task CreatePayload(Stream output, IZafiroDirectory directory)
+    public static Task<Result> Build(Stream output, Stream runtime, Stream payload)
     {
-        var results = await directory
-            .GetFilesInTree()
-            .Bind(files => Combine(directory, files));
-
-        await results.Tap(async fileData =>
+        return Result.Try(async () =>
         {
-            var fs = new NyaFs.Filesystem.SquashFs.SquashFsBuilder(SqCompressionType.Gzip);
-
-            HashSet<ZafiroPath> dirs = new();
-            foreach (var f in fileData.OrderBy(x => x.Path.RouteFragments.Count()))
-            {
-                var zafiroPath = f.Path.Parent();
-                if (!dirs.Contains(zafiroPath))
-                {
-                    fs.Directory("/" + zafiroPath, 0,0, 511);
-                    dirs.Add(zafiroPath);
-                }
-                fs.File("/" + f.Path, f.Bytes, 0, 0, 493);
-            }
-
-            await output.WriteAsync(fs.GetFilesystemImage());
+            await runtime.CopyToAsync(output);
+            await payload.CopyToAsync(output);
         });
     }
-
-    private static Task<Result<IEnumerable<(ZafiroPath Path, byte[] Bytes)>>> Combine(IZafiroDirectory directory, IEnumerable<IZafiroFile> files)
+    
+    public static Task<Result> Build(Stream output, Architecture architecture, IZafiroDirectory directory)
     {
-        return files
-            .Select(file => file.GetData()
-                .Map(async stream => (Path: file.Path.MakeRelativeTo(directory.Path), Bytes: await stream.ReadBytes())))
-            .Combine();
+        return RuntimeDownloader
+            .GetRuntimeStream(architecture, new DefaultHttpClientFactory())
+            .CombineAndBind(SquashFS.Build(directory), (runtime, payload) => Build(output, runtime, payload));
     }
-
-    public static async Task Create(Stream input, Architecture arch, Stream payload)
+    
+    public static async Task<Result> Build(IZafiroFile output, Architecture architecture, IZafiroDirectory directory)
     {
-        var runtime = await GetRuntime(arch);
-        await runtime.CopyToAsync(input);
-        await runtime.CopyToAsync(payload);
-    }
-
-    private static async Task<Stream> GetRuntime(Architecture arch)
-    {
-        return await Download("https://github.com/AppImage/type2-runtime/releases/download/old/runtime-fuse2-aarch64");
-    }
-
-    private static async Task<Stream> Download(string url)
-    {
-        throw new NotImplementedException();
+        var ms = new MemoryStream();
+        return await Build(ms, architecture, directory).Bind(() =>
+        {
+            ms.Position = 0;
+            return output.SetData(ms);
+        }).Map(() => ms);
     }
 }
-
