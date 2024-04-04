@@ -2,7 +2,6 @@ using System.IO.Abstractions;
 using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using NyaFs.Filesystem.SquashFs;
-using NyaFs.Filesystem.SquashFs.Types;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Comparer;
 using Zafiro.FileSystem.Local;
@@ -12,6 +11,11 @@ namespace DotnetPackaging.AppImage.Tests
 {
     public static class Mixin
     {
+        public static Task<Result> ToFile(this Stream stream, IZafiroFile file)
+        {
+            return file.SetData(stream);
+        }
+        
         public static Result<IEnumerable<TResult>> MapMany<TInput, TResult>(
             this Result<IEnumerable<TInput>> taskResult,
             Func<TInput, TResult> selector)
@@ -38,29 +42,17 @@ namespace DotnetPackaging.AppImage.Tests
         [Fact]
         public async Task Task()
         {
-            var p = new NyaFs.Filesystem.SquashFs.SquashFsBuilder(SqCompressionType.Gzip);
-
             var fs = new FileSystemRoot(new ObservableFileSystem(new WindowsZafiroFileSystem(new FileSystem())));
-            var root = fs.GetDirectory("c:/users/jmn/Desktop/Pack");
+            var root = fs.GetDirectory("c:/users/jmn/Desktop/AvaloniaSyncer.AppDir");
 
-            var allFiles = await root.GetFilesInTree()
-                .Bind(files => CreateDirs(files, root, p))
-                .Bind(files => CreateFiles(files, root, p));
-
-            var list = allFiles.Value.ToList();
-
-            //p.Directory("/", 0, 0, 511);
-            //p.Directory("/usr", 0, 0, 511);
-            //p.Directory("/usr/bin", 0, 0, 511);
-            //p.Directory("/usr/bin/AvaloniaSyncer", 0, 0, 511);
-
-            //p.File(@"/AppRun", File.ReadAllBytes("c:/users/jmn/Desktop/AvaloniaSyncer.AppDir/AppRun"), 0, 0, 493);
-            //p.File(@"/AvaloniaSyncer.desktop", File.ReadAllBytes("c:/users/jmn/Desktop/AvaloniaSyncer.AppDir/AvaloniaSyncer.desktop"), 0, 0, 493);
-            //p.File(@"/AvaloniaSyncer.png", File.ReadAllBytes("c:/users/jmn/Desktop/AvaloniaSyncer.AppDir/AvaloniaSyncer.png"), 0, 0, 493);
-            //p.File(@"/usr/bin/AvaloniaSyncer/Avalonia.Base.dll", File.ReadAllBytes("c:/users/jmn/Desktop/AvaloniaSyncer.AppDir/usr/bin/AvaloniaSyncer/Avalonia.Base.dll"), 0, 0, 493);
-            //p.File(@"/usr/bin/AvaloniaSyncer/Avalonia.Controls.DataGrid.dll", File.ReadAllBytes("c:/users/jmn/Desktop/AvaloniaSyncer.AppDir/usr/bin/AvaloniaSyncer/Avalonia.Controls.DataGrid.dll"), 0, 0, 493);
-
-            await File.WriteAllBytesAsync("c:\\users\\jmn\\Desktop\\Test.squashfs", p.GetFilesystemImage());
+            await SquashFS.Build(root)
+                .Tap(async stream =>
+                {
+                    await using (stream)
+                    {
+                        await stream.ToFile(fs.GetFile("c:/users/jmn/Desktop/Test.squashfs"));
+                    }
+                });
         }
 
         private async Task<Result<IEnumerable<IZafiroFile>>> CreateFiles(IEnumerable<IZafiroFile> files, IZafiroDirectory root, SquashFsBuilder squashFsBuilder)

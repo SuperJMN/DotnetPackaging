@@ -1,6 +1,5 @@
 ﻿using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
-using DiscUtils.SquashFs;
 using NyaFs.Filesystem.SquashFs.Types;
 using Zafiro.FileSystem;
 using Zafiro.Reactive;
@@ -41,14 +40,6 @@ public class AppImagePackager
             .Select(file => file.GetData()
                 .Map(async stream => (Path: file.Path.MakeRelativeTo(directory.Path), Bytes: await stream.ReadBytes())))
             .Combine();
-    }
-
-    private static void AddFiles(IEnumerable<(ZafiroPath Path, byte[] Bytes)> valueTuples, SquashFileSystemBuilder fs)
-    {
-        foreach (var valueTuple in valueTuples.Where(tuple => tuple.Bytes.Length > 0).Take(5))
-        {
-            fs.AddFile(valueTuple.Path, valueTuple.Bytes);
-        }
     }
 
     public static async Task Create(Stream input, Architecture arch, Stream payload)

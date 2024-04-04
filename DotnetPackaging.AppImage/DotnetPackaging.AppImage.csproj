@@ -7,13 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LTRData.DiscUtils.SquashFs" Version="1.0.40" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
+    <PackageReference Include="NyaFs" Version="1.0.0" />
+    <PackageReference Include="Zafiro" Version="4.0.25" />
     <PackageReference Include="Zafiro.FileSystem" Version="5.0.11" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\nyaimagetool\NyaFs\NyaFs.csproj" />
   </ItemGroup>
 
 </Project>
