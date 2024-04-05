@@ -1,5 +1,4 @@
 ﻿using CSharpFunctionalExtensions;
-using DotnetPackaging.Archives.Deb;
 using DotnetPackaging.Common;
 using Zafiro.FileSystem;
 

@@ -1,9 +1,7 @@
 using System.IO.Abstractions;
 using CSharpFunctionalExtensions;
-using NyaFs.Filesystem.SquashFs;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Local;
-using Zafiro.Reactive;
 
 namespace DotnetPackaging.AppImage.Tests;
 
