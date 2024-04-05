@@ -1,40 +1,32 @@
-﻿using CSharpFunctionalExtensions;
+﻿using ClassLibrary1;
 using DotnetPackaging.AppImage.Model;
 using Zafiro.FileSystem;
 
 namespace DotnetPackaging.AppImage;
 
-internal class ApplicationDirectory : IZafiroDirectory
+public class ApplicationDirectory
 {
-    private readonly Application application;
-
-    public ApplicationDirectory(Application application)
+    public static IDirectory Create(Application application)
     {
-        this.application = application;
-    }
+        var relativeToItself = application.Contents.RelativeToItself();
 
-    public Task<Result> Create() => throw new NotImplementedException();
-
-    public Task<Result<IEnumerable<IZafiroFile>>> GetFiles() => throw new NotImplementedException();
-
-    public Task<Result<IEnumerable<IZafiroDirectory>>> GetDirectories()
-    {
-        var applicationContents = application.Contents;
-
-        var zafiroDirectories = new List<IZafiroDirectory>()
+        return new CraftedDirectory(directory =>
         {
-            applicationContents,
-        };
-
-        var success = Result.Success<IEnumerable<IZafiroDirectory>>(zafiroDirectories);
-        return Task.FromResult(success);
+            IEnumerable<IZafiroFile> files =
+            [
+                new InMemoryFile("AppRun", directory, application.AppRun),
+                new InMemoryFile(".AppIcon", directory, application.Icon),
+                new InMemoryFile("App.desktop", directory, GetStream(application.DesktopMetadata))
+            ];
+            return files;
+        }, new[]
+        {
+            relativeToItself
+        });
     }
 
-    public Task<Result> Delete() => throw new NotImplementedException();
-
-    public ZafiroPath Path { get; }
-    public Task<Result<bool>> Exists { get; }
-    public IFileSystemRoot FileSystem { get; }
-    public Task<Result<DirectoryProperties>> Properties { get; }
-    public IObservable<FileSystemChange> Changed { get; }
+    private static IGetStream GetStream(DesktopMetadata applicationDesktopMetadata)
+    {
+        throw new NotImplementedException();
+    }
 }

@@ -14,7 +14,7 @@ public class AppImageWriter
 
     private async Task<Result> WriteApplication(Application application, Stream stream)
     {
-        return await SquashFS.Build(new ApplicationDirectory(application))
+        return await SquashFS.Build(ApplicationDirectory.Create(application))
             .Map(async stream1 =>
             {
                 using (stream1)
@@ -22,22 +22,5 @@ public class AppImageWriter
                     await stream1.CopyToAsync(stream);
                 }
             });
-    }
-}
-
-public static class Mixin
-{
-    public static async Task<Result> WriteTo(this IGetStream getStream, Stream stream)
-    {
-        var writeTo = await getStream.StreamFactory()
-            .Map(async sourceStream =>
-            {
-                using (sourceStream)
-                {
-                    await sourceStream.CopyToAsync(stream);
-                }
-            });
-
-        return writeTo;
     }
 }

@@ -15,7 +15,3 @@ public class ScriptAppRun : IAppRun
     public Func<Task<Result<Stream>>> StreamFactory => () => Task.FromResult(Result.Success((Stream)new MemoryStream(Script.GetAsciiBytes())));
 }
 
-public interface IGetStream
-{
-    public Func<Task<Result<Stream>>> StreamFactory { get; }
-}

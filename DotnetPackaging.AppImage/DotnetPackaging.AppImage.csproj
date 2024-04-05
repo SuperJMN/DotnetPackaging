@@ -9,12 +9,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <PackageReference Include="NyaFs" Version="1.0.0" />
-    <PackageReference Include="System.Security.Permissions" Version="6.0.0" />
+    <PackageReference Include="System.Security.Permissions" Version="8.0.0" />
     <PackageReference Include="Zafiro" Version="4.0.25" />
-    <PackageReference Include="Zafiro.FileSystem" Version="5.0.11" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\SuperJMN-Zafiro\Zafiro.FileSystem\ClassLibrary1\ClassLibrary1.csproj" />
     <ProjectReference Include="..\src\DotnetPackaging\DotnetPackaging.csproj" />
   </ItemGroup>
 

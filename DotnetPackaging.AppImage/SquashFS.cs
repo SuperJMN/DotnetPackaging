@@ -1,66 +1,75 @@
+using ClassLibrary1;
 using CSharpFunctionalExtensions;
 using NyaFs.Filesystem.SquashFs;
 using NyaFs.Filesystem.SquashFs.Types;
 using NyaFs.Filesystem.Universal;
+using System;
+using MoreLinq;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 using Zafiro.Reactive;
+using ReactiveUI;
 
 namespace DotnetPackaging.AppImage;
 
 public static class SquashFS
 {
-    public async static Task<Result<Stream>>  Build(IZafiroDirectory directory)
+    public async static Task<Result<Stream>> Build(IDirectory directory)
     {
         var builder = new SquashFsBuilder(SqCompressionType.Gzip);
 
         await directory.GetFilesInTree()
-            .Bind(files => CreateDirs(files, directory, builder))
-            .Bind(files => CreateFiles(files, directory, builder));
+            .Check(files => CreateDirs(files, directory, builder))
+            .Check(files => CreateFiles(files, directory, builder));
 
         return new MemoryStream(builder.GetFilesystemImage());
     }
-        
-    private static async Task<Result<IEnumerable<IZafiroFile>>> CreateFiles(IEnumerable<IZafiroFile> files, IZafiroDirectory root, SquashFsBuilder squashFsBuilder)
-    {
-        var p = Result.Success()
-            .Map(() => files.Select(file => file.GetData().Map(async stream =>
-            {
-                using (stream)
-                {
-                    return (Contents: await stream.ReadBytes(), Path: file.Path);
-                }
-            })));
 
-        var r = await p.MapAndCombine(tuple =>
+    private static async Task<Result> CreateFiles(IEnumerable<IFile> files, IDirectory root, SquashFsBuilder squashFsBuilder)
+    {
+        var resultFiles = await files.Combine(file => file.ToBytes().Combine(file.GetPath()));
+        var dataPathAndRootPath = await resultFiles.Bind(dataAndPath => root.GetPath().Map(rootPath => (dataAndPath, rootPath)));
+        dataPathAndRootPath.Tap(contentFiles =>
         {
-            if (tuple.Contents.Length == 0)
-            {
-                return 1;
-            }
-            squashFsBuilder.File("/" + tuple.Path.MakeRelativeTo(root.Path), tuple.Contents, 0, 0, 491);
-            return 1;
+            AddFiles(contentFiles, squashFsBuilder);
         });
 
-        return r.Map(_ => files);
+        return dataPathAndRootPath.Map(_ => Result.Success());
     }
 
-    private static Result<IEnumerable<IZafiroFile>> CreateDirs(IEnumerable<IZafiroFile> files, IZafiroDirectory root, IFilesystemBuilder fs)
+    private static void AddFiles((IEnumerable<(byte[], ZafiroPath)> dataAndPath, ZafiroPath rootPath) contentFiles, SquashFsBuilder squashFsBuilder)
     {
-        return Result.Try(() =>
+        foreach (var contentFile in contentFiles.dataAndPath)
         {
-            var paths = files
-                .SelectMany(x => x.Path.MakeRelativeTo(root.Path).Parents())
-                .Concat(new[] { ZafiroPath.Empty, })
-                .Distinct()
-                .OrderBy(path => path.RouteFragments.Count());
+            squashFsBuilder.File("/" + contentFile.Item2.MakeRelativeTo(contentFiles.rootPath), contentFile.Item1, 0, 0, 491);
+        }
+    }
 
-            foreach (var zafiroPath in paths)
-            {
-                fs.Directory("/" + zafiroPath, 0, 0, 511);
-            }
+    private static async Task<Result> CreateDirs(IEnumerable<IFile> files, IDirectory root, IFilesystemBuilder fs)
+    {
+        // Falta crear los directorios
+        // Antes se hacía así
+        //var paths = files
+        //    .SelectMany(x => x.Path.MakeRelativeTo(root.Path).Parents())
+        //    .Concat(new[] { ZafiroPath.Empty, })
+        //    .Distinct()
+        //    .OrderBy(path => path.RouteFragments.Count());
+        throw new NotImplementedException();
+    }
+}
 
-            return files;
-        });
+public static class ResultMixin
+{
+    public static async Task<Result<IEnumerable<TResult>>> Combine<T, TResult>(this IEnumerable<T> enumerable, Func<T, Task<Result<TResult>>> selector)
+    {
+        var whenAll = await Task.WhenAll(enumerable.Select(selector));
+        return whenAll.Combine();
+    }
+
+    public static Task<Result<(T, Q)>> Combine<T, Q>(
+        this Task<Result<T>> one,
+        Task<Result<Q>> another)
+    {
+        return one.Bind(x => another.Map(y => (x, y)));
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace DotnetPackaging.AppImage.Model;
+﻿using ClassLibrary1;
+
+namespace DotnetPackaging.AppImage.Model;
 
 public class AppImage
 {

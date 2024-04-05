@@ -14,7 +14,7 @@ public class Application
 
     public IZafiroDirectory Contents { get; }
 
-    private IIcon Icon { get; }
-    private IGetStream AppRun { get; }
+    public IIcon Icon { get; }
+    public IAppRun AppRun { get; }
     public DesktopMetadata DesktopMetadata { get; }
 }

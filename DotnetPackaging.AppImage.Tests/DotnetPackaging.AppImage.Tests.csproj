@@ -22,7 +22,6 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Zafiro.FileSystem.Local" Version="5.0.11" />
     <PackageReference Include="CSharpFunctionalExtensions.FluentAssertions" Version="2.0.0" />
   </ItemGroup>
 

@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using ClassLibrary1;
 using CSharpFunctionalExtensions;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
@@ -16,20 +17,20 @@ public class AppImagePackager
         });
     }
     
-    public static Task<Result> Build(Stream output, Architecture architecture, IZafiroDirectory directory)
+    public static Task<Result> Build(Stream output, Architecture architecture, IDirectory directory)
     {
         return RuntimeDownloader
             .GetRuntimeStream(architecture, new DefaultHttpClientFactory())
             .CombineAndBind(SquashFS.Build(directory), (runtime, payload) => Build(output, runtime, payload));
     }
     
-    public static async Task<Result> Build(IZafiroFile output, Architecture architecture, IZafiroDirectory directory)
-    {
-        var ms = new MemoryStream();
-        return await Build(ms, architecture, directory).Bind(() =>
-        {
-            ms.Position = 0;
-            return output.SetData(ms);
-        }).Map(() => ms);
-    }
+    //public static async Task<Result> Build(IFile output, Architecture architecture, IZafiroDirectory directory)
+    //{
+    //    var ms = new MemoryStream();
+    //    return await Build(ms, architecture, directory).Bind(() =>
+    //    {
+    //        ms.Position = 0;
+    //        return output.SetData(ms);
+    //    }).Map(() => ms);
+    //}
 }

@@ -1,4 +1,5 @@
-﻿using CSharpFunctionalExtensions;
+﻿using ClassLibrary1;
+using CSharpFunctionalExtensions;
 
 namespace DotnetPackaging.AppImage.Model;
 
