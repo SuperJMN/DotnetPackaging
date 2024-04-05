@@ -1,7 +1,5 @@
 ﻿using System.IO.Abstractions.TestingHelpers;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Runtime.Loader;
+using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Model;
 using FluentAssertions;
 using Zafiro.FileSystem.Local;
@@ -40,3 +38,4 @@ public class AppImageModelTests
         result.Should().Succeed();
     }
 }
+
