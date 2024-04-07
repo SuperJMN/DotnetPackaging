@@ -16,11 +16,4 @@ public class AppImagePackager
             await payload.CopyToAsync(output);
         });
     }
-    
-    public static Task<Result> Build(Stream output, Architecture architecture, IDataTree dataTree)
-    {
-        return RuntimeDownloader
-            .GetRuntimeStream(architecture, new DefaultHttpClientFactory())
-            .CombineAndBind(SquashFS.Build(dataTree), (runtime, payload) => Build(output, runtime, payload));
-    }
 }
