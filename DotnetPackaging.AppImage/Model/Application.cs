@@ -1,10 +1,11 @@
-﻿using Zafiro.FileSystem;
+﻿using ClassLibrary1;
+using CSharpFunctionalExtensions;
 
 namespace DotnetPackaging.AppImage.Model;
 
 public class Application
 {
-    public Application(IZafiroDirectory contents, IIcon icon, DesktopMetadata desktopMetadata, IAppRun appRun)
+    public Application(IDataTree contents, IIcon icon, Maybe<DesktopMetadata> desktopMetadata, IAppRun appRun)
     {
         Contents = contents;
         Icon = icon;
@@ -12,9 +13,8 @@ public class Application
         AppRun = appRun;
     }
 
-    public IZafiroDirectory Contents { get; }
-
+    public IDataTree Contents { get; }
     public IIcon Icon { get; }
     public IAppRun AppRun { get; }
-    public DesktopMetadata DesktopMetadata { get; }
+    public Maybe<DesktopMetadata> DesktopMetadata { get; }
 }

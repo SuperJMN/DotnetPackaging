@@ -1,4 +1,6 @@
-﻿namespace DotnetPackaging.AppImage.Model;
+﻿using CSharpFunctionalExtensions;
+
+namespace DotnetPackaging.AppImage.Model;
 
 public class DesktopMetadata
 {
@@ -7,4 +9,5 @@ public class DesktopMetadata
     public required IEnumerable<string> Keywords { get; init; }
     public required string Comment { get; init; }
     public required IEnumerable<string> Categories { get; init; }
+    public string ExecutableEntry { get; init; }
 }

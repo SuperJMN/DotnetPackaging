@@ -1,9 +1,6 @@
-﻿using System.IO.Abstractions.TestingHelpers;
-using CSharpFunctionalExtensions;
+﻿using ClassLibrary1;
 using DotnetPackaging.AppImage.Model;
 using FluentAssertions;
-using Zafiro.FileSystem.Local;
-using Zafiro.FileSystem;
 
 namespace DotnetPackaging.AppImage.Tests;
 
@@ -23,19 +20,10 @@ public class AppImageModelTests
             StartupWmClass = "Application",
         };
 
-        var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>()
-        {
-            [$"{appdir}/SomeExe"] = new("Contents of executable file"),
-            [$"{appdir}/SomeLib.dll"] = new("Contents of Some Lib"),
-            [$"{appdir}/Subdir/OtherLib.dll"] = new("Contents of Other Lib"),
-        });
-        
-        var fs = new FileSystemRoot(new ObservableFileSystem(new WindowsZafiroFileSystem(mockFileSystem)));
+        var result = await new AppImageBuilder()
+            .WithDesktopMetadata(desktopMetadata)
+            .Build(new InMemoryDataTree(new List<IData>(), new List<IDataTree>()), new TestRuntime(), new DefaultScriptAppRun("/usr/bin/Application/App.Desktop"));
 
-        var root = fs.GetDirectory("c:/users/jmn/Desktop/AvaloniaSyncer.AppDir");
-
-        var result = await new AppImageBuilder().Build(root, new TestRuntime());
         result.Should().Succeed();
     }
 }
-

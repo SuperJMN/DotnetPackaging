@@ -17,20 +17,10 @@ public class AppImagePackager
         });
     }
     
-    public static Task<Result> Build(Stream output, Architecture architecture, IDirectory directory)
+    public static Task<Result> Build(Stream output, Architecture architecture, IDataTree dataTree)
     {
         return RuntimeDownloader
             .GetRuntimeStream(architecture, new DefaultHttpClientFactory())
-            .CombineAndBind(SquashFS.Build(directory), (runtime, payload) => Build(output, runtime, payload));
+            .CombineAndBind(SquashFS.Build(dataTree), (runtime, payload) => Build(output, runtime, payload));
     }
-    
-    //public static async Task<Result> Build(IFile output, Architecture architecture, IZafiroDirectory directory)
-    //{
-    //    var ms = new MemoryStream();
-    //    return await Build(ms, architecture, directory).Bind(() =>
-    //    {
-    //        ms.Position = 0;
-    //        return output.SetData(ms);
-    //    }).Map(() => ms);
-    //}
 }

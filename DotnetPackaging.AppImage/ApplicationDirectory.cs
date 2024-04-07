@@ -1,32 +1,36 @@
 ﻿using ClassLibrary1;
+using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Model;
-using Zafiro.FileSystem;
 
 namespace DotnetPackaging.AppImage;
 
 public class ApplicationDirectory
 {
-    public static IDirectory Create(Application application)
+    public static IDataTree Create(Application application)
     {
-        var relativeToItself = application.Contents.RelativeToItself();
+        var files = GetRootFiles(application);
 
-        return new CraftedDirectory(directory =>
-        {
-            IEnumerable<IZafiroFile> files =
-            [
-                new InMemoryFile("AppRun", directory, application.AppRun),
-                new InMemoryFile(".AppIcon", directory, application.Icon),
-                new InMemoryFile("App.desktop", directory, GetStream(application.DesktopMetadata))
-            ];
-            return files;
-        }, new[]
-        {
-            relativeToItself
-        });
+        return new InMemoryDataTree(
+            "root",
+            files,
+            [application.Contents]);
     }
 
-    private static IGetStream GetStream(DesktopMetadata applicationDesktopMetadata)
+    private static IEnumerable<IData> GetRootFiles(Application application)
     {
-        throw new NotImplementedException();
+        IEnumerable<IData> mandatory =
+        [
+            new InMemoryData("AppRun", application.AppRun.StreamFactory),
+            new InMemoryData(".AppIcon", application.Icon.StreamFactory),
+        ];
+
+        var optional = application.DesktopMetadata.Match(x =>
+            [
+                new InMemoryData("App.desktop", x.ToStreamFactory())
+            ],
+            () => new List<IData>());
+
+        var files = mandatory.Concat(optional);
+        return files;
     }
 }

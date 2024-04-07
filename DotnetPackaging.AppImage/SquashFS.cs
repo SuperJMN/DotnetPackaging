@@ -3,73 +3,70 @@ using CSharpFunctionalExtensions;
 using NyaFs.Filesystem.SquashFs;
 using NyaFs.Filesystem.SquashFs.Types;
 using NyaFs.Filesystem.Universal;
-using System;
-using MoreLinq;
-using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
-using Zafiro.Reactive;
-using ReactiveUI;
 
 namespace DotnetPackaging.AppImage;
 
 public static class SquashFS
 {
-    public async static Task<Result<Stream>> Build(IDirectory directory)
+    public async static Task<Result<Stream>> Build(IDataTree dataTree)
     {
         var builder = new SquashFsBuilder(SqCompressionType.Gzip);
 
-        await directory.GetFilesInTree()
-            .Check(files => CreateDirs(files, directory, builder))
-            .Check(files => CreateFiles(files, directory, builder));
+        await dataTree.GetFilesAndPaths()
+            .Check(files => CreateDirs(files, builder))
+            .Check(files => CreateFiles(files, builder));
 
         return new MemoryStream(builder.GetFilesystemImage());
     }
 
-    private static async Task<Result> CreateFiles(IEnumerable<IFile> files, IDirectory root, SquashFsBuilder squashFsBuilder)
+    private static async Task<Result> CreateFiles(IEnumerable<(IData, ZafiroPath)> files, SquashFsBuilder squashFsBuilder)
     {
-        var resultFiles = await files.Combine(file => file.ToBytes().Combine(file.GetPath()));
-        var dataPathAndRootPath = await resultFiles.Bind(dataAndPath => root.GetPath().Map(rootPath => (dataAndPath, rootPath)));
-        dataPathAndRootPath.Tap(contentFiles =>
+        var resultFiles = await GetFilesAndContents(files);
+        resultFiles.Tap(contentFiles =>
         {
             AddFiles(contentFiles, squashFsBuilder);
         });
 
-        return dataPathAndRootPath.Map(_ => Result.Success());
+        return resultFiles.Map(_ => Result.Success());
     }
 
-    private static void AddFiles((IEnumerable<(byte[], ZafiroPath)> dataAndPath, ZafiroPath rootPath) contentFiles, SquashFsBuilder squashFsBuilder)
+    private static async Task<Result<IEnumerable<(byte[] bytes, ZafiroPath)>>> GetFilesAndContents(IEnumerable<(IData, ZafiroPath)> files)
     {
-        foreach (var contentFile in contentFiles.dataAndPath)
+        return await files.Combine(file => file.Item1.ToBytes().Map(bytes => (bytes, file.Item2)));
+    }
+
+    private static void AddFiles(IEnumerable<(byte[] bytes, ZafiroPath)> contentFiles, SquashFsBuilder squashFsBuilder)
+    {
+        foreach (var contentFile in contentFiles)
         {
-            squashFsBuilder.File("/" + contentFile.Item2.MakeRelativeTo(contentFiles.rootPath), contentFile.Item1, 0, 0, 491);
+            squashFsBuilder.File("/" + contentFile.Item2, contentFile.Item1, 0, 0, 491);
         }
     }
 
-    private static async Task<Result> CreateDirs(IEnumerable<IFile> files, IDirectory root, IFilesystemBuilder fs)
+    private static Result<IEnumerable<(IData, ZafiroPath)>> CreateDirs(IEnumerable<(IData, ZafiroPath)> files, IFilesystemBuilder fs)
     {
-        // Falta crear los directorios
-        // Antes se hacía así
-        //var paths = files
-        //    .SelectMany(x => x.Path.MakeRelativeTo(root.Path).Parents())
-        //    .Concat(new[] { ZafiroPath.Empty, })
-        //    .Distinct()
-        //    .OrderBy(path => path.RouteFragments.Count());
-        throw new NotImplementedException();
-    }
-}
-
-public static class ResultMixin
-{
-    public static async Task<Result<IEnumerable<TResult>>> Combine<T, TResult>(this IEnumerable<T> enumerable, Func<T, Task<Result<TResult>>> selector)
-    {
-        var whenAll = await Task.WhenAll(enumerable.Select(selector));
-        return whenAll.Combine();
+        var paths = GetDirectoryPaths(files);
+        AddDirectories(paths, fs);
+        return Result.Success(files);
     }
 
-    public static Task<Result<(T, Q)>> Combine<T, Q>(
-        this Task<Result<T>> one,
-        Task<Result<Q>> another)
+    private static Result<IEnumerable<ZafiroPath>> AddDirectories(IEnumerable<ZafiroPath> paths, IFilesystemBuilder fs)
     {
-        return one.Bind(x => another.Map(y => (x, y)));
+        foreach (var path in paths)
+        {
+            fs.Directory("/" + path, 0, 0, 491);
+        }
+
+        return Result.Success(paths);
+    }
+
+    private static IEnumerable<ZafiroPath> GetDirectoryPaths(IEnumerable<(IData, ZafiroPath)> files)
+    {
+        return files
+            .SelectMany(x => x.Item2.Parents())
+            .Concat(new[] { ZafiroPath.Empty, })
+            .Distinct()
+            .OrderBy(path => path.RouteFragments.Count());
     }
 }
