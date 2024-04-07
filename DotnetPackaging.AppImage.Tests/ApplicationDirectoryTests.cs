@@ -1,9 +1,7 @@
 ﻿using System.IO.Abstractions;
 using System.Security.Policy;
-using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Model;
 using FluentAssertions;
-using Zafiro.FileSystem;
 using Zafiro.FileSystem.Local;
 
 namespace DotnetPackaging.AppImage.Tests;

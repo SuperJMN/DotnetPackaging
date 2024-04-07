@@ -1,6 +1,3 @@
-using CSharpFunctionalExtensions;
-using Zafiro.FileSystem;
-
 namespace DotnetPackaging.AppImage.Tests;
 
 public static class Mixin

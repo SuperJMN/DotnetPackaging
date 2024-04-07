@@ -1,5 +1,4 @@
-﻿using CSharpFunctionalExtensions;
-using DotnetPackaging.AppImage.Model;
+﻿using DotnetPackaging.AppImage.Model;
 using Zafiro.Mixins;
 
 namespace DotnetPackaging.AppImage.Tests;

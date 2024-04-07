@@ -6,7 +6,7 @@ using Zafiro.FileSystem;
 
 namespace DotnetPackaging.AppImage;
 
-public class AppImagePackager
+public class AppImage
 {
     public static Task<Result> Build(Stream output, Stream runtime, Stream payload)
     {

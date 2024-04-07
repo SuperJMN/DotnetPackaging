@@ -5,7 +5,7 @@ using NyaFs.Filesystem.SquashFs.Types;
 using NyaFs.Filesystem.Universal;
 using Zafiro.FileSystem;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Core;
 
 public static class SquashFS
 {
@@ -68,5 +68,15 @@ public static class SquashFS
             .Concat(new[] { ZafiroPath.Empty, })
             .Distinct()
             .OrderBy(path => path.RouteFragments.Count());
+    }
+
+    public static Task<Result> Write(MemoryStream stream, IDataTree dataTree)
+    {
+        var builder = new SquashFsBuilder(SqCompressionType.Gzip);
+
+        return dataTree.GetFilesAndPaths()
+            .Check(files => CreateDirs(files, builder))
+            .Check(files => CreateFiles(files, builder))
+            .Bind(_ => Result.Try(() => stream.Write(builder.GetFilesystemImage())));
     }
 }

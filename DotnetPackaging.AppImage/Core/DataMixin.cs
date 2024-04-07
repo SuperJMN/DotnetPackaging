@@ -2,7 +2,7 @@
 using DotnetPackaging.AppImage.Model;
 using DotnetPackaging.Common;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Core;
 
 public static class DataMixin
 {

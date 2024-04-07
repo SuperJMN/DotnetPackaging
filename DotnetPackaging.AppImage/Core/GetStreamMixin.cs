@@ -2,7 +2,7 @@
 using CSharpFunctionalExtensions;
 using Zafiro.Reactive;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Core;
 
 public static class GetStreamMixin
 {

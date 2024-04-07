@@ -13,7 +13,3 @@ public class AppImage
     public IGetStream Runtime { get; }
     public Application Application { get; }
 }
-
-public interface IRuntime : IGetStream
-{
-}

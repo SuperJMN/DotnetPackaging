@@ -1,26 +1,34 @@
-﻿using CSharpFunctionalExtensions;
+﻿using ClassLibrary1;
+using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Model;
-using System.IO;
+using NyaFs.Filesystem.SquashFs;
+using NyaFs.Filesystem.SquashFs.Types;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Core;
 
 public class AppImageWriter
 {
-    public async Task<Result> Write(Stream stream, AppImage.Model.AppImage appImage)
+    public static Task<Result> Write(MemoryStream stream, Model.AppImage appImage)
     {
-        return await appImage.Runtime.WriteTo(stream)
-            .Bind(() => WriteApplication(appImage.Application, stream));
+        return appImage.Runtime.WriteTo(stream)
+            .Bind(() =>
+        {
+            return WritePayload(stream, appImage.Application);
+        });
     }
 
-    private async Task<Result> WriteApplication(Application application, Stream stream)
+    private static Task<Result> WritePayload(MemoryStream stream, Application appImageApplication)
     {
-        return await SquashFS.Build(ApplicationDirectory.Create(application))
-            .Map(async stream1 =>
-            {
-                using (stream1)
-                {
-                    await stream1.CopyToAsync(stream);
-                }
-            });
+        var payload = GetPayload(appImageApplication);
+        return SquashFS.Write(stream, payload);
+    }
+
+    private static IDataTree GetPayload(Application application)
+    {
+        //new InMemoryDataTree(new List<IData>()
+        //{
+        //    "AppRun"
+        //});
+        throw new NotImplementedException();
     }
 }

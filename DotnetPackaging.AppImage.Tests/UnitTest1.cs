@@ -1,6 +1,4 @@
 using System.IO.Abstractions;
-using CSharpFunctionalExtensions;
-using Zafiro.FileSystem;
 using Zafiro.FileSystem.Local;
 
 namespace DotnetPackaging.AppImage.Tests;
