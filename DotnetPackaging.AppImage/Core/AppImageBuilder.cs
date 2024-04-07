@@ -12,7 +12,7 @@ public class AppImageBuilder
 
     private Maybe<DesktopMetadata> desktopMetadata = Maybe.None;
 
-    public async Task<Result<Model.AppImage>> Build(IDataTree contents, IRuntime runtime, IAppRun appRun)
+    public async Task<Result<Model.AppImage>> Build(IBlobContainer contents, IRuntime runtime, IAppRun appRun)
     {
         return Result.Success()
             .Map(() => contents)

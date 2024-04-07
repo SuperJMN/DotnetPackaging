@@ -9,10 +9,11 @@ public class AppImageTests
     [Fact]
     public async Task CreateAppImage()
     {
-        // TODO:
-        //var stream = new MemoryStream();
-        //var build = new AppImageBuilder().Build(new InMemoryDataTree("", new List<IData>(), new List<IDataTree>()));
-        //var writeResult = await build.Bind(image => AppImageWriter.Write(stream, image));
-        //writeResult.Should().Succeed();
+    
+        var stream = new MemoryStream();
+        var inMemoryBlobContainer = new InMemoryBlobContainer("", new List<IBlob>(), new List<IBlobContainer>());
+        var build = new AppImageBuilder().Build(inMemoryBlobContainer, new TestRuntime(), new DefaultScriptAppRun("/usr/bin/Blabla"));
+        var writeResult = await build.Bind(image => AppImageWriter.Write(stream, image));
+        writeResult.Should().Succeed();
     }
 }

@@ -6,29 +6,29 @@ namespace DotnetPackaging.AppImage.Core;
 
 public class ApplicationDirectory
 {
-    public static IDataTree Create(Application application)
+    public static IBlobContainer Create(Application application)
     {
         var files = GetRootFiles(application);
 
-        return new InMemoryDataTree(
+        return new InMemoryBlobContainer(
             "root",
             files,
             [application.Contents]);
     }
 
-    private static IEnumerable<IData> GetRootFiles(Application application)
+    private static IEnumerable<IBlob> GetRootFiles(Application application)
     {
-        IEnumerable<IData> mandatory =
+        IEnumerable<IBlob> mandatory =
         [
-            new InMemoryData("AppRun", application.AppRun.StreamFactory),
-            new InMemoryData(".AppIcon", application.Icon.StreamFactory),
+            new InMemoryBlob("AppRun", application.AppRun.StreamFactory),
+            new InMemoryBlob(".AppIcon", application.Icon.StreamFactory),
         ];
 
         var optional = application.DesktopMetadata.Match(x =>
             [
-                new InMemoryData("App.desktop", x.ToStreamFactory())
+                new InMemoryBlob("App.desktop", x.ToStreamFactory())
             ],
-            () => new List<IData>());
+            () => new List<IBlob>());
 
         var files = mandatory.Concat(optional);
         return files;

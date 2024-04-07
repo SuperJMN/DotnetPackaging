@@ -23,12 +23,14 @@ public class AppImageWriter
         return SquashFS.Write(stream, payload);
     }
 
-    private static IDataTree GetPayload(Application application)
+    private static IBlobContainer GetPayload(Application application)
     {
-        //new InMemoryDataTree(new List<IData>()
-        //{
-        //    "AppRun"
-        //});
-        throw new NotImplementedException();
+        var root = new InMemoryBlobContainer(new List<IBlob>()
+        {
+            new InMemoryBlob("AppRun", application.AppRun.StreamFactory),
+            new InMemoryBlob(".AppIcon", application.Icon.StreamFactory),
+        }, new List<IBlobContainer>());
+
+        return root;
     }
 }

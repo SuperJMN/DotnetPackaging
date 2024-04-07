@@ -11,7 +11,7 @@ public static class DataMixin
         var textContent = $"""
                            [Desktop Entry]
                            Type=Application
-                           Name={desktopEntry.Name}
+                           Path={desktopEntry.Name}
                            StartupWMClass={desktopEntry.StartupWmClass}
                            GenericName={desktopEntry.StartupWmClass}
                            Comment={desktopEntry.Comment}
