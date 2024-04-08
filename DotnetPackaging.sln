@@ -11,15 +11,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Console", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging", "src\DotnetPackaging\DotnetPackaging.csproj", "{BD2F6800-8509-480D-8F01-0E698375052B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.AppImage", "DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj", "{78D08303-2C77-44CE-9BD8-64C9ADEEA36F}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.AppImage.Tests", "DotnetPackaging.AppImage.Tests\DotnetPackaging.AppImage.Tests.csproj", "{857E91B4-EE0A-407B-B67F-589CED23E28B}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro.FileSystem.Local", "..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Local\Zafiro.FileSystem.Local.csproj", "{090E80C0-BE1F-4793-A442-0B86908AB55D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro.FileSystem", "..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem\Zafiro.FileSystem.csproj", "{5D7F4915-142D-46C4-96A4-C97E5581FDBF}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro.FileSystem.Lightweight", "..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Lightweight\Zafiro.FileSystem.Lightweight.csproj", "{649CCF50-4167-46D2-9CC3-31E23A9836D1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.AppImage.Tests", "src\DotnetPackaging.AppImage.Tests\DotnetPackaging.AppImage.Tests.csproj", "{92F88516-0B41-4D98-A3FF-DF12C16539F7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.AppImage", "src\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj", "{93EED3D2-D674-4EFF-BB8D-4C13BFA14B3E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,14 +43,6 @@ Global
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{78D08303-2C77-44CE-9BD8-64C9ADEEA36F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{78D08303-2C77-44CE-9BD8-64C9ADEEA36F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{78D08303-2C77-44CE-9BD8-64C9ADEEA36F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{78D08303-2C77-44CE-9BD8-64C9ADEEA36F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{857E91B4-EE0A-407B-B67F-589CED23E28B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{857E91B4-EE0A-407B-B67F-589CED23E28B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{857E91B4-EE0A-407B-B67F-589CED23E28B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{857E91B4-EE0A-407B-B67F-589CED23E28B}.Release|Any CPU.Build.0 = Release|Any CPU
 		{090E80C0-BE1F-4793-A442-0B86908AB55D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{090E80C0-BE1F-4793-A442-0B86908AB55D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{090E80C0-BE1F-4793-A442-0B86908AB55D}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -63,6 +55,14 @@ Global
 		{649CCF50-4167-46D2-9CC3-31E23A9836D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{649CCF50-4167-46D2-9CC3-31E23A9836D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{649CCF50-4167-46D2-9CC3-31E23A9836D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{92F88516-0B41-4D98-A3FF-DF12C16539F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{92F88516-0B41-4D98-A3FF-DF12C16539F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{92F88516-0B41-4D98-A3FF-DF12C16539F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{92F88516-0B41-4D98-A3FF-DF12C16539F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{93EED3D2-D674-4EFF-BB8D-4C13BFA14B3E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{93EED3D2-D674-4EFF-BB8D-4C13BFA14B3E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{93EED3D2-D674-4EFF-BB8D-4C13BFA14B3E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{93EED3D2-D674-4EFF-BB8D-4C13BFA14B3E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

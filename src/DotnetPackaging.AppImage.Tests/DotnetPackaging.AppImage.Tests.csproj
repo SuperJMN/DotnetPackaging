@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="E:\Repos\SuperJMN\DotnetPackaging\src\DotnetPackaging.AppImage.Tests\AppImageTests.cs" Link="AppImageTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -27,6 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Lightweight\Zafiro.FileSystem.Lightweight.csproj" />
     <ProjectReference Include="..\..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Lightweight\Zafiro.FileSystem.Lightweight.csproj" />
     <ProjectReference Include="..\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj" />
   </ItemGroup>

@@ -14,9 +14,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\SuperJMN-Zafiro\Zafiro.FileSystem\ClassLibrary1\ClassLibrary1.csproj" />
-    <ProjectReference Include="..\..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Lightweight\Zafiro.FileSystem.Lightweight.csproj" />
-    <ProjectReference Include="..\src\DotnetPackaging\DotnetPackaging.csproj" />
+    <ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Lightweight\Zafiro.FileSystem.Lightweight.csproj" />
+    <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
   </ItemGroup>
 
   <ItemGroup>

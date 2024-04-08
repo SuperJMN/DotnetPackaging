@@ -22,11 +22,11 @@ public class AppImageTests
     [Fact]
     public async Task Integration()
     {
-        var output = File.OpenWrite(@"C:\Users\JMN\Desktop\Test.AppImage");
-        var fs = new FileSystem();
-        var bc = new DirectoryBlobContainer("AvaloniaSyncer", fs.DirectoryInfo.New(@"C:\Users\JMN\Desktop\Testing"));
-        var build = new AppImageBuilder().Build(bc, new UriRuntime(Architecture.X64), new DefaultScriptAppRun("AvaloniaSyncer/AvaloniaSyncer.Desktop"));
-        var writeResult = await build.Bind(image => AppImageWriter.Write(output, image, "AvaloniaSyncer/AvaloniaSyncer.Desktop"));
-        writeResult.Should().Succeed();
+        var result = await AppImage.Build(
+            @"C:\Users\JMN\Desktop\Testing", 
+            "AvaloniaSyncer.Desktop", 
+            "C:\\Users\\JMN\\Desktop\\Test.AppImage", 
+            Architecture.X64);
+        result.Should().Succeed();
     }
 }
