@@ -1,24 +1,25 @@
 ﻿using Zafiro.FileSystem.Lightweight;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Model;
+using Zafiro.FileSystem;
 
 namespace DotnetPackaging.AppImage.Core;
 
 public class AppImageWriter
 {
-    public static Task<Result> Write(Stream stream, Model.AppImage appImage)
+    public static Task<Result> Write(Stream stream, Model.AppImage appImage, ZafiroPath executableFilePath)
     {
         return appImage.Runtime.WriteTo(stream)
             .Bind(() =>
         {
-            return WritePayload(stream, appImage.Application);
+            return WritePayload(stream, appImage.Application, executableFilePath);
         });
     }
 
-    private static Task<Result> WritePayload(Stream stream, Application appImageApplication)
+    private static Task<Result> WritePayload(Stream stream, Application appImageApplication, ZafiroPath executableFilePath)
     {
         var payload = GetPayload(appImageApplication);
-        return SquashFS.Write(stream, payload);
+        return SquashFS.Write(stream, payload, executableFilePath);
     }
 
     private static IBlobContainer GetPayload(Application application)
