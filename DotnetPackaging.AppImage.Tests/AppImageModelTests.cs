@@ -22,7 +22,7 @@ public class AppImageModelTests
 
         var result = await new AppImageBuilder()
             .WithDesktopMetadata(desktopMetadata)
-            .Build(new InMemoryBlobContainer(new List<IBlob>(), new List<IBlobContainer>()), new TestRuntime(), new DefaultScriptAppRun("/usr/bin/Application/App.Desktop"));
+            .Build(new BlobContainer(new List<IBlob>(), new List<IBlobContainer>()), new TestRuntime(), new DefaultScriptAppRun("/usr/bin/Application/App.Desktop"));
 
         result.Should().Succeed();
     }

@@ -18,4 +18,10 @@
     <ProjectReference Include="..\src\DotnetPackaging\DotnetPackaging.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Default.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

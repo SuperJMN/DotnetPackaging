@@ -9,17 +9,6 @@ namespace DotnetPackaging.AppImage.Core;
 
 public static class SquashFS
 {
-    public async static Task<Result<Stream>> Build(IBlobContainer dataTree)
-    {
-        var builder = new SquashFsBuilder(SqCompressionType.Gzip);
-
-        await dataTree.GetBlobsInTree(ZafiroPath.Empty)
-            .Check(files => CreateDirs(files, builder))
-            .Check(files => CreateFiles(files, builder));
-
-        return new MemoryStream(builder.GetFilesystemImage());
-    }
-
     private static async Task<Result> CreateFiles(IEnumerable<(ZafiroPath, IBlob)> files, SquashFsBuilder squashFsBuilder)
     {
         var resultFiles = await GetFilesAndContents(files);
@@ -38,9 +27,10 @@ public static class SquashFS
 
     private static void AddFiles(IEnumerable<(byte[] bytes, ZafiroPath)> contentFiles, SquashFsBuilder squashFsBuilder)
     {
+        uint mode = Convert.ToUInt32("644", 8);
         foreach (var contentFile in contentFiles)
         {
-            squashFsBuilder.File("/" + contentFile.Item2, contentFile.Item1, 0, 0, 491);
+            squashFsBuilder.File("/" + contentFile.Item2, contentFile.Item1, 0, 0, mode);
         }
     }
 
@@ -53,9 +43,10 @@ public static class SquashFS
 
     private static Result<IEnumerable<ZafiroPath>> AddDirectories(IEnumerable<ZafiroPath> paths, IFilesystemBuilder fs)
     {
+        uint mode = Convert.ToUInt32("755", 8);
         foreach (var path in paths)
         {
-            fs.Directory("/" + path, 0, 0, 491);
+            fs.Directory("/" + path, 0, 0, mode);
         }
 
         return Result.Success(paths);
@@ -70,7 +61,7 @@ public static class SquashFS
             .OrderBy(path => path.RouteFragments.Count());
     }
 
-    public static Task<Result> Write(MemoryStream stream, IBlobContainer dataTree)
+    public static Task<Result> Write(Stream stream, IBlobContainer dataTree)
     {
         var builder = new SquashFsBuilder(SqCompressionType.Gzip);
 

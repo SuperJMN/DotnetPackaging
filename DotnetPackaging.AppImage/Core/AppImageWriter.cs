@@ -1,14 +1,12 @@
 ﻿using ClassLibrary1;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Model;
-using NyaFs.Filesystem.SquashFs;
-using NyaFs.Filesystem.SquashFs.Types;
 
 namespace DotnetPackaging.AppImage.Core;
 
 public class AppImageWriter
 {
-    public static Task<Result> Write(MemoryStream stream, Model.AppImage appImage)
+    public static Task<Result> Write(Stream stream, Model.AppImage appImage)
     {
         return appImage.Runtime.WriteTo(stream)
             .Bind(() =>
@@ -17,7 +15,7 @@ public class AppImageWriter
         });
     }
 
-    private static Task<Result> WritePayload(MemoryStream stream, Application appImageApplication)
+    private static Task<Result> WritePayload(Stream stream, Application appImageApplication)
     {
         var payload = GetPayload(appImageApplication);
         return SquashFS.Write(stream, payload);
@@ -25,11 +23,14 @@ public class AppImageWriter
 
     private static IBlobContainer GetPayload(Application application)
     {
-        var root = new InMemoryBlobContainer(new List<IBlob>()
+        var root = new BlobContainer(new List<IBlob>()
         {
-            new InMemoryBlob("AppRun", application.AppRun.StreamFactory),
-            new InMemoryBlob(".AppIcon", application.Icon.StreamFactory),
-        }, new List<IBlobContainer>());
+            new Blob("AppRun", application.AppRun.StreamFactory),
+            new Blob(".AppIcon", application.Icon.StreamFactory),
+        }, new List<IBlobContainer>()
+        {
+            application.Contents
+        });
 
         return root;
     }
