@@ -1,9 +1,10 @@
-using ClassLibrary1;
+using Zafiro.FileSystem.Lightweight;
 using CSharpFunctionalExtensions;
 using NyaFs.Filesystem.SquashFs;
 using NyaFs.Filesystem.SquashFs.Types;
 using NyaFs.Filesystem.Universal;
 using Zafiro.FileSystem;
+using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage.Core;
 

@@ -1,5 +1,5 @@
-﻿using ClassLibrary1;
-using CSharpFunctionalExtensions;
+﻿using CSharpFunctionalExtensions;
+using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage.Model;
 

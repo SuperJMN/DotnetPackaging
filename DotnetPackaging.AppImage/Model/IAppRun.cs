@@ -1,4 +1,4 @@
-﻿using ClassLibrary1;
+﻿using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage.Model;
 

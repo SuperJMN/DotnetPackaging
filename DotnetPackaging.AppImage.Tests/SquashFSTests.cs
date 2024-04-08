@@ -1,10 +1,9 @@
 using System.IO.Abstractions;
-using ClassLibrary1;
-using Zafiro.FileSystem.Local;
+using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage.Tests;
 
-public class UnitTest1
+public class SquashFSTests
 {
     [Fact]
     public async Task SquashFS()

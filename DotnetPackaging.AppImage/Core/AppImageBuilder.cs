@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using ClassLibrary1;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Model;
+using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage;
 

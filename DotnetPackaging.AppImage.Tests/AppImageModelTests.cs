@@ -1,6 +1,6 @@
-﻿using ClassLibrary1;
-using DotnetPackaging.AppImage.Model;
+﻿using DotnetPackaging.AppImage.Model;
 using FluentAssertions;
+using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage.Tests;
 
