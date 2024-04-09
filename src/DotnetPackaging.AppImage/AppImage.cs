@@ -1,29 +1,69 @@
-﻿using System;
-using System.IO.Abstractions;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Core;
-using NyaFs.Processor.Scripting.Commands;
+using DotnetPackaging.AppImage.Model;
+using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage;
 
-public static class AppImage
+public class AppImage
 {
-    public static async Task<Result> Build(string contentFolderPath, string executableName, string outputPath, Architecture architecture)
+    public static async Task<Result<Model.AppImage>> FromBuildDirectory(DirectoryBlobContainer buildDirectory, Maybe<DesktopMetadata> desktopMetadataOverride)
     {
-        var fs = new FileSystem();
-        var contentDir = fs.DirectoryInfo.New(contentFolderPath);
-        var outputFile = fs.FileInfo.New(outputPath);
-        var bc = new DirectoryBlobContainer(contentDir.Name, contentDir);
-        var executablePath = contentDir.Name + "/" + executableName;
-        var build = new AppImageBuilder()
-            .Build(bc, new UriRuntime(architecture), new DefaultScriptAppRun(executablePath));
-        var writeResult = await build.Bind(async image =>
+        var allBlobsResult = await buildDirectory.GetBlobsInTree(ZafiroPath.Empty)
+            .Bind(blobs =>
+            {
+                return blobs.Select(x =>
+                {
+                    return x.Blob
+                        .Within(stream => stream.IsElf())
+                        .Map(isExec => (IsExec: isExec, x.Path, x.Blob));
+                }).Combine();
+            });
+
+        var firstExecutableResult = allBlobsResult.Bind(x => x.TryFirst(file => file.IsExec).ToResult("Could not find any executable file"));
+        var maybeIconResult = allBlobsResult.Map(x => x.TryFirst(file => file.Path.ToString() == "AppImage.png").Map(f => (IIcon)new Icon(f.Blob)));
+        var architectureResult = firstExecutableResult.Map(result => result.Blob.Within(stream => stream.IsElf()));
+        var desktopMetadataResult = firstExecutableResult.Map(firstExec => new DesktopMetadata()
         {
-            await using var fileSystemStream = outputFile.OpenWrite();
-            return await AppImageWriter.Write(fileSystemStream, image);
+            ExecutablePath = "$APPDIR/" + firstExec.Path,
+            Categories = new List<string>(),
+            Comment = "",
+            Keywords = [],
+            Name = firstExec.Path.NameWithoutExtension(),
+            StartupWmClass = firstExec.Path.NameWithoutExtension(),
         });
-        return writeResult;
+
+        return await from content in allBlobsResult
+            from firstExecutable in firstExecutableResult
+            from maybeIcon in maybeIconResult
+            from architecture in architectureResult
+            from desktopMetadata in desktopMetadataResult
+            select new Application(
+                buildDirectory, 
+                maybeIcon, 
+                desktopMetadataOverride.Or(desktopMetadata.AsMaybe()), 
+                new DefaultScriptAppRun(firstExecutable.Path));
+    }
+
+    public static Task<Result<Model.AppImage>> FromAppDir(DirectoryBlobContainer appDir, Architecture architecture)
+    {
+        return CreateApplication(appDir).Map(application => new Model.AppImage(new UriRuntime(architecture), application));
+    }
+
+    private static async Task<Result<Application>> CreateApplication(IBlobContainer appFolder)
+    {
+        var application = await appFolder.GetBlobsInTree(ZafiroPath.Empty)
+            .Map(files => files.ToDictionary(x => x.Path, x => x.Blob))
+            .Bind(async fileDict =>
+            {
+                var appRunResult = fileDict.TryFind("AppRun").Map(blob => new StreamAppRun(blob)).ToResult("Could not locate AppRun file in AppDir");
+                var maybeIcon = fileDict.TryFind("AppIcon.png").Map(blob => (IIcon)new Icon(blob));
+                var maybeDesktop = await fileDict.TryFind("App.desktop").Map(blob => blob.StreamFactory.FromStreamFactory());
+                return appRunResult.Map(appRun => new Application(appFolder, maybeIcon, maybeDesktop, appRun));
+            });
+
+        return application;
     }
 }

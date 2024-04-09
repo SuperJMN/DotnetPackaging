@@ -1,12 +1,13 @@
 ﻿using CSharpFunctionalExtensions;
+using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage.Model;
 
 public class Icon : IIcon
 {
-    public Icon(Func<Task<Result<Stream>>> streamFactory)
+    public Icon(IGetStream streamFactory)
     {
-        StreamFactory = streamFactory;
+        StreamFactory = streamFactory.StreamFactory;
     }
 
     public Func<Task<Result<Stream>>> StreamFactory { get; }

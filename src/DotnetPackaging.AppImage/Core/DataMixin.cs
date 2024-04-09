@@ -17,7 +17,7 @@ public static class DataMixin
                            Comment={desktopEntry.Comment}
                            Icon={desktopEntry.Name}
                            Terminal=false
-                           Exec={desktopEntry.ExecutableEntry}
+                           Exec={desktopEntry.ExecutablePath}
                            Categories={string.Join(";", desktopEntry.Categories)};
                            Keywords={string.Join(";", desktopEntry.Keywords)};
                            """.FromCrLfToLf();
@@ -36,7 +36,7 @@ public static class DataMixin
         using var reader = new StreamReader(stream);
         var content = await reader.ReadToEndAsync();
         var lines = content.Split('\n');
-        string name = null, startupWmClass = null, comment = null, executableEntry = null;
+        string name = null, startupWmClass = null, comment = null, executablePath = null;
         IEnumerable<string> categories = null, keywords = null;
         foreach (var line in lines)
         {
@@ -57,7 +57,7 @@ public static class DataMixin
                     comment = value;
                     break;
                 case "Exec":
-                    executableEntry = value;
+                    executablePath = value;
                     break;
                 case "Categories":
                     categories = value.Split(';').ToList();
@@ -72,7 +72,7 @@ public static class DataMixin
             Name = name,
             StartupWmClass = startupWmClass,
             Comment = comment,
-            ExecutableEntry = executableEntry,
+            ExecutablePath = executablePath,
             Categories = categories,
             Keywords = keywords
         };

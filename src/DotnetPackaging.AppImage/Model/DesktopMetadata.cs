@@ -7,5 +7,5 @@ public class DesktopMetadata
     public required IEnumerable<string> Keywords { get; init; }
     public required string Comment { get; init; }
     public required IEnumerable<string> Categories { get; init; }
-    public string ExecutableEntry { get; init; }
+    public required string ExecutablePath { get; init; }
 }

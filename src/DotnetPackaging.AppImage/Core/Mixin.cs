@@ -38,7 +38,7 @@ public static class Mixin
             {
                 using (stream)
                 {
-                    return stream.IsLinuxExecutable().Map(isExec => isExec ? execFile : regularFile);
+                    return stream.IsElf().Map(isExec => isExec ? execFile : regularFile);
                 }
             }).GetValueOrDefault(() => regularFile);
     }

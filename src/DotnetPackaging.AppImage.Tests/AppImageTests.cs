@@ -18,17 +18,6 @@ public class AppImageTests
         var writeResult = await build.Bind(image => AppImageWriter.Write(stream, image));
         writeResult.Should().Succeed();
     }
-
-    [Fact]
-    public async Task Integration()
-    {
-        var result = await AppImage.Build(
-            @"C:\Users\JMN\Desktop\Testing", 
-            "AvaloniaSyncer.Desktop", 
-            "C:\\Users\\JMN\\Desktop\\Test.AppImage", 
-            Architecture.X64);
-        result.Should().Succeed();
-    }
     
     [Fact]
     public async Task FromAppDir()
@@ -37,7 +26,7 @@ public class AppImageTests
         var directoryInfo = fs.DirectoryInfo.New(@"C:\Users\JMN\Desktop\AppDir");
         var appDir = new DirectoryBlobContainer(Maybe<string>.None, directoryInfo);
         var fileSystemStream = fs.File.Open("C:\\Users\\JMN\\Desktop\\Test.appimage", FileMode.Create);
-        var result = await Factory.From(appDir, Architecture.X64)
+        var result = await AppImage.FromAppDir(appDir, Architecture.X64)
             .Bind(image => AppImageWriter.Write(fileSystemStream, image));
 
         result.Should().Succeed();

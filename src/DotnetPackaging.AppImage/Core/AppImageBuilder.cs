@@ -18,7 +18,7 @@ public class AppImageBuilder
             .Map(() => contents)
             .Map(contents =>
             {
-                var application = new Application(contents, icon.GetValueOrDefault(new DefaultIcon()), desktopMetadata, appRun);
+                var application = new Application(contents, icon, desktopMetadata, appRun);
                 return new Model.AppImage(runtime, application);
             });
     }

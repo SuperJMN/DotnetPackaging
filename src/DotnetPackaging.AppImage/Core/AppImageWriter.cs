@@ -21,15 +21,18 @@ public class AppImageWriter
 
     private static IBlobContainer GetPayload(Application application)
     {
-        var root = new BlobContainer(new List<IBlob>()
+        var mandatory = new List<IBlob>()
         {
             new Blob("AppRun", application.AppRun.StreamFactory),
-            new Blob(".AppIcon", application.Icon.StreamFactory),
-        }, new List<IBlobContainer>()
+        };
+        var optional = application.Icon.Map(icon => new[]{ new Blob("AppIcon.png", icon.StreamFactory) }).GetValueOrDefault();
+        var files = mandatory.Concat(optional);
+
+        var blobContainers = new List<IBlobContainer>()
         {
             application.Contents
-        });
+        };
 
-        return root;
+        return new BlobContainer(files, blobContainers);
     }
 }

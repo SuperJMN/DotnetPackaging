@@ -5,7 +5,7 @@ namespace DotnetPackaging.AppImage.Model;
 
 public class Application
 {
-    public Application(IBlobContainer applicationBlobContainer, IIcon icon, Maybe<DesktopMetadata> desktopMetadata, IAppRun appRun)
+    public Application(IBlobContainer applicationBlobContainer, Maybe<IIcon> icon, Maybe<DesktopMetadata> desktopMetadata, IAppRun appRun)
     {
         Contents = applicationBlobContainer;
         Icon = icon;
@@ -14,7 +14,7 @@ public class Application
     }
 
     public IBlobContainer Contents { get; }
-    public IIcon Icon { get; }
+    public Maybe<IIcon> Icon { get; }
     public IAppRun AppRun { get; }
     public Maybe<DesktopMetadata> DesktopMetadata { get; }
 }
