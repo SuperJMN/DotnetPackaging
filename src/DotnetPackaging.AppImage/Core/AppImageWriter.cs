@@ -7,19 +7,17 @@ namespace DotnetPackaging.AppImage.Core;
 
 public class AppImageWriter
 {
-    public static Task<Result> Write(Stream stream, Model.AppImage appImage, ZafiroPath executableFilePath)
+    public static Task<Result> Write(Stream stream, Model.AppImage appImage)
     {
         return appImage.Runtime.WriteTo(stream)
-            .Bind(() =>
-        {
-            return WritePayload(stream, appImage.Application, executableFilePath);
-        });
+            .Bind(() => WritePayload(stream, appImage.Application));
     }
 
-    private static Task<Result> WritePayload(Stream stream, Application appImageApplication, ZafiroPath executableFilePath)
+    private static Task<Result> WritePayload(Stream stream, Application appImageApplication)
     {
-        var payload = GetPayload(appImageApplication);
-        return SquashFS.Write(stream, payload, executableFilePath);
+        return GetPayload(appImageApplication)
+            .ToLinuxFileEntries()
+            .Bind(entries => SquashFS.Write(stream, entries));
     }
 
     private static IBlobContainer GetPayload(Application application)
@@ -36,3 +34,5 @@ public class AppImageWriter
         return root;
     }
 }
+
+public record LinuxFileEntry(ZafiroPath path, IGetStream data, string owner, string group, UnixFileMode unixFileMode);

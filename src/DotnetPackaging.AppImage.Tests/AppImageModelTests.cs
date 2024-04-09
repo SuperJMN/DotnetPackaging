@@ -1,4 +1,5 @@
-﻿using DotnetPackaging.AppImage.Model;
+﻿using DotnetPackaging.AppImage.Core;
+using DotnetPackaging.AppImage.Model;
 using FluentAssertions;
 using Zafiro.FileSystem.Lightweight;
 

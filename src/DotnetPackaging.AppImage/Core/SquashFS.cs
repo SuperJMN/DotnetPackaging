@@ -3,54 +3,42 @@ using NyaFs.Filesystem.SquashFs;
 using NyaFs.Filesystem.SquashFs.Types;
 using NyaFs.Filesystem.Universal;
 using Zafiro.FileSystem;
-using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage.Core;
 
 public static class SquashFS
 {
-    public static Task<Result> Write(Stream stream, IBlobContainer dataTree, ZafiroPath executablePath)
+    public static Task<Result> Write(Stream stream, IList<LinuxFileEntry> fileEntries)
     {
         var builder = new SquashFsBuilder(SqCompressionType.Gzip);
 
-        return dataTree.GetBlobsInTree(ZafiroPath.Empty)
-            .Check(files => CreateDirs(files, builder))
-            .Check(files => CreateFiles(files, builder, executablePath))
+        return CreateDirs(fileEntries, builder)
+            .Check(_ => CreateFiles(fileEntries, builder))
             .Bind(_ => Result.Try(() => stream.Write(builder.GetFilesystemImage())));
     }
 
-    private static async Task<Result> CreateFiles(IEnumerable<(ZafiroPath, IBlob)> files, SquashFsBuilder squashFsBuilder, ZafiroPath executablePath)
+    private static async Task<Result> CreateFiles(IList<LinuxFileEntry> files, SquashFsBuilder squashFsBuilder)
     {
         var resultFiles = await GetFilesAndContents(files);
-        resultFiles.Tap(contentFiles => AddFiles(contentFiles, squashFsBuilder, executablePath));
+        resultFiles.Tap(contentFiles => AddFiles(contentFiles, squashFsBuilder));
         return resultFiles.Map(_ => Result.Success());
     }
 
-    private static async Task<Result<IEnumerable<(byte[] bytes, ZafiroPath)>>> GetFilesAndContents(IEnumerable<(ZafiroPath, IBlob)> files)
+    private static async Task<Result<IEnumerable<(byte[] bytes, ZafiroPath path, string owner, string group, UnixFileMode unixFileMode)>>> GetFilesAndContents(IList<LinuxFileEntry> files)
     {
-        return await files.Combine(file => file.Item2.ToBytes().Map(bytes => (bytes, file.Item1)));
+        return await files.Combine(file => file.data.ToBytes().Map(bytes => (bytes, file.path, file.owner, file.group, file.unixFileMode)));
     }
 
-    private static void AddFiles(IEnumerable<(byte[] bytes, ZafiroPath)> contentFiles, SquashFsBuilder squashFsBuilder, ZafiroPath executablePath)
+    private static void AddFiles(IEnumerable<(byte[] bytes, ZafiroPath path, string owner, string group, UnixFileMode unixFileMode)> contentFiles, SquashFsBuilder squashFsBuilder)
     {
-        var regularFile = Convert.ToUInt32("644", 8);
-        var executableFile = Convert.ToUInt32("755", 8);
         foreach (var contentFile in contentFiles)
         {
-            uint mode;
-            if (contentFile.Item2 == executablePath || contentFile.Item2 == "AppRun")
-            {
-                mode = executableFile;
-            }
-            else
-            {
-                mode = regularFile;
-            }
-            squashFsBuilder.File("/" + contentFile.Item2, contentFile.Item1, 0, 0, mode);
+            squashFsBuilder.File("/" + contentFile.Item2, contentFile.Item1, 0, 0, (uint)contentFile.unixFileMode);
         }
     }
 
-    private static Result<IEnumerable<(ZafiroPath, IBlob)>> CreateDirs(IEnumerable<(ZafiroPath, IBlob)> files, IFilesystemBuilder fs)
+ 
+    private static Result<IList<LinuxFileEntry>> CreateDirs(IList<LinuxFileEntry> files, IFilesystemBuilder fs)
     {
         var paths = GetDirectoryPaths(files);
         AddDirectories(paths, fs);
@@ -68,10 +56,10 @@ public static class SquashFS
         return Result.Success(paths);
     }
 
-    private static IEnumerable<ZafiroPath> GetDirectoryPaths(IEnumerable<(ZafiroPath, IBlob)> files)
+    private static IEnumerable<ZafiroPath> GetDirectoryPaths(IList<LinuxFileEntry> files)
     {
         return files
-            .SelectMany(x => x.Item1.Parents())
+            .SelectMany(x => x.path.Parents())
             .Concat(new[] { ZafiroPath.Empty })
             .Distinct()
             .OrderBy(path => path.RouteFragments.Count());

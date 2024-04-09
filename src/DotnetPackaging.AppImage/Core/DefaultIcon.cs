@@ -1,7 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Model;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Core;
 
 public class DefaultIcon : IIcon
 {

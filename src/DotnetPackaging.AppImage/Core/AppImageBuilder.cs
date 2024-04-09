@@ -3,7 +3,7 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Model;
 using Zafiro.FileSystem.Lightweight;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Core;
 
 [SuppressMessage("ReSharper", "ParameterHidesMember")]
 public class AppImageBuilder

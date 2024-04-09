@@ -1,9 +1,8 @@
-﻿using Zafiro.FileSystem.Lightweight;
-using CSharpFunctionalExtensions;
-using DotnetPackaging.AppImage.Model;
+﻿using CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
+using Zafiro.FileSystem.Lightweight;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Core;
 
 internal class InMemoryFile : IZafiroFile
 {

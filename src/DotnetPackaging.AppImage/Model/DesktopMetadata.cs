@@ -1,6 +1,4 @@
-﻿using CSharpFunctionalExtensions;
-
-namespace DotnetPackaging.AppImage.Model;
+﻿namespace DotnetPackaging.AppImage.Model;
 
 public class DesktopMetadata
 {

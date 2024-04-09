@@ -1,13 +1,13 @@
-﻿using Zafiro.FileSystem.Lightweight;
-using CSharpFunctionalExtensions;
+﻿using CSharpFunctionalExtensions;
 
 namespace DotnetPackaging.AppImage.Model;
 
 public class Icon : IIcon
 {
-    public Func<Task<Result<Stream>>> StreamFactory => throw new NotImplementedException();
-}
+    public Icon(Func<Task<Result<Stream>>> streamFactory)
+    {
+        StreamFactory = streamFactory;
+    }
 
-public interface IIcon : IGetStream
-{
+    public Func<Task<Result<Stream>>> StreamFactory { get; }
 }

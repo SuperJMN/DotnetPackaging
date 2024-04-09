@@ -1,7 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Core;
 
 public class CraftedDirectory : IZafiroDirectory
 {

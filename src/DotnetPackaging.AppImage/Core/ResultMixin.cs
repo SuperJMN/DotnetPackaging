@@ -1,6 +1,6 @@
 using CSharpFunctionalExtensions;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Core;
 
 public static class ResultMixin
 {

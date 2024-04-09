@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Core;
 
 public static class RuntimeDownloader
 {
