@@ -14,12 +14,12 @@ public static class AppImage
         var contentDir = fs.DirectoryInfo.New(contentFolderPath);
         var outputFile = fs.FileInfo.New(outputPath);
         var bc = new DirectoryBlobContainer(contentDir.Name, contentDir);
-        var executablePath = fs.Path.Combine(contentDir.Name, executableName);
+        var executablePath = contentDir.Name + "/" + executableName;
         var build = new AppImageBuilder().Build(bc, new UriRuntime(architecture), new DefaultScriptAppRun(executablePath));
-        var writeResult = await build.Bind(image =>
+        var writeResult = await build.Bind(async image =>
         {
-            using var fileSystemStream = outputFile.OpenWrite();
-            return AppImageWriter.Write(fileSystemStream, image, executablePath);
+            await using var fileSystemStream = outputFile.OpenWrite();
+            return await AppImageWriter.Write(fileSystemStream, image, executablePath);
         });
         return writeResult;
     }
