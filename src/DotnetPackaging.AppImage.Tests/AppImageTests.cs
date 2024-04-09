@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using Zafiro.FileSystem.Lightweight;
 using DotnetPackaging.AppImage.Core;
+using DotnetPackaging.AppImage.Model;
 using FluentAssertions;
 using Zafiro.FileSystem.Lightweight;
 
@@ -27,6 +28,19 @@ public class AppImageTests
         var appDir = new DirectoryBlobContainer(Maybe<string>.None, directoryInfo);
         var fileSystemStream = fs.File.Open("C:\\Users\\JMN\\Desktop\\Test.appimage", FileMode.Create);
         var result = await AppImage.FromAppDir(appDir, Architecture.X64)
+            .Bind(image => AppImageWriter.Write(fileSystemStream, image));
+
+        result.Should().Succeed();
+    }
+    
+    [Fact]
+    public async Task FromBuildDir()
+    {
+        var fs = new FileSystem();
+        var directoryInfo = fs.DirectoryInfo.New(@"C:\Users\JMN\Desktop\Testing");
+        var appDir = new DirectoryBlobContainer(Maybe<string>.None, directoryInfo);
+        var fileSystemStream = fs.File.Open("C:\\Users\\JMN\\Desktop\\Test.appimage", FileMode.Create);
+        var result = await AppImage.FromBuildDir(appDir, Maybe<DesktopMetadata>.None)
             .Bind(image => AppImageWriter.Write(fileSystemStream, image));
 
         result.Should().Succeed();
