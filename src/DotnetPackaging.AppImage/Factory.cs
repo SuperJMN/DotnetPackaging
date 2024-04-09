@@ -19,10 +19,10 @@ public class Factory
     {
         var application = await appFolder.GetBlobsInTree(ZafiroPath.Empty)
             .Map(files => files.ToDictionary(x => x.Path, x => x.Blob))
-            .Bind(files =>
+            .Bind(fileDict =>
             {
-                var appRunResult = files.TryFind("AppRun").Map(blob => new StreamAppRun(blob.StreamFactory)).ToResult("Could not locate AppRun file in AppDir");
-                var maybeIcon = files.TryFind("AppIcon.png").Map(blob => (IIcon) new Icon(blob.StreamFactory)).GetValueOrDefault(() => new DefaultIcon());
+                var appRunResult = fileDict.TryFind("AppRun").Map(blob => new StreamAppRun(blob.StreamFactory)).ToResult("Could not locate AppRun file in AppDir");
+                var maybeIcon = fileDict.TryFind("AppIcon.png").Map(blob => (IIcon) new Icon(blob.StreamFactory)).GetValueOrDefault(() => new DefaultIcon());
                 //var desktopMetadata = files["AppIcon.png"];
                 return appRunResult.Map(appRun => new Application(appFolder, maybeIcon, Maybe<DesktopMetadata>.None, appRun));
             });

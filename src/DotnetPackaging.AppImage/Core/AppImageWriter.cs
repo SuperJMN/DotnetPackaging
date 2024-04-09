@@ -1,7 +1,6 @@
 ﻿using Zafiro.FileSystem.Lightweight;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Model;
-using Zafiro.FileSystem;
 
 namespace DotnetPackaging.AppImage.Core;
 
@@ -34,5 +33,3 @@ public class AppImageWriter
         return root;
     }
 }
-
-public record LinuxFileEntry(ZafiroPath path, IGetStream data, string owner, string group, UnixFileMode unixFileMode);
