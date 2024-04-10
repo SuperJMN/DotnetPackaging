@@ -7,33 +7,6 @@ using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage;
 
-public abstract class AppImageBase
-{
-    public IRuntime Runtime { get; }
-
-    public AppImageBase(IRuntime runtime)
-    {
-        Runtime = runtime;
-    }
-    
-    public abstract Task<Result<IEnumerable<(ZafiroPath Path, IBlob Blob)>>> PayloadEntries();
-}
-
-public class RawAppImage : AppImageBase
-{
-    private readonly IBlobContainer container;
-    
-    public RawAppImage(IRuntime runtime, IBlobContainer container) : base(runtime)
-    {
-        this.container = container;
-    }
-
-    public override Task<Result<IEnumerable<(ZafiroPath Path, IBlob Blob)>>> PayloadEntries()
-    {
-        return container.GetBlobsInTree(ZafiroPath.Empty);
-    }
-}
-
 public class AppImage
 {
     private static async Task<Result<Application>> CreateApplicationFromBuildDirectory(IBlobContainer buildDir, (ZafiroPath Path, IBlob Blob) firstExecutable, Maybe<DesktopMetadata> desktopMetadataOverride)
@@ -70,10 +43,10 @@ public class AppImage
 
     public static AppImageBase FromAppDir(DirectoryBlobContainer appDir, Architecture architecture)
     {
-        return new RawAppImage(new UriRuntime(architecture), appDir);
+        return new AppDirBasedAppImage(new UriRuntime(architecture), appDir);
     }
 
-    public static async Task<Result<Model.CustomAppImage>> FromBuildDir(DirectoryBlobContainer buildDir, Maybe<DesktopMetadata> desktopMetadataOverride)
+    public static async Task<Result<Model.AppImageModel>> FromBuildDir(DirectoryBlobContainer buildDir, Maybe<DesktopMetadata> desktopMetadataOverride)
     {
         var firstExecutableResult = GetExecutable(buildDir).Bind(exec =>
         {
@@ -84,7 +57,7 @@ public class AppImage
             .Bind(execWithArch =>
             {
                 return CreateApplicationFromBuildDirectory(buildDir, execWithArch.Exec, desktopMetadataOverride)
-                        .Map(application => new Model.CustomAppImage(new UriRuntime(execWithArch.Arch), application));
+                        .Map(application => new Model.AppImageModel(new UriRuntime(execWithArch.Arch), application));
             });
         
         return result;
