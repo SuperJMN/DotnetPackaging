@@ -22,6 +22,11 @@ public static class Mixin
             .Map(entries => entries.ToLinuxFileEntries());
     }
 
+    public static Task<Result<bool>> IsExecutable(this (ZafiroPath Path, IBlob Blob) entry)
+    {
+        return entry.Blob.Within(stream => stream.IsElf().Map(isElf => isElf && entry.Path.Extension() != "so" && entry.Path.Name() != "createdump"));
+    }
+    
     private static async Task<UnixFileMode> GetMode((ZafiroPath path, IBlob blob) valueTuple)
     {
         const UnixFileMode execFile = (UnixFileMode) 755;
@@ -29,17 +34,9 @@ public static class Mixin
         
         if (valueTuple.path == "AppRun")
         {
-            
             return execFile;
         }
 
-        return await valueTuple.blob.StreamFactory()
-            .Bind(stream =>
-            {
-                using (stream)
-                {
-                    return stream.IsExecutable().Map(isExec => isExec ? execFile : regularFile);
-                }
-            }).GetValueOrDefault(() => regularFile);
+        return await valueTuple.IsExecutable().Map(isExec => isExec ? execFile : regularFile).GetValueOrDefault(() => regularFile);
     }
 }

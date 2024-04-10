@@ -44,7 +44,7 @@ public static class ElfInspector
         };
     }
 
-    public static Result<bool> IsExecutable(this Stream stream)
+    public static Result<bool> IsElf(this Stream stream)
     {
         using var reader = new BinaryReader(stream);
         var magicBytes = new byte[] { 0x7F, (byte)'E', (byte)'L', (byte)'F' };
