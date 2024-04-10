@@ -28,11 +28,11 @@ public class AppImageWriter
         var optional = application.Icon.Map(icon => (IEnumerable<IBlob>)new[] { new Blob("AppIcon.png", icon.StreamFactory) }).GetValueOrDefault(Enumerable.Empty<IBlob>());
         var files = mandatory.Concat(optional);
 
-        var blobContainers = new List<IBlobContainer>()
+        var containers = new List<IBlobContainer>()
         {
             application.Contents
         };
 
-        return new BlobContainer(files, blobContainers);
+        return new BlobContainer("", files, containers);
     }
 }

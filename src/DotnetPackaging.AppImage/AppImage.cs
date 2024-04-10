@@ -9,21 +9,12 @@ namespace DotnetPackaging.AppImage;
 
 public class AppImage
 {
-    private static async Task<Result<Application>> CreateApplicationFromBuildDirectory(DirectoryBlobContainer buildDirectory, (ZafiroPath Path, IBlob Blob) firstExecutable, Maybe<DesktopMetadata> desktopMetadataOverride)
+    private static async Task<Result<Application>> CreateApplicationFromBuildDirectory(IBlobContainer buildDir, (ZafiroPath Path, IBlob Blob) firstExecutable, Maybe<DesktopMetadata> desktopMetadataOverride)
     {
-        var allBlobsResult = await buildDirectory.GetBlobsInTree(ZafiroPath.Empty)
-            .Bind(blobs =>
-            {
-                return blobs.Select(x =>
-                {
-                    return x.Blob
-                        .Within(stream => stream.IsElf())
-                        .Map(isExec => (IsExec: isExec, x.Path, x.Blob));
-                }).Combine();
-            });
+        var allEntries = buildDir.GetBlobsInTree(ZafiroPath.Empty).Bind(Complete);
 
-        var maybeIconResult = allBlobsResult.Map(x => x.TryFirst(file => file.Path.ToString() == "AppImage.png").Map(f => (IIcon)new Icon(f.Blob)));
-        var architectureResult = await firstExecutable.Blob.Within(stream => stream.IsElf());
+        var maybeIconResult = allEntries.Map(x => x.TryFirst(file => file.Path.ToString() == "AppImage.png").Map(f => (IIcon)new Icon(f.Blob)));
+        var architectureResult = await firstExecutable.Blob.Within(stream => stream.IsExecutable());
         var desktopMetadata = new DesktopMetadata()
         {
             ExecutablePath = "$APPDIR/" + firstExecutable.Path,
@@ -33,18 +24,29 @@ public class AppImage
             Name = firstExecutable.Path.NameWithoutExtension(),
             StartupWmClass = firstExecutable.Path.NameWithoutExtension(),
         };
-
-        var applicationFromBuildDirectory = from content in allBlobsResult
+        
+        var applicationFromBuildDirectory = from content in allEntries
             from maybeIcon in maybeIconResult
             from architecture in architectureResult
             select new Application(
-                buildDirectory, 
+                new BlobContainer("", buildDir.Blobs(), buildDir.Children()), 
                 maybeIcon, 
                 desktopMetadataOverride.GetValueOrDefault(desktopMetadata), 
                 new DefaultScriptAppRun(firstExecutable.Path));
-        return applicationFromBuildDirectory;
+        
+        return await applicationFromBuildDirectory;
     }
-    
+
+    private static Task<Result<IEnumerable<(bool IsExec, ZafiroPath Path, IBlob Blob)>>> Complete(IEnumerable<(ZafiroPath Path, IBlob Blob)> files)
+    {
+        return files.Select(x =>
+        {
+            return x.Blob
+                .Within(stream => stream.IsExecutable())
+                .Map(isExec => (IsExec: isExec, x.Path, x.Blob));
+        }).Combine();
+    }
+
     public static Task<Result<Model.AppImage>> FromAppDir(DirectoryBlobContainer appDir, Architecture architecture)
     {
         return CreateApplicationFromAppDir(appDir).Map(application => new Model.AppImage(new UriRuntime(architecture), application));
@@ -58,9 +60,10 @@ public class AppImage
         });
 
         var result = await firstExecutableResult
-            .Bind(tuple =>
+            .Bind(execWithArch =>
             {
-                return CreateApplicationFromBuildDirectory(buildDir, tuple.Exec, desktopMetadataOverride).Map(application => new Model.AppImage(new UriRuntime(tuple.Arch), application));
+                return CreateApplicationFromBuildDirectory(buildDir, execWithArch.Exec, desktopMetadataOverride)
+                        .Map(application => new Model.AppImage(new UriRuntime(execWithArch.Arch), application));
             });
         
         return result;
@@ -75,7 +78,8 @@ public class AppImage
                 var appRunResult = fileDict.TryFind("AppRun").Map(blob => new StreamAppRun(blob)).ToResult("Could not locate AppRun file in AppDir");
                 var maybeIcon = fileDict.TryFind("AppIcon.png").Map(blob => (IIcon)new Icon(blob));
                 var maybeDesktop = await fileDict.TryFind("App.desktop").Map(blob => blob.StreamFactory.FromStreamFactory());
-                return appRunResult.Map(appRun => new Application(appFolder, maybeIcon, maybeDesktop, appRun));
+                return appRunResult
+                    .Map(appRun => new Application(appFolder, maybeIcon, maybeDesktop, appRun));
             });
 
         return application;
@@ -89,7 +93,7 @@ public class AppImage
                 return blobs.Select(x =>
                 {
                     return x.Blob
-                        .Within(stream => stream.IsElf())
+                        .Within(stream => stream.IsExecutable().Map(isExec => isExec && x.Path.Extension() != "so" && x.Path.Name() != "createdump"))
                         .Map(isExec => (IsExec: isExec, x.Path, x.Blob));
                 }).Combine();
             });

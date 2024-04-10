@@ -38,9 +38,9 @@ public class AppImageTests
     {
         var fs = new FileSystem();
         var directoryInfo = fs.DirectoryInfo.New(@"C:\Users\JMN\Desktop\Testing");
-        var appDir = new DirectoryBlobContainer(Maybe<string>.None, directoryInfo);
+        var buildDir = new DirectoryBlobContainer("", directoryInfo);
         var fileSystemStream = fs.File.Open("C:\\Users\\JMN\\Desktop\\Test.appimage", FileMode.Create);
-        var result = await AppImage.FromBuildDir(appDir, Maybe<DesktopMetadata>.None)
+        var result = await AppImage.FromBuildDir(buildDir, Maybe<DesktopMetadata>.None)
             .Bind(image => AppImageWriter.Write(fileSystemStream, image));
 
         result.Should().Succeed();

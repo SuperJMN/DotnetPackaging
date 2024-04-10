@@ -5,6 +5,9 @@ namespace DotnetPackaging.AppImage.Core;
 
 public static class ElfInspector
 {
+    private const int EtExec = 2;
+    private const int EtDyn = 3;
+    
     public static Result<Architecture> GetArchitecture(this Stream stream)
     {
         using var br = new BinaryReader(stream);
@@ -41,12 +44,22 @@ public static class ElfInspector
         };
     }
 
-    private const string ElfMagicNumber = "\u007fELF";
-
-    public static Result<bool> IsElf(this Stream stream)
+    public static Result<bool> IsExecutable(this Stream stream)
     {
         using var reader = new BinaryReader(stream);
-        var magicNumber = new string(reader.ReadChars(4));
-        return magicNumber.Equals(ElfMagicNumber);
+        var magicBytes = new byte[] { 0x7F, (byte)'E', (byte)'L', (byte)'F' };
+        var fileMagicBytes = reader.ReadBytes(4);
+                
+        if (!magicBytes.SequenceEqual(fileMagicBytes))
+        {
+            return false; // No es un archivo ELF.
+        }
+
+        // Saltar a la posición 16 para leer e_type (teniendo en cuenta ELF 32 y 64 bits)
+        stream.Seek(16, SeekOrigin.Begin);
+        var eType = reader.ReadUInt16(); // e_type es un campo de 2 bytes.
+
+        var isExecutable = eType == EtExec || eType == EtDyn;
+        return isExecutable; // Verdadero si el archivo es un ejecutable ELF.
     }
 }
