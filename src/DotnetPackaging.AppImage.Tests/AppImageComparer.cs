@@ -8,7 +8,7 @@ public class AppImageStreamComparer
     {
         var superBlockIndex = await GetSuperBlockId(first());
         var indicesToIgnore = Enumerable.Range(superBlockIndex + 8, 4).ToArray();
-        var comparer = new MyComparer<byte>(indicesToIgnore);
+        var comparer = new IgnorePositionsComparer<byte>(indicesToIgnore);
         var sequenceEqual = first().Indexed().SequenceEqual(second().Indexed(), comparer);
         return await sequenceEqual;
     }
@@ -24,11 +24,6 @@ public class AppImageStreamComparer
 
         // Devuelve el índice del primer bloque que cumple la condición o -1 si ninguno cumple
         return firstBlockIndex ?? -1;
-    }
-
-    private async Task<bool> Equal<T>(IObservable<T> a, IObservable<T> b)
-    {
-        return await a.Indexed().Zip(b, (a, b) => a.Item1.Equals(b)).Any(x => !x);
     }
 
     // You can define other methods, fields, classes and namespaces here
@@ -48,11 +43,11 @@ public class AppImageStreamComparer
         return magicBytes && version;
     }
 
-    private class MyComparer<T> : IEqualityComparer<(T, int)>
+    private class IgnorePositionsComparer<T> : IEqualityComparer<(T, int)>
     {
         private readonly int[] ignoreIndices;
 
-        public MyComparer(int[] ignoreIndices)
+        public IgnorePositionsComparer(int[] ignoreIndices)
         {
             this.ignoreIndices = ignoreIndices;
         }
