@@ -1,15 +1,14 @@
 ﻿using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
-using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.AppImage.Model;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Core;
 
-public class AppImage
+public class AppImageFactory
 {
-    private static async Task<Result<Application>> CreateApplicationFromBuildDirectory(IBlobContainer buildDir, (ZafiroPath Path, IBlob Blob) firstExecutable, Maybe<DesktopMetadata> desktopMetadataOverride)
+    private static Task<Result<Application>> CreateApplicationFromBuildDirectory(IBlobContainer buildDir, (ZafiroPath Path, IBlob Blob) firstExecutable, Maybe<DesktopMetadata> desktopMetadataOverride)
     {
         var allEntries = buildDir.GetBlobsInTree(ZafiroPath.Empty).Bind(ToExecutableEntries);
 
@@ -24,16 +23,14 @@ public class AppImage
             Name = appName,
             StartupWmClass = appName,
         };
-        
-        var applicationFromBuildDirectory = from content in allEntries
+
+        return from content in allEntries
             from maybeIcon in maybeIconResult
             select new Application(
-                new []{ new BlobContainer(appName, buildDir.Blobs(), buildDir.Children()) }, 
-                maybeIcon, 
-                desktopMetadataOverride.GetValueOrDefault(desktopMetadata), 
+                new[] { new BlobContainer(appName, buildDir.Blobs(), buildDir.Children()) },
+                maybeIcon,
+                desktopMetadataOverride.GetValueOrDefault(desktopMetadata),
                 new DefaultScriptAppRun(firstExecutable.Path));
-        
-        return await applicationFromBuildDirectory;
     }
 
     private static Task<Result<IEnumerable<(bool IsExec, ZafiroPath Path, IBlob Blob)>>> ToExecutableEntries(IEnumerable<(ZafiroPath Path, IBlob Blob)> files)
@@ -41,12 +38,12 @@ public class AppImage
         return files.Select(x => x.IsExecutable().Map(isExec => (IsExec: isExec, x.Path, x.Blob))).Combine();
     }
 
-    public static AppImageBase FromAppDir(DirectoryBlobContainer appDir, Architecture architecture)
+    public static AppImageBase FromAppDir(IBlobContainer appDir, IRuntime uriRuntime)
     {
-        return new AppDirBasedAppImage(new UriRuntime(architecture), appDir);
+        return new AppDirBasedAppImage(uriRuntime, appDir);
     }
 
-    public static async Task<Result<Model.AppImageModel>> FromBuildDir(DirectoryBlobContainer buildDir, Maybe<DesktopMetadata> desktopMetadataOverride)
+    public static async Task<Result<AppImageBase>> FromBuildDir(IBlobContainer buildDir, Maybe<DesktopMetadata> desktopMetadataOverride, Func<Architecture, IRuntime> getRuntime)
     {
         var firstExecutableResult = GetExecutable(buildDir).Bind(exec =>
         {
@@ -57,9 +54,9 @@ public class AppImage
             .Bind(execWithArch =>
             {
                 return CreateApplicationFromBuildDirectory(buildDir, execWithArch.Exec, desktopMetadataOverride)
-                        .Map(application => new Model.AppImageModel(new UriRuntime(execWithArch.Arch), application));
+                        .Map(application => (AppImageBase)new AppImageModel(getRuntime(execWithArch.Arch), application));
             });
-        
+
         return result;
     }
 

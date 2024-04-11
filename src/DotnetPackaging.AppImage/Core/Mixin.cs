@@ -11,20 +11,14 @@ public static class Mixin
         return Task.WhenAll(toLinuxEntries.Select(async r =>
         {
             var unixFileMode = await GetMode(r);
-            return new LinuxFileEntry(r.Path, r.Blob, "", "", unixFileMode);
+            var fullPath = r.Path == string.Empty ? r.Blob.Name : r.Path + "/" + r.Blob.Name;
+            return new LinuxFileEntry(fullPath, r.Blob, "", "", unixFileMode);
         }));
-    }
-
-    public static Task<Result<LinuxFileEntry[]>> ToLinuxFileEntries(this IBlobContainer toLinuxEntries)
-    {
-        return toLinuxEntries
-            .GetBlobsInTree(ZafiroPath.Empty)
-            .Map(entries => entries.ToLinuxFileEntries());
     }
 
     public static Task<Result<bool>> IsExecutable(this (ZafiroPath Path, IBlob Blob) entry)
     {
-        return entry.Blob.Within(stream => stream.IsElf().Map(isElf => isElf && entry.Path.Extension() != "so" && entry.Path.Name() != "createdump"));
+        return entry.Blob.Within(stream => stream.IsElf().Map(isElf => isElf && !entry.Blob.Name.EndsWith(".so") && entry.Blob.Name != "createdump"));
     }
     
     private static async Task<UnixFileMode> GetMode((ZafiroPath path, IBlob blob) valueTuple)

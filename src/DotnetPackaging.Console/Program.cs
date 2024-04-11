@@ -10,7 +10,6 @@ using DotnetPackaging.Client.Dtos;
 using DotnetPackaging.Common;
 using Serilog;
 using Zafiro.FileSystem.Lightweight;
-using AppImage = DotnetPackaging.AppImage.AppImage;
 using FileMode = System.IO.FileMode;
 
 Log.Logger = new LoggerConfiguration()
@@ -42,7 +41,7 @@ static async Task CreateAppImageFromAppDir(DirectoryInfo contents, FileInfo debF
     var directoryInfo = fs.DirectoryInfo.New(contents.FullName);
     var buildDir = new DirectoryBlobContainer("", directoryInfo);
     var fileSystemStream = fs.File.Open(debFile.FullName, FileMode.Create);
-    var result = AppImageWriter.Write(fileSystemStream, AppImage.FromAppDir(buildDir, architecture));
+    var result = AppImageWriter.Write(fileSystemStream, AppImageFactory.FromAppDir(buildDir, new UriRuntime(architecture)));
 
     await result
         .Tap(() => Log.Information("Success"))
@@ -55,7 +54,7 @@ static async Task CreateAppImageFromBuildDir(DirectoryInfo contents, FileInfo de
     var directoryInfo = fs.DirectoryInfo.New(contents.FullName);
     var buildDir = new DirectoryBlobContainer("", directoryInfo);
     var fileSystemStream = fs.File.Open(debFile.FullName, FileMode.Create);
-    var result = await AppImage.FromBuildDir(buildDir, Maybe<DesktopMetadata>.None)
+    var result = await AppImageFactory.FromBuildDir(buildDir, Maybe<DesktopMetadata>.None, ar => new UriRuntime(ar))
         .Bind(image => AppImageWriter.Write(fileSystemStream, image));
 
     result

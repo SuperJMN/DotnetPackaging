@@ -1,9 +1,8 @@
 ﻿using CSharpFunctionalExtensions;
-using DotnetPackaging.AppImage.Model;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Model;
 
 public abstract class AppImageBase
 {
@@ -13,6 +12,6 @@ public abstract class AppImageBase
     {
         Runtime = runtime;
     }
-    
+
     public abstract Task<Result<IEnumerable<(ZafiroPath Path, IBlob Blob)>>> PayloadEntries();
 }

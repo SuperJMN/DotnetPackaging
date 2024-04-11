@@ -1,0 +1,2 @@
+$"#!/usr/bin/env sh
+"$APPDIR/AvaloniaSyncer/AvaloniaSyncer.Desktop" "$@""
