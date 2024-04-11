@@ -13,12 +13,13 @@ public class AppImageModel : AppImageBase
     }
 
     public Application Application { get; }
+    
     public override Task<Result<IEnumerable<(ZafiroPath Path, IFile Blob)>>> PayloadEntries() => GetPayload(Application);
 
     private async Task<Result<IEnumerable<(ZafiroPath Path, IFile Blob)>>> GetPayload(Application application)
     {
         var entries = BasicEntries();
-        var getBlobsListResult = await Task.WhenAll(application.Contents.Select(container => container.GetFilesInTree(ZafiroPath.Empty)));
+        var getBlobsListResult = await Task.WhenAll(application.Contents.Select(container => container.GetFilesInTree(container.Name)));
         var contentEntries = getBlobsListResult.Combine();
         var plain = contentEntries.Map(x => x.SelectMany(r => r));
         return plain.Map(ce => entries.Concat(ce));

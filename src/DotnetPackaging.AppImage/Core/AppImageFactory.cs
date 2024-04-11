@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
@@ -35,11 +36,12 @@ public class AppImageFactory
     {
         var allEntries = buildDir.GetFilesInTree(ZafiroPath.Empty).Bind(ToExecutableEntries);
 
+        Debugger.Launch();
         var maybeIconResult = allEntries.Map(x => x.TryFirst(file => file.Path.ToString() == "AppImage.png").Map(f => (IIcon) new Icon(f.Blob)));
         var appName = ((ZafiroPath)firstExecutable.Blob.Name).NameWithoutExtension();
         var desktopMetadata = new DesktopMetadata
         {
-            ExecutablePath = "$APPDIR/" + firstExecutable.Path,
+            ExecutablePath = "$APPDIR/" + appName + "/" + firstExecutable.Blob.Name,
             Categories = new List<string>(),
             Comment = "",
             Keywords = [],
@@ -47,10 +49,15 @@ public class AppImageFactory
             StartupWmClass = appName
         };
 
+        IDirectory[] applicationContents =
+        {
+            new Directory(appName, buildDir.Files(), buildDir.Directories())
+        };
+
         return from content in allEntries
             from maybeIcon in maybeIconResult
             select new Application(
-                new[] { new Directory(appName, buildDir.Files(), buildDir.Directories()) },
+                applicationContents,
                 maybeIcon,
                 desktopMetadataOverride.GetValueOrDefault(desktopMetadata),
                 new DefaultScriptAppRun(firstExecutable.Path));
