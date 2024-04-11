@@ -5,5 +5,5 @@ namespace DotnetPackaging.AppImage.Tests;
 
 public class TestRuntime : IRuntime
 {
-    public Func<Task<Result<Stream>>> StreamFactory => () => Task.FromResult(Result.Success("Stub runtime!".PadRight(1024).ToStream()));
+    public Func<Task<Result<Stream>>> Open => () => Task.FromResult(Result.Success("Stub runtime!".PadRight(1024).ToStream()));
 }

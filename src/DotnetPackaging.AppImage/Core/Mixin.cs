@@ -6,7 +6,7 @@ namespace DotnetPackaging.AppImage.Core;
 
 public static class Mixin
 {
-    public static Task<LinuxFileEntry[]> ToLinuxFileEntries(this IEnumerable<(ZafiroPath Path, IBlob Blob)> toLinuxEntries)
+    public static Task<LinuxFileEntry[]> ToLinuxFileEntries(this IEnumerable<(ZafiroPath Path, IFile Blob)> toLinuxEntries)
     {
         return Task.WhenAll(toLinuxEntries.Select(async r =>
         {
@@ -16,12 +16,12 @@ public static class Mixin
         }));
     }
 
-    public static Task<Result<bool>> IsExecutable(this (ZafiroPath Path, IBlob Blob) entry)
+    public static Task<Result<bool>> IsExecutable(this (ZafiroPath Path, IFile Blob) entry)
     {
         return entry.Blob.Within(stream => stream.IsElf().Map(isElf => isElf && !entry.Blob.Name.EndsWith(".so") && entry.Blob.Name != "createdump"));
     }
     
-    private static async Task<UnixFileMode> GetMode((ZafiroPath path, IBlob blob) valueTuple)
+    private static async Task<UnixFileMode> GetMode((ZafiroPath path, IFile blob) valueTuple)
     {
         const UnixFileMode execFile = (UnixFileMode) 755;
         const UnixFileMode regularFile = (UnixFileMode) 544;

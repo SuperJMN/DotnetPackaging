@@ -6,15 +6,15 @@ namespace DotnetPackaging.AppImage.Core;
 
 public class AppDirBasedAppImage : AppImageBase
 {
-    private readonly IBlobContainer container;
+    private readonly IDirectory container;
 
-    public AppDirBasedAppImage(IRuntime runtime, IBlobContainer container) : base(runtime)
+    public AppDirBasedAppImage(IRuntime runtime, IDirectory container) : base(runtime)
     {
         this.container = container;
     }
 
-    public override Task<Result<IEnumerable<(ZafiroPath Path, IBlob Blob)>>> PayloadEntries()
+    public override Task<Result<IEnumerable<(ZafiroPath Path, IFile Blob)>>> PayloadEntries()
     {
-        return container.GetBlobsInTree(ZafiroPath.Empty);
+        return container.GetFilesInTree(ZafiroPath.Empty);
     }
 }

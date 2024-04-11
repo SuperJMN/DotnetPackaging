@@ -2,6 +2,6 @@
 
 namespace DotnetPackaging.AppImage.Core;
 
-public interface IIcon : IGetStream
+public interface IIcon : IStreamOpen
 {
 }

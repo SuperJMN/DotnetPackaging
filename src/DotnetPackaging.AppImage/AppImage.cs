@@ -7,12 +7,12 @@ namespace DotnetPackaging.AppImage;
 
 public static class AppImage
 {
-    public static Task<Result> FromAppDir(Stream stream, IBlobContainer appDir, IRuntime uriRuntime)
+    public static Task<Result> FromAppDir(Stream stream, IDirectory appDir, IRuntime uriRuntime)
     {
         return AppImageWriter.Write(stream, AppImageFactory.FromAppDir(appDir, uriRuntime));
     }
     
-    public static Task<Result> FromBuildDir(Stream stream, IBlobContainer buildDir, Func<Architecture, IRuntime> getRuntime)
+    public static Task<Result> FromBuildDir(Stream stream, IDirectory buildDir, Func<Architecture, IRuntime> getRuntime)
     {
         return AppImageFactory.FromBuildDir(buildDir, Maybe<DesktopMetadata>.None, getRuntime: getRuntime).Bind(appImage => AppImageWriter.Write(stream, appImage));
     }

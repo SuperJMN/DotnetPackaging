@@ -2,4 +2,4 @@
 
 namespace DotnetPackaging.AppImage.Core;
 
-public interface IAppRun : IGetStream;
+public interface IAppRun : IStreamOpen;

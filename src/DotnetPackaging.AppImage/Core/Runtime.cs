@@ -3,7 +3,7 @@ using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage.Core;
 
-public class Runtime : IGetStream
+public class Runtime : IStreamOpen
 {
-    public Func<Task<Result<Stream>>> StreamFactory => throw new NotImplementedException();
+    public Func<Task<Result<Stream>>> Open => throw new NotImplementedException();
 }

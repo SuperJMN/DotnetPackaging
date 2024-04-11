@@ -38,7 +38,7 @@ static async Task CreateAppImageFromAppDir(DirectoryInfo contents, FileInfo debF
 {
     var fs = new FileSystem();
     var directoryInfo = fs.DirectoryInfo.New(contents.FullName);
-    var buildDir = new DirectoryBlobContainer("", directoryInfo);
+    var buildDir = new DirectorioIODirectory("", directoryInfo);
     var fileSystemStream = fs.File.Open(debFile.FullName, FileMode.Create);
     var result = AppImageWriter.Write(fileSystemStream, AppImageFactory.FromAppDir(buildDir, new UriRuntime(architecture)));
 
@@ -51,7 +51,7 @@ static async Task CreateAppImageFromBuildDir(DirectoryInfo contents, FileInfo de
 {
     var fs = new FileSystem();
     var directoryInfo = fs.DirectoryInfo.New(contents.FullName);
-    var buildDir = new DirectoryBlobContainer("", directoryInfo);
+    var buildDir = new DirectorioIODirectory("", directoryInfo);
     var fileSystemStream = fs.File.Open(debFile.FullName, FileMode.Create);
     var result = await AppImageFactory.FromBuildDir(buildDir, Maybe<DesktopMetadata>.None, ar => new UriRuntime(ar))
         .Bind(image => AppImageWriter.Write(fileSystemStream, image));

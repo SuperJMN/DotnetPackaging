@@ -2,6 +2,6 @@
 
 namespace DotnetPackaging.AppImage.Core;
 
-public interface IRuntime : IGetStream
+public interface IRuntime : IStreamOpen
 {
 }

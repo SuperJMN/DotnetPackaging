@@ -12,5 +12,5 @@ public class UriRuntime : IRuntime
         this.architecture = architecture;
     }
 
-    public Func<Task<Result<Stream>>> StreamFactory => () => RuntimeDownloader.GetRuntimeStream(architecture, new DefaultHttpClientFactory());
+    public Func<Task<Result<Stream>>> Open => () => RuntimeDownloader.GetRuntimeStream(architecture, new DefaultHttpClientFactory());
 }

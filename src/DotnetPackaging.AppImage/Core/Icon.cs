@@ -5,10 +5,10 @@ namespace DotnetPackaging.AppImage.Core;
 
 public class Icon : IIcon
 {
-    public Icon(IGetStream streamFactory)
+    public Icon(IStreamOpen streamOpenFactory)
     {
-        StreamFactory = streamFactory.StreamFactory;
+        Open = streamOpenFactory.Open;
     }
 
-    public Func<Task<Result<Stream>>> StreamFactory { get; }
+    public Func<Task<Result<Stream>>> Open { get; }
 }

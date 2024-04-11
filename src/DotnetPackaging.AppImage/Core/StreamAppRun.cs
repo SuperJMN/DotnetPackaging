@@ -3,7 +3,7 @@ using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage.Core;
 
-public class StreamAppRun(IGetStream streamFactory) : IAppRun
+public class StreamAppRun(IStreamOpen streamOpenFactory) : IAppRun
 {
-    public Func<Task<Result<Stream>>> StreamFactory { get; } = streamFactory.StreamFactory;
+    public Func<Task<Result<Stream>>> Open { get; } = streamOpenFactory.Open;
 }

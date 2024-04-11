@@ -6,9 +6,9 @@ namespace DotnetPackaging.AppImage.Core;
 
 public static class GetStreamMixin
 {
-    public static async Task<Result> WriteTo(this IGetStream getStream, Stream stream)
+    public static async Task<Result> WriteTo(this IStreamOpen streamOpen, Stream stream)
     {
-        var writeTo = await getStream.StreamFactory()
+        var writeTo = await streamOpen.Open()
             .Map(async sourceStream =>
             {
                 using (sourceStream)
@@ -20,9 +20,9 @@ public static class GetStreamMixin
         return writeTo;
     }
 
-    public static Task<Result<byte[]>> ToBytes(this IGetStream getStream)
+    public static Task<Result<byte[]>> ToBytes(this IStreamOpen streamOpen)
     {
-        return getStream.StreamFactory()
+        return streamOpen.Open()
             .Map(async sourceStream =>
             {
                 await using (sourceStream)
@@ -32,9 +32,9 @@ public static class GetStreamMixin
             });
     }
     
-    public static Task<Result<T>> Within<T>(this IGetStream getStream, Func<Stream, Task<Result<T>>> apply)
+    public static Task<Result<T>> Within<T>(this IStreamOpen streamOpen, Func<Stream, Task<Result<T>>> apply)
     {
-        return getStream.StreamFactory()
+        return streamOpen.Open()
             .Bind(async sourceStream =>
             {
                 await using (sourceStream)
@@ -44,9 +44,9 @@ public static class GetStreamMixin
             });
     }
     
-    public static Task<Result<T>> Within<T>(this IGetStream getStream, Func<Stream, Result<T>> apply)
+    public static Task<Result<T>> Within<T>(this IStreamOpen streamOpen, Func<Stream, Result<T>> apply)
     {
-        return getStream.StreamFactory()
+        return streamOpen.Open()
             .Bind(async sourceStream =>
             {
                 await using (sourceStream)

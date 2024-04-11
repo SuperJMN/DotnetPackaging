@@ -8,13 +8,13 @@ internal class InMemoryFile : IZafiroFile
 {
     public string Name { get; }
     public IZafiroDirectory Parent { get; }
-    public IGetStream GetStream { get; }
+    public IStreamOpen StreamOpen { get; }
 
-    public InMemoryFile(string name, IZafiroDirectory parent, IGetStream getStream)
+    public InMemoryFile(string name, IZafiroDirectory parent, IStreamOpen streamOpen)
     {
         Name = name;
         Parent = parent;
-        GetStream = getStream;
+        StreamOpen = streamOpen;
     }
 
     public Task<Result> Delete() => throw new NotImplementedException();
