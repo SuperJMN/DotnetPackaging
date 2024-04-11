@@ -48,8 +48,6 @@ static async Task CreateAppImageFromAppDir(DirectoryInfo contents, FileInfo debF
         .TapError(Log.Error);
 }
 
-
-
 static Command DebCommand()
 {
     var contentDir = new Option<DirectoryInfo>("--directory", "The input directory to create the package from") { IsRequired = true };
@@ -84,7 +82,7 @@ static Command AppImageFromBuildDirCommand()
     fromBuildDir.AddOption(appImageFile);
     fromBuildDir.AddOption(desktopFile);
 
-    fromBuildDir.SetHandler(new FromAppDir(new FileSystem()).Create, buildDir, appImageFile, desktopFile);
+    fromBuildDir.SetHandler((info, fileInfo, s) => new FromAppDir(new FileSystem()).Create(info, fileInfo, s).WriteResult(), buildDir, appImageFile, desktopFile);
     return fromBuildDir;
 }
 
