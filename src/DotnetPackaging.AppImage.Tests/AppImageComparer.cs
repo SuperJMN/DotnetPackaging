@@ -4,13 +4,18 @@ namespace DotnetPackaging.AppImage.Tests;
 
 public class AppImageStreamComparer
 {
-    public async Task<bool> AreSameAppImages(Func<IObservable<byte>> first, Func<IObservable<byte>> second)
+    public async Task<bool> AreEqual(Func<IObservable<byte>> first, Func<IObservable<byte>> second)
     {
         var superBlockIndex = await GetSuperBlockId(first());
         var indicesToIgnore = Enumerable.Range(superBlockIndex + 8, 4).ToArray();
         var comparer = new IgnorePositionsComparer<byte>(indicesToIgnore);
-        var sequenceEqual = first().Indexed().SequenceEqual(second().Indexed(), comparer);
-        return await sequenceEqual;
+        var firstIndexed = first().Indexed();
+        var secondIndexed = second().Indexed();
+        var sequenceEqual = firstIndexed.SequenceEqual(secondIndexed, comparer);
+        var firstBytes = await firstIndexed.ToList();
+        var secondBytes = await secondIndexed.ToList();
+        var areEqual = await sequenceEqual;
+        return areEqual;
     }
 
     private async Task<int> GetSuperBlockId(IObservable<byte> bytes)
