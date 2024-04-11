@@ -1,6 +1,5 @@
 ﻿using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
-using DotnetPackaging.AppImage.Model;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 

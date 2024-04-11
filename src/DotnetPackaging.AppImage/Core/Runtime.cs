@@ -1,7 +1,7 @@
-﻿using Zafiro.FileSystem.Lightweight;
-using CSharpFunctionalExtensions;
+﻿using CSharpFunctionalExtensions;
+using Zafiro.FileSystem.Lightweight;
 
-namespace DotnetPackaging.AppImage.Model;
+namespace DotnetPackaging.AppImage.Core;
 
 public class Runtime : IGetStream
 {

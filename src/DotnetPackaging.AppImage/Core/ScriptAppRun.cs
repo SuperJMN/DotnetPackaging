@@ -1,7 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using DotnetPackaging.Common;
 
-namespace DotnetPackaging.AppImage.Model;
+namespace DotnetPackaging.AppImage.Core;
 
 public class ScriptAppRun : IAppRun
 {

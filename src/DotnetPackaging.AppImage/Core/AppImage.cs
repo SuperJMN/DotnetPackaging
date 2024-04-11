@@ -2,7 +2,7 @@
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 
-namespace DotnetPackaging.AppImage.Model;
+namespace DotnetPackaging.AppImage.Core;
 
 public class AppImageModel : AppImageBase
 {

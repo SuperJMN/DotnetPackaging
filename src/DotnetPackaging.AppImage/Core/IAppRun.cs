@@ -1,5 +1,5 @@
 ﻿using Zafiro.FileSystem.Lightweight;
 
-namespace DotnetPackaging.AppImage.Model;
+namespace DotnetPackaging.AppImage.Core;
 
 public interface IAppRun : IGetStream;

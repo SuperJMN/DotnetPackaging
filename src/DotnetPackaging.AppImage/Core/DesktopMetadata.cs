@@ -1,4 +1,4 @@
-﻿namespace DotnetPackaging.AppImage.Model;
+﻿namespace DotnetPackaging.AppImage.Core;
 
 public class DesktopMetadata
 {

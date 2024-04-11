@@ -1,6 +1,5 @@
 ﻿using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
-using DotnetPackaging.AppImage.Model;
 
 namespace DotnetPackaging.AppImage.Core;
 

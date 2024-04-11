@@ -2,13 +2,13 @@
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 
-namespace DotnetPackaging.AppImage.Model;
+namespace DotnetPackaging.AppImage.Core;
 
 public abstract class AppImageBase
 {
     public IRuntime Runtime { get; }
 
-    public AppImageBase(IRuntime runtime)
+    protected AppImageBase(IRuntime runtime)
     {
         Runtime = runtime;
     }

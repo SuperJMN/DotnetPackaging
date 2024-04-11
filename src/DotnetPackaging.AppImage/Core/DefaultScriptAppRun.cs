@@ -1,6 +1,4 @@
-﻿using DotnetPackaging.AppImage.Model;
-
-namespace DotnetPackaging.AppImage.Core;
+﻿namespace DotnetPackaging.AppImage.Core;
 
 public class DefaultScriptAppRun : ScriptAppRun
 {

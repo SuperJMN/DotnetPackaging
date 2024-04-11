@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
 using DotnetPackaging.AppImage.Core;
-using DotnetPackaging.AppImage.Model;
 using DotnetPackaging.Client.Dtos;
 using DotnetPackaging.Common;
 using Serilog;

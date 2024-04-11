@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using CSharpFunctionalExtensions;
-using DotnetPackaging.AppImage.Model;
 using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage.Core;

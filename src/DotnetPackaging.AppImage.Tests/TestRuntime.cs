@@ -1,4 +1,4 @@
-﻿using DotnetPackaging.AppImage.Model;
+﻿using DotnetPackaging.AppImage.Core;
 using Zafiro.Mixins;
 
 namespace DotnetPackaging.AppImage.Tests;
