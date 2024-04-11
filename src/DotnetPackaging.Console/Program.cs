@@ -7,6 +7,7 @@ using DotnetPackaging;
 using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.Client.Dtos;
 using DotnetPackaging.Common;
+using DotnetPackaging.Console;
 using Serilog;
 using Zafiro.FileSystem.Lightweight;
 using FileMode = System.IO.FileMode;
@@ -47,19 +48,7 @@ static async Task CreateAppImageFromAppDir(DirectoryInfo contents, FileInfo debF
         .TapError(Log.Error);
 }
 
-static async Task CreateAppImageFromBuildDir(DirectoryInfo contents, FileInfo debFile)
-{
-    var fs = new FileSystem();
-    var directoryInfo = fs.DirectoryInfo.New(contents.FullName);
-    var buildDir = new DirectorioIODirectory("", directoryInfo);
-    var fileSystemStream = fs.File.Open(debFile.FullName, FileMode.Create);
-    var result = await AppImageFactory.FromBuildDir(buildDir, Maybe<DesktopMetadata>.None, ar => new UriRuntime(ar))
-        .Bind(image => AppImageWriter.Write(fileSystemStream, image));
 
-    result
-        .Tap(() => Log.Information("Success"))
-        .TapError(Log.Error);
-}
 
 static Command DebCommand()
 {
@@ -88,19 +77,19 @@ static Command AppImageFromBuildDirCommand()
 {
     var buildDir = new Option<DirectoryInfo>("--directory", "The input directory to create the package from") { IsRequired = true };
     var appImageFile = new Option<FileInfo>("--output", "Output file (.deb)") { IsRequired = true };
+    var desktopFile = new Option<string>("--desktop-file", "Desktop file formatted as JSON") { IsRequired = false };
     
     var fromBuildDir = new Command("from-build", "Creates AppImage from a directory with the contents. Everything is inferred. For .NET applications, this is usually the \"publish\" directory.");
     fromBuildDir.AddOption(buildDir);
     fromBuildDir.AddOption(appImageFile);
+    fromBuildDir.AddOption(desktopFile);
 
-    fromBuildDir.SetHandler(CreateAppImageFromBuildDir, buildDir, appImageFile);
+    fromBuildDir.SetHandler(new FromAppDir(new FileSystem()).Create, buildDir, appImageFile, desktopFile);
     return fromBuildDir;
 }
 
 static Command AppImageFromAppDirCommand()
 {
-    Debugger.Launch();
-    
     var buildDir = new Option<DirectoryInfo>("--directory", "The input directory to create the package from") { IsRequired = true };
     var appImageFile = new Option<FileInfo>("--output", "Output file (.deb)") { IsRequired = true };
     var architecture = new Option<Architecture>("--architecture", "Architecture of the target AppImage") { IsRequired = true };
