@@ -1,6 +1,5 @@
 ﻿using System.Reactive.Linq;
-using DotnetPackaging.Archives.Tar;
-using DotnetPackaging.Common;
+using DotnetPackaging.Deb.Archives.Tar;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 
@@ -13,7 +12,7 @@ public class TarEntryTests
     {
         var entry = new Entry("Icon.png", new Properties()
         {
-            FileMode = FileMode.Parse("777"),
+            FileMode = LinuxFileMode.Parse("777"),
             GroupId = 1000,
             OwnerId = 1000,
             GroupName = "root",

@@ -1,7 +1,6 @@
 ﻿using System.IO.Abstractions;
 using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
-using DotnetPackaging.Archives.Tar;
 using FluentAssertions;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;

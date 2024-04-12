@@ -1,8 +1,6 @@
-﻿using System.IO.Abstractions;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Core;
-using Zafiro.FileSystem.Lightweight;
 using IDirectory = Zafiro.FileSystem.Lightweight.IDirectory;
 
 namespace DotnetPackaging.AppImage;

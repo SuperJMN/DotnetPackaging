@@ -23,6 +23,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\DotnetPackaging.Deb\DotnetPackaging.Deb.csproj" />
     <ProjectReference Include="..\..\src\DotnetPackaging\DotnetPackaging.csproj" />
   </ItemGroup>
   <ItemGroup>

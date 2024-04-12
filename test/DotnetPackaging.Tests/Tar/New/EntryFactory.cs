@@ -1,6 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
-using DotnetPackaging.Archives.Tar;
-using DotnetPackaging.Common;
+using DotnetPackaging.Deb.Archives.Tar;
 using FluentAssertions.Extensions;
 using Zafiro.FileSystem;
 

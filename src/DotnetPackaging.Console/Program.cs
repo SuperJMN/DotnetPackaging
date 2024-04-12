@@ -2,9 +2,10 @@
 using System.IO.Abstractions;
 using System.Runtime.InteropServices;
 using DotnetPackaging;
-using DotnetPackaging.Client.Dtos;
-using DotnetPackaging.Common;
+using DotnetPackaging.Deb.Client.Dtos;
 using DotnetPackaging.Console;
+using DotnetPackaging.Deb;
+using DotnetPackaging.Deb.Archives;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()

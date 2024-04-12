@@ -1,5 +1,4 @@
 ﻿using CSharpFunctionalExtensions;
-using DotnetPackaging.Common;
 
 namespace DotnetPackaging.AppImage.Core;
 

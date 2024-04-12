@@ -1,5 +1,4 @@
-﻿using DotnetPackaging.Common;
-using FluentAssertions;
+﻿using FluentAssertions;
 
 namespace DotnetPackaging.Tests.Extra;
 

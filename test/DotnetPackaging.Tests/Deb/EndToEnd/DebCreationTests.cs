@@ -1,4 +1,5 @@
-﻿using FluentAssertions;
+﻿using DotnetPackaging.Deb;
+using FluentAssertions;
 
 namespace DotnetPackaging.Tests.Deb.EndToEnd;
 
