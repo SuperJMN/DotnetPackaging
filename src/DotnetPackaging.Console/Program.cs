@@ -1,6 +1,7 @@
 ﻿using System.CommandLine;
 using System.IO.Abstractions;
 using System.Runtime.InteropServices;
+using CSharpFunctionalExtensions;
 using DotnetPackaging;
 using DotnetPackaging.Deb.Client.Dtos;
 using DotnetPackaging.Console;
@@ -74,7 +75,7 @@ static Command AppImageFromBuildDirCommand()
     fromBuildDir.AddOption(keywords);
     fromBuildDir.AddOption(comment);
 
-    fromBuildDir.SetHandler((inputDir, outputFile, singleDirMetadata) => new FromSingleDirectory(new FileSystem()).Create(inputDir.FullName, outputFile.FullName, singleDirMetadata).WriteResult(), buildDir, appImageFile, new DesktopMetadataBinder(appName, startupWmClass, keywords, comment, categories));
+    fromBuildDir.SetHandler((inputDir, outputFile, singleDirMetadata) => new FromSingleDirectory(new FileSystem()).Create(inputDir.FullName, outputFile.FullName, Maybe.From(singleDirMetadata)).WriteResult(), buildDir, appImageFile, new SingleDirMetadataBinder(appName, startupWmClass, keywords, comment, categories));
     return fromBuildDir;
 }
 

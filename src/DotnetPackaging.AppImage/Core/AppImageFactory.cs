@@ -9,7 +9,7 @@ public class AppImageFactory
 {
     public static AppImageBase FromAppDir(IDirectory appDir, IRuntime uriRuntime) => new AppDirBasedAppImage(uriRuntime, appDir);
 
-    public static async Task<Result<AppImageBase>> FromBuildDir(IDirectory inputDir, SingleDirMetadata metadata, Func<Architecture, IRuntime> getRuntime)
+    public static async Task<Result<AppImageBase>> FromBuildDir(IDirectory inputDir, Maybe<SingleDirMetadata> metadata, Func<Architecture, IRuntime> getRuntime)
     { 
         var execFile =
             await FileHelper.GetExecutables(inputDir)
@@ -21,25 +21,21 @@ public class AppImageFactory
             return Result.Failure<AppImageBase>("Could not find any executable file");
         }
 
-        var firstExecutable = execFile.Value;
-        var appName = Maybe.From(metadata.AppName).GetValueOrDefault(firstExecutable.Exec.File.Name.Replace(".Desktop", ""));
-        IDirectory[] applicationContents =
-        {
-            new Directory(appName, inputDir.Files(), inputDir.Directories()),
-        };
+        var executable = execFile.Value;
+        var appName = metadata.Map(x => x.AppName).GetValueOrDefault(executable.Exec.File.Name.Replace(".Desktop", ""));
         
-        var executablePath = "$APPDIR/" + appName + "/" + firstExecutable.Exec.File.Name;
+        var executablePath = "$APPDIR/" + appName + "/" + executable.Exec.File.Name;
         
-        var desktopMetadata = new DesktopMetadata
+        var desktopMetadata = metadata.Map(m => new DesktopMetadata
         {
-            Categories = metadata.Categories,
-            Comment = metadata.Comment,
+            Categories = m.Categories,
+            Comment = m.Comment,
             ExecutablePath = executablePath,
-            Keywords = metadata.Keywords,
-            Name = metadata.AppName,
-            StartupWmClass = metadata.StartupWmClass
-        };
+            Keywords = m.Keywords,
+            Name = m.AppName,
+            StartupWmClass = m.StartupWmClass
+        });
 
-        return new AppImageModel(getRuntime(firstExecutable.Arch), new Application(applicationContents, Maybe<IIcon>.None, desktopMetadata, new DefaultScriptAppRun(executablePath)));
+        return new AppImageModel(getRuntime(executable.Arch), new Application(Maybe<IIcon>.None, desktopMetadata, new DefaultScriptAppRun(executablePath), new Directory(appName, inputDir.Files(), inputDir.Directories())));
     }
 }

@@ -16,7 +16,7 @@ public class FromSingleDirectory
         this.fileSystem = fileSystem;
     }
 
-    public async Task<Result> Create(string contentsDirPath, string outputFilePath, SingleDirMetadata singleDirMetadata)
+    public async Task<Result> Create(string contentsDirPath, string outputFilePath, Maybe<SingleDirMetadata> singleDirMetadata)
     {
         Log.Information("Creating AppImage from Single Directory {AppDirPath} and writing to {OutputPath}...", contentsDirPath, outputFilePath);
         var directoryInfo = fileSystem.DirectoryInfo.New(contentsDirPath);
@@ -27,7 +27,7 @@ public class FromSingleDirectory
         return result;
     }
 
-    private static async Task<Result> Build(Stream stream, SingleDirMetadata singleDirMetadata, IDirectory inputDir)
+    private static async Task<Result> Build(Stream stream, Maybe<SingleDirMetadata> singleDirMetadata, IDirectory inputDir)
     {
         using (stream)
         {

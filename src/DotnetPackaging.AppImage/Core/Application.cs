@@ -5,7 +5,7 @@ namespace DotnetPackaging.AppImage.Core;
 
 public class Application
 {
-    public Application(IDirectory[] contents, Maybe<IIcon> icon, Maybe<DesktopMetadata> desktopMetadata, IAppRun appRun)
+    public Application(Maybe<IIcon> icon, Maybe<DesktopMetadata> desktopMetadata, IAppRun appRun, params IDirectory[] contents)
     {
         Contents = contents;
         Icon = icon;

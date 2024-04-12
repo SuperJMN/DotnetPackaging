@@ -32,5 +32,10 @@ public class AppImageModel : AppImageBase
         {
             yield return new RootedFile(ZafiroPath.Empty, new File(".AppIcon.png", Application.Icon.Value.Open));
         }
+
+        if (Application.DesktopMetadata.HasNoValue)
+        {
+            
+        }
     }
 }

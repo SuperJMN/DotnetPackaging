@@ -12,7 +12,7 @@ public static class AppImage
         return AppImageWriter.Write(stream, AppImageFactory.FromAppDir(appDir, runtime));
     }
 
-    public static Task<Result> WriteFromBuildDirectory(Stream stream, IDirectory inputDir, SingleDirMetadata metadata)
+    public static Task<Result> WriteFromBuildDirectory(Stream stream, IDirectory inputDir, Maybe<SingleDirMetadata> metadata)
     {
         return AppImageFactory.FromBuildDir(inputDir, metadata, architecture => new UriRuntime(architecture))
             .Bind(img => AppImageWriter.Write(stream, img));

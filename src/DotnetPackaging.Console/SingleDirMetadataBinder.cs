@@ -4,15 +4,17 @@ using DotnetPackaging.AppImage.Core;
 
 namespace DotnetPackaging.Console;
 
-public class DesktopMetadataBinder : BinderBase<SingleDirMetadata>
+public class SingleDirMetadataBinder : BinderBase<SingleDirMetadata>
 {
+    private readonly List<Option> _options;
+    
     private readonly Option<string> _nameOption;
     private readonly Option<string> _startupWmClassOption;
     private readonly Option<List<string>> _keywordsOption;
     private readonly Option<string> _commentOption;
     private readonly Option<List<string>> _categoriesOption;
 
-    public DesktopMetadataBinder(
+    public SingleDirMetadataBinder(
         Option<string> nameOption,
         Option<string> startupWmClassOption,
         Option<List<string>> keywordsOption,
@@ -24,10 +26,25 @@ public class DesktopMetadataBinder : BinderBase<SingleDirMetadata>
         _keywordsOption = keywordsOption;
         _commentOption = commentOption;
         _categoriesOption = categoriesOption;
+        
+        _options = new List<Option>
+        {
+            nameOption,
+            startupWmClassOption,
+            keywordsOption,
+            commentOption,
+            categoriesOption
+        };
     }
 
     protected override SingleDirMetadata GetBoundValue(BindingContext bindingContext)
     {
+        // If all values in the bindingContext are null, return null
+        if (bindingContext.AllValuesAreNull(_options))
+        {
+            return null;
+        }
+
         return new SingleDirMetadata
         {
             AppName = bindingContext.ParseResult.GetValueForOption(_nameOption),
