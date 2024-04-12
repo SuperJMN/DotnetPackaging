@@ -13,15 +13,18 @@ public class AppImageFactory
     public static async Task<Result<AppImageBase>> FromBuildDir(IDirectory inputDir, SingleDirMetadata metadata, Func<Architecture, IRuntime> getRuntime)
     { 
         Debugger.Launch();
-        
-        var firstExecutableResult = await FileHelper.GetExecutable(inputDir).Bind(exec => { return exec.Blob.Within(execStream => execStream.GetArchitecture()).Map(arch => (Arch: arch, Exec: exec)); });
 
-        if (firstExecutableResult.IsFailure)
+        var execFile =
+            await FileHelper.GetExecutables(inputDir)
+                .Bind(tuples => tuples.TryFirst().ToResult("Could not find any executable in the input directory"))
+                .Bind(exec => exec.Blob.Within(execStream => execStream.GetArchitecture()).Map(arch => (Arch: arch, Exec: exec)));
+
+        if (execFile.IsFailure)
         {
             return Result.Failure<AppImageBase>("Could not find any executable file");
         }
 
-        var firstExecutable = firstExecutableResult.Value;
+        var firstExecutable = execFile.Value;
         var appName = Maybe.From(metadata.AppName).GetValueOrDefault(firstExecutable.Exec.Blob.Name);
         IDirectory[] applicationContents =
         {
