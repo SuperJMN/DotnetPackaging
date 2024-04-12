@@ -18,19 +18,17 @@ public static class Mixin
 
     public static Task<Result<bool>> IsExecutable(this (ZafiroPath Path, IFile Blob) entry)
     {
-        return entry.Blob.Within(stream => stream.IsElf().Map(isElf => isElf && !entry.Blob.Name.EndsWith(".so") && entry.Blob.Name != "createdump"));
+        return entry.Blob.Within(stream =>
+        {
+            return stream.IsElf().Map(isElf => entry.Blob.Name == "AppRun" || (isElf && !entry.Blob.Name.EndsWith(".so") && entry.Blob.Name != "createdump"));
+        });
     }
     
-    private static async Task<UnixFileMode> GetMode((ZafiroPath path, IFile blob) valueTuple)
+    private static Task<UnixFileMode> GetMode((ZafiroPath path, IFile blob) valueTuple)
     {
         const UnixFileMode execFile = (UnixFileMode) 755;
         const UnixFileMode regularFile = (UnixFileMode) 544;
-        
-        if (valueTuple.path == "AppRun")
-        {
-            return execFile;
-        }
 
-        return await valueTuple.IsExecutable().Map(isExec => isExec ? execFile : regularFile).GetValueOrDefault(() => regularFile);
+        return valueTuple.IsExecutable().Map(isExec => isExec ? execFile : regularFile).GetValueOrDefault(() => regularFile);
     }
 }

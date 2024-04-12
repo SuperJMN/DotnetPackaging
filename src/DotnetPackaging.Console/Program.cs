@@ -1,21 +1,17 @@
 ﻿using System.CommandLine;
-using System.Diagnostics;
 using System.IO.Abstractions;
 using System.Runtime.InteropServices;
-using CSharpFunctionalExtensions;
 using DotnetPackaging;
-using DotnetPackaging.AppImage;
-using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.Client.Dtos;
 using DotnetPackaging.Common;
 using DotnetPackaging.Console;
 using Serilog;
-using Zafiro.FileSystem.Lightweight;
-using FileMode = System.IO.FileMode;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateLogger();
+
+Log.Information("Executing...");
 
 var rootCommand = new RootCommand();
 rootCommand.AddCommand(DebCommand());
@@ -31,22 +27,7 @@ static async Task CreateDeb(DirectoryInfo contents, FileInfo debFile, FileInfo m
     var packageDefinition = await packagingDto.ToModel();
     var result = await Create.Deb(packageDefinition, contents.FullName, debFile.FullName);
 
-    result
-        .Tap(() => Log.Information("Success"))
-        .TapError(Log.Error);
-}
-
-static async Task CreateAppImageFromAppDir(DirectoryInfo contents, FileInfo debFile, Architecture architecture)
-{
-    var fs = new FileSystem();
-    var directoryInfo = fs.DirectoryInfo.New(contents.FullName);
-    var buildDir = new DirectorioIODirectory("", directoryInfo);
-    var fileSystemStream = fs.File.Open(debFile.FullName, FileMode.Create);
-    var result = AppImageWriter.Write(fileSystemStream, AppImageFactory.FromAppDir(buildDir, new UriRuntime(architecture)));
-
-    await result
-        .Tap(() => Log.Information("Success"))
-        .TapError(Log.Error);
+    result.WriteResult();
 }
 
 static Command DebCommand()
@@ -92,7 +73,7 @@ static Command AppImageFromBuildDirCommand()
     fromBuildDir.AddOption(keywords);
     fromBuildDir.AddOption(comment);
 
-    fromBuildDir.SetHandler((info, fileInfo, singleDirMetadata) => new FromSingleDirectory(new FileSystem()).Create(info, fileInfo, singleDirMetadata).WriteResult(), buildDir, appImageFile, new DesktopMetadataBinder(appName, startupWmClass, keywords, comment, categories));
+    fromBuildDir.SetHandler((inputDir, outputFile, singleDirMetadata) => new FromSingleDirectory(new FileSystem()).Create(inputDir.FullName, outputFile.FullName, singleDirMetadata).WriteResult(), buildDir, appImageFile, new DesktopMetadataBinder(appName, startupWmClass, keywords, comment, categories));
     return fromBuildDir;
 }
 
@@ -107,6 +88,6 @@ static Command AppImageFromAppDirCommand()
     fromBuildDir.AddOption(appImageFile);
     fromBuildDir.AddOption(architecture);
 
-    fromBuildDir.SetHandler(CreateAppImageFromAppDir, buildDir, appImageFile, architecture);
+    fromBuildDir.SetHandler((appDir, outputFile, architecture) => new FromAppDir(new FileSystem()).Create(appDir.FullName, outputFile.FullName, architecture).WriteResult(), buildDir, appImageFile, architecture);
     return fromBuildDir;
 }

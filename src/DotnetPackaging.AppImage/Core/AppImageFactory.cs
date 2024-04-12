@@ -25,13 +25,13 @@ public class AppImageFactory
         }
 
         var firstExecutable = execFile.Value;
-        var appName = Maybe.From(metadata.AppName).GetValueOrDefault(firstExecutable.Exec.Blob.Name);
+        var appName = Maybe.From(metadata.AppName).GetValueOrDefault(firstExecutable.Exec.Blob.Name.Replace(".Desktop", ""));
         IDirectory[] applicationContents =
         {
             new Directory(appName, inputDir.Files(), inputDir.Directories()),
         };
         
-        var executablePath = "$APPDIR/" + firstExecutable.Exec.Path + "/" + firstExecutable.Exec.Blob.Name;
+        var executablePath = "$APPDIR/" + appName + "/" + firstExecutable.Exec.Blob.Name;
         
         var desktopMetadata = new DesktopMetadata
         {

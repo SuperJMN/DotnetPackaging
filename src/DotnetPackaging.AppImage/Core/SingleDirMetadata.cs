@@ -1,4 +1,4 @@
-﻿namespace DotnetPackaging.AppImage;
+﻿namespace DotnetPackaging.AppImage.Core;
 
 public class SingleDirMetadata
 {

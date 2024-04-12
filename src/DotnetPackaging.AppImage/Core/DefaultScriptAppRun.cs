@@ -2,7 +2,7 @@
 
 public class DefaultScriptAppRun : ScriptAppRun
 {
-    public DefaultScriptAppRun(string executablePath) : base($"#!/usr/bin/env sh\n\"$APPDIR/{executablePath}\" \"$@\"")
+    public DefaultScriptAppRun(string executablePath) : base($"#!/usr/bin/env sh\n\"{executablePath}\" \"$@\"")
     {
     }
 }

@@ -5,9 +5,9 @@ namespace DotnetPackaging.Console;
 
 public static class ConsoleMixin
 {
-    public static async Task WriteResult<T>(this Task<Result<T>> result)
+    public static void WriteResult(this Result result)
     {
-        await result
+        result
             .Tap(() => Log.Information("Success"))
             .TapError(Log.Error);
     }

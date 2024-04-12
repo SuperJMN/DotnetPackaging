@@ -12,8 +12,6 @@ public class AppImageStreamComparer
         var firstIndexed = first().Indexed();
         var secondIndexed = second().Indexed();
         var sequenceEqual = firstIndexed.SequenceEqual(secondIndexed, comparer);
-        var firstBytes = await firstIndexed.ToList();
-        var secondBytes = await secondIndexed.ToList();
         var areEqual = await sequenceEqual;
         return areEqual;
     }

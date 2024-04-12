@@ -1,9 +1,11 @@
 ﻿using System.IO.Abstractions;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.AppImage.Core;
+using Serilog;
 using Zafiro.FileSystem.Lightweight;
 using IDirectory = Zafiro.FileSystem.Lightweight.IDirectory;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.Console;
 
 public class FromSingleDirectory
 {
@@ -14,11 +16,12 @@ public class FromSingleDirectory
         this.fileSystem = fileSystem;
     }
 
-    public async Task<Result> Create(DirectoryInfo contents, FileInfo outputFile, SingleDirMetadata singleDirMetadata)
+    public async Task<Result> Create(string contentsDirPath, string outputFilePath, SingleDirMetadata singleDirMetadata)
     {
-        var directoryInfo = fileSystem.DirectoryInfo.New(contents.FullName);
+        Log.Information("Creating AppImage from Single Directory {AppDirPath} and writing to {OutputPath}...", contentsDirPath, outputFilePath);
+        var directoryInfo = fileSystem.DirectoryInfo.New(contentsDirPath);
         var buildDir = new DirectorioIODirectory("", directoryInfo);
-        var outputStreamResult = Result.Try(() => fileSystem.File.Open(outputFile.FullName, FileMode.Create));
+        var outputStreamResult = Result.Try(() => fileSystem.File.Open(outputFilePath, FileMode.Create));
         var result = await outputStreamResult.Bind(stream => Build(stream, singleDirMetadata, buildDir));
 
         return result;
@@ -28,7 +31,7 @@ public class FromSingleDirectory
     {
         using (stream)
         {
-            return await AppImage.WriteFromBuildDirectory(stream, inputDir, singleDirMetadata);
+            return await AppImage.AppImage.WriteFromBuildDirectory(stream, inputDir, singleDirMetadata);
         }
     }
 }

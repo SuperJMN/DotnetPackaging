@@ -1,6 +1,6 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Binding;
-using DotnetPackaging.AppImage;
+using DotnetPackaging.AppImage.Core;
 
 namespace DotnetPackaging.Console;
 

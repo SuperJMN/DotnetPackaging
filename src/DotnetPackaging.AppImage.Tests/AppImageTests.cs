@@ -26,23 +26,30 @@ public class CustomAppImageTests
             () => File.OpenRead("TestFiles/Results/Minimal-FromAppDir.appimage")));
         result.Should().SucceedWith(true);
     }
-    
-    //[Fact]
-    //public async Task Minimal_from_build_dir()
-    //{
-    //    var streamGenerator = StreamGenerator.Generate(stream =>
-    //    {
-    //        var fs = new FileSystem();
-    //        var directoryInfo = fs.DirectoryInfo.New("TestFiles/AppDir/Minimal");
-    //        var appDir = new DirectorioIODirectory(Maybe<string>.None, directoryInfo);
-    //        return AppImage.FromBuildDir(stream, appDir, _ => new TestRuntime());
-    //    });
 
-    //    var result = await streamGenerator().Map(streamFactory => AreEqual(
-    //        streamFactory,
-    //        () => File.OpenRead("TestFiles/Results/Minimal-FromBuildDir.appimage")));
-    //    result.Should().SucceedWith(true);
-    //}
+    [Fact]
+    public async Task Minimal_from_build_dir()
+    {
+        var streamGenerator = StreamGenerator.Generate(stream =>
+        {
+            var fs = new FileSystem();
+            var directoryInfo = fs.DirectoryInfo.New("TestFiles/AppDir/Minimal");
+            var appDir = new DirectorioIODirectory(Maybe<string>.None, directoryInfo);
+            return AppImage.WriteFromBuildDirectory(stream, appDir, new SingleDirMetadata()
+            {
+                StartupWmClass = "StartupWmClass",
+                Keywords = ["Keyword", "Keyword2"],
+                Comment = "Some comment",
+                Categories = ["Category1", "Category 2"],
+                AppName = "TestApp"
+            });
+        });
+
+        var result = await streamGenerator().Map(streamFactory => AreEqual(
+            streamFactory,
+            () => File.OpenRead("TestFiles/Results/Minimal-FromBuildDir.appimage")));
+        result.Should().SucceedWith(true);
+    }
 
     private static Task<bool> AreEqual(Func<Stream> one, Func<Stream> another)
     {
