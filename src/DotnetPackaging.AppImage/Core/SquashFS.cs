@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using CSharpFunctionalExtensions;
 using NyaFs.Filesystem.SquashFs;
 using NyaFs.Filesystem.SquashFs.Types;
@@ -25,9 +24,9 @@ public static class SquashFS
         return resultFiles.Map(_ => Result.Success());
     }
 
-    private static async Task<Result<IEnumerable<(byte[] bytes, ZafiroPath path, string owner, string group, UnixFileMode unixFileMode)>>> GetFilesAndContents(IList<LinuxFileEntry> files)
+    private static Task<Result<IEnumerable<(byte[] bytes, ZafiroPath path, string owner, string group, UnixFileMode unixFileMode)>>> GetFilesAndContents(IList<LinuxFileEntry> files)
     {
-        return await files.Combine(file => file.data.ToBytes().Map(bytes => (bytes, file.path, file.owner, file.group, file.unixFileMode)));
+        return files.Combine(file => file.data.ToBytes().Map(bytes => (bytes, file.path, file.owner, file.group, file.unixFileMode)));
     }
 
     private static void AddFiles(IEnumerable<(byte[] bytes, ZafiroPath path, string owner, string group, UnixFileMode unixFileMode)> contentFiles, SquashFsBuilder squashFsBuilder)

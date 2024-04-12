@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using Zafiro.FileSystem.Lightweight;
 using Directory = Zafiro.FileSystem.Lightweight.Directory;
