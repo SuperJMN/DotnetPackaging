@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
-using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 using Directory = Zafiro.FileSystem.Lightweight.Directory;
 
@@ -11,60 +10,36 @@ public class AppImageFactory
 {
     public static AppImageBase FromAppDir(IDirectory appDir, IRuntime uriRuntime) => new AppDirBasedAppImage(uriRuntime, appDir);
 
-    public static async Task<Result<AppImageBase>> FromBuildDir(IDirectory buildDir, Maybe<DesktopMetadata> desktopMetadataOverride, Func<Architecture, IRuntime> getRuntime)
-    {
-        var firstExecutableResult = GetExecutable(buildDir).Bind(exec => { return exec.Blob.Within(execStream => execStream.GetArchitecture()).Map(arch => (Arch: arch, Exec: exec)); });
-
-        var result = await firstExecutableResult
-            .Bind(execWithArch =>
-            {
-                return CreateApplicationFromBuildDirectory(buildDir, execWithArch.Exec, desktopMetadataOverride)
-                    .Map(application => (AppImageBase) new AppImageModel(getRuntime(execWithArch.Arch), application));
-            });
-
-        return result;
-    }
-
-    private static Task<Result<(ZafiroPath Path, IFile Blob)>> GetExecutable(IDirectory buildDirectory)
-    {
-        return buildDirectory.GetFilesInTree(ZafiroPath.Empty)
-            .Bind(ToExecutableEntries)
-            .Bind(x => x.TryFirst(file => file.IsExec).Select(tuple => (tuple.Path, tuple.Blob)).ToResult("Could not find any executable file"));
-    }
-
-    private static Task<Result<Application>> CreateApplicationFromBuildDirectory(IDirectory buildDir, (ZafiroPath Path, IFile Blob) firstExecutable, Maybe<DesktopMetadata> desktopMetadataOverride)
-    {
-        var allEntries = buildDir.GetFilesInTree(ZafiroPath.Empty).Bind(ToExecutableEntries);
-
+    public static async Task<Result<AppImageBase>> FromBuildDir(IDirectory inputDir, SingleDirMetadata metadata, Func<Architecture, IRuntime> getRuntime)
+    { 
         Debugger.Launch();
-        var maybeIconResult = allEntries.Map(x => x.TryFirst(file => file.Path.ToString() == "AppImage.png").Map(f => (IIcon) new Icon(f.Blob)));
-        var appName = ((ZafiroPath)firstExecutable.Blob.Name).NameWithoutExtension();
-        var desktopMetadata = new DesktopMetadata
-        {
-            ExecutablePath = "$APPDIR/" + appName + "/" + firstExecutable.Blob.Name,
-            Categories = new List<string>(),
-            Comment = "",
-            Keywords = [],
-            Name = appName,
-            StartupWmClass = appName
-        };
+        
+        var firstExecutableResult = await FileHelper.GetExecutable(inputDir).Bind(exec => { return exec.Blob.Within(execStream => execStream.GetArchitecture()).Map(arch => (Arch: arch, Exec: exec)); });
 
+        if (firstExecutableResult.IsFailure)
+        {
+            return Result.Failure<AppImageBase>("Could not find any executable file");
+        }
+
+        var firstExecutable = firstExecutableResult.Value;
+        var appName = Maybe.From(metadata.AppName).GetValueOrDefault(firstExecutable.Exec.Blob.Name);
         IDirectory[] applicationContents =
         {
-            new Directory(appName, buildDir.Files(), buildDir.Directories())
+            new Directory(appName, inputDir.Files(), inputDir.Directories()),
+        };
+        
+        var executablePath = "$APPDIR/" + firstExecutable.Exec.Path + "/" + firstExecutable.Exec.Blob.Name;
+        
+        var desktopMetadata = new DesktopMetadata
+        {
+            Categories = metadata.Categories,
+            Comment = metadata.Comment,
+            ExecutablePath = executablePath,
+            Keywords = metadata.Keywords,
+            Name = metadata.AppName,
+            StartupWmClass = metadata.StartupWmClass
         };
 
-        return from content in allEntries
-            from maybeIcon in maybeIconResult
-            select new Application(
-                applicationContents,
-                maybeIcon,
-                desktopMetadataOverride.GetValueOrDefault(desktopMetadata),
-                new DefaultScriptAppRun(firstExecutable.Path));
-    }
-
-    private static Task<Result<IEnumerable<(bool IsExec, ZafiroPath Path, IFile Blob)>>> ToExecutableEntries(IEnumerable<(ZafiroPath Path, IFile Blob)> files)
-    {
-        return files.Select(x => x.IsExecutable().Map(isExec => (IsExec: isExec, x.Path, x.Blob))).Combine();
+        return new AppImageModel(getRuntime(firstExecutable.Arch), new Application(applicationContents, Maybe<IIcon>.None, desktopMetadata, new DefaultScriptAppRun(executablePath)));
     }
 }

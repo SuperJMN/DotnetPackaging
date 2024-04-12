@@ -4,6 +4,7 @@ using System.IO.Abstractions;
 using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
+using DotnetPackaging.AppImage;
 using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.Client.Dtos;
 using DotnetPackaging.Common;
@@ -75,14 +76,23 @@ static Command AppImageFromBuildDirCommand()
 {
     var buildDir = new Option<DirectoryInfo>("--directory", "The input directory to create the package from") { IsRequired = true };
     var appImageFile = new Option<FileInfo>("--output", "Output file (.deb)") { IsRequired = true };
-    var desktopFile = new Option<string>("--desktop-file", "Desktop file formatted as JSON") { IsRequired = false };
-    
+    var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
+    var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
+    var categories = new Option<List<string>>("--categories", "Categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+    var keywords = new Option<List<string>>("--keywords", "Categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+    var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
+
     var fromBuildDir = new Command("from-build", "Creates AppImage from a directory with the contents. Everything is inferred. For .NET applications, this is usually the \"publish\" directory.");
+
     fromBuildDir.AddOption(buildDir);
     fromBuildDir.AddOption(appImageFile);
-    fromBuildDir.AddOption(desktopFile);
+    fromBuildDir.AddOption(appName);
+    fromBuildDir.AddOption(startupWmClass);
+    fromBuildDir.AddOption(categories);
+    fromBuildDir.AddOption(keywords);
+    fromBuildDir.AddOption(comment);
 
-    fromBuildDir.SetHandler((info, fileInfo, s) => new FromAppDir(new FileSystem()).Create(info, fileInfo, s).WriteResult(), buildDir, appImageFile, desktopFile);
+    fromBuildDir.SetHandler((info, fileInfo, singleDirMetadata) => new FromSingleDirectory(new FileSystem()).Create(info, fileInfo, singleDirMetadata).WriteResult(), buildDir, appImageFile, new DesktopMetadataBinder(appName, startupWmClass, keywords, comment, categories));
     return fromBuildDir;
 }
 
@@ -96,7 +106,7 @@ static Command AppImageFromAppDirCommand()
     fromBuildDir.AddOption(buildDir);
     fromBuildDir.AddOption(appImageFile);
     fromBuildDir.AddOption(architecture);
-    
+
     fromBuildDir.SetHandler(CreateAppImageFromAppDir, buildDir, appImageFile, architecture);
     return fromBuildDir;
 }

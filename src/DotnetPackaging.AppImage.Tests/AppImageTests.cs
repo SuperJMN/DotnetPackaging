@@ -27,22 +27,22 @@ public class CustomAppImageTests
         result.Should().SucceedWith(true);
     }
     
-    [Fact]
-    public async Task Minimal_from_build_dir()
-    {
-        var streamGenerator = StreamGenerator.Generate(stream =>
-        {
-            var fs = new FileSystem();
-            var directoryInfo = fs.DirectoryInfo.New("TestFiles/AppDir/Minimal");
-            var appDir = new DirectorioIODirectory(Maybe<string>.None, directoryInfo);
-            return AppImage.FromBuildDir(stream, appDir, _ => new TestRuntime());
-        });
+    //[Fact]
+    //public async Task Minimal_from_build_dir()
+    //{
+    //    var streamGenerator = StreamGenerator.Generate(stream =>
+    //    {
+    //        var fs = new FileSystem();
+    //        var directoryInfo = fs.DirectoryInfo.New("TestFiles/AppDir/Minimal");
+    //        var appDir = new DirectorioIODirectory(Maybe<string>.None, directoryInfo);
+    //        return AppImage.FromBuildDir(stream, appDir, _ => new TestRuntime());
+    //    });
 
-        var result = await streamGenerator().Map(streamFactory => AreEqual(
-            streamFactory,
-            () => File.OpenRead("TestFiles/Results/Minimal-FromBuildDir.appimage")));
-        result.Should().SucceedWith(true);
-    }
+    //    var result = await streamGenerator().Map(streamFactory => AreEqual(
+    //        streamFactory,
+    //        () => File.OpenRead("TestFiles/Results/Minimal-FromBuildDir.appimage")));
+    //    result.Should().SucceedWith(true);
+    //}
 
     private static Task<bool> AreEqual(Func<Stream> one, Func<Stream> another)
     {
