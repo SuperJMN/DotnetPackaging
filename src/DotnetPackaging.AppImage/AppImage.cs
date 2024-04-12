@@ -7,9 +7,9 @@ namespace DotnetPackaging.AppImage;
 
 public static class AppImage
 {
-    public static Task<Result> FromAppDir(Stream stream, IDirectory appDir, IRuntime uriRuntime)
+    public static Task<Result> FromAppDir(Stream stream, IDirectory appDir, IRuntime runtime)
     {
-        return AppImageWriter.Write(stream, AppImageFactory.FromAppDir(appDir, uriRuntime));
+        return AppImageWriter.Write(stream, AppImageFactory.FromAppDir(appDir, runtime));
     }
 
     public static Task<Result> WriteFromBuildDirectory(Stream stream, IDirectory inputDir, SingleDirMetadata metadata)

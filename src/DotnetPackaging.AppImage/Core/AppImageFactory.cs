@@ -12,8 +12,6 @@ public class AppImageFactory
 
     public static async Task<Result<AppImageBase>> FromBuildDir(IDirectory inputDir, SingleDirMetadata metadata, Func<Architecture, IRuntime> getRuntime)
     { 
-        Debugger.Launch();
-
         var execFile =
             await FileHelper.GetExecutables(inputDir)
                 .Bind(tuples => tuples.TryFirst().ToResult("Could not find any executable in the input directory"))

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using CSharpFunctionalExtensions;
 using NyaFs.Filesystem.SquashFs;
 using NyaFs.Filesystem.SquashFs.Types;
