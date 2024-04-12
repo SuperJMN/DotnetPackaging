@@ -14,9 +14,9 @@ public class AppImageModel : AppImageBase
 
     public Application Application { get; }
     
-    public override Task<Result<IEnumerable<(ZafiroPath Path, IFile Blob)>>> PayloadEntries() => GetPayload(Application);
+    public override Task<Result<IEnumerable<RootedFile>>> PayloadEntries() => GetPayload(Application);
 
-    private async Task<Result<IEnumerable<(ZafiroPath Path, IFile Blob)>>> GetPayload(Application application)
+    private async Task<Result<IEnumerable<RootedFile>>> GetPayload(Application application)
     {
         var entries = BasicEntries();
         var getBlobsListResult = await Task.WhenAll(application.Contents.Select(container => container.GetFilesInTree(container.Name)));
@@ -25,12 +25,12 @@ public class AppImageModel : AppImageBase
         return plain.Map(ce => entries.Concat(ce));
     }
 
-    private IEnumerable<(ZafiroPath Path, IFile Blob)> BasicEntries()
+    private IEnumerable<RootedFile> BasicEntries()
     {
-        yield return (ZafiroPath.Empty, new File("AppRun", Application.AppRun.Open));
+        yield return new RootedFile(ZafiroPath.Empty, new File("AppRun", Application.AppRun.Open));
         if (Application.Icon.HasValue)
         {
-            yield return (ZafiroPath.Empty, new File(".AppIcon.png", Application.Icon.Value.Open));
+            yield return new RootedFile(ZafiroPath.Empty, new File(".AppIcon.png", Application.Icon.Value.Open));
         }
     }
 }

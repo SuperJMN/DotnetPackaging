@@ -15,7 +15,7 @@ public class AppImageFactory
         var execFile =
             await FileHelper.GetExecutables(inputDir)
                 .Bind(tuples => tuples.TryFirst().ToResult("Could not find any executable in the input directory"))
-                .Bind(exec => exec.Blob.Within(execStream => execStream.GetArchitecture()).Map(arch => (Arch: arch, Exec: exec)));
+                .Bind(exec => exec.File.Within(execStream => execStream.GetArchitecture()).Map(arch => (Arch: arch, Exec: exec)));
 
         if (execFile.IsFailure)
         {
@@ -23,13 +23,13 @@ public class AppImageFactory
         }
 
         var firstExecutable = execFile.Value;
-        var appName = Maybe.From(metadata.AppName).GetValueOrDefault(firstExecutable.Exec.Blob.Name.Replace(".Desktop", ""));
+        var appName = Maybe.From(metadata.AppName).GetValueOrDefault(firstExecutable.Exec.File.Name.Replace(".Desktop", ""));
         IDirectory[] applicationContents =
         {
             new Directory(appName, inputDir.Files(), inputDir.Directories()),
         };
         
-        var executablePath = "$APPDIR/" + appName + "/" + firstExecutable.Exec.Blob.Name;
+        var executablePath = "$APPDIR/" + appName + "/" + firstExecutable.Exec.File.Name;
         
         var desktopMetadata = new DesktopMetadata
         {

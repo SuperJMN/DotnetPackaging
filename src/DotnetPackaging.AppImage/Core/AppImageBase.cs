@@ -13,5 +13,5 @@ public abstract class AppImageBase
         Runtime = runtime;
     }
 
-    public abstract Task<Result<IEnumerable<(ZafiroPath Path, IFile Blob)>>> PayloadEntries();
+    public abstract Task<Result<IEnumerable<RootedFile>>> PayloadEntries();
 }
