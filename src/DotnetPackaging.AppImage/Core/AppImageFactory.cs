@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
+using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem.Lightweight;
 using Directory = Zafiro.FileSystem.Lightweight.Directory;
 
@@ -37,9 +38,20 @@ public class AppImageFactory
         });
         
         return new AppImageModel(getRuntime(executable.Arch), new Application(
-            Maybe<IIcon>.None, 
+            await metadata.Bind(x => x.Icon).Or(() => GetIconFromBuildDir(inputDir)), 
             desktopMetadata, 
             new DefaultScriptAppRun(executablePath), 
             new Directory(appName, inputDir.Files(), inputDir.Directories())));
+    }
+
+    private static async Task<Maybe<IIcon>> GetIconFromBuildDir(IDirectory inputDir)
+    {
+        var result = await inputDir.Files().Map(files => files.TryFirst(file => file.Name == "AppImage.png").Map(file =>
+        {
+            var icon = (IIcon)new Icon(file.Open);
+            return icon;
+        }));
+
+        return result.AsMaybe().Bind(x => x);
     }
 }

@@ -28,9 +28,10 @@ public class AppImageModel : AppImageBase
     private IEnumerable<RootedFile> BasicEntries()
     {
         yield return new RootedFile(ZafiroPath.Empty, new File("AppRun", Application.AppRun.Open));
+        
         if (Application.Icon.HasValue)
         {
-            yield return new RootedFile(ZafiroPath.Empty, new File(".AppIcon.png", Application.Icon.Value.Open));
+            yield return new RootedFile(ZafiroPath.Empty, new File(".DirIcon", Application.Icon.Value.Open));
         }
 
         if (Application.DesktopMetadata.HasValue)

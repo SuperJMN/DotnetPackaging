@@ -1,15 +1,16 @@
 ﻿using System.CommandLine;
+using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO.Abstractions;
 using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
-using DotnetPackaging;
 using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.Deb.Client.Dtos;
 using DotnetPackaging.Console;
 using DotnetPackaging.Deb;
 using DotnetPackaging.Deb.Archives;
 using Serilog;
+using File = System.IO.File;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -68,7 +69,16 @@ static Command AppImageFromBuildDirCommand()
     var categories = new Option<IEnumerable<string>>("--categories", "Categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
     var keywords = new Option<IEnumerable<string>>("--keywords", "Categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
     var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
-    var iconOption = new Option<IIcon>("--icon", result => { return new DefaultIcon(); }) { IsRequired = false };
+    var iconOption = new Option<IIcon>("--icon", result =>
+    {
+        return GetIcon(result);
+
+        IIcon GetIcon(SymbolResult argumentResult)
+        {
+            var iconPath = argumentResult.Tokens[0].Value;
+            return new Icon(() => Task.FromResult(Result.Try(() => (Stream)File.OpenRead(iconPath))));
+        }
+    }) { IsRequired = false };
 
     var fromBuildDir = new Command("from-build", "Creates AppImage from a directory with the contents. Everything is inferred. For .NET applications, this is usually the \"publish\" directory.");
 
