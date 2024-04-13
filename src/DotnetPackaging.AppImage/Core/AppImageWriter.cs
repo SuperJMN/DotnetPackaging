@@ -13,7 +13,7 @@ public class AppImageWriter
     private static Task<Result> WritePayload(Stream stream, AppImageBase appImage)
     {
         return appImage.PayloadEntries()
-            .Map(tuples => tuples.ToLinuxFileEntries())
+            .Map(tuples => tuples.ToUnixFileList())
             .Bind(entries => SquashFS.Write(stream, entries));
     }
 }

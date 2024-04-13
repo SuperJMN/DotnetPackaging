@@ -5,13 +5,13 @@ namespace DotnetPackaging.AppImage.Core;
 
 public static class Mixin
 {
-    public static Task<LinuxFileEntry[]> ToLinuxFileEntries(this IEnumerable<RootedFile> toLinuxEntries)
+    public static Task<UnixFile[]> ToUnixFileList(this IEnumerable<RootedFile> toLinuxEntries)
     {
         return Task.WhenAll(toLinuxEntries.Select(async r =>
         {
-            var unixFileMode = await GetMode(r);
+            var unixFilePermissions = await GetMode(r);
             var fullPath = r.Path == string.Empty ? r.File.Name : r.Path + "/" + r.File.Name;
-            return new LinuxFileEntry(fullPath, r.File, "", "", unixFileMode);
+            return new UnixFile(fullPath, r.File, "", "", unixFilePermissions);
         }));
     }
 
@@ -23,10 +23,10 @@ public static class Mixin
         });
     }
     
-    private static Task<UnixFileMode> GetMode(RootedFile valueTuple)
+    private static Task<UnixFilePermissions> GetMode(RootedFile valueTuple)
     {
-        const UnixFileMode execFile = (UnixFileMode) 755;
-        const UnixFileMode regularFile = (UnixFileMode) 544;
+        var execFile = (UnixFilePermissions) Convert.ToUInt32("755", 8);
+        var regularFile = (UnixFilePermissions) Convert.ToUInt32("644", 8);
 
         return valueTuple.IsExecutable().Map(isExec => isExec ? execFile : regularFile).GetValueOrDefault(() => regularFile);
     }

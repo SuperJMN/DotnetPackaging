@@ -28,8 +28,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj" />
-		<ProjectReference Include="..\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj" />
+	  <ProjectReference Include="..\..\src\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
