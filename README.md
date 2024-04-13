@@ -7,7 +7,7 @@ With it, you can create your .deb packages for Debian based systems like Ubuntu 
 
 One of the most flagrant annoyances of the .NET world is the absence of standardized ways to distribute "classic" applications, those that are for end users. Imagine that have a beautiful cross-platform application, like the ones created using [Avalonia UI](https://www.avaloniaui.net). Everything is fine until you need to distribute you apps. 
 
-**DotnetPackageing** has been created to give an answer to those that want to distribute their applications in a more convenient way. It's about time, uh?
+**DotnetPackaging** has been created to give an answer to those that want to distribute their applications in a more convenient way. It's about time, uh?
 
 # How can I use this?
 
@@ -21,10 +21,32 @@ Easy peasy. Install the tool by executing this command:
 dotnet tool install --global DotnetPackaging.Console
 ```
 
-After the tool is installed, just invoke it with the appropriate arguments:
+After the tool is installed, just invoke it with the appropriate arguments. 
+
+## Samples
+
+### AppImage
+
+This tool can create [AppImage](https://appimage.org) packages. Just invoke it this way:
+
+```csharp
+dotnetpackaging appimage ... <options>
+```
+
+## From single directory
+
+You can create them using a single build directory (using dotnet publish, for example). The tool find everything from that folder.
+
+## From AppImage
+
+You can create a directory structure according to the [AppDir specs](https://docs.appimage.org/reference/appdir.html) and use this tool to create the package from it. 
+
+### Deb files
+
+This is a sample to create a **deb** package.
 
 ```powershell
-dotnetpackaging --directory c:\repos\myapp\bin\Release\net7.0\publish\linux-x64 --metadata C:\Users\JMN\Desktop\Testing\metadata.deb.json --output c:\users\jmn\desktop\testing\myapp.1.0.0.x64.deb
+dotnetpackaging deb --directory c:\repos\myapp\bin\Release\net7.0\publish\linux-x64 --metadata C:\Users\JMN\Desktop\Testing\metadata.deb.json --output c:\users\jmn\desktop\testing\myapp.1.0.0.x64.deb
 ```
 
 - Wait, wait! I understand the --directory and --output options, but what's the json file?
