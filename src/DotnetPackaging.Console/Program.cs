@@ -78,7 +78,11 @@ static Command AppImageFromBuildDirCommand()
             var iconPath = argumentResult.Tokens[0].Value;
             return new Icon(() => Task.FromResult(Result.Try(() => (Stream)File.OpenRead(iconPath))));
         }
-    }) { IsRequired = false };
+    })
+    {
+        IsRequired = false, 
+        Description = "Path to the application icon. When this options is not provided, the tool will look up for an image called 'AppImage.png'."
+    };
 
     var fromBuildDir = new Command("from-build", "Creates AppImage from a directory with the contents. Everything is inferred. For .NET applications, this is usually the \"publish\" directory.");
 
