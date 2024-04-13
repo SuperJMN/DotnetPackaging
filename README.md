@@ -1,7 +1,7 @@
 # Distribute your aplications!
 
 Wondering how to distribute your wonderful .NET application to your fellow peeps? Bored to pack your stuff in a .zip that you hate as much as your users? You are in the correct place!
-With it, you can create your .deb packages for Debian based systems like Ubuntu and Debian itself. Woohoo!
+With it, you can create your .Deb and AppImage packages for Linux systems like Ubuntu, Debian and others. Woohoo!
 
 # Overview
 
