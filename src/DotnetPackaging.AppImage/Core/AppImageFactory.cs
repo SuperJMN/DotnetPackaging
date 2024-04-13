@@ -22,7 +22,7 @@ public class AppImageFactory
         }
 
         var executable = execFile.Value;
-        var appName = metadata.Map(x => x.AppName).GetValueOrDefault(executable.Exec.File.Name.Replace(".Desktop", ""));
+        var appName = metadata.Bind(x => x.AppName).GetValueOrDefault(executable.Exec.File.Name.Replace(".Desktop", ""));
         
         var executablePath = "$APPDIR/" + appName + "/" + executable.Exec.File.Name;
         
@@ -35,7 +35,11 @@ public class AppImageFactory
             Name = m.AppName,
             StartupWmClass = m.StartupWmClass
         });
-
-        return new AppImageModel(getRuntime(executable.Arch), new Application(Maybe<IIcon>.None, desktopMetadata, new DefaultScriptAppRun(executablePath), new Directory(appName, inputDir.Files(), inputDir.Directories())));
+        
+        return new AppImageModel(getRuntime(executable.Arch), new Application(
+            Maybe<IIcon>.None, 
+            desktopMetadata, 
+            new DefaultScriptAppRun(executablePath), 
+            new Directory(appName, inputDir.Files(), inputDir.Directories())));
     }
 }

@@ -1,8 +1,10 @@
 ﻿using System.CommandLine;
+using System.Diagnostics;
 using System.IO.Abstractions;
 using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
+using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.Deb.Client.Dtos;
 using DotnetPackaging.Console;
 using DotnetPackaging.Deb;
@@ -57,13 +59,16 @@ static Command AppImageCommand()
 
 static Command AppImageFromBuildDirCommand()
 {
+    Debugger.Launch();
+    
     var buildDir = new Option<DirectoryInfo>("--directory", "The input directory to create the package from") { IsRequired = true };
     var appImageFile = new Option<FileInfo>("--output", "Output file (.deb)") { IsRequired = true };
     var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
     var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
-    var categories = new Option<List<string>>("--categories", "Categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
-    var keywords = new Option<List<string>>("--keywords", "Categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+    var categories = new Option<IEnumerable<string>>("--categories", "Categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+    var keywords = new Option<IEnumerable<string>>("--keywords", "Categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
     var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
+    var iconOption = new Option<IIcon>("--icon", result => { return new DefaultIcon(); }) { IsRequired = false };
 
     var fromBuildDir = new Command("from-build", "Creates AppImage from a directory with the contents. Everything is inferred. For .NET applications, this is usually the \"publish\" directory.");
 
@@ -74,8 +79,11 @@ static Command AppImageFromBuildDirCommand()
     fromBuildDir.AddOption(categories);
     fromBuildDir.AddOption(keywords);
     fromBuildDir.AddOption(comment);
+    fromBuildDir.AddOption(iconOption);
 
-    fromBuildDir.SetHandler((inputDir, outputFile, singleDirMetadata) => new FromSingleDirectory(new FileSystem()).Create(inputDir.FullName, outputFile.FullName, Maybe.From(singleDirMetadata)).WriteResult(), buildDir, appImageFile, new SingleDirMetadataBinder(appName, startupWmClass, keywords, comment, categories));
+    fromBuildDir.SetHandler(
+        (inputDir, outputFile, singleDirMetadata) => new FromSingleDirectory(new FileSystem()).Create(inputDir.FullName, outputFile.FullName, Maybe.From(singleDirMetadata)).WriteResult(), buildDir, appImageFile,
+        new SingleDirMetadataBinder(appName, startupWmClass, keywords, comment, categories, iconOption));
     return fromBuildDir;
 }
 

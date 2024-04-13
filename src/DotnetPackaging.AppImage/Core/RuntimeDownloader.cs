@@ -13,13 +13,13 @@ public static class RuntimeDownloader
         { Architecture.Arm64, "https://github.com/AppImage/AppImageKit/releases/download/continuous/runtime-aarch64" },
     };
 
-    public static Task<Result<Stream>> GetRuntimeStream(Architecture architecture, IHttpClientFactory httpClientFactory)
+    public static async Task<Result<Stream>> GetRuntimeStream(Architecture architecture)
     {
         if (!RuntimeUrls.TryGetValue(architecture, out var runtimeUrl))
         {
-            throw new ArgumentException("Invalid architecture", nameof(architecture));
+            return Result.Failure<Stream>($"Cannot retrieve runtime for the architecture '{architecture}'.");
         }
-        return FetchStream(runtimeUrl);
+        return await FetchStream(runtimeUrl);
     }
     private static Task<Result<Stream>> FetchStream(string runtimeUrl)
     {
