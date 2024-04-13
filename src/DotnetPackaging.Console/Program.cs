@@ -60,8 +60,6 @@ static Command AppImageCommand()
 
 static Command AppImageFromBuildDirCommand()
 {
-    Debugger.Launch();
-    
     var buildDir = new Option<DirectoryInfo>("--directory", "The input directory to create the package from") { IsRequired = true };
     var appImageFile = new Option<FileInfo>("--output", "Output file (.deb)") { IsRequired = true };
     var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
