@@ -1,6 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
-using DotnetPackaging.Archives.Tar;
-using DotnetPackaging.Common;
+using DotnetPackaging.Deb.Archives.Tar;
 using FluentAssertions.Extensions;
 using Zafiro.FileSystem;
 
@@ -22,18 +21,5 @@ public class EntryFactory
                 LinkIndicator = 0,
                 OwnerUsername = "jmn"
             }, byteFlow));
-    }
-}
-
-public static class Mixin 
-{
-    public static TResult Bind<T, TResult>(this T obj, Func<T, TResult> func)
-    {
-        return func(obj);
-    }
-
-    public static TResult Map<T, TResult>(this T obj, Func<T, TResult> func)
-    {
-        return func(obj);
     }
 }

@@ -1,7 +1,7 @@
 ﻿using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
-using DotnetPackaging.Archives.Deb.Contents;
-using DotnetPackaging.Archives.Deb;
+using DotnetPackaging.Deb.Archives.Deb;
+using DotnetPackaging.Deb.Archives.Deb.Contents;
 using DotnetPackaging.Tests.Deb.EndToEnd;
 using FluentAssertions;
 using Zafiro.FileSystem;

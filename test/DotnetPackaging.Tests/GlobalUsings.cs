@@ -1,2 +1,2 @@
 global using Xunit;
-global using FileMode = DotnetPackaging.Common.FileMode;
+global using FileMode = DotnetPackaging.LinuxFileMode;

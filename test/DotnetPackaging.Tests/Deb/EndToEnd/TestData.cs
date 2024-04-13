@@ -1,5 +1,5 @@
-﻿using DotnetPackaging.Archives.Deb;
-using DotnetPackaging.Common;
+﻿using DotnetPackaging.Deb.Archives;
+using DotnetPackaging.Deb.Archives.Deb;
 using SixLabors.ImageSharp;
 using Zafiro.FileSystem;
 
