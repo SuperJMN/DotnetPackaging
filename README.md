@@ -103,3 +103,6 @@ Take a looks to this example:
 
 Feel free to ask in the Discussions section of this repo.
 If this has been useful for you, please consider sponsoring this project. Thanks!
+
+# Acknowledgements
+- Huge thanks [Alexey Sonkin](https://github.com/teplofizik) for his wonderful SquashFS support in his [NyaFS](https://github.com/teplofizik/nyafs) library.
