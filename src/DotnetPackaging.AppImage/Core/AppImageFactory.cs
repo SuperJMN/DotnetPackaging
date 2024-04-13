@@ -38,6 +38,7 @@ public class AppImageFactory
             ExecutablePath = executablePath,
             Keywords = m.Keywords,
             Name = m.AppName,
+            Path = "$APPDIR/" + appName,
             StartupWmClass = m.StartupWmClass.Or(appName)
         });
 

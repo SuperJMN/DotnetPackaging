@@ -10,4 +10,5 @@ public class DesktopMetadata
     public required Maybe<string> Comment { get; init; }
     public required Maybe<IEnumerable<string>> Categories { get; init; }
     public required Maybe<string> ExecutablePath { get; init; }
+    public required Maybe<string> Path { get; init; }
 }
