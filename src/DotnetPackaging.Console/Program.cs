@@ -1,6 +1,5 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Parsing;
-using System.Diagnostics;
 using System.IO.Abstractions;
 using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
@@ -11,6 +10,7 @@ using DotnetPackaging.Deb;
 using DotnetPackaging.Deb.Archives;
 using Serilog;
 using File = System.IO.File;
+
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()

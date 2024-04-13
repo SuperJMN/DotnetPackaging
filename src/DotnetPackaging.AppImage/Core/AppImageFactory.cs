@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
+using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem.Lightweight;
 using Directory = Zafiro.FileSystem.Lightweight.Directory;
@@ -23,23 +24,30 @@ public class AppImageFactory
         }
 
         var executable = execFile.Value;
+        
+        Log.Information("Executable file: {Executable}, Architecture: {ExeArchitecture}", executable.Exec.File, executable.Arch);
+        
         var appName = metadata.Bind(x => x.AppName).GetValueOrDefault(executable.Exec.File.Name.Replace(".Desktop", ""));
         
         var executablePath = "$APPDIR/" + appName + "/" + executable.Exec.File.Name;
         
-        var desktopMetadata = metadata.Map(m => new DesktopMetadata
+        var maybeDesktopMetadata = metadata.Map(m => new DesktopMetadata
         {
             Categories = m.Categories,
             Comment = m.Comment,
             ExecutablePath = executablePath,
             Keywords = m.Keywords,
             Name = m.AppName,
-            StartupWmClass = m.StartupWmClass
+            StartupWmClass = m.StartupWmClass.Or(appName)
         });
+
+        var maybeIcon = await metadata.Bind(x => x.Icon).Or(() => GetIconFromBuildDir(inputDir));
+        
+        Log.Information("AppName: {AppName}", appName);
         
         return new AppImageModel(getRuntime(executable.Arch), new Application(
-            await metadata.Bind(x => x.Icon).Or(() => GetIconFromBuildDir(inputDir)), 
-            desktopMetadata, 
+            maybeIcon, 
+            maybeDesktopMetadata, 
             new DefaultScriptAppRun(executablePath), 
             new Directory(appName, inputDir.Files(), inputDir.Directories())));
     }
@@ -49,6 +57,7 @@ public class AppImageFactory
         var result = await inputDir.Files().Map(files => files.TryFirst(file => file.Name == "AppImage.png").Map(file =>
         {
             var icon = (IIcon)new Icon(file.Open);
+            Log.Information("Using icon from 'AppImage.png' defined in input directory");
             return icon;
         }));
 

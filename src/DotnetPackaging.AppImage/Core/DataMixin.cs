@@ -9,6 +9,7 @@ public static class DataMixin
         var textContent = $"""
                            [Desktop Entry]
                            Type=Application
+                           Name={desktopEntry.Name}
                            Path={desktopEntry.Name}
                            StartupWMClass={desktopEntry.StartupWmClass}
                            GenericName={desktopEntry.StartupWmClass}
@@ -16,8 +17,8 @@ public static class DataMixin
                            Icon={desktopEntry.Name}
                            Terminal=false
                            Exec={desktopEntry.ExecutablePath}
-                           Categories={string.Join(";", desktopEntry.Categories)};
-                           Keywords={string.Join(";", desktopEntry.Keywords)};
+                           Categories={desktopEntry.Categories.Map(cats => string.Join(";", cats))};
+                           Keywords={desktopEntry.Keywords.Map(keywords => string.Join(";", keywords))};
                            """.FromCrLfToLf();
 
         return () => Task.FromResult(Result.Success((Stream)new MemoryStream(textContent.GetAsciiBytes())));
