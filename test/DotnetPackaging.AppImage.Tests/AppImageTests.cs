@@ -38,10 +38,11 @@ public class CustomAppImageTests
             return AppImage.WriteFromBuildDirectory(stream, appDir, new SingleDirMetadata()
             {
                 StartupWmClass = "StartupWmClass",
-                Keywords = ["Keyword", "Keyword2"],
+                Keywords = Maybe.From<IEnumerable<string>>(["Keyword", "Keyword2"]),
                 Comment = "Some comment",
-                Categories = ["Category1", "Category 2"],
-                AppName = "TestApp"
+                Categories = Maybe.From<IEnumerable<string>>(["Category1", "Category 2"]),
+                AppName = "TestApp",
+                Icon = Maybe<IIcon>.None,
             });
         });
 

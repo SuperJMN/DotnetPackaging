@@ -28,4 +28,17 @@ public static class ImageMixin
         image.Mutate(x => x.Resize(width, height));
         return image;
     }
+
+
+    public static bool HasProperIconSize(this Image image)
+    {
+        return image.Height == image.Width && MathMixin.IsPowerOf2(image.Width);
+    }
+    
+    public static Image MakeAppIcon(this Image image)
+    {
+        int maxSize = Math.Max(image.Width, image.Height);
+        var newSize = MathMixin.NextPowerOfTwo(maxSize);
+        return image.Resize(newSize, newSize);
+    }
 }

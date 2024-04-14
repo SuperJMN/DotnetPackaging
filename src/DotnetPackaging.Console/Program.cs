@@ -1,13 +1,16 @@
 ﻿using System.CommandLine;
+using System.CommandLine.Parsing;
 using System.IO.Abstractions;
 using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
-using DotnetPackaging;
+using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.Deb.Client.Dtos;
 using DotnetPackaging.Console;
 using DotnetPackaging.Deb;
 using DotnetPackaging.Deb.Archives;
 using Serilog;
+using File = System.IO.File;
+
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -61,9 +64,23 @@ static Command AppImageFromBuildDirCommand()
     var appImageFile = new Option<FileInfo>("--output", "Output file (.deb)") { IsRequired = true };
     var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
     var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
-    var categories = new Option<List<string>>("--categories", "Categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
-    var keywords = new Option<List<string>>("--keywords", "Categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+    var categories = new Option<IEnumerable<string>>("--categories", "Categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+    var keywords = new Option<IEnumerable<string>>("--keywords", "Categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
     var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
+    var iconOption = new Option<IIcon>("--icon", result =>
+    {
+        return GetIcon(result);
+
+        IIcon GetIcon(SymbolResult argumentResult)
+        {
+            var iconPath = argumentResult.Tokens[0].Value;
+            return new Icon(() => Task.FromResult(Result.Try(() => (Stream)File.OpenRead(iconPath))));
+        }
+    })
+    {
+        IsRequired = false, 
+        Description = "Path to the application icon. When this options is not provided, the tool will look up for an image called 'AppImage.png'."
+    };
 
     var fromBuildDir = new Command("from-build", "Creates AppImage from a directory with the contents. Everything is inferred. For .NET applications, this is usually the \"publish\" directory.");
 
@@ -74,8 +91,11 @@ static Command AppImageFromBuildDirCommand()
     fromBuildDir.AddOption(categories);
     fromBuildDir.AddOption(keywords);
     fromBuildDir.AddOption(comment);
+    fromBuildDir.AddOption(iconOption);
 
-    fromBuildDir.SetHandler((inputDir, outputFile, singleDirMetadata) => new FromSingleDirectory(new FileSystem()).Create(inputDir.FullName, outputFile.FullName, Maybe.From(singleDirMetadata)).WriteResult(), buildDir, appImageFile, new SingleDirMetadataBinder(appName, startupWmClass, keywords, comment, categories));
+    fromBuildDir.SetHandler(
+        (inputDir, outputFile, singleDirMetadata) => new FromSingleDirectory(new FileSystem()).Create(inputDir.FullName, outputFile.FullName, Maybe.From(singleDirMetadata)).WriteResult(), buildDir, appImageFile,
+        new SingleDirMetadataBinder(appName, startupWmClass, keywords, comment, categories, iconOption));
     return fromBuildDir;
 }
 

@@ -1,10 +1,13 @@
-﻿namespace DotnetPackaging.AppImage.Core;
+﻿using CSharpFunctionalExtensions;
+
+namespace DotnetPackaging.AppImage.Core;
 
 public class SingleDirMetadata
 {
-    public required string AppName { get; init; }
-    public required string StartupWmClass { get; set; }
-    public required List<string> Keywords { get; init; }
-    public required string Comment { get; init; }
-    public required List<string> Categories { get; init; }
+    public required Maybe<string> AppName { get; init; }
+    public required Maybe<string> StartupWmClass { get; set; }
+    public required Maybe<IEnumerable<string>> Keywords { get; init; }
+    public required Maybe<string> Comment { get; init; }
+    public required Maybe<IEnumerable<string>> Categories { get; init; }
+    public required Maybe<IIcon> Icon { get; init; }
 }
