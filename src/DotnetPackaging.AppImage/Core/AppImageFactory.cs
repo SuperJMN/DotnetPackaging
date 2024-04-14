@@ -25,7 +25,7 @@ public class AppImageFactory
 
         var executable = execFile.Value;
         
-        Log.Information("Executable file: {Executable}, Architecture: {ExeArchitecture}", executable.Exec.File, executable.Arch);
+        Log.Information("Executable file: {Executable}, Architecture: {ExeArchitecture}", executable.Exec.FullPath(), executable.Arch);
         
         var appName = metadata.Bind(x => x.AppName).GetValueOrDefault(executable.Exec.File.Name.Replace(".Desktop", ""));
         
