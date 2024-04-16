@@ -1,11 +1,12 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Binding;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.AppImage;
 using DotnetPackaging.AppImage.Core;
 
 namespace DotnetPackaging.Console;
 
-public class SingleDirMetadataBinder : BinderBase<SingleDirMetadata>
+public class SingleDirMetadataBinder : BinderBase<Options>
 {
     private readonly List<Option> _options;
     
@@ -41,7 +42,7 @@ public class SingleDirMetadataBinder : BinderBase<SingleDirMetadata>
         };
     }
 
-    protected override SingleDirMetadata GetBoundValue(BindingContext bindingContext)
+    protected override Options GetBoundValue(BindingContext bindingContext)
     {
         // If all values in the bindingContext are null, return null
         if (bindingContext.AllValuesAreNull(_options))
@@ -49,7 +50,7 @@ public class SingleDirMetadataBinder : BinderBase<SingleDirMetadata>
             return null;
         }
 
-        return new SingleDirMetadata
+        return new Options
         {
             AppName = Maybe.From(bindingContext.ParseResult.GetValueForOption(_nameOption)),
             StartupWmClass = Maybe.From(bindingContext.ParseResult.GetValueForOption(_startupWmClassOption)),
@@ -59,10 +60,4 @@ public class SingleDirMetadataBinder : BinderBase<SingleDirMetadata>
             Icon = Maybe<IIcon>.From(bindingContext.ParseResult.GetValueForOption(_iconOption))
         };
     }
-}
-
-public class IconBinder : BinderBase<IIcon>
-
-{
-    protected override IIcon GetBoundValue(BindingContext bindingContext) => throw new NotImplementedException();
 }

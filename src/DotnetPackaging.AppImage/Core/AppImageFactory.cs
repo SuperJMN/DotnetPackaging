@@ -2,6 +2,7 @@
 using CSharpFunctionalExtensions;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
+using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 using Directory = Zafiro.FileSystem.Lightweight.Directory;
 
@@ -11,7 +12,7 @@ public class AppImageFactory
 {
     public static AppImageBase FromAppDir(IDirectory appDir, IRuntime uriRuntime) => new AppDirBasedAppImage(uriRuntime, appDir);
 
-    public static async Task<Result<AppImageBase>> FromBuildDir(IDirectory inputDir, Maybe<SingleDirMetadata> metadata, Func<Architecture, IRuntime> getRuntime)
+    public static async Task<Result<AppImageBase>> FromBuildDir(IDirectory inputDir, Options options, Func<Architecture, IRuntime> getRuntime)
     { 
         var execFile =
             await FileHelper.GetExecutables(inputDir)
@@ -24,33 +25,26 @@ public class AppImageFactory
         }
 
         var executable = execFile.Value;
+
+        var metadata = new Metadata
+        {
+            Icon = await options.Icon.Or(() => GetIconFromBuildDir(inputDir)),
+            AppName = options.AppName.GetValueOrDefault(() => executable.Exec.File.Name.Replace(".Desktop", "")),
+            Keywords = options.Keywords,
+            Comment = options.Comment,
+            Categories = options.Categories,
+            StartupWmClass = options.StartupWmClass
+        };
         
         Log.Information("Executable file: {Executable}, Architecture: {ExeArchitecture}", executable.Exec.FullPath(), executable.Arch);
-        
-        var appName = metadata.Bind(x => x.AppName).GetValueOrDefault(executable.Exec.File.Name.Replace(".Desktop", ""));
-        
-        var executablePath = "$APPDIR/" + appName + "/" + executable.Exec.File.Name;
-        
-        var maybeDesktopMetadata = metadata.Map(m => new DesktopMetadata
-        {
-            Categories = m.Categories,
-            Comment = m.Comment,
-            ExecutablePath = executablePath,
-            Keywords = m.Keywords,
-            Name = m.AppName,
-            Path = "$APPDIR/" + appName,
-            StartupWmClass = m.StartupWmClass.Or(appName)
-        });
-
-        var maybeIcon = await metadata.Bind(x => x.Icon).Or(() => GetIconFromBuildDir(inputDir));
-        
-        Log.Information("AppName: {AppName}", appName);
+        var executablePath = "$APPDIR/" + options.AppName + "/" + executable.Exec.File.Name;
+        Log.Information("AppName: {AppName}", options.AppName);
         
         return new AppImageModel(getRuntime(executable.Arch), new Application(
-            maybeIcon, 
-            maybeDesktopMetadata, 
+            metadata, 
+            ((ZafiroPath)metadata.AppName).Combine(executable.Exec.FullPath()),
             new DefaultScriptAppRun(executablePath), 
-            new Directory(appName, inputDir.Files(), inputDir.Directories())));
+            new Directory(metadata.AppName, inputDir.Files(), inputDir.Directories())));
     }
 
     private static async Task<Maybe<IIcon>> GetIconFromBuildDir(IDirectory inputDir)

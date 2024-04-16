@@ -35,7 +35,7 @@ public class CustomAppImageTests
             var fs = new FileSystem();
             var directoryInfo = fs.DirectoryInfo.New("TestFiles/AppDir/Minimal");
             var appDir = new DirectorioIODirectory(Maybe<string>.None, directoryInfo);
-            return AppImage.WriteFromBuildDirectory(stream, appDir, new SingleDirMetadata()
+            return AppImage.WriteFromBuildDirectory(stream, appDir, new Options()
             {
                 StartupWmClass = "StartupWmClass",
                 Keywords = Maybe.From<IEnumerable<string>>(["Keyword", "Keyword2"]),
