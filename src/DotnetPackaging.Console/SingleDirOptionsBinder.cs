@@ -13,7 +13,8 @@ public class SingleDirOptionsBinder(
     Option<string> commentOption,
     Option<MainCategory?> mainCategory,
     Option<IEnumerable<AdditionalCategory>> categoriesOption,
-    Option<IIcon> iconOption)
+    Option<IIcon> iconOption, 
+    Option<string> versionOption)
     : BinderBase<Options>
 {
     protected override Options GetBoundValue(BindingContext bindingContext)
@@ -21,13 +22,14 @@ public class SingleDirOptionsBinder(
         var valueForOption = bindingContext.ParseResult.GetValueForOption(mainCategory);
         return new Options
         {
-            AppName = CSharpFunctionalExtensions.Maybe.From(bindingContext.ParseResult.GetValueForOption(option)!),
-            StartupWmClass = CSharpFunctionalExtensions.Maybe.From(bindingContext.ParseResult.GetValueForOption(wmClassOption)!),
-            Keywords = CSharpFunctionalExtensions.Maybe.From(bindingContext.ParseResult.GetValueForOption(keywordsOption)!),
-            Comment = CSharpFunctionalExtensions.Maybe.From(bindingContext.ParseResult.GetValueForOption(commentOption)!),
-            MainCategory = Maybe.SafeFrom(valueForOption),
-            AdditionalCategories = CSharpFunctionalExtensions.Maybe.From(bindingContext.ParseResult.GetValueForOption(categoriesOption)!),
-            Icon = Maybe<IIcon>.From(bindingContext.ParseResult.GetValueForOption(iconOption)!)
+            AppName = Maybe.From(bindingContext.ParseResult.GetValueForOption(option)!),
+            StartupWmClass = Maybe.From(bindingContext.ParseResult.GetValueForOption(wmClassOption)!),
+            Keywords = Maybe.From(bindingContext.ParseResult.GetValueForOption(keywordsOption)!),
+            Comment = Maybe.From(bindingContext.ParseResult.GetValueForOption(commentOption)!),
+            MainCategory = MaybeMixin.From(valueForOption),
+            AdditionalCategories = Maybe.From(bindingContext.ParseResult.GetValueForOption(categoriesOption)!),
+            Icon = Maybe<IIcon>.From(bindingContext.ParseResult.GetValueForOption(iconOption)!),
+            Version = Maybe.From(bindingContext.ParseResult.GetValueForOption(versionOption)!),
         };
     }
 }
