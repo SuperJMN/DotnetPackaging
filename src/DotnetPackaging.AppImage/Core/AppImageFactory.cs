@@ -37,6 +37,7 @@ public class AppImageFactory
         var metadata = new Metadata
         {
             Icon = await options.Icon.Or(() => GetIconFromBuildDir(inputDir)),
+            Version = options.Version,
             AppName = appName,
             Keywords = options.Keywords,
             Comment = options.Comment,

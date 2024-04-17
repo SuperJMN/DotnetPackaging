@@ -10,4 +10,5 @@ public record Metadata
     public required Maybe<string> Comment { get; init; }
     public required Maybe<Categories> Categories { get; init; }
     public required Maybe<IIcon> Icon { get; init; }
+    public required Maybe<string> Version { get; init; }
 }

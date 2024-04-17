@@ -67,6 +67,7 @@ static Command AppImageFromBuildDirCommand()
     var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories", "Additional categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
     var keywords = new Option<IEnumerable<string>>("--keywords", "Keywords") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
     var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
+    var version = new Option<string>("--version", "Version") { IsRequired = false };
     var iconOption = new Option<IIcon>("--icon", result =>
     {
         return GetIcon(result);
@@ -93,6 +94,7 @@ static Command AppImageFromBuildDirCommand()
     fromBuildDir.AddOption(comment);
     fromBuildDir.AddOption(iconOption);
     fromBuildDir.AddOption(additionalCategories);
+    fromBuildDir.AddOption(version);
 
     fromBuildDir.SetHandler(
         (inputDir, outputFile, singleDirMetadata) => new FromSingleDirectory(new FileSystem()).Create(inputDir.FullName, outputFile.FullName, singleDirMetadata).WriteResult(), buildDir, appImageFile,

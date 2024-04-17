@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using CSharpFunctionalExtensions;
+﻿using CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 using Zafiro.Mixins;
@@ -56,6 +55,8 @@ public class AppImageModel : AppImageBase
                            Keywords={metadata.Keywords.Map(keywords => string.Join(";", keywords))};
                            """.FromCrLfToLf();
 
-        return textContent;
+        var final = metadata.Version.Match(version => string.Join("\n", textContent, version), () => textContent);
+
+        return final;
     }
 }
