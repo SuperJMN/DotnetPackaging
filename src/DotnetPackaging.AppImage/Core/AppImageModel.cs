@@ -55,7 +55,7 @@ public class AppImageModel : AppImageBase
                            Keywords={metadata.Keywords.Map(keywords => string.Join(";", keywords))};
                            """.FromCrLfToLf();
 
-        var final = metadata.Version.Match(version => string.Join("\n", textContent, version), () => textContent);
+        var final = metadata.Version.Match(version => string.Join("\n", textContent, $"X-AppImage-Version={version};"), () => textContent);
 
         return final;
     }
