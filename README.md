@@ -5,7 +5,7 @@ With it, you can create your .Deb and AppImage packages for Linux systems like U
 
 # Overview
 
-One of the most flagrant annoyances of the .NET world is the absence of standardized ways to distribute "classic" applications, those that are for end users. Imagine that have a beautiful cross-platform application, like the ones created using [Avalonia UI](https://www.avaloniaui.net). Everything is fine until you need to distribute you apps. 
+One of the most flagrant annoyances of the .NET world is the absence of standardized ways to distribute "classic" applications, those that are for end users. Imagine that you have a beautiful cross-platform application, like the ones created using [Avalonia UI](https://www.avaloniaui.net). Everything is fine until you need to distribute you apps. 
 
 **DotnetPackaging** has been created to give an answer to those that want to distribute their applications in a more convenient way. It's about time, uh?
 
@@ -35,7 +35,7 @@ dotnetpackaging appimage ... <options>
 
 ## From single directory
 
-You can create them using a single build directory (using dotnet publish, for example). The tool find everything from that folder.
+You can create them using a single build directory (using dotnet publish, for example). The tool will use the binaries and resources in that directory to create the AppImage. 
 
 ## From AppImage
 
