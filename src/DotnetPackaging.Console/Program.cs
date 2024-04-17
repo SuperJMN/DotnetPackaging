@@ -65,7 +65,7 @@ static Command AppImageFromBuildDirCommand()
     var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
     var mainCategory = new Option<MainCategory?>("--main-category", "Main category") { IsRequired = false, Arity = ArgumentArity.ZeroOrOne, };
     var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories", "Additional categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
-    var keywords = new Option<IEnumerable<string>>("--keywords", "Categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+    var keywords = new Option<IEnumerable<string>>("--keywords", "Keywords") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
     var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
     var iconOption = new Option<IIcon>("--icon", result =>
     {
@@ -96,7 +96,7 @@ static Command AppImageFromBuildDirCommand()
 
     fromBuildDir.SetHandler(
         (inputDir, outputFile, singleDirMetadata) => new FromSingleDirectory(new FileSystem()).Create(inputDir.FullName, outputFile.FullName, singleDirMetadata).WriteResult(), buildDir, appImageFile,
-        new SingleDirMetadataBinder(appName, startupWmClass, keywords, comment, mainCategory, additionalCategories, iconOption));
+        new SingleDirOptionsBinder(appName, startupWmClass, keywords, comment, mainCategory, additionalCategories, iconOption));
     return fromBuildDir;
 }
 
