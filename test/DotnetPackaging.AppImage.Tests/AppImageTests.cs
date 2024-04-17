@@ -38,12 +38,18 @@ public class CustomAppImageTests
             return AppImage.WriteFromBuildDirectory(stream, appDir, new Options()
             {
                 StartupWmClass = "StartupWmClass",
-                Keywords = CSharpFunctionalExtensions.Maybe.From<IEnumerable<string>>(["Keyword", "Keyword2"]),
+                Keywords = Maybe.From<IEnumerable<string>>(["Keyword", "Keyword2"]),
                 Comment = "Some comment",
                 MainCategory = Maybe<MainCategory>.From(MainCategory.Utility),
                 AdditionalCategories = Maybe<IEnumerable<AdditionalCategory>>.From(new [] { AdditionalCategory.FileManager }),
                 AppName = "TestApp",
                 Icon = Maybe<IIcon>.None,
+                Summary = "",
+                HomePage = new Maybe<Uri>(),
+                License = "MIT",
+                ScreenshotUrls = Maybe<IEnumerable<Uri>>.None,
+                Version = "1.0.0",
+                AppId = Maybe<string>.None
             });
         });
 
