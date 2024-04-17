@@ -29,8 +29,6 @@ public class AppImageModel : AppImageBase
 
     private IEnumerable<RootedFile> BasicEntries()
     {
-        Debugger.Launch();
-        
         yield return new RootedFile(ZafiroPath.Empty, new File("AppRun", Application.AppRun.Open));
         
         if (Application.Metadata.Icon.HasValue)
@@ -54,7 +52,7 @@ public class AppImageModel : AppImageBase
                            Icon={Application.Metadata.AppName}
                            Terminal=false
                            Exec=$APPDIR/{Application.ExecutablePath}
-                           Categories={metadata.Categories.Map(cats => string.Join(";", cats))};
+                           Categories={metadata.Categories};
                            Keywords={metadata.Keywords.Map(keywords => string.Join(";", keywords))};
                            """.FromCrLfToLf();
 

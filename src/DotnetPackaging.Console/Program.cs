@@ -3,6 +3,7 @@ using System.CommandLine.Parsing;
 using System.IO.Abstractions;
 using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
+using DotnetPackaging;
 using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.Deb.Client.Dtos;
 using DotnetPackaging.Console;
@@ -15,8 +16,6 @@ using File = System.IO.File;
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateLogger();
-
-Log.Information("Executing...");
 
 var rootCommand = new RootCommand();
 rootCommand.AddCommand(DebCommand());
@@ -64,7 +63,8 @@ static Command AppImageFromBuildDirCommand()
     var appImageFile = new Option<FileInfo>("--output", "Output file (.deb)") { IsRequired = true };
     var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
     var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
-    var categories = new Option<IEnumerable<string>>("--categories", "Categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+    var mainCategory = new Option<MainCategory?>("--main-category", "Main category") { IsRequired = false, Arity = ArgumentArity.ZeroOrOne, };
+    var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories", "Additional categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
     var keywords = new Option<IEnumerable<string>>("--keywords", "Categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
     var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
     var iconOption = new Option<IIcon>("--icon", result =>
@@ -88,14 +88,15 @@ static Command AppImageFromBuildDirCommand()
     fromBuildDir.AddOption(appImageFile);
     fromBuildDir.AddOption(appName);
     fromBuildDir.AddOption(startupWmClass);
-    fromBuildDir.AddOption(categories);
+    fromBuildDir.AddOption(mainCategory);
     fromBuildDir.AddOption(keywords);
     fromBuildDir.AddOption(comment);
     fromBuildDir.AddOption(iconOption);
+    fromBuildDir.AddOption(additionalCategories);
 
     fromBuildDir.SetHandler(
         (inputDir, outputFile, singleDirMetadata) => new FromSingleDirectory(new FileSystem()).Create(inputDir.FullName, outputFile.FullName, singleDirMetadata).WriteResult(), buildDir, appImageFile,
-        new SingleDirMetadataBinder(appName, startupWmClass, keywords, comment, categories, iconOption));
+        new SingleDirMetadataBinder(appName, startupWmClass, keywords, comment, mainCategory, additionalCategories, iconOption));
     return fromBuildDir;
 }
 

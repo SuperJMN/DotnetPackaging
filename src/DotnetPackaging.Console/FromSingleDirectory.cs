@@ -1,7 +1,7 @@
-﻿using System.IO.Abstractions;
+﻿using System.Diagnostics;
+using System.IO.Abstractions;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage;
-using DotnetPackaging.AppImage.Core;
 using Serilog;
 using Zafiro.FileSystem.Lightweight;
 using IDirectory = Zafiro.FileSystem.Lightweight.IDirectory;

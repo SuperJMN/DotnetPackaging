@@ -25,6 +25,11 @@ public class AppImageFactory
             return Result.Failure<AppImageBase>("Could not find any executable file");
         }
 
+        if (options.MainCategory.HasNoValue && options.AdditionalCategories.HasValue)
+        {
+            return Result.Failure<AppImageBase>("You specified additional categories, but a main category hasn't been specified. Please, use a main category");
+        }
+
         var executable = execFile.Value;
 
         var appName = options.AppName.GetValueOrDefault(() => executable.Exec.File.Name.Replace(".Desktop", ""));
@@ -35,7 +40,7 @@ public class AppImageFactory
             AppName = appName,
             Keywords = options.Keywords,
             Comment = options.Comment,
-            Categories = options.Categories,
+            Categories = options.MainCategory.Map(main => new Categories(main, options.AdditionalCategories.GetValueOrDefault(new List<AdditionalCategory>()).ToArray())),
             StartupWmClass = options.StartupWmClass.Or(appName)
         };
         
