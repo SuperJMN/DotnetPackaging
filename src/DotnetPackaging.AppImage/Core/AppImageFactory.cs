@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
+using CSharpFunctionalExtensions.ValueTasks;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
@@ -26,14 +27,16 @@ public class AppImageFactory
 
         var executable = execFile.Value;
 
+        var appName = options.AppName.GetValueOrDefault(() => executable.Exec.File.Name.Replace(".Desktop", ""));
+        
         var metadata = new Metadata
         {
             Icon = await options.Icon.Or(() => GetIconFromBuildDir(inputDir)),
-            AppName = options.AppName.GetValueOrDefault(() => executable.Exec.File.Name.Replace(".Desktop", "")),
+            AppName = appName,
             Keywords = options.Keywords,
             Comment = options.Comment,
             Categories = options.Categories,
-            StartupWmClass = options.StartupWmClass
+            StartupWmClass = options.StartupWmClass.Or(appName)
         };
         
         Log.Information("Executable file: {Executable}, Architecture: {ExeArchitecture}", executable.Exec.FullPath(), executable.Arch);
