@@ -1,20 +1,20 @@
-﻿using CSharpFunctionalExtensions;
+﻿using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage.Core;
 
 public class Application
 {
-    public Application(Maybe<IIcon> icon, Maybe<DesktopMetadata> desktopMetadata, IAppRun appRun, params IDirectory[] contents)
+    public Application(Metadata metadata, ZafiroPath executablePath, IAppRun appRun, params IDirectory[] contents)
     {
         Contents = contents;
-        Icon = icon;
-        DesktopMetadata = desktopMetadata;
+        Metadata = metadata;
+        ExecutablePath = executablePath;
         AppRun = appRun;
     }
 
     public IDirectory[] Contents { get; }
-    public Maybe<IIcon> Icon { get; }
     public IAppRun AppRun { get; }
-    public Maybe<DesktopMetadata> DesktopMetadata { get; }
+    public Metadata Metadata { get; }
+    public ZafiroPath ExecutablePath { get; }
 }
