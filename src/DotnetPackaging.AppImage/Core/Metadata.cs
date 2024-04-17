@@ -11,4 +11,9 @@ public record Metadata
     public required Maybe<Categories> Categories { get; init; }
     public required Maybe<IIcon> Icon { get; init; }
     public required Maybe<string> Version { get; init; }
+    public required Maybe<Uri> HomePage { get; init; }
+    public required Maybe<IEnumerable<Uri>> ScreenshotUrls { get; init; }
+    public required Maybe<string> Summary { get; init; }
+    public required Maybe<string> License { get; init; }
+    public required Maybe<string> AppId { get; init; }
 }

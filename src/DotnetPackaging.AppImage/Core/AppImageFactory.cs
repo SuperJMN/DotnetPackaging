@@ -1,6 +1,5 @@
 ﻿using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
-using CSharpFunctionalExtensions.ValueTasks;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
@@ -42,7 +41,12 @@ public class AppImageFactory
             Keywords = options.Keywords,
             Comment = options.Comment,
             Categories = options.MainCategory.Map(main => new Categories(main, options.AdditionalCategories.GetValueOrDefault(new List<AdditionalCategory>()).ToArray())),
-            StartupWmClass = options.StartupWmClass.Or(appName)
+            StartupWmClass = options.StartupWmClass.Or(appName),
+            HomePage = options.HomePage,
+            License = options.License,
+            ScreenshotUrls = options.ScreenshotUrls,
+            Summary = options.Summary,
+            AppId = options.AppId,
         };
         
         Log.Information("Executable file: {Executable}, Architecture: {ExeArchitecture}", executable.Exec.FullPath(), executable.Arch);

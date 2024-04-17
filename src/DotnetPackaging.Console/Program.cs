@@ -68,6 +68,11 @@ static Command AppImageFromBuildDirCommand()
     var keywords = new Option<IEnumerable<string>>("--keywords", "Keywords") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
     var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
     var version = new Option<string>("--version", "Version") { IsRequired = false };
+    var homePage = new Option<Uri>("--homepage", "Home page of the application") { IsRequired = false };
+    var license = new Option<string>("--license", "License of the application") { IsRequired = false };
+    var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls", "Screenshot URLs") { IsRequired = false };
+    var summary = new Option<string>("--summary", "Summary. Short description that should not end in a dot.") { IsRequired = false };
+    var appId = new Option<string>("--appId", "Application Id. Usuallya Reverse DNS name like com.SomeCompany.SomeApplication") { IsRequired = false };
     var iconOption = new Option<IIcon>("--icon", result =>
     {
         return GetIcon(result);
@@ -80,7 +85,7 @@ static Command AppImageFromBuildDirCommand()
     })
     {
         IsRequired = false, 
-        Description = "Path to the application icon. When this options is not provided, the tool will look up for an image called 'AppImage.png'."
+        Description = "Path to the application icon. When this option is not provided, the tool will look up for an image called 'AppImage.png'."
     };
 
     var fromBuildDir = new Command("from-build", "Creates AppImage from a directory with the contents. Everything is inferred. For .NET applications, this is usually the \"publish\" directory.");
@@ -95,10 +100,28 @@ static Command AppImageFromBuildDirCommand()
     fromBuildDir.AddOption(iconOption);
     fromBuildDir.AddOption(additionalCategories);
     fromBuildDir.AddOption(version);
+    fromBuildDir.AddOption(homePage);
+    fromBuildDir.AddOption(license);
+    fromBuildDir.AddOption(screenshotUrls);
+    fromBuildDir.AddOption(summary);
+    fromBuildDir.AddOption(appId);
 
     fromBuildDir.SetHandler(
         (inputDir, outputFile, singleDirMetadata) => new FromSingleDirectory(new FileSystem()).Create(inputDir.FullName, outputFile.FullName, singleDirMetadata).WriteResult(), buildDir, appImageFile,
-        new SingleDirOptionsBinder(appName, startupWmClass, keywords, comment, mainCategory, additionalCategories, iconOption, version));
+        new SingleDirOptionsBinder(
+            appName, 
+            startupWmClass, 
+            keywords, 
+            comment, 
+            mainCategory, 
+            additionalCategories, 
+            iconOption, 
+            version,
+            homePage,
+            license,
+            screenshotUrls,
+            summary,
+            appId));
     return fromBuildDir;
 }
 
