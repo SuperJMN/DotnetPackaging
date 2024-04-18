@@ -57,7 +57,7 @@ public class AppImageModel : AppImageBase
                            Comment={metadata.Comment}
                            Icon={Application.Metadata.AppName}
                            Terminal=false
-                           Exec="$APPDIR/{Application.ExecutablePath}"
+                           Exec="\\$APPDIR/{Application.ExecutablePath}"
                            Categories={metadata.Categories};
                            Keywords={metadata.Keywords.Map(keywords => string.Join(";", keywords))};
                            """.FromCrLfToLf();
