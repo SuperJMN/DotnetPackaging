@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
 using DotnetPackaging.AppImage.Core;
-using DotnetPackaging.Deb.Client.Dtos;
 using DotnetPackaging.Console;
 using DotnetPackaging.Deb;
 using DotnetPackaging.Deb.Archives;
@@ -25,13 +24,14 @@ return await rootCommand.InvokeAsync(args);
 
 static async Task CreateDeb(DirectoryInfo contents, FileInfo debFile, FileInfo metadataFile)
 {
-    var packagingDto = await metadataFile.ToDto();
-    Log.Logger.Information("Creating {Deb} from {Contents}", debFile.FullName, contents.FullName);
-    Log.Logger.Verbose("Metadata for {Deb} is set to {Metadata}", debFile.FullName, packagingDto);
-    var packageDefinition = await packagingDto.ToModel();
-    var result = await Create.Deb(packageDefinition, contents.FullName, debFile.FullName);
+    // TODO: Restore this
+    //var packagingDto = await metadataFile.ToDto();
+    //Log.Logger.Information("Creating {Deb} from {Contents}", debFile.FullName, contents.FullName);
+    //Log.Logger.Verbose("Metadata for {Deb} is set to {Metadata}", debFile.FullName, packagingDto);
+    //var packageDefinition = await packagingDto.ToModel();
+    //var result = await Create.Deb(packageDefinition, contents.FullName, debFile.FullName);
 
-    result.WriteResult();
+    //result.WriteResult();
 }
 
 static Command DebCommand()
