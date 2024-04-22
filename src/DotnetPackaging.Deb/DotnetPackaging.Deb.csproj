@@ -6,17 +6,14 @@
   </PropertyGroup>
   <Import Project="..\Common.props" />
   <ItemGroup>
-    <Compile Remove="Archives\Ar\**" />
     <Compile Remove="Archives\Deb\**" />
-    <Compile Remove="Archives\Tar\**" />
+    <Compile Remove="Archives\TarOld\**" />
     <Compile Remove="Client\**" />
-    <EmbeddedResource Remove="Archives\Ar\**" />
     <EmbeddedResource Remove="Archives\Deb\**" />
-    <EmbeddedResource Remove="Archives\Tar\**" />
+    <EmbeddedResource Remove="Archives\TarOld\**" />
     <EmbeddedResource Remove="Client\**" />
-    <None Remove="Archives\Ar\**" />
     <None Remove="Archives\Deb\**" />
-    <None Remove="Archives\Tar\**" />
+    <None Remove="Archives\TarOld\**" />
     <None Remove="Client\**" />
   </ItemGroup>
   <ItemGroup>

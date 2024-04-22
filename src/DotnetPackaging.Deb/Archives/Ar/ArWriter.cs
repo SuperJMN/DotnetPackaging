@@ -2,7 +2,7 @@
 using CSharpFunctionalExtensions;
 using Zafiro.CSharpFunctionalExtensions;
 
-namespace DotnetPackaging.Deb.Archives;
+namespace DotnetPackaging.Deb.Archives.Ar;
 
 public static class ArWriter
 {
@@ -34,20 +34,20 @@ public static class ArWriter
                 }));
     }
 
-    private static  Task<Result> WriteProperties(Properties properties, long fileSize, Stream output)
+    private static Task<Result> WriteProperties(Properties properties, long fileSize, Stream output)
     {
         return Result.Try(async () =>
         {
             await WritePaddedString(properties.LastModification.ToUnixTimeSeconds().ToString(), 12, output);
             await WritePaddedString(properties.OwnerId.GetValueOrDefault().ToString(), 6, output);
             await WritePaddedString(properties.GroupId.GetValueOrDefault().ToString(), 6, output);
-            var fileModeOctal = Convert.ToString((uint) properties.FileMode, 8);
+            var fileModeOctal = Convert.ToString((uint)properties.FileMode, 8);
             await WritePaddedString("100" + fileModeOctal, 8, output);
             await WritePaddedString(fileSize.ToString(), 10, output);
         });
     }
-    
-    private static  async Task WritePaddedString(string str, int length, Stream output)
+
+    private static async Task WritePaddedString(string str, int length, Stream output)
     {
         str = str.PadRight(length);
         await output.WriteAsync(Encoding.ASCII.GetBytes(str));
