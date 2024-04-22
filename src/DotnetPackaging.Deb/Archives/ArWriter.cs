@@ -12,7 +12,7 @@ public static class ArWriter
             .Bind(() => WriteEntries(arFile, stream));
     }
 
-    private static Result WriteHeader(Stream stream) => Result.Try(() => stream.WriteAsync("<!arch>\n".GetAsciiBytes()));
+    private static Result WriteHeader(Stream stream) => Result.Try(() => stream.WriteAsync("!<arch>\n".GetAsciiBytes()));
 
     private static Task<Result> WriteEntries(ArFile arFile, Stream stream)
     {
@@ -26,8 +26,12 @@ public static class ArWriter
         return Result
             .Try(() => output.WriteAsync(entry.File.Name.PadRight(16).GetAsciiBytes()))
             .Bind(_ => entry.File.Open()
-                .Using(stream => WriteProperties(entry.Properties, stream.Length, output)
-                    .Bind(() => Result.Try(() => stream.CopyToAsync(output)))));
+                .Using(stream =>
+                {
+                    return WriteProperties(entry.Properties, stream.Length, output)
+                        .Bind(() => Result.Try(() => output.WriteAsync("`\n".GetAsciiBytes())))
+                        .Bind(_ => Result.Try(() => stream.CopyToAsync(output)));
+                }));
     }
 
     private static  Task<Result> WriteProperties(Properties properties, long fileSize, Stream output)
