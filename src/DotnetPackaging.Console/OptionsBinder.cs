@@ -6,7 +6,7 @@ using DotnetPackaging.AppImage.Core;
 
 namespace DotnetPackaging.Console;
 
-public class SingleDirOptionsBinder(
+public class OptionsBinder(
     Option<string> appNameOption,
     Option<string> wmClassOption,
     Option<IEnumerable<string>> keywordsOption,

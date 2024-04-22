@@ -108,7 +108,7 @@ static Command AppImageFromBuildDirCommand()
 
     fromBuildDir.SetHandler(
         (inputDir, outputFile, singleDirMetadata) => new FromSingleDirectory(new FileSystem()).Create(inputDir.FullName, outputFile.FullName, singleDirMetadata).WriteResult(), buildDir, appImageFile,
-        new SingleDirOptionsBinder(
+        new OptionsBinder(
             appName, 
             startupWmClass, 
             keywords, 
