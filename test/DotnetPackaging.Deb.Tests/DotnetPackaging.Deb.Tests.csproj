@@ -7,6 +7,25 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Deb\**" />
+    <Compile Remove="Extra\**" />
+    <Compile Remove="Tar\**" />
+    <Compile Remove="TestFiles\**" />
+    <EmbeddedResource Remove="Deb\**" />
+    <EmbeddedResource Remove="Extra\**" />
+    <EmbeddedResource Remove="Tar\**" />
+    <EmbeddedResource Remove="TestFiles\**" />
+    <None Remove="Deb\**" />
+    <None Remove="Extra\**" />
+    <None Remove="Tar\**" />
+    <None Remove="TestFiles\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="GlobalUsings.cs" />
+    <Compile Remove="LinuxFileModeTests.cs" />
+    <Compile Remove="StringManipulationTests.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="2.41.0" />
     <PackageReference Include="CSharpFunctionalExtensions.FluentAssertions" Version="2.0.0" />
     <PackageReference Include="FluentAssertions" Version="6.12.0" />
@@ -25,10 +44,5 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\DotnetPackaging.Deb\DotnetPackaging.Deb.csproj" />
     <ProjectReference Include="..\..\src\DotnetPackaging\DotnetPackaging.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Update="TestFiles\**">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 </Project>

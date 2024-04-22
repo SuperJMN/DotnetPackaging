@@ -1,4 +1,4 @@
-﻿namespace DotnetPackaging.AppImage.Core;
+﻿namespace DotnetPackaging;
 
 [Flags]
 public enum UnixFilePermissions

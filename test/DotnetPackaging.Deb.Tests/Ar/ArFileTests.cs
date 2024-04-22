@@ -1,9 +1,46 @@
-﻿namespace DotnetPackaging.Tests.Ar;
+﻿using DotnetPackaging.Deb.Archives;
+using FluentAssertions;
+using FluentAssertions.Extensions;
+using Xunit;
+using Zafiro.Mixins;
+using File = Zafiro.FileSystem.Lightweight.File;
+
+namespace DotnetPackaging.Deb.Tests.Ar;
 
 public class ArFileTests
 {
-    // TODO: Place some interesting tests here
+    [Fact]
+    public async Task WriteAr()
+    {
+        var entries = new List<Entry>()
+        {
+            new(new File("My entry", Mixin.SuccessFunc("Some content".ToStream())), DefaultProperties()),
+            new(new File("Some other entry", Mixin.SuccessFunc("Other content".ToStream())), DefaultProperties())
+        };
+        
+        var arFile = new ArFile(entries.ToArray());
+        var outputStream = new MemoryStream();
+        var result = await ArWriter.Write(arFile, outputStream);
+        result.Should().Succeed();
+        var content = """
+                      <!arch>
+                      1010101
+                      My entry
+                      Some content
+                      Some other entry
+                      Other content
+                      """.FromCrLfToLf();
 
+        outputStream.ToArray().ToAscii().Should().Be(content);
+    }
+
+    private static Properties DefaultProperties() => new()
+    {
+        FileMode = UnixFilePermissions.AllPermissions,
+        GroupId = 0,
+        LastModification = 20.January(2020),
+        OwnerId = 0
+    };
     //[Fact]
     //public async Task Regular_file()
     //{

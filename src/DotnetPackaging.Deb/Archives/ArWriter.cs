@@ -1,43 +1,51 @@
 ﻿using System.Text;
-using MoreLinq;
+using CSharpFunctionalExtensions;
+using Zafiro.CSharpFunctionalExtensions;
 
 namespace DotnetPackaging.Deb.Archives;
 
-public class ArWriter : IArFileVisitor
+public static class ArWriter
 {
-    private readonly Stream stream;
-
-    public ArWriter(Stream stream)
+    public static Task<Result> Write(ArFile arFile, Stream stream)
     {
-        this.stream = stream;
+        return WriteHeader(stream)
+            .Bind(() => WriteEntries(arFile, stream));
+    }
+
+    private static Result WriteHeader(Stream stream) => Result.Try(() => stream.WriteAsync("<!arch>\n".GetAsciiBytes()));
+
+    private static Task<Result> WriteEntries(ArFile arFile, Stream stream)
+    {
+        return arFile.Entries
+            .Select(entry => WriteEntry(entry, stream))
+            .CombineInOrder();
+    }
+
+    private static Task<Result> WriteEntry(Entry entry, Stream output)
+    {
+        return Result
+            .Try(() => output.WriteAsync(entry.File.Name.PadRight(16).GetAsciiBytes()))
+            .Bind(_ => entry.File.Open()
+                .Using(stream => WriteProperties(entry.Properties, stream.Length, output)
+                    .Bind(() => Result.Try(() => stream.CopyToAsync(output)))));
+    }
+
+    private static  Task<Result> WriteProperties(Properties properties, long fileSize, Stream output)
+    {
+        return Result.Try(async () =>
+        {
+            await WritePaddedString(properties.LastModification.ToUnixTimeSeconds().ToString(), 12, output);
+            await WritePaddedString(properties.OwnerId.GetValueOrDefault().ToString(), 6, output);
+            await WritePaddedString(properties.GroupId.GetValueOrDefault().ToString(), 6, output);
+            var fileModeOctal = Convert.ToString((uint) properties.FileMode, 8);
+            await WritePaddedString("100" + fileModeOctal, 8, output);
+            await WritePaddedString(fileSize.ToString(), 10, output);
+        });
     }
     
-    public async Task Visit(ArFile arFile)
-    {
-        await stream.WriteAsync("!<arch>\n".GetAsciiBytes());
-        arFile.Entries.ForEach(e => e.Accept(this));
-    }
-
-    public async Task Visit(Entry entry)
-    {
-        await stream.WriteAsync(entry.Name.PadRight(16).GetAsciiBytes());
-        entry.Properties.Accept(this);
-        await using var contentStream = entry.ContentStreamFactory();
-        await WritePaddedString(contentStream.Length.ToString(), 10);
-        await stream.WriteAsync("`\n".GetAsciiBytes());
-    }
-
-    public async Task Visit(Properties properties)
-    {
-        await WritePaddedString(properties.LastModification.ToUnixTimeSeconds().ToString(), 12);
-        await WritePaddedString(properties.OwnerId.GetValueOrDefault().ToString(), 6);
-        await WritePaddedString(properties.GroupId.GetValueOrDefault().ToString(), 6);
-        await WritePaddedString("100" + properties.FileMode, 8);
-    }
-    
-    private async Task WritePaddedString(string str, int length)
+    private static  async Task WritePaddedString(string str, int length, Stream output)
     {
         str = str.PadRight(length);
-        await stream.WriteAsync(Encoding.ASCII.GetBytes(str));
+        await output.WriteAsync(Encoding.ASCII.GetBytes(str));
     }
 }
