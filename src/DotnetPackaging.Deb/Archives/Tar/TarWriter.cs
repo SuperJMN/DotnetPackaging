@@ -1,11 +1,5 @@
-﻿using System.Reactive.Linq;
-using System.Text;
-using System.Xml.Linq;
-using CSharpFunctionalExtensions;
-using DotnetPackaging.Deb.Archives.Ar;
-using ICSharpCode.SharpZipLib.Checksum;
+﻿using CSharpFunctionalExtensions;
 using MoreLinq;
-using Zafiro.CSharpFunctionalExtensions;
 
 namespace DotnetPackaging.Deb.Archives.Tar;
 
@@ -13,7 +7,17 @@ public static class TarWriter
 {
     public static Task<Result> Write(TarFile arFile, Stream stream)
     {
-        return WriteEntries(arFile, stream);
+        return WriteEntries(arFile, stream).Bind(() => WritePadding(stream));
+    }
+
+    private static Task<Result> WritePadding(Stream stream)
+    {
+        return Result.Try(async () =>
+        {
+            var finalSize = stream.Position.RoundUpToNearestMultiple(20 * 512);
+            var padding = finalSize - stream.Position;
+            await stream.WriteAsync(new byte[padding]);
+        });
     }
 
     private static Task<Result> WriteEntries(TarFile arFile, Stream stream)
@@ -27,10 +31,10 @@ public static class TarWriter
     {
         return entry.File.Open().Bind(async fileStream =>
         {
-            var header = GetHeader(entry, 0, fileStream.Length);
+            var header = GetHeader(entry, fileStream.Length);
             var buffer = header.Pad(512).ToArray();
             await output.WriteAsync(buffer);
-            //await WriteContent(fileStream, output);
+            await WriteContent(fileStream, output);
             return Result.Success();
         });
 
@@ -49,11 +53,18 @@ public static class TarWriter
     {
         var multiple = fileStream.Length.RoundUpToNearestMultiple(512);
         var padding = multiple - fileStream.Length;
-        await output.CopyToAsync(output);
-        output.Seek(padding, SeekOrigin.Current);
+        await fileStream.CopyToAsync(output);
+        await output.WriteAsync(new byte[padding]);
+    }
+
+    private static IEnumerable<byte> GetHeader(TarEntry entry, long fileSize)
+    {
+        var headerBytes = GetHeaderCore(entry, Maybe<long>.None, fileSize);
+        var checksum = headerBytes.Sum(x => x);
+        return GetHeaderCore(entry, checksum, fileSize);
     }
     
-    private static IEnumerable<byte> GetHeader(TarEntry entry, Maybe<long> checksum, long fileSize)
+    private static IEnumerable<byte> GetHeaderCore(TarEntry entry, Maybe<long> checksum, long fileSize)
     {
         var filenameBytes = entry.File.Name.Truncate(100).PadRight(100, '\0').GetAsciiBytes();
         var fileModeBytes = ((int)entry.Properties.FileMode).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes();
