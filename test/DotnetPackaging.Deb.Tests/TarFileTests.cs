@@ -18,11 +18,11 @@ public class TarFileTests
             new(StringFile("Some other entry", "Other content"), DefaultProperties())
         };
 
-        //var arFile = new TarFile(entries.ToArray());
+        var tarFile = new TarFile(entries.ToArray());
         var outputStream = new MemoryStream();
-        //var result = await TarWriter.Write(arFile, outputStream);
+        var result = await TarWriter.Write(tarFile, outputStream);
         //result.Should().Succeed();
-        outputStream.ToAscii().Should().Be(await File.ReadAllTextAsync("TestFiles/Sample.tar"));
+        outputStream.ToArray().ShouldBeEquivalentToWithBinaryFormat(await File.ReadAllBytesAsync("TestFiles/Sample.tar"));
     }
 
     private TarProperties DefaultProperties()
