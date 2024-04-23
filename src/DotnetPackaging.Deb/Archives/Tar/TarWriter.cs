@@ -4,6 +4,7 @@ using System.Xml.Linq;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb.Archives.Ar;
 using ICSharpCode.SharpZipLib.Checksum;
+using MoreLinq;
 using Zafiro.CSharpFunctionalExtensions;
 
 namespace DotnetPackaging.Deb.Archives.Tar;
@@ -27,7 +28,9 @@ public static class TarWriter
         return entry.File.Open().Bind(async fileStream =>
         {
             var header = GetHeader(entry, 0, fileStream.Length);
-            await output.WriteAsync(header.ToArray());
+            var buffer = header.Pad(512).ToArray();
+            await output.WriteAsync(buffer);
+            //await WriteContent(fileStream, output);
             return Result.Success();
         });
 
@@ -42,7 +45,14 @@ public static class TarWriter
         //        }));
     }
 
-
+    private static async Task WriteContent(Stream fileStream, Stream output)
+    {
+        var multiple = fileStream.Length.RoundUpToNearestMultiple(512);
+        var padding = multiple - fileStream.Length;
+        await output.CopyToAsync(output);
+        output.Seek(padding, SeekOrigin.Current);
+    }
+    
     private static IEnumerable<byte> GetHeader(TarEntry entry, Maybe<long> checksum, long fileSize)
     {
         var filenameBytes = entry.File.Name.Truncate(100).PadRight(100, '\0').GetAsciiBytes();
