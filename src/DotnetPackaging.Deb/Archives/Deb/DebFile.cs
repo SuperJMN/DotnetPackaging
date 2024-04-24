@@ -2,33 +2,31 @@
 
 namespace DotnetPackaging.Deb.Archives.Deb;
 
-public class DebFile
+public record DebFile
 {
-    public DebFile()
-    {
-        
-    }
+    public ControlMetadata ControlMetadata { get; }
+    public FileEntry[] Data { get; }
 
-    public DebFile(ControlMetadata controlMetadata)
+    public DebFile(ControlMetadata controlMetadata, params FileEntry[] data)
     {
-        
-    }
-
-    public DebFile(ControlMetadata controlMetadata, params FileEntry[] fileEntry)
-    {
-        throw new NotImplementedException();
+        ControlMetadata = controlMetadata;
+        Data = data;
     }
 }
 
-public class FileEntry
+public record FileEntry
 {
+    public RootedFile File { get; }
+    public UnixFileProperties UnixFileProperties { get; }
+
     public FileEntry(RootedFile file, UnixFileProperties unixFileProperties)
     {
-        throw new NotImplementedException();
+        File = file;
+        UnixFileProperties = unixFileProperties;
     }
 }
 
-public class ControlMetadata
+public record ControlMetadata
 {
     public string Package { get; set; }
     public string Version { get; set; }
@@ -37,5 +35,11 @@ public class ControlMetadata
     public string Architecture { get; set; }
     public string Maintainer { get; set; }
     public string Description { get; set; }
+    public string Homepage { get; set; }
+    public string License { get; set; }
+    public string Recommends { get; set; }
+    public string VcsGit { get; set; }
+    public string VcsBrowser { get; set; }
+    public string InstalledSize { get; set; }
 }
 
