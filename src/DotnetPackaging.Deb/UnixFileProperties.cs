@@ -1,8 +1,8 @@
 ﻿using CSharpFunctionalExtensions;
 
-namespace DotnetPackaging.Deb.Archives.Tar;
+namespace DotnetPackaging.Deb;
 
-public record TarProperties
+public record UnixFileProperties
 {
     public required DateTimeOffset LastModification { get; init; }
     public required UnixFilePermissions FileMode { get; init; }

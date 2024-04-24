@@ -2,7 +2,7 @@
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using static DotnetPackaging.Deb.Tests.Ar.Mixin;
+using static DotnetPackaging.Deb.Tests.Mixin;
 
 namespace DotnetPackaging.Deb.Tests;
 
@@ -13,7 +13,7 @@ public class TarFileTests
     {
         var entries = new List<TarEntry>
         {
-            new(StringFile("My entry", "My content"), new TarProperties()
+            new(StringFile("My entry", "My content"), new UnixFileProperties()
             {
                 FileMode = UnixFilePermissions.AllPermissions,
                 GroupId = 1000,
@@ -23,7 +23,7 @@ public class TarFileTests
                 OwnerId = 1000,
                 LastModification = 1.January(2023),
             }),
-            new(StringFile("Other entry", "Other content"), new TarProperties()
+            new(StringFile("Other entry", "Other content"), new UnixFileProperties()
             {
                 FileMode = (UnixFilePermissions)Convert.ToInt32("755", 8),
                 GroupId = 123,

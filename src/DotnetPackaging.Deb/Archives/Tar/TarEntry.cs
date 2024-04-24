@@ -2,6 +2,6 @@
 
 namespace DotnetPackaging.Deb.Archives.Tar;
 
-public record TarEntry(IFile File, TarProperties Properties)
+public record TarEntry(IFile File, UnixFileProperties Properties)
 {
 }

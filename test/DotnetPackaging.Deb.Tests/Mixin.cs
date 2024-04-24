@@ -4,7 +4,7 @@ using Zafiro.FileSystem.Lightweight;
 using Zafiro.Mixins;
 using File = Zafiro.FileSystem.Lightweight.File;
 
-namespace DotnetPackaging.Deb.Tests.Ar;
+namespace DotnetPackaging.Deb.Tests;
 
 public static class Mixin
 {

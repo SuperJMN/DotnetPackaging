@@ -6,13 +6,13 @@
   </PropertyGroup>
   <Import Project="..\Common.props" />
   <ItemGroup>
-    <Compile Remove="Archives\Deb\**" />
+    <Compile Remove="Archives\DebOld\**" />
     <Compile Remove="Archives\TarOld\**" />
     <Compile Remove="Client\**" />
-    <EmbeddedResource Remove="Archives\Deb\**" />
+    <EmbeddedResource Remove="Archives\DebOld\**" />
     <EmbeddedResource Remove="Archives\TarOld\**" />
     <EmbeddedResource Remove="Client\**" />
-    <None Remove="Archives\Deb\**" />
+    <None Remove="Archives\DebOld\**" />
     <None Remove="Archives\TarOld\**" />
     <None Remove="Client\**" />
   </ItemGroup>
@@ -33,5 +33,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Archives\Deb\" />
   </ItemGroup>
 </Project>
