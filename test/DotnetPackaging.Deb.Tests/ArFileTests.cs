@@ -2,7 +2,7 @@
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using static DotnetPackaging.Deb.Tests.Mixin;
+using static DotnetPackaging.Deb.Tests.TestMixin;
 using File = Zafiro.FileSystem.Lightweight.File;
 
 namespace DotnetPackaging.Deb.Tests;

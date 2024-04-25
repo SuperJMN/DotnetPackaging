@@ -6,7 +6,7 @@ using File = Zafiro.FileSystem.Lightweight.File;
 
 namespace DotnetPackaging.Deb.Tests;
 
-public static class Mixin
+public static class TestMixin
 {
     public static Task<Result<T>> Success<T>(T value)
     {
