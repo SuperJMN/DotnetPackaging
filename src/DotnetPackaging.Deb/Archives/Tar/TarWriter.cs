@@ -76,7 +76,7 @@ public static class TarWriter
     
     private static IEnumerable<byte> GetHeaderDirCore(DirectoryTarEntry entry, Maybe<long> checksum)
     {
-        var filenameBytes = entry.Path.ToString().Truncate(100).PadRight(100, '\0').GetAsciiBytes();
+        var filenameBytes = ("./" + entry.Path).Truncate(100).PadRight(100, '\0').GetAsciiBytes();
         var fileModeBytes = ((int)entry.Properties.FileMode).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes();
         var ownerBytes = entry.Properties.OwnerId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes();
         var groupBytes = entry.Properties.GroupId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes();
@@ -130,7 +130,7 @@ public static class TarWriter
     
     private static IEnumerable<byte> GetHeaderCore(FileTarEntry entry, Maybe<long> checksum, long fileSize)
     {
-        var filenameBytes = entry.File.FullPath().ToString().Truncate(100).PadRight(100, '\0').GetAsciiBytes();
+        var filenameBytes = ("./" + entry.File.FullPath()).Truncate(100).PadRight(100, '\0').GetAsciiBytes();
         var fileModeBytes = ((int)entry.Properties.FileMode).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes();
         var ownerBytes = entry.Properties.OwnerId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes();
         var groupBytes = entry.Properties.GroupId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8).GetAsciiBytes();

@@ -58,8 +58,8 @@ public class DebFileWriter
             new(new RootedFile(ZafiroPath.Empty,new File("control", TestMixin.String(signature))), unixFileProperties)
         };
         
-        var dirPaths = entries.Select(x => x.File.Path);
-        var dirs = dirPaths.DirectoryEntries();
+        var filePaths = entries.Select(x => x.File.FullPath());
+        var dirs = filePaths.DirectoryPaths().OrderBy(x => x.RouteFragments.Count());
         var directoryTarEntries = dirs.Select(path => (TarEntry)new DirectoryTarEntry(path, unixFileProperties));
         var tarEntries = directoryTarEntries.Concat(entries);
         var controlTarFile = new TarFile(tarEntries.ToArray());
@@ -68,7 +68,7 @@ public class DebFileWriter
             new ArFile
             (
                 new Entry(new File("debian-binary", TestMixin.String(signature)), properties),
-                new Entry(new File("control", () => controlTarFile.ToStream()), properties)
+                new Entry(new File("control.tar", () => controlTarFile.ToStream()), properties)
             );
 
         await ArWriter.Write(controlFile, stream);

@@ -14,12 +14,12 @@ public static class DebMixin
             .Tap(() => ms.Position = 0);
     }
 
-    public static IEnumerable<ZafiroPath> DirectoryEntries(this IEnumerable<ZafiroPath> filePaths)
+    public static IEnumerable<ZafiroPath> DirectoryPaths(this IEnumerable<ZafiroPath> filePaths)
     {
         return filePaths
-            .Select(x => x.Parents())
-            .SelectMany(x => x)
+            .Select(x => x.Parent())
             .Distinct()
-            .OrderBy(x => x.RouteFragments);
+            .Select(x => x.Parents().Append(x))
+            .SelectMany(x => x);
     }
 }
