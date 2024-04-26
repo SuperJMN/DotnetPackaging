@@ -28,6 +28,7 @@ public class DebTests
                 Architecture = "All",
                 Maintainer = "Baeldung <test@test.com>",
                 Description = "This is a test application\n for packaging",
+                ModificationTime = 25.April(2024).AddHours(9).AddMinutes(47).AddSeconds(22).ToDateTimeOffset(),
             },
             new FileEntry(
                 new RootedFile("etc", new File("etc", String("NAME=Test"))), new UnixFileProperties()
@@ -36,7 +37,7 @@ public class DebTests
                     GroupId = 0,
                     OwnerUsername = "jmn",
                     GroupName = "jmn",
-                    LinkIndicator = 1,
+                    LinkIndicator = 0,
                     OwnerId = 0,
                     LastModification = dateTimeOffset
                 }));
@@ -51,9 +52,10 @@ public class DebTests
         }
 
         memoryStream.Position = 0;
-        
-        var actual = await memoryStream.ToObservable().Take(20).ToList();
-        var expected = await IoFile.OpenRead("TestFiles/Sample.deb").ToObservable().Take(20).ToList();
+
+        var take = 740;
+        var actual = await memoryStream.ToObservable().Take(take).ToList();
+        var expected = await IoFile.OpenRead("TestFiles/Sample.deb").ToObservable().Take(take).ToList();
         actual.Should().BeEquivalentTo(expected);
     }
 }

@@ -41,5 +41,6 @@ public record ControlMetadata
     public string VcsGit { get; set; }
     public string VcsBrowser { get; set; }
     public string InstalledSize { get; set; }
+    public DateTimeOffset ModificationTime { get; set; }
 }
 

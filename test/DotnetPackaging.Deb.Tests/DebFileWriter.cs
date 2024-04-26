@@ -14,35 +14,47 @@ public class DebFileWriter
 {
     public static async Task<Result> Write(DebFile deb, MemoryStream stream)
     {
-        var data = $"""
-                    Package: {deb.ControlMetadata.Package}
-                    Priority: {deb.ControlMetadata.Priority}
-                    Section: {deb.ControlMetadata.Section}
-                    Maintainer: {deb.ControlMetadata.Maintainer}
-                    Version: {deb.ControlMetadata.Version}
-                    Homepage: {deb.ControlMetadata.Homepage}
-                    Vcs-Git: {deb.ControlMetadata.VcsGit}
-                    Vcs-Browser: {deb.ControlMetadata.VcsBrowser}
-                    Architecture: {deb.ControlMetadata.Architecture}
-                    License: {deb.ControlMetadata.License}
-                    Installed-Size: {deb.ControlMetadata.InstalledSize}
-                    Recommends: {deb.ControlMetadata.Recommends}
-                    Description: {deb.ControlMetadata.Description}
-                    """.FromCrLfToLf();
+        var arFile = new ArFile(Signature(deb), ControlTar(deb));
 
-        var signature = """
-                       2.0
+        await ArWriter.Write(arFile, stream);
 
-                       """.FromCrLfToLf();
+        return Result.Success();
+    }
 
+    private static Entry ControlTar(DebFile debFile)
+    {
         var properties = new Properties()
         {
             FileMode = (UnixFilePermissions) Convert.ToInt32("644", 8),
             GroupId = 0,
-            LastModification = 25.April(2024).AddHours(9).AddMinutes(47).AddSeconds(22).ToDateTimeOffset(),
+            LastModification = debFile.ControlMetadata.ModificationTime,
             OwnerId = 0,
         };
+        
+        var controlTarFile = ControlTarFile(debFile);
+        return new Entry(new File("control.tar", () => controlTarFile.ToStream()), properties);
+    }
 
+    private static Entry Signature(DebFile debFile)
+    {
+        var properties = new Properties()
+        {
+            FileMode = (UnixFilePermissions) Convert.ToInt32("644", 8),
+            GroupId = 0,
+            LastModification = debFile.ControlMetadata.ModificationTime,
+            OwnerId = 0,
+        };
+        
+        var signature = """
+                        2.0
+
+                        """.FromCrLfToLf();
+
+        return new Entry(new File("debian-binary", TestMixin.String(signature)), properties);
+    }
+
+    private static TarFile ControlTarFile(DebFile deb)
+    {
         var dirProperties = new UnixFileProperties()
         {
             FileMode = (UnixFilePermissions) Convert.ToInt32("755", 8),
@@ -53,10 +65,24 @@ public class DebFileWriter
             LastModification = 24.April(2024).AddHours(12).AddMinutes(11).AddSeconds(36).ToDateTimeOffset(),
             LinkIndicator = 5
         };
-
+        
         var entries = new FileTarEntry[]
         {
-            new(new RootedFile(ZafiroPath.Empty,new File("control", TestMixin.String(signature))), dirProperties)
+            new(new RootedFile(ZafiroPath.Empty,new File("control", TestMixin.String($"""
+                                                                                      Package: {deb.ControlMetadata.Package}
+                                                                                      Priority: {deb.ControlMetadata.Priority}
+                                                                                      Section: {deb.ControlMetadata.Section}
+                                                                                      Maintainer: {deb.ControlMetadata.Maintainer}
+                                                                                      Version: {deb.ControlMetadata.Version}
+                                                                                      Homepage: {deb.ControlMetadata.Homepage}
+                                                                                      Vcs-Git: {deb.ControlMetadata.VcsGit}
+                                                                                      Vcs-Browser: {deb.ControlMetadata.VcsBrowser}
+                                                                                      Architecture: {deb.ControlMetadata.Architecture}
+                                                                                      License: {deb.ControlMetadata.License}
+                                                                                      Installed-Size: {deb.ControlMetadata.InstalledSize}
+                                                                                      Recommends: {deb.ControlMetadata.Recommends}
+                                                                                      Description: {deb.ControlMetadata.Description}
+                                                                                      """.FromCrLfToLf()))), dirProperties)
         };
         
         var filePaths = entries.Select(x => x.File.FullPath());
@@ -64,16 +90,6 @@ public class DebFileWriter
         var directoryTarEntries = dirs.Select(path => (TarEntry)new DirectoryTarEntry(path, dirProperties));
         var tarEntries = directoryTarEntries.Concat(entries);
         var controlTarFile = new TarFile(tarEntries.ToArray());
-
-        var controlFile =
-            new ArFile
-            (
-                new Entry(new File("debian-binary", TestMixin.String(signature)), properties),
-                new Entry(new File("control.tar", () => controlTarFile.ToStream()), properties)
-            );
-
-        await ArWriter.Write(controlFile, stream);
-
-        return Result.Success();
+        return controlTarFile;
     }
 }
