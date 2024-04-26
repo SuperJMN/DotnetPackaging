@@ -86,7 +86,7 @@ public static class TarWriter
             l => (l.ToOctal().PadLeft(6, '0').NullTerminated() + " ").GetAsciiBytes(),
             () => Enumerable.Repeat<byte>(0x20, 8).ToArray()
         );
-        var linkIndicatorBytes = entry.Properties.LinkIndicator.ToString().GetAsciiBytes();
+        var linkIndicatorBytes = 5.ToString().GetAsciiBytes();
         var nameOfLinkedFileBytes = new byte[100];
         var ustarBytes = "ustar".PadRight(6, ' ').GetAsciiBytes();
         var ustarVersionBytes = new byte[] { 0x20, 0x00 };
@@ -140,7 +140,7 @@ public static class TarWriter
             l => (l.ToOctal().PadLeft(6, '0').NullTerminated() + " ").GetAsciiBytes(),
             () => Enumerable.Repeat<byte>(0x20, 8).ToArray()
         );
-        var linkIndicatorBytes = entry.Properties.LinkIndicator.ToString().GetAsciiBytes();
+        var linkIndicatorBytes = 0.ToString().GetAsciiBytes();
         var nameOfLinkedFileBytes = new byte[100];
         var ustarBytes = "ustar".PadRight(6, ' ').GetAsciiBytes();
         var ustarVersionBytes = new byte[] { 0x20, 0x00 };

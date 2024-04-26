@@ -55,7 +55,7 @@ public class DebFileWriter
 
     private static TarFile ControlTarFile(DebFile deb)
     {
-        var dirProperties = new UnixFileProperties()
+        var fileProperties = new TarFileProperties()
         {
             FileMode = (UnixFilePermissions) Convert.ToInt32("755", 8),
             GroupId = 0,
@@ -63,8 +63,18 @@ public class DebFileWriter
             OwnerId = 0,
             OwnerUsername = "root",
             LastModification = 24.April(2024).AddHours(12).AddMinutes(11).AddSeconds(36).ToDateTimeOffset(),
-            LinkIndicator = 5
         };
+        
+        var dirProperties = new TarDirectoryProperties()
+        {
+            FileMode = (UnixFilePermissions) Convert.ToInt32("755", 8),
+            GroupId = 0,
+            GroupName = "root",
+            OwnerId = 0,
+            OwnerUsername = "root",
+            LastModification = 24.April(2024).AddHours(12).AddMinutes(11).AddSeconds(36).ToDateTimeOffset(),
+        };
+
         
         var entries = new FileTarEntry[]
         {
@@ -82,7 +92,7 @@ public class DebFileWriter
                                                                                       Installed-Size: {deb.ControlMetadata.InstalledSize}
                                                                                       Recommends: {deb.ControlMetadata.Recommends}
                                                                                       Description: {deb.ControlMetadata.Description}
-                                                                                      """.FromCrLfToLf()))), dirProperties)
+                                                                                      """.FromCrLfToLf()))), fileProperties)
         };
         
         var filePaths = entries.Select(x => x.File.FullPath());

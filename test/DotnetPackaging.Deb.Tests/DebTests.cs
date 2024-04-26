@@ -37,7 +37,6 @@ public class DebTests
                     GroupId = 0,
                     OwnerUsername = "jmn",
                     GroupName = "jmn",
-                    LinkIndicator = 0,
                     OwnerId = 0,
                     LastModification = dateTimeOffset
                 }));

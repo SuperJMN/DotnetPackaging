@@ -17,26 +17,24 @@ public class TarFileTests
         var entries = new List<FileTarEntry>
         {
             new(new RootedFile(ZafiroPath.Empty, 
-                StringFile("My entry", "My content")), new UnixFileProperties()
+                StringFile("My entry", "My content")), new TarFileProperties()
             {
                 FileMode = UnixFilePermissions.AllPermissions,
                 GroupId = 1000,
                 GroupName = "group1",
                 OwnerUsername = "owner1",
-                LinkIndicator = 0,
                 OwnerId = 1000,
                 LastModification = 1.January(2023),
             }),
             new FileTarEntry(new RootedFile(
                 ZafiroPath.Empty,
-                StringFile("Other entry", "Other content")),  new UnixFileProperties()
+                StringFile("Other entry", "Other content")),  new TarFileProperties()
             {
                 FileMode = (UnixFilePermissions)Convert.ToInt32("755", 8),
                 GroupId = 123,
                 OwnerId = 567,
                 GroupName = "group2",
                 OwnerUsername = "owner2",
-                LinkIndicator = 0,
                 LastModification = 1.January(2023),
             })
         };

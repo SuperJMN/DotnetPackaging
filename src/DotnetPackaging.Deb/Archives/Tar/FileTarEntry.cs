@@ -15,7 +15,7 @@ public abstract record TarEntry
 
 public record DirectoryTarEntry : TarEntry
 {
-    public DirectoryTarEntry(ZafiroPath path, UnixFileProperties properties) :base(properties)
+    public DirectoryTarEntry(ZafiroPath path, TarDirectoryProperties properties) :base(properties)
     {
         Path = path;
     }
@@ -23,12 +23,20 @@ public record DirectoryTarEntry : TarEntry
     public ZafiroPath Path { get; }
 }
 
+public record TarDirectoryProperties : UnixFileProperties
+{
+}
+
 public record FileTarEntry : TarEntry
 {
     public RootedFile File { get; }
 
-    public FileTarEntry(RootedFile file, UnixFileProperties properties) : base(properties)
+    public FileTarEntry(RootedFile file, TarFileProperties properties) : base(properties)
     {
         File = file;
     }
+}
+
+public record TarFileProperties : UnixFileProperties
+{
 }
