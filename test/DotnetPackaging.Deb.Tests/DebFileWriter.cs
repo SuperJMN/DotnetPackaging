@@ -2,6 +2,7 @@
 using DotnetPackaging.Deb.Archives.Ar;
 using DotnetPackaging.Deb.Archives.Deb;
 using DotnetPackaging.Deb.Archives.Tar;
+using FluentAssertions.Common;
 using FluentAssertions.Extensions;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
@@ -38,29 +39,29 @@ public class DebFileWriter
         {
             FileMode = (UnixFilePermissions) Convert.ToInt32("644", 8),
             GroupId = 0,
-            LastModification = 25.April(2024).AddHours(9).AddMinutes(47).AddSeconds(22),
+            LastModification = 25.April(2024).AddHours(9).AddMinutes(47).AddSeconds(22).ToDateTimeOffset(),
             OwnerId = 0,
         };
 
-        var unixFileProperties = new UnixFileProperties()
+        var dirProperties = new UnixFileProperties()
         {
-            FileMode = (UnixFilePermissions) Convert.ToInt32("322", 8),
+            FileMode = (UnixFilePermissions) Convert.ToInt32("755", 8),
             GroupId = 0,
             GroupName = "root",
             OwnerId = 0,
             OwnerUsername = "root",
-            LastModification = DateTimeOffset.Now,
-            LinkIndicator = 1
+            LastModification = 24.April(2024).AddHours(12).AddMinutes(11).AddSeconds(36).ToDateTimeOffset(),
+            LinkIndicator = 5
         };
 
         var entries = new FileTarEntry[]
         {
-            new(new RootedFile(ZafiroPath.Empty,new File("control", TestMixin.String(signature))), unixFileProperties)
+            new(new RootedFile(ZafiroPath.Empty,new File("control", TestMixin.String(signature))), dirProperties)
         };
         
         var filePaths = entries.Select(x => x.File.FullPath());
         var dirs = filePaths.DirectoryPaths().OrderBy(x => x.RouteFragments.Count());
-        var directoryTarEntries = dirs.Select(path => (TarEntry)new DirectoryTarEntry(path, unixFileProperties));
+        var directoryTarEntries = dirs.Select(path => (TarEntry)new DirectoryTarEntry(path, dirProperties));
         var tarEntries = directoryTarEntries.Concat(entries);
         var controlTarFile = new TarFile(tarEntries.ToArray());
 
