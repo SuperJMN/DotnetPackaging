@@ -57,7 +57,7 @@ public class DebFileWriter
     {
         var fileProperties = new TarFileProperties()
         {
-            FileMode = (UnixFilePermissions) Convert.ToInt32("755", 8),
+            FileMode = (UnixFilePermissions) Convert.ToInt32("644", 8),
             GroupId = 0,
             GroupName = "root",
             OwnerId = 0,
@@ -75,25 +75,27 @@ public class DebFileWriter
             LastModification = 24.April(2024).AddHours(12).AddMinutes(11).AddSeconds(36).ToDateTimeOffset(),
         };
 
-        
+
         var entries = new FileTarEntry[]
         {
             new(new RootedFile(ZafiroPath.Empty,new File("control", TestMixin.String($"""
                                                                                       Package: {deb.ControlMetadata.Package}
-                                                                                      Priority: {deb.ControlMetadata.Priority}
-                                                                                      Section: {deb.ControlMetadata.Section}
-                                                                                      Maintainer: {deb.ControlMetadata.Maintainer}
                                                                                       Version: {deb.ControlMetadata.Version}
-                                                                                      Homepage: {deb.ControlMetadata.Homepage}
-                                                                                      Vcs-Git: {deb.ControlMetadata.VcsGit}
-                                                                                      Vcs-Browser: {deb.ControlMetadata.VcsBrowser}
+                                                                                      Section: {deb.ControlMetadata.Section}
+                                                                                      Priority: {deb.ControlMetadata.Priority}
                                                                                       Architecture: {deb.ControlMetadata.Architecture}
-                                                                                      License: {deb.ControlMetadata.License}
-                                                                                      Installed-Size: {deb.ControlMetadata.InstalledSize}
-                                                                                      Recommends: {deb.ControlMetadata.Recommends}
+                                                                                      Maintainer: {deb.ControlMetadata.Maintainer}
                                                                                       Description: {deb.ControlMetadata.Description}
+
                                                                                       """.FromCrLfToLf()))), fileProperties)
         };
+        
+        //Homepage: {deb.ControlMetadata.Homepage}
+        //Vcs-Git: {deb.ControlMetadata.VcsGit}
+        //Vcs-Browser: {deb.ControlMetadata.VcsBrowser}
+        //License: {deb.ControlMetadata.License}
+        //Installed-Size: {deb.ControlMetadata.InstalledSize}
+        //Recommends: {deb.ControlMetadata.Recommends}
         
         var filePaths = entries.Select(x => x.File.FullPath());
         var dirs = filePaths.DirectoryPaths().OrderBy(x => x.RouteFragments.Count());

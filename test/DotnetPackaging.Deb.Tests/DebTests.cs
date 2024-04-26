@@ -21,11 +21,11 @@ public class DebTests
         
         var deb = new DebFile(new ControlMetadata
             {
-                Package = "Test",
+                Package = "test",
                 Version = "1.0-1",
-                Section = "Utils",
+                Section = "utils",
                 Priority = "optional",
-                Architecture = "All",
+                Architecture = "all",
                 Maintainer = "Baeldung <test@test.com>",
                 Description = "This is a test application\n for packaging",
                 ModificationTime = 25.April(2024).AddHours(9).AddMinutes(47).AddSeconds(22).ToDateTimeOffset(),
@@ -52,7 +52,7 @@ public class DebTests
 
         memoryStream.Position = 0;
 
-        var take = 740;
+        var take = 10368;
         var actual = await memoryStream.ToObservable().Take(take).ToList();
         var expected = await IoFile.OpenRead("TestFiles/Sample.deb").ToObservable().Take(take).ToList();
         actual.Should().BeEquivalentTo(expected);
