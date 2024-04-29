@@ -21,7 +21,6 @@
     <None Remove="Tar\**" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="DebFileWriter.cs" />
     <Compile Remove="DebTests.cs" />
     <Compile Remove="GlobalUsings.cs" />
     <Compile Remove="HelperTests.cs" />
