@@ -1,5 +1,4 @@
-﻿using CSharpFunctionalExtensions;
-using DotnetPackaging.Deb.Archives.Ar;
+﻿using DotnetPackaging.Deb.Archives.Ar;
 using DotnetPackaging.Deb.Archives.Deb;
 using DotnetPackaging.Deb.Archives.Tar;
 using FluentAssertions.Common;
@@ -14,8 +13,23 @@ public static class DebMixin
 {
     public static IByteProvider ToByteProvider(this DebFile debFile)
     {
-        ArFile arFile = new ArFile(Signature(debFile), ControlTar(debFile));
+        ArFile arFile = new ArFile(Signature(debFile), ControlTar(debFile), DataTar(debFile));
         return arFile.ToByteProvider();
+    }
+
+    private static Entry DataTar(DebFile debFile)
+    {
+        TarFile dataTarFile = new TarFile(debFile.Entries);
+        
+        var properties = new Properties()
+        {
+            FileMode = (UnixFilePermissions)Convert.ToInt32("644", 8),
+            GroupId = 0,
+            LastModification = debFile.Metadata.ModificationTime,
+            OwnerId = 0,
+        };
+        
+        return new Entry(new ByteProviderFile("data.tar", dataTarFile.ToByteProvider()), properties);
     }
 
     private static Entry Signature(DebFile debFile)
@@ -71,7 +85,6 @@ public static class DebMixin
             OwnerUsername = "root",
             LastModification = 24.April(2024).AddHours(12).AddMinutes(11).AddSeconds(36).ToDateTimeOffset(),
         };
-
 
         var content = $"""
                  Package: {deb.Metadata.Package}
