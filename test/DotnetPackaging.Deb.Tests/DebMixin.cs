@@ -14,10 +14,28 @@ public static class DebMixin
 {
     public static IByteProvider ToByteProvider(this DebFile debFile)
     {
-        var arFile = new ArFile(ControlTar(debFile)).ToByteProvider();
-        return arFile;
+        ArFile arFile = new ArFile(Signature(debFile), ControlTar(debFile));
+        return arFile.ToByteProvider();
     }
-    
+
+    private static Entry Signature(DebFile debFile)
+    {
+        var properties = new Properties()
+        {
+            FileMode = (UnixFilePermissions)Convert.ToInt32("644", 8),
+            GroupId = 0,
+            LastModification = debFile.Metadata.ModificationTime,
+            OwnerId = 0,
+        };
+
+        var signature = """
+                        2.0
+
+                        """.FromCrLfToLf();
+
+        return new Entry(new File("debian-binary", signature), properties);
+    }
+
     private static Entry ControlTar(DebFile debFile)
     {
         var properties = new Properties()
