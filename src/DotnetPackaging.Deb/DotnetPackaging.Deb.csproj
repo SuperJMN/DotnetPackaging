@@ -9,17 +9,14 @@
     <Compile Remove="Archives\DebOld\**" />
     <Compile Remove="Archives\Deb\**" />
     <Compile Remove="Archives\TarOld\**" />
-    <Compile Remove="Archives\Tar\**" />
     <Compile Remove="Client\**" />
     <EmbeddedResource Remove="Archives\DebOld\**" />
     <EmbeddedResource Remove="Archives\Deb\**" />
     <EmbeddedResource Remove="Archives\TarOld\**" />
-    <EmbeddedResource Remove="Archives\Tar\**" />
     <EmbeddedResource Remove="Client\**" />
     <None Remove="Archives\DebOld\**" />
     <None Remove="Archives\Deb\**" />
     <None Remove="Archives\TarOld\**" />
-    <None Remove="Archives\Tar\**" />
     <None Remove="Client\**" />
   </ItemGroup>
   <ItemGroup>
