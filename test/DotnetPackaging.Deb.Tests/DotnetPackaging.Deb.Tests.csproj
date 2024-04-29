@@ -28,7 +28,6 @@
     <Compile Remove="LinuxFileModeTests.cs" />
     <Compile Remove="StreamAssertionExtensions.cs" />
     <Compile Remove="StringManipulationTests.cs" />
-    <Compile Remove="TarFileTests.cs" />
     <Compile Remove="TestMixin.cs" />
   </ItemGroup>
   <ItemGroup>

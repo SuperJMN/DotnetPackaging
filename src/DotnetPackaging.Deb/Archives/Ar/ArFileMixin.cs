@@ -7,7 +7,7 @@ public static class ArFileMixin
 {
     public static IByteProvider ToByteProvider(this ArFile arFile)
     {
-        return new ComposedByteProvider(Signature(), new ComposedByteProvider(arFile.Entries.Select(x => x.ToByteProvider()).ToArray()));
+        return new CompositeByteProvider(Signature(), new CompositeByteProvider(arFile.Entries.Select(x => x.ToByteProvider()).ToArray()));
     }
 
     private static IByteProvider Signature()

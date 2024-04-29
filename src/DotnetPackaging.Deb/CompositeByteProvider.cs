@@ -3,9 +3,9 @@ using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.Deb;
 
-public class ComposedByteProvider : IByteProvider
+public class CompositeByteProvider : IByteProvider
 {
-    public ComposedByteProvider(params IByteProvider[] byteProviders)
+    public CompositeByteProvider(params IByteProvider[] byteProviders)
     {
         Bytes = byteProviders.Select(x => x.Bytes).Concat();
         Length = byteProviders.Sum(x => x.Length);

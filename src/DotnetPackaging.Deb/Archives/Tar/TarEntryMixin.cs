@@ -3,20 +3,20 @@ using System.Text;
 using CSharpFunctionalExtensions;
 using Zafiro.FileSystem.Lightweight;
 
-namespace DotnetPackaging.Deb.Archives.Tar.Mixins;
+namespace DotnetPackaging.Deb.Archives.Tar;
 
 public static class TarEntryMixin
 {
     public static IByteProvider ToByteProvider(this FileTarEntry entry)
     {
-        return new ComposedByteProvider(entry.Header(entry.File.Length, 0), entry.File);
+        return new CompositeByteProvider(entry.Header(entry.File.Length, 0).PadToNearestMultiple(512), entry.File.PadToNearestMultiple(512));
     }
-    
+
     public static IByteProvider ToByteProvider(this DirectoryTarEntry entry)
     {
-        return new ComposedByteProvider(entry.Header(0, 5));
+        return new CompositeByteProvider(entry.Header(0, 5).PadToNearestMultiple(512));
     }
-    
+
     /// <summary>
     ///     From 0 to 100
     /// </summary>
@@ -27,7 +27,7 @@ public static class TarEntryMixin
     ///     From 100 to 108
     /// </summary>
     /// <returns></returns>
-    public static IByteProvider FileMode(this TarEntry entry) => new StringByteProvider(entry.Properties.FileMode.ToString().NullTerminatedPaddedField(8), Encoding.ASCII);
+    public static IByteProvider FileMode(this TarEntry entry) => new StringByteProvider(entry.Properties.FileMode.ToFileModeString().NullTerminatedPaddedField(8), Encoding.ASCII);
 
     /// <summary>
     ///     From 108 to 116
@@ -43,23 +43,23 @@ public static class TarEntryMixin
     public static IByteProvider Header(this TarEntry entry, long fileLength, int linkIndicator)
     {
         var header = entry.HeaderCore(Maybe<long>.None, fileLength, linkIndicator);
-        var checkSum = header.Bytes.Flatten().ToEnumerable().Sum(b => (long) b);
+        var checkSum = header.Bytes.Flatten().ToEnumerable().Sum(b => (long)b);
         return entry.HeaderCore(checkSum, fileLength, linkIndicator);
     }
 
-    private static IByteProvider HeaderCore(this TarEntry entry, Maybe<long> checkSum, long fileLength, int linkIndicator) => new ComposedByteProvider
+    private static IByteProvider HeaderCore(this TarEntry entry, Maybe<long> checkSum, long fileLength, int linkIndicator) => new CompositeByteProvider
     (
         entry.Filename(),
         entry.FileMode(),
         entry.Owner(),
         entry.Group(),
         FileSize(fileLength),
-        Checksum(checkSum),
         entry.LastModification(),
+        Checksum(checkSum),
         LinkIndicator(linkIndicator),
         entry.NameOfLinkedFile(),
-        entry.Ustar(),
-        entry.UstarVersion(),
+        Ustar(),
+        UstarVersion(),
         entry.OwnerUsername(),
         entry.GroupUsername()
     );
@@ -90,9 +90,9 @@ public static class TarEntryMixin
     /// </summary>
     private static IByteProvider LinkIndicator(int linkIndicator) => new StringByteProvider(linkIndicator.ToString(), Encoding.ASCII);
 
-    private static IByteProvider Ustar(this TarEntry entry) => new StringByteProvider("ustar".PadRight(6, ' '), Encoding.ASCII);
+    private static IByteProvider Ustar() => new StringByteProvider("ustar".PadRight(6, ' '), Encoding.ASCII);
 
-    private static IByteProvider UstarVersion(this TarEntry entry) => new StringByteProvider("00", Encoding.ASCII);
+    private static IByteProvider UstarVersion() => new ByteArrayByteProvider([0x20, 0x0]);
 
     private static IByteProvider OwnerUsername(this TarEntry entry)
     {

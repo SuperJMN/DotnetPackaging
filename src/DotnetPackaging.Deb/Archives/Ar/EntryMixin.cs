@@ -7,7 +7,7 @@ public static class EntryMixin
 {
     public static IByteProvider ToByteProvider(this Entry entry)
     {
-        return new ComposedByteProvider
+        return new CompositeByteProvider
         (
             entry.FileIdentifier(), 
             entry.FileModificationTimestamp(),
@@ -28,7 +28,7 @@ public static class EntryMixin
     // 34  6   Group ID Decimal
     private static IByteProvider GroupId(this Entry entry) => new StringByteProvider(entry.Properties.GroupId.GetValueOrDefault().ToString().PadRight(6), Encoding.ASCII);
     // 40  8   File mode (type and permission) Octal
-    private static IByteProvider FileMode(this Entry entry) => new StringByteProvider(("100" + entry.Properties.FileMode.ToFileMode()).PadRight(8), Encoding.ASCII);
+    private static IByteProvider FileMode(this Entry entry) => new StringByteProvider(("100" + entry.Properties.FileMode.ToFileModeString()).PadRight(8), Encoding.ASCII);
     // 48  10  File size in bytes Decimal
     private static IByteProvider FileSize(this Entry entry) => new StringByteProvider(entry.File.Length.ToString().PadRight(10), Encoding.ASCII);
     // 58  2   Ending characters 0x60 0x0A
