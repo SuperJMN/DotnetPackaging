@@ -15,7 +15,7 @@ public class AppImageModel : AppImageBase
 
     public Application Application { get; }
 
-    public override Task<Result<IEnumerable<RootedFile>>> PayloadEntries() => GetPayload(Application);
+    public override Task<Result<IEnumerable<IRootedFile>>> PayloadEntries() => GetPayload(Application);
 
     private async Task<Result<IEnumerable<RootedFile>>> GetPayload(Application application)
     {

@@ -6,7 +6,7 @@ using FluentAssertions.Extensions;
 using Xunit;
 using Zafiro.FileSystem.Lightweight;
 using Zafiro.Reactive;
-using static DotnetPackaging.Deb.Tests.TestMixin;
+using static DotnetPackaging.Deb.Tests.TestEntryMixin;
 using File = Zafiro.FileSystem.Lightweight.File;
 using IoFile = System.IO.File;
 

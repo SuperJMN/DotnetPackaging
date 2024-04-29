@@ -4,7 +4,7 @@ using FluentAssertions.Extensions;
 using Xunit;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
-using static DotnetPackaging.Deb.Tests.TestMixin;
+using static DotnetPackaging.Deb.Tests.TestEntryMixin;
 using File = System.IO.File;
 
 namespace DotnetPackaging.Deb.Tests;

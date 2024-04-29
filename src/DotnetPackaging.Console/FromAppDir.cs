@@ -20,7 +20,7 @@ public class FromAppDir
     {
         Log.Information("Creating AppImage from AppDir {AppDirPath} and writing to {OutputPath}...", appDirPath, outputFilePath);
         var directoryInfo = fileSystem.DirectoryInfo.New(appDirPath);
-        var buildDir = new DirectorioIODirectory("", directoryInfo);
+        var buildDir = new SystemIODirectory(directoryInfo);
         var outputStreamResult = Result.Try(() => fileSystem.File.Open(outputFilePath, FileMode.Create));
         var result = await outputStreamResult.Bind(stream => Build(stream, buildDir, architecture));
 
@@ -31,7 +31,8 @@ public class FromAppDir
     {
         using (stream)
         {
-            return await AppImage.AppImage.WriteFromAppDir(stream, inputDir, architecture);
+            throw new NotImplementedException();
+            //return await AppImage.AppImage.WriteFromAppDir(stream, inputDir, architecture);
         }
     }
 }

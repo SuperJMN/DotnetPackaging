@@ -18,3 +18,14 @@ public enum UnixFilePermissions
     OtherPermissions = OtherRead | OtherWrite | OtherExecute,
     AllPermissions = UserPermissions | GroupPermissions | OtherPermissions
 }
+
+public static class UnixFilePermissionsMixin
+{
+    public static string ToFileMode(this UnixFilePermissions permissions)
+    {
+        int userPermissions = ((int)permissions & (int)UnixFilePermissions.UserPermissions) >> 0;
+        int groupPermissions = ((int)permissions & (int)UnixFilePermissions.GroupPermissions) >> 3;
+        int otherPermissions = ((int)permissions & (int)UnixFilePermissions.OtherPermissions) >> 6;
+        return $"{userPermissions}{groupPermissions}{otherPermissions}";
+    }    
+}

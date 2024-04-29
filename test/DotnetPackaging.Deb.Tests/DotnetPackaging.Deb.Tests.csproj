@@ -21,9 +21,18 @@
     <None Remove="Tar\**" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="DebFileWriter.cs" />
+    <Compile Remove="DebTests.cs" />
     <Compile Remove="GlobalUsings.cs" />
+    <Compile Remove="HelperTests.cs" />
     <Compile Remove="LinuxFileModeTests.cs" />
+    <Compile Remove="StreamAssertionExtensions.cs" />
     <Compile Remove="StringManipulationTests.cs" />
+    <Compile Remove="TarFileTests.cs" />
+    <Compile Remove="TestMixin.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="TextFile1.txt" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="2.41.0" />

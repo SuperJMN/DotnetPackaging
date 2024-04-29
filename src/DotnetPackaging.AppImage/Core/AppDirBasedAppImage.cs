@@ -13,7 +13,7 @@ public class AppDirBasedAppImage : AppImageBase
         this.container = container;
     }
 
-    public override Task<Result<IEnumerable<RootedFile>>> PayloadEntries()
+    public override Task<Result<IEnumerable<IRootedFile>>> PayloadEntries()
     {
         return container.GetFilesInTree(ZafiroPath.Empty);
     }

@@ -71,7 +71,7 @@ public class DebFileWriter
 
                         """.FromCrLfToLf();
 
-        return new Entry(new File("debian-binary", TestMixin.String(signature)), properties);
+        return new Entry(new File("debian-binary", TestEntryMixin.String(signature)), properties);
     }
 
     private static TarFile ControlTarFile(DebFile deb)
@@ -99,7 +99,7 @@ public class DebFileWriter
 
         var entries = new FileTarEntry[]
         {
-            new(new RootedFile(ZafiroPath.Empty,new File("control", TestMixin.String($"""
+            new(new RootedFile(ZafiroPath.Empty,new File("control", TestEntryMixin.String($"""
                                                                                       Package: {deb.ControlMetadata.Package}
                                                                                       Version: {deb.ControlMetadata.Version}
                                                                                       Section: {deb.ControlMetadata.Section}

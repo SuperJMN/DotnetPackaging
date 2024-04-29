@@ -1,8 +1,9 @@
-﻿using DotnetPackaging.Deb.Archives.Ar;
+﻿using System.Reactive.Linq;
+using System.Text;
+using DotnetPackaging.Deb.Archives.Ar;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using static DotnetPackaging.Deb.Tests.TestMixin;
 using File = Zafiro.FileSystem.Lightweight.File;
 
 namespace DotnetPackaging.Deb.Tests;
@@ -14,23 +15,23 @@ public class ArFileTests
     {
         var entries = new List<Entry>
         {
-            new(StringFile("My entry", "Some content"), DefaultProperties()),
-            new(StringFile("Some other entry", "Other content"), DefaultProperties())
+            new(new File("My entry", "Some content"), DefaultProperties()),
+            new(new File("Some other entry", "Other content"), DefaultProperties())
         };
 
         var arFile = new ArFile(entries.ToArray());
-        var outputStream = new MemoryStream();
-        var result = await ArWriter.Write(arFile, outputStream);
-        result.Should().Succeed();
-        var content = """
-                      NOT SURE IF THIS IS OK
+        var byteProvider = arFile.ToByteProvider();
+        
+        var expected = """
                       !<arch>
                       My entry        1579474800  0     0     100777  12        `
                       Some contentSome other entry1579474800  0     0     100777  13        `
                       Other content
                       """.FromCrLfToLf();
 
-        outputStream.ToAscii().Should().Be(content);
+        var bytes = (await byteProvider.Bytes.ToList()).SelectMany(x => x);
+        var s = Encoding.ASCII.GetString(bytes.ToArray());
+        s.Should().BeEquivalentTo(expected);
     }
 
     private static Properties DefaultProperties() => new()
