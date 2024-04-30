@@ -128,8 +128,8 @@ public class DebTests
             var tarFileProperties = new TarFileProperties()
             {
                 FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("644"),
-                GroupId = 0,
-                OwnerId = 0,
+                GroupId = 1000,
+                OwnerId = 1000,
                 GroupName = "root",
                 OwnerUsername = "root",
                 LastModification = DateTimeOffset.Now,
@@ -148,8 +148,8 @@ public class DebTests
             TarDirectoryProperties directoryProperties = new TarDirectoryProperties()
             {
                 FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("644"),
-                GroupId = 0,
-                OwnerId = 0,
+                GroupId = 1000,
+                OwnerId = 1000,
                 GroupName = "root",
                 OwnerUsername = "root",
                 LastModification = DateTimeOffset.Now,
