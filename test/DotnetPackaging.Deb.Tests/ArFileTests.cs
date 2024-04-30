@@ -1,6 +1,7 @@
 ﻿using System.Reactive.Linq;
 using System.Text;
 using DotnetPackaging.Deb.Archives.Ar;
+using DotnetPackaging.Deb.Archives.Deb;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;

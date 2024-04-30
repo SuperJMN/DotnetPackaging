@@ -1,12 +1,16 @@
 ﻿using System.Reactive.Linq;
 using System.Text;
+using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb.Archives.Deb;
 using DotnetPackaging.Deb.Archives.Tar;
 using FluentAssertions;
 using FluentAssertions.Common;
 using FluentAssertions.Extensions;
 using Xunit;
+using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
+using Directory = Zafiro.FileSystem.Lightweight.Directory;
+using File = Zafiro.FileSystem.Lightweight.File;
 using IoFile = System.IO.File;
 
 namespace DotnetPackaging.Deb.Tests;
@@ -16,7 +20,7 @@ public class DebTests
     [Fact]
     public async Task Deb_test()
     {
-        var metadata = new Metadata
+        var metadata = new PackageMetadata
         {
             Package = "test",
             Version = "1.0-1",
@@ -34,7 +38,7 @@ public class DebTests
                          echo "Hi $NAME"
                          
                          """.FromCrLfToLf();
-        
+
         var confContents = "NAME=Test\n".FromCrLfToLf();
 
         var defaultFileProperties = new TarFileProperties()
@@ -56,7 +60,7 @@ public class DebTests
             OwnerId = 0,
             OwnerUsername = "root",
         };
-        
+
         var tarEntries = new TarEntry[]
         {
             new DirectoryTarEntry("./", defaultDirProperties with { LastModification = DateTimeOffset.Parse("24/04/2024 12:11:05 +00:00") }),
@@ -76,5 +80,68 @@ public class DebTests
         var expected = await IoFile.ReadAllBytesAsync("TestFiles/Sample.deb");
 
         actual.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public async Task Create_deb_from_directory()
+    {
+        var directory = new Directory(
+            "Somedirectory",
+            new List<IFile>()
+            {
+                new File("MyApp", "Fake exe"),
+                new File("MyApp.dll", "Fake dll"),
+                new File("Some content.txt", "Hi"),
+            }, new List<IDirectory>());
+
+        var metadata = new PackageMetadata
+        {
+            AppName = "Test Application",
+            AppId = "com.Company.TestApplication",
+            Package = "test-application",
+            Version = "1.0-1",
+            Section = "utils",
+            Priority = "optional",
+            Architecture = "all",
+            Maintainer = "Baeldung <test@test.com>",
+            Description = "This is a test application\n for packaging",
+            ModificationTime = 25.April(2024).AddHours(9).AddMinutes(47).AddSeconds(22).ToDateTimeOffset(),
+            ExecutableName = "MyApp",
+        };
+
+        var appDir = $"/opt/{metadata.Package}";
+
+        var filesInDirectory = await directory.GetFilesInTree(ZafiroPath.Empty);
+
+        var result = await filesInDirectory.Bind(async files =>
+        {
+            var tarFileProperties = new TarFileProperties()
+            {
+                FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("644"),
+                GroupId = 0,
+                OwnerId = 0,
+                GroupName = "root",
+                OwnerUsername = "root",
+                LastModification = DateTimeOffset.Now,
+            };
+
+            var executablePath = appDir + "/" + metadata.ExecutableName;
+
+            var additionalFileEntries = new FileTarEntry[]
+            {
+                new($"./usr/share/{metadata.Package.ToLower()}.desktop", new StringByteProvider(MiscMixin.DesktopFileContents(executablePath, metadata), Encoding.ASCII), tarFileProperties),
+                new($"./usr/bin/{metadata.Package.ToLower()}", new StringByteProvider(MiscMixin.RunScript(executablePath), Encoding.ASCII), tarFileProperties)
+            };
+
+            var directoryFileEntries = filesInDirectory.Value.Select(x => new FileTarEntry($"./opt/{metadata.Package}/" + x.FullPath(), x.Rooted, tarFileProperties));
+
+            var fileEntries = directoryFileEntries.Concat(additionalFileEntries);
+
+            var debFile = new DebFile(metadata, fileEntries.ToArray());
+            await using var fileStream = IoFile.Open("C:\\Users\\JMN\\Desktop\\testing.deb", FileMode.Create);
+            return (await debFile.ToByteProvider().DumpTo(fileStream).ToList()).Combine();
+        });
+
+        result.Should().Succeed();
     }
 }
