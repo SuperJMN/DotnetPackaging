@@ -20,7 +20,6 @@ public static class DebMixin
     private static Entry DataTar(DebFile debFile)
     {
         TarFile dataTarFile = new TarFile(debFile.Entries);
-        
         var properties = new Properties()
         {
             FileMode = (UnixFilePermissions)Convert.ToInt32("644", 8),
@@ -28,7 +27,6 @@ public static class DebMixin
             LastModification = debFile.Metadata.ModificationTime,
             OwnerId = 0,
         };
-        
         return new Entry(new ByteProviderFile("data.tar", dataTarFile.ToByteProvider()), properties);
     }
 
@@ -99,9 +97,10 @@ public static class DebMixin
 
         var file = new File("control", content.FromCrLfToLf());
         
-        var entries = new FileTarEntry[]
+        var entries = new TarEntry[]
         {
-            new(new RootedFile(ZafiroPath.Empty, file), fileProperties)
+            new DirectoryTarEntry("./", dirProperties),
+            new FileTarEntry("./control", file, fileProperties)
         };
         
         //Homepage: {deb.ControlMetadata.Homepage}
@@ -111,11 +110,7 @@ public static class DebMixin
         //Installed-Size: {deb.ControlMetadata.InstalledSize}
         //Recommends: {deb.ControlMetadata.Recommends}
         
-        var filePaths = entries.Select(x => x.File.FullPath());
-        var dirs = filePaths.DirectoryPaths().OrderBy(x => x.RouteFragments.Count());
-        var directoryTarEntries = dirs.Select(path => (TarEntry)new DirectoryTarEntry(path, dirProperties));
-        var tarEntries = directoryTarEntries.Concat(entries);
-        var controlTarFile = new TarFile(tarEntries.ToArray());
+        var controlTarFile = new TarFile(entries.ToArray());
         return controlTarFile;
     }
 }

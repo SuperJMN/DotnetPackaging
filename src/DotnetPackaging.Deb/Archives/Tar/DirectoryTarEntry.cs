@@ -1,13 +1,8 @@
-﻿using Zafiro.FileSystem;
-
-namespace DotnetPackaging.Deb.Archives.Tar;
+﻿namespace DotnetPackaging.Deb.Archives.Tar;
 
 public record DirectoryTarEntry : TarEntry
 {
-    public DirectoryTarEntry(ZafiroPath path, TarDirectoryProperties properties) : base(properties)
+    public DirectoryTarEntry(string path, TarDirectoryProperties properties) : base(path, properties)
     {
-        Path = path;
     }
-
-    public override ZafiroPath Path { get; }
 }

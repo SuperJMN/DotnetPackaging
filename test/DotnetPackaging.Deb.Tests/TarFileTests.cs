@@ -4,10 +4,8 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using System.Text;
 using Xunit;
-using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 using static System.IO.File;
-using File = Zafiro.FileSystem.Lightweight.File;
 
 namespace DotnetPackaging.Deb.Tests;
 
@@ -18,8 +16,7 @@ public class TarFileTests
     {
         var entries = new List<TarEntry>
         {
-            new FileTarEntry(new RootedFile(ZafiroPath.Empty, 
-                new File("My entry", "My content")), new TarFileProperties()
+            new FileTarEntry("My entry", new StringByteProvider("My content", Encoding.ASCII), new TarFileProperties()
             {
                 FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("777"),
                 GroupId = 1000,
@@ -28,9 +25,7 @@ public class TarFileTests
                 OwnerId = 1000,
                 LastModification = 1.January(2023),
             }),
-            new FileTarEntry(new RootedFile(
-                ZafiroPath.Empty,
-                new File("Other entry", "Other content")),  new TarFileProperties()
+            new FileTarEntry("Other entry", new StringByteProvider("Other content", Encoding.ASCII),  new TarFileProperties()
             {
                 FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("755"),
                 GroupId = 123,

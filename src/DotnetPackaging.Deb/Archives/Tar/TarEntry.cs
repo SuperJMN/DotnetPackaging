@@ -4,11 +4,12 @@ namespace DotnetPackaging.Deb.Archives.Tar;
 
 public abstract record TarEntry
 {
-    protected TarEntry(UnixFileProperties properties)
+    protected TarEntry(string path, UnixFileProperties properties)
     {
+        Path = path;
         Properties = properties;
     }
 
     public UnixFileProperties Properties { get; }
-    public abstract ZafiroPath Path { get; }
+    public string Path { get; }
 }
