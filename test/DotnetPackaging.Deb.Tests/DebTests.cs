@@ -82,6 +82,16 @@ public class DebTests
         actual.Should().BeEquivalentTo(expected);
     }
 
+    private static IEnumerable<string> GetParentDirectories(string filePath)
+    {
+        var directory = Path.GetDirectoryName(filePath);
+        while (!string.IsNullOrEmpty(directory))
+        {
+            yield return directory;
+            directory = Path.GetDirectoryName(directory);
+        }
+    }
+    
     [Fact]
     public async Task Create_deb_from_directory()
     {
@@ -134,10 +144,24 @@ public class DebTests
             };
 
             var directoryFileEntries = filesInDirectory.Value.Select(x => new FileTarEntry($"./opt/{metadata.Package}/" + x.FullPath(), x.Rooted, tarFileProperties));
+            
+            TarDirectoryProperties directoryProperties = new TarDirectoryProperties()
+            {
+                FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("644"),
+                GroupId = 0,
+                OwnerId = 0,
+                GroupName = "root",
+                OwnerUsername = "root",
+                LastModification = DateTimeOffset.Now,
+            };
 
-            var fileEntries = directoryFileEntries.Concat(additionalFileEntries);
+            var allFiles = directoryFileEntries.Concat(additionalFileEntries).ToList();
+            var directoryEntries = allFiles.Select(x => ((ZafiroPath)x.Path[2..]).Parents()).Flatten().Distinct().OrderBy(x => x.RouteFragments.Count());
+            var dirEntries = directoryEntries.Select(path => (TarEntry)new DirectoryTarEntry($"./{path}", directoryProperties));
 
-            var debFile = new DebFile(metadata, fileEntries.ToArray());
+            var tarEntries = dirEntries.Concat(allFiles);
+
+            var debFile = new DebFile(metadata, tarEntries.ToArray());
             await using var fileStream = IoFile.Open("C:\\Users\\JMN\\Desktop\\testing.deb", FileMode.Create);
             return (await debFile.ToByteProvider().DumpTo(fileStream).ToList()).Combine();
         });
