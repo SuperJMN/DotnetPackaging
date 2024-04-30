@@ -112,14 +112,4 @@ public class DebTests
         await using var fileStream = IoFile.Open("C:\\Users\\JMN\\Desktop\\testing.deb", FileMode.Create);
         (await result.Value.ToByteProvider().DumpTo(fileStream).ToList()).Combine();
     }
-
-    private static IEnumerable<string> GetParentDirectories(string filePath)
-    {
-        var directory = Path.GetDirectoryName(filePath);
-        while (!string.IsNullOrEmpty(directory))
-        {
-            yield return directory;
-            directory = Path.GetDirectoryName(directory);
-        }
-    }
 }
