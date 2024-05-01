@@ -6,24 +6,27 @@ public static class MiscMixin
 {
     public static string DesktopFileContents(string appDir, PackageMetadata metadata)
     {
-        var textContent = $"""
-                           [Desktop Entry]
-                           Type=Application
-                           Name={metadata.AppName}
-                           StartupWMClass={metadata.StartupWmClass}
-                           GenericName={metadata.AppName}
-                           Comment={metadata.Comment}
-                           Icon={metadata.AppName}
-                           Terminal=false
-                           Exec="{appDir}/{metadata.ExecutableName}"
-                           Categories={metadata.Categories};
-                           Keywords={metadata.Keywords.Map(keywords => string.Join((string?) ";", (IEnumerable<string?>) keywords))};
-                           """.FromCrLfToLf();
+        List<IEnumerable<string>> items =
+        [
+            Item(Maybe.From("[Desktop Entry]")),
+            Item(Maybe.From("Type=Application")),
+            Item(metadata.StartupWmClass.Map(n => $"Name={n}")),
+            Item(Maybe.From($"GenericName={metadata.AppName}")),
+            Item(metadata.Comment.Map(n => $"Comment={n}")),
+            Item(metadata.Icon.Map(_ => $"Icon={metadata.Package}")),
+            Item("Terminal=False"),
+            Item($"Exec={appDir}/{metadata.ExecutableName}"),
+            Item(metadata.Categories.Map(x => $"Categories={x}")),
+            Item(metadata.Keywords.Map(keywords => $"Keywords={string.Join((string?) ";", (IEnumerable<string?>) keywords)}")),
+            Item(metadata.Version.Map(version => $"X-AppImage-Version={version}")),
+        ];
 
-        // TODO: This is only for app-image
-        var final = metadata.Version.Match(version => string.Join("\n", textContent, $"X-AppImage-Version={version};"), () => textContent);
+        return string.Join("\n", items.Flatten());
+    }
 
-        return final;
+    private static IEnumerable<string> Item(Maybe<string> from)
+    {
+        return from.ToList();
     }
 
     public static string RunScript(string executablePath)
