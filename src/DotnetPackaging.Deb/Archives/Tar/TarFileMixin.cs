@@ -6,7 +6,7 @@ public static class TarFileMixin
 {
     public static IByteProvider ToByteProvider(this TarFile tarFile)
     {
-        var byteProviders = tarFile.Entries.Select(tarEntry =>
+        var entries = tarFile.Entries.Select(tarEntry =>
         {
             return tarEntry switch
             {
@@ -15,7 +15,9 @@ public static class TarFileMixin
                 _ => throw new NotSupportedException()
             };
         });
-        
-        return new CompositeByteProvider(byteProviders.ToArray()).PadToNearestMultiple(20 * 512);
+
+        var entriesProvider = new CompositeByteProvider(entries.ToArray());
+        return entriesProvider;
+        //return entriesProvider.PadToNearestMultiple(2 * 512);
     }
 }

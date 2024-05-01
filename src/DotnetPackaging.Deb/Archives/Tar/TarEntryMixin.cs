@@ -9,7 +9,7 @@ public static class TarEntryMixin
 {
     public static IByteProvider ToByteProvider(this FileTarEntry entry)
     {
-        return new CompositeByteProvider(entry.Header(entry.Content.Length, 0).PadToNearestMultiple(512), entry.Content.PadToNearestMultiple(512));
+        return new CompositeByteProvider(entry.Header(entry.Content.Length, 0), entry.Content);
     }
 
     public static IByteProvider ToByteProvider(this DirectoryTarEntry entry)

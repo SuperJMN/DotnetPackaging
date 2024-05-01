@@ -17,8 +17,6 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" Version="21.0.2" />
-    <PackageReference Include="Zafiro.FileSystem" Version="5.2.1" />
-    <PackageReference Include="Zafiro.FileSystem.Lightweight" Version="5.2.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DotnetPackaging.Deb\DotnetPackaging.Deb.csproj" />

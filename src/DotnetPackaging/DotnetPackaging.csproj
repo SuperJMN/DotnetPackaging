@@ -8,7 +8,9 @@
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="2.41.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.4" />
-    <PackageReference Include="Zafiro" Version="4.0.27" />
-    <PackageReference Include="Zafiro.FileSystem" Version="5.2.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem\Zafiro.FileSystem.csproj" />
+    <ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro\src\Zafiro\Zafiro.csproj" />
   </ItemGroup>
 </Project>

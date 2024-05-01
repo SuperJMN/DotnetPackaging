@@ -2,4 +2,7 @@
 
 namespace DotnetPackaging;
 
-public interface IIcon : IByteProvider;
+public interface IIcon : IByteProvider
+{
+    public int Size { get; }
+}

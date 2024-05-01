@@ -1,4 +1,5 @@
-﻿using System.Reactive.Linq;
+﻿using System.IO.Abstractions;
+using System.Reactive.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb.Archives.Deb;
@@ -8,10 +9,14 @@ using FluentAssertions.Common;
 using FluentAssertions.Extensions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using Xunit;
+using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 using Directory = Zafiro.FileSystem.Lightweight.Directory;
 using File = Zafiro.FileSystem.Lightweight.File;
+using IDirectory = Zafiro.FileSystem.Lightweight.IDirectory;
+using IFile = Zafiro.FileSystem.Lightweight.IFile;
 using IoFile = System.IO.File;
 
 namespace DotnetPackaging.Deb.Tests;
@@ -27,7 +32,7 @@ public class DebTests
             Version = "1.0-1",
             Section = "utils",
             Priority = "optional",
-            Architecture = "all",
+            Architecture = Architecture.All,
             Maintainer = "Baeldung <test@test.com>",
             Description = "This is a test application\n for packaging",
             ModificationTime = 25.April(2024).AddHours(9).AddMinutes(47).AddSeconds(22).ToDateTimeOffset()
@@ -103,16 +108,45 @@ public class DebTests
             Version = "1.0-1",
             Section = "utils",
             Priority = "optional",
-            Architecture = "all",
+            Architecture = Architecture.All,
             Maintainer = "Baeldung <test@test.com>",
             Description = "This is a test application\n for packaging",
             ModificationTime = 25.April(2024).AddHours(9).AddMinutes(47).AddSeconds(22).ToDateTimeOffset(),
             ExecutableName = "MyApp",
-            Icon = Maybe.From(await Icon.FromImage(new Image<Bgra32>(48, 48, Color.AliceBlue))),
+            Icon = Maybe.From(await Icon.FromImage(new Image<Bgra32>(48, 48, Color.Red))),
         };
         var result = await DebPackageCreator.CreateFromDirectory(directory, metadata);
         result.Should().Succeed();
         await using var fileStream = IoFile.Open("C:\\Users\\JMN\\Desktop\\testing.deb", FileMode.Create);
         (await result.Value.ToByteProvider().DumpTo(fileStream).ToList()).Combine();
+    }
+    
+    [Fact]
+    public async Task Integration()
+    {
+        var fileSystem = new FileSystem();
+        var directory = new SystemIODirectory(fileSystem.DirectoryInfo.New(@"C:\Users\JMN\Desktop\AppDir\AvaloniaSyncer"));
+        
+        var metadata = new PackageMetadata
+        {
+            AppName = "Avalonia Syncer",
+            AppId = "com.SuperJMN.AvaloniaSyncer",
+            Package = "avaloniasyncer",
+            Version = "1.0.0",
+            Section = "utils",
+            Priority = "optional",
+            Architecture = Architecture.X64,
+            Maintainer = "SuperJMN <jmn@superjmn.com>",
+            Description = "Application for cool file exploring",
+            ModificationTime = DateTimeOffset.Now,
+            ExecutableName = "AvaloniaSyncer.Desktop",
+            Icon = Maybe.From(await Icon.FromImage(await Image.LoadAsync("E:\\Repos\\SuperJMN\\AvaloniaSyncer\\AppImage.png"))),
+        };
+        var result = await DebPackageCreator.CreateFromDirectory(directory, metadata);
+        result.Should().Succeed();
+        await using (var fileStream = IoFile.Open($"C:\\Users\\JMN\\Desktop\\{FileName.FromMetadata(metadata)}.deb", FileMode.Create))
+        {
+            (await result.Value.ToByteProvider().DumpTo(fileStream).ToList()).Combine();
+        }
     }
 }

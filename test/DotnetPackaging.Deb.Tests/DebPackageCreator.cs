@@ -4,22 +4,19 @@ using DotnetPackaging.Deb.Archives.Deb;
 using DotnetPackaging.Deb.Archives.Tar;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
-using Directory = Zafiro.FileSystem.Lightweight.Directory;
-using File = Zafiro.FileSystem.Lightweight.File;
 
 namespace DotnetPackaging.Deb.Tests;
 
 public static class DebPackageCreator
 {
-    public static async Task<Result<DebFile>> CreateFromDirectory(Directory directory, PackageMetadata metadata)
+    public static async Task<Result<DebFile>> CreateFromDirectory(IDirectory directory, PackageMetadata metadata)
     {
         var appDir = $"/opt/{metadata.Package}";
         var filesInDirectory = await directory.GetFilesInTree(ZafiroPath.Empty);
         return filesInDirectory.Map(files =>
         {
-            var tarFileProperties = RegularFileProperties();
             var executablePath = $"{appDir}/{metadata.ExecutableName}";
-            var tarEntriesFromImplicitFiles = ImplicitFileEntries(metadata, executablePath, tarFileProperties);
+            var tarEntriesFromImplicitFiles = ImplicitFileEntries(metadata, executablePath);
             var tarEntriesFromFiles = TarEntriesFromFiles(files, metadata);
             var allFiles = tarEntriesFromFiles.Concat(tarEntriesFromImplicitFiles).ToList();
             var directoryEntries = CreateDirectoryEntries(allFiles);
@@ -28,24 +25,13 @@ public static class DebPackageCreator
         });
     }
 
-    private static TarFileProperties RegularFileProperties() => new()
-    {
-        FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("644"),
-        GroupId = 1000,
-        OwnerId = 1000,
-        GroupName = "root",
-        OwnerUsername = "root",
-        LastModification = DateTimeOffset.Now
-    };
 
-    private static TarFileProperties ExecutableFileProperties() => RegularFileProperties() with { FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("755") };
-
-    private static IEnumerable<FileTarEntry> ImplicitFileEntries(PackageMetadata metadata, string executablePath, TarFileProperties tarFileProperties)
+    private static IEnumerable<FileTarEntry> ImplicitFileEntries(PackageMetadata metadata, string executablePath)
     {
         return new FileTarEntry[]
         {
-            new($"./usr/share/applications/{metadata.Package.ToLower()}.desktop", new StringByteProvider(MiscMixin.DesktopFileContents(executablePath, metadata), Encoding.ASCII), tarFileProperties),
-            new($"./usr/bin/{metadata.Package.ToLower()}", new StringByteProvider(MiscMixin.RunScript(executablePath), Encoding.ASCII), tarFileProperties)
+            new($"./usr/local/share/applications/{metadata.Package.ToLower()}.desktop", new StringByteProvider(MiscMixin.DesktopFileContents(executablePath, metadata), Encoding.ASCII), Misc.RegularFileProperties()),
+            new($"./usr/local/bin/{metadata.Package.ToLower()}", new StringByteProvider(MiscMixin.RunScript(executablePath), Encoding.ASCII), Misc.ExecutableFileProperties())
         }.Concat(GetIconEntry(metadata));
     }
 
@@ -56,7 +42,8 @@ public static class DebPackageCreator
             return Enumerable.Empty<FileTarEntry>();
         }
 
-        return [new FileTarEntry($"./usr/share/icons/{metadata.Package}", metadata.Icon.Value, RegularFileProperties())];
+        var size = metadata.Icon.Value.Size;
+        return [new FileTarEntry($"./usr/local/share/icons/apps/{size}x{size}/{metadata.Package}.png", metadata.Icon.Value, Misc.RegularFileProperties())];
     }
 
     private static IEnumerable<TarEntry> TarEntriesFromFiles(IEnumerable<IRootedFile> files, PackageMetadata metadata)
@@ -68,17 +55,17 @@ public static class DebPackageCreator
     {
         if (string.Equals(file.Name, executableName, StringComparison.Ordinal))
         {
-            return ExecutableFileProperties();
+            return Misc.ExecutableFileProperties();
         }
 
-        return RegularFileProperties();
+        return Misc.RegularFileProperties();
     }
 
     private static IEnumerable<TarEntry> CreateDirectoryEntries(IEnumerable<TarEntry> allFiles)
     {
         var directoryProperties = new TarDirectoryProperties
         {
-            FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("644"),
+            FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("755"),
             GroupId = 1000,
             OwnerId = 1000,
             GroupName = "root",

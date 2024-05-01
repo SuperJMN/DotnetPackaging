@@ -38,7 +38,7 @@ public record PackageMetadata
     public string Package { get; set; }
     public string Section { get; set; }
     public string Priority { get; set; }
-    public string Architecture { get; set; }
+    public required Architecture Architecture { get; init; }
     public string Maintainer { get; set; }
     public string Description { get; set; }
     public string Homepage { get; set; }
@@ -48,4 +48,18 @@ public record PackageMetadata
     public string InstalledSize { get; set; }
     public DateTimeOffset ModificationTime { get; set; }
     public string ExecutableName { get; set; }
+}
+
+public class Architecture
+{
+    public string Name { get; }
+    public string PackagePrefix { get; }
+    public static Architecture All = new Architecture("all", "all");
+    public static Architecture X64 = new Architecture("amd64", "x86_x64");
+
+    private Architecture(string name, string packagePrefix)
+    {
+        Name = name;
+        PackagePrefix = packagePrefix;
+    }
 }

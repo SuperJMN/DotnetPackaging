@@ -1,7 +1,7 @@
 ﻿using System.Reactive.Linq;
 using Zafiro.FileSystem.Lightweight;
 
-namespace DotnetPackaging.Deb;
+namespace DotnetPackaging;
 
 public class ByteArrayByteProvider : IByteProvider
 {
