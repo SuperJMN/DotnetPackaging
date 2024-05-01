@@ -1,6 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
 using System.Reactive.Linq;
-using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging;
 
@@ -50,5 +49,3 @@ public record PackageMetadata
     public DateTimeOffset ModificationTime { get; set; }
     public string ExecutableName { get; set; }
 }
-
-public interface IIcon : IByteProvider;

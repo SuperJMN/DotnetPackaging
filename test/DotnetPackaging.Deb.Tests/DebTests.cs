@@ -6,6 +6,8 @@ using DotnetPackaging.Deb.Archives.Tar;
 using FluentAssertions;
 using FluentAssertions.Common;
 using FluentAssertions.Extensions;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
 using Zafiro.FileSystem.Lightweight;
 using Directory = Zafiro.FileSystem.Lightweight.Directory;
@@ -105,7 +107,8 @@ public class DebTests
             Maintainer = "Baeldung <test@test.com>",
             Description = "This is a test application\n for packaging",
             ModificationTime = 25.April(2024).AddHours(9).AddMinutes(47).AddSeconds(22).ToDateTimeOffset(),
-            ExecutableName = "MyApp"
+            ExecutableName = "MyApp",
+            Icon = Maybe.From(await Icon.FromImage(new Image<Bgra32>(48, 48, Color.AliceBlue))),
         };
         var result = await DebPackageCreator.CreateFromDirectory(directory, metadata);
         result.Should().Succeed();
