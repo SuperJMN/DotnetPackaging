@@ -1,11 +1,11 @@
 ﻿using System.Reactive.Linq;
-using Zafiro.FileSystem.Lightweight;
+using Zafiro.FileSystem;
 
 namespace DotnetPackaging;
 
-public class CompositeByteProvider : IByteProvider
+public class CompositeObservableDataStream : IObservableDataStream
 {
-    public CompositeByteProvider(params IByteProvider[] byteProviders)
+    public CompositeObservableDataStream(params IObservableDataStream[] byteProviders)
     {
         Bytes = byteProviders.Select(x => x.Bytes).Concat();
         Length = byteProviders.Sum(x => x.Length);

@@ -1,12 +1,13 @@
-﻿using Zafiro.FileSystem.Lightweight;
+﻿using Zafiro.FileSystem;
+using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.Deb.Archives.Tar;
 
 public record FileTarEntry : TarEntry
 {
-    public IByteProvider Content { get; }
+    public IObservableDataStream Content { get; }
 
-    public FileTarEntry(string path, IByteProvider content, TarFileProperties properties) : base(path, properties)
+    public FileTarEntry(string path, IObservableDataStream content, TarFileProperties properties) : base(path, properties)
     {
         Content = content;
     }

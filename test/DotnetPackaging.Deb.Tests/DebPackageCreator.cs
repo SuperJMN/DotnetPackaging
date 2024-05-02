@@ -4,6 +4,7 @@ using DotnetPackaging.Deb.Archives.Deb;
 using DotnetPackaging.Deb.Archives.Tar;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
+using Zafiro.Mixins;
 
 namespace DotnetPackaging.Deb.Tests;
 
@@ -30,8 +31,8 @@ public static class DebPackageCreator
     {
         return new FileTarEntry[]
         {
-            new($"./usr/local/share/applications/{metadata.Package.ToLower()}.desktop", new StringByteProvider(MiscMixin.DesktopFileContents(executablePath, metadata), Encoding.ASCII), Misc.RegularFileProperties()),
-            new($"./usr/local/bin/{metadata.Package.ToLower()}", new StringByteProvider(MiscMixin.RunScript(executablePath), Encoding.ASCII), Misc.ExecutableFileProperties())
+            new($"./usr/local/share/applications/{metadata.Package.ToLower()}.desktop", new StringObservableDataStream(MiscMixin.DesktopFileContents(executablePath, metadata), Encoding.ASCII), Misc.RegularFileProperties()),
+            new($"./usr/local/bin/{metadata.Package.ToLower()}", new StringObservableDataStream(MiscMixin.RunScript(executablePath), Encoding.ASCII), Misc.ExecutableFileProperties())
         }.Concat(GetIconEntry(metadata));
     }
 

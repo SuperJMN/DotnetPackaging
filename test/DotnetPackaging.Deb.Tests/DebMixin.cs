@@ -3,6 +3,7 @@ using DotnetPackaging.Deb.Archives.Deb;
 using DotnetPackaging.Deb.Archives.Tar;
 using FluentAssertions.Common;
 using FluentAssertions.Extensions;
+using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 using File = Zafiro.FileSystem.Lightweight.File;
 
@@ -10,7 +11,7 @@ namespace DotnetPackaging.Deb.Tests;
 
 public static class DebMixin
 {
-    public static IByteProvider ToByteProvider(this DebFile debFile)
+    public static IObservableDataStream ToByteProvider(this DebFile debFile)
     {
         ArFile arFile = new ArFile(Signature(debFile), ControlTar(debFile), DataTar(debFile));
         return arFile.ToByteProvider();

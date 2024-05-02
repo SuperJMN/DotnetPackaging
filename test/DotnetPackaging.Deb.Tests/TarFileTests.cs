@@ -10,6 +10,7 @@ using SharpCompress;
 using Xunit;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
+using Zafiro.Mixins;
 using static System.IO.File;
 using File = System.IO.File;
 
@@ -22,7 +23,7 @@ public class TarFileTests
     {
         var entries = new List<TarEntry>
         {
-            new FileTarEntry("My entry", new StringByteProvider("My content", Encoding.ASCII), new TarFileProperties()
+            new FileTarEntry("My entry", new StringObservableDataStream("My content", Encoding.ASCII), new TarFileProperties()
             {
                 FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("777"),
                 GroupId = 1000,
@@ -31,7 +32,7 @@ public class TarFileTests
                 OwnerId = 1000,
                 LastModification = 1.January(2023),
             }),
-            new FileTarEntry("Other entry", new StringByteProvider("Other content", Encoding.ASCII),  new TarFileProperties()
+            new FileTarEntry("Other entry", new StringObservableDataStream("Other content", Encoding.ASCII), new TarFileProperties()
             {
                 FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("755"),
                 GroupId = 123,
@@ -44,31 +45,29 @@ public class TarFileTests
 
         var tarFile = new TarFile(entries.ToArray());
         var byteProvider = tarFile.ToByteProvider();
-
-        var bytes = (await byteProvider.Bytes.ToList()).SelectMany(x => x).ToArray();
-        await WriteAllBytesAsync("C:\\Users\\JMN\\Desktop\\mytar.tar", bytes);
+        var bytes = byteProvider.Bytes();
         var actualString = Encoding.ASCII.GetString(bytes);
         actualString.Should().BeEquivalentTo(await ReadAllTextAsync("TestFiles\\Sample.tar"));
     }
 
-    [Fact]
-    public async Task Integration()
-    {
-        var fileSystem = new FileSystem();
-        var systemIODirectory = new SystemIODirectory(fileSystem.DirectoryInfo.New("C:\\Users\\JMN\\Desktop\\Testing"));
-        var allFiles = systemIODirectory.GetFilesInTree(ZafiroPath.Empty);
-        var contents = new ByteArrayByteProvider(await ReadAllBytesAsync(@"C:\Users\JMN\Desktop\Testing\AvaloniaSyncer.Desktop.runtimeconfig.json"));
-        var contents2 = allFiles.Result.Value.First();
-        var fileBytes = contents2.Rooted.Bytes.Flatten().ToEnumerable().ToList();
-        var tarEntry = new FileTarEntry("AvaloniaSyncer.Desktop.runtimeconfig.json", contents2, Misc.RegularFileProperties());
-        var tarEntryBytes = tarEntry.ToByteProvider().Bytes.Flatten().ToEnumerable().ToList();
-        await tarEntryBytes.DumpTo("C:\\Users\\JMN\\Desktop\\Entry.bin");
-        var tarFile = new TarFile(tarEntry);
-        await using (var fileStream = File.Open("C:\\Users\\JMN\\Desktop\\mytarfile.tar", FileMode.Create))
-        {
-            var byteProvider = tarFile.ToByteProvider();
-            var tarfilebytes = byteProvider.Bytes.Flatten().ToEnumerable().ToList();
-            var result = (await byteProvider.DumpTo(fileStream).ToList()).Combine();
-        }
-    }
+    //[Fact]
+    //public async Task Integration()
+    //{
+    //    var fileSystem = new FileSystem();
+    //    var systemIODirectory = new SystemIODirectory(fileSystem.DirectoryInfo.New("C:\\Users\\JMN\\Desktop\\AppDir\\AvaloniaSyncer"));
+    //    var allFiles = systemIODirectory.GetFilesInTree(ZafiroPath.Empty);
+
+    //    var result = await allFiles
+    //        .Map(x => x.Select(t => new FileTarEntry(t.FullPath(), t.Rooted, Misc.RegularFileProperties())))
+    //        .Map(entries => new TarFile(entries.ToArray()))
+    //        .Map(file => file.ToByteProvider())
+    //        .Bind(async byteProvider =>
+    //        {
+    //            await using (var fileStream = Open("C:\\Users\\JMN\\Desktop\\mytarfile.tar", FileMode.Create))
+    //            {
+    //                return (await byteProvider.DumpTo(fileStream).ToList()).Combine();
+    //            }
+    //        });
+    //    result.Should().Succeed();
+    //}
 }

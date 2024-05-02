@@ -1,11 +1,11 @@
 ﻿using System.Reactive.Linq;
-using Zafiro.FileSystem.Lightweight;
+using Zafiro.FileSystem;
 
 namespace DotnetPackaging;
 
-public class ByteArrayByteProvider : IByteProvider
+public class ByteArrayObservableDataStream : IObservableDataStream
 {
-    public ByteArrayByteProvider(byte[] content)
+    public ByteArrayObservableDataStream(byte[] content)
     {
         Bytes = Observable.Return(content);
         Length = content.Length;

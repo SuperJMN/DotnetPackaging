@@ -6,11 +6,11 @@ namespace DotnetPackaging;
 
 public class Icon : IIcon
 {
-    private readonly ByteArrayByteProvider byteArrayByteProvider;
+    private readonly ByteArrayObservableDataStream byteArrayObservableDataStream;
 
-    private Icon(ByteArrayByteProvider byteArrayByteProvider, int sizeWidth)
+    private Icon(ByteArrayObservableDataStream byteArrayObservableDataStream, int sizeWidth)
     {
-        this.byteArrayByteProvider = byteArrayByteProvider;
+        this.byteArrayObservableDataStream = byteArrayObservableDataStream;
         Size = sizeWidth;
     }
 
@@ -19,11 +19,11 @@ public class Icon : IIcon
         await using var memoryStream = new MemoryStream();
         var icon = image.MakeAppIcon();
         await icon.SaveAsync(memoryStream, PngFormat.Instance);
-        return new Icon(new ByteArrayByteProvider(memoryStream.ToArray()), image.Size.Width);
+        return new Icon(new ByteArrayObservableDataStream(memoryStream.ToArray()), image.Size.Width);
     }
 
-    public IObservable<byte[]> Bytes => byteArrayByteProvider.Bytes;
-    public long Length => byteArrayByteProvider.Length;
+    public IObservable<byte[]> Bytes => byteArrayObservableDataStream.Bytes;
+    public long Length => byteArrayObservableDataStream.Length;
 
     public int Size { get; }
 }

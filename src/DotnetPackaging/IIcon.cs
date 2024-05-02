@@ -1,8 +1,8 @@
-﻿using Zafiro.FileSystem.Lightweight;
+﻿using Zafiro.FileSystem;
 
 namespace DotnetPackaging;
 
-public interface IIcon : IByteProvider
+public interface IIcon : IObservableDataStream
 {
     public int Size { get; }
 }

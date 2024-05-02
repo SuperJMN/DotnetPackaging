@@ -1,17 +1,18 @@
 ﻿using System.Text;
+using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.Deb.Archives.Ar;
 
 public static class ArFileMixin
 {
-    public static IByteProvider ToByteProvider(this ArFile arFile)
+    public static IObservableDataStream ToByteProvider(this ArFile arFile)
     {
-        return new CompositeByteProvider(Signature(), new CompositeByteProvider(arFile.Entries.Select(x => x.ToByteProvider()).ToArray()));
+        return new CompositeObservableDataStream(Signature(), new CompositeObservableDataStream(arFile.Entries.Select(x => x.ToByteProvider()).ToArray()));
     }
 
-    private static IByteProvider Signature()
+    private static IObservableDataStream Signature()
     {
-        return new StringByteProvider("!<arch>\n", Encoding.ASCII);
+        return new StringObservableDataStream("!<arch>\n", Encoding.ASCII);
     }
 }

@@ -1,9 +1,10 @@
 ﻿using System.Reactive.Linq;
+using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.Deb.Archives.Tar;
 
-public class PaddingProvider : IByteProvider
+public class PaddingProvider : IObservableDataStream
 {
     private readonly byte value;
     private readonly int count;

@@ -1,10 +1,11 @@
-﻿using Zafiro.FileSystem.Lightweight;
+﻿using Zafiro.FileSystem;
+using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.Deb.Archives.Tar;
 
 public static class TarFileMixin
 {
-    public static IByteProvider ToByteProvider(this TarFile tarFile)
+    public static IObservableDataStream ToByteProvider(this TarFile tarFile)
     {
         var entries = tarFile.Entries.Select(tarEntry =>
         {
@@ -16,8 +17,8 @@ public static class TarFileMixin
             };
         });
 
-        var entriesProvider = new CompositeByteProvider(entries.ToArray());
-        return entriesProvider;
-        //return entriesProvider.PadToNearestMultiple(2 * 512);
+        var entriesProvider = new CompositeObservableDataStream(entries.ToArray());
+        //return entriesProvider;
+        return entriesProvider.PadToNearestMultiple(2 * 512);
     }
 }

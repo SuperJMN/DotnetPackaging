@@ -1,11 +1,12 @@
-﻿using Zafiro.FileSystem.Lightweight;
+﻿using Zafiro.FileSystem;
+using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.Deb.Archives.Tar;
 
 public static class ByteProviderMixin
 {
-    public static IByteProvider PadToNearestMultiple(this IByteProvider byteProvider, int multiple)
+    public static IObservableDataStream PadToNearestMultiple(this IObservableDataStream observableDataStream, int multiple)
     {
-        return new CompositeByteProvider(byteProvider, new PaddingProvider(0, (int)(byteProvider.Length.RoundUpToNearestMultiple(multiple) - byteProvider.Length)));
+        return new CompositeObservableDataStream(observableDataStream, new PaddingProvider(0, (int)(observableDataStream.Length.RoundUpToNearestMultiple(multiple) - observableDataStream.Length)));
     }
 }
