@@ -3,9 +3,9 @@ using Zafiro.FileSystem;
 
 namespace DotnetPackaging;
 
-public class ByteArrayObservableDataStream : IObservableDataStream
+public class ByteArrayData : IData
 {
-    public ByteArrayObservableDataStream(byte[] content)
+    public ByteArrayData(byte[] content)
     {
         Bytes = Observable.Return(content);
         Length = content.Length;

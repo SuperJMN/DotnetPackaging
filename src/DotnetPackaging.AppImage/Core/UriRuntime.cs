@@ -13,4 +13,6 @@ public class UriRuntime : IRuntime
     }
 
     public Func<Task<Result<Stream>>> Open => () => RuntimeDownloader.GetRuntimeStream(architecture);
+    public IObservable<byte[]> Bytes { get; }
+    public long Length { get; }
 }

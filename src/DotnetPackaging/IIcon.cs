@@ -2,7 +2,7 @@
 
 namespace DotnetPackaging;
 
-public interface IIcon : IObservableDataStream
+public interface IIcon : IData
 {
     public int Size { get; }
 }

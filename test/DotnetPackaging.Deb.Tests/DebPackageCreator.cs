@@ -31,8 +31,8 @@ public static class DebPackageCreator
     {
         return new FileTarEntry[]
         {
-            new($"./usr/local/share/applications/{metadata.Package.ToLower()}.desktop", new StringObservableDataStream(MiscMixin.DesktopFileContents(executablePath, metadata), Encoding.ASCII), Misc.RegularFileProperties()),
-            new($"./usr/local/bin/{metadata.Package.ToLower()}", new StringObservableDataStream(MiscMixin.RunScript(executablePath), Encoding.ASCII), Misc.ExecutableFileProperties())
+            new($"./usr/local/share/applications/{metadata.Package.ToLower()}.desktop", new StringData(MiscMixin.DesktopFileContents(executablePath, metadata), Encoding.ASCII), Misc.RegularFileProperties()),
+            new($"./usr/local/bin/{metadata.Package.ToLower()}", new StringData(MiscMixin.RunScript(executablePath), Encoding.ASCII), Misc.ExecutableFileProperties())
         }.Concat(GetIconEntry(metadata));
     }
 

@@ -6,13 +6,13 @@ namespace DotnetPackaging.Deb.Archives.Ar;
 
 public static class ArFileMixin
 {
-    public static IObservableDataStream ToByteProvider(this ArFile arFile)
+    public static IData ToByteProvider(this ArFile arFile)
     {
-        return new CompositeObservableDataStream(Signature(), new CompositeObservableDataStream(arFile.Entries.Select(x => x.ToByteProvider()).ToArray()));
+        return new CompositeData(Signature(), new CompositeData(arFile.Entries.Select(x => x.ToByteProvider()).ToArray()));
     }
 
-    private static IObservableDataStream Signature()
+    private static IData Signature()
     {
-        return new StringObservableDataStream("!<arch>\n", Encoding.ASCII);
+        return new StringData("!<arch>\n", Encoding.ASCII);
     }
 }

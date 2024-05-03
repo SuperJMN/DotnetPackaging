@@ -1,4 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
+using System.IO;
 using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage.Core;
@@ -11,16 +12,13 @@ public static class Mixin
         {
             var unixFilePermissions = await GetMode(r);
             var fullPath = r.Path == string.Empty ? r.File.Name : r.Path + "/" + r.File.Name;
-            return new UnixFile(fullPath, r.File, "", "", unixFilePermissions);
+            return new UnixFile(fullPath, r, "", "", unixFilePermissions);
         }));
     }
 
-    public static Task<Result<bool>> IsExecutable(this RootedFile entry)
+    public static Task<Result<bool>> IsExecutable(this IRootedFile entry)
     {
-        return entry.File.Within(stream =>
-        {
-            return stream.IsElf().Map(isElf => entry.File.Name == "AppRun" || (isElf && !entry.File.Name.EndsWith(".so") && entry.File.Name != "createdump"));
-        });
+        return Task.FromResult(entry.IsElf().Map(isElf => entry.Name == "AppRun" || (isElf && !entry.Name.EndsWith(".so") && entry.Name != "createdump")));
     }
     
     private static Task<UnixFilePermissions> GetMode(RootedFile valueTuple)

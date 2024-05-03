@@ -64,7 +64,7 @@ public class AppImageFactory
     {
         var result = await inputDir.Files().Map(files => files.TryFirst(file => file.Name == "AppImage.png").Map(file =>
         {
-            var icon = (IIcon)new Icon(file.Open);
+            var icon = Icon.FromDataStream(file);
             Log.Information("Using icon from 'AppImage.png' defined in input directory");
             return icon;
         }));

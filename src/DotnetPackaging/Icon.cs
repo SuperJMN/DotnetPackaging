@@ -1,17 +1,17 @@
-﻿using DotnetPackaging.Deb;
-using SixLabors.ImageSharp;
+﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
+using Zafiro.FileSystem;
 
 namespace DotnetPackaging;
 
 public class Icon : IIcon
 {
-    private readonly ByteArrayObservableDataStream byteArrayObservableDataStream;
+    private readonly ByteArrayData byteArrayData;
 
-    private Icon(ByteArrayObservableDataStream byteArrayObservableDataStream, int sizeWidth)
+    private Icon(ByteArrayData byteArrayData, int size)
     {
-        this.byteArrayObservableDataStream = byteArrayObservableDataStream;
-        Size = sizeWidth;
+        this.byteArrayData = byteArrayData;
+        Size = size;
     }
 
     public static async Task<IIcon> FromImage(Image image)
@@ -19,11 +19,11 @@ public class Icon : IIcon
         await using var memoryStream = new MemoryStream();
         var icon = image.MakeAppIcon();
         await icon.SaveAsync(memoryStream, PngFormat.Instance);
-        return new Icon(new ByteArrayObservableDataStream(memoryStream.ToArray()), image.Size.Width);
+        return new Icon(new ByteArrayData(memoryStream.ToArray()), image.Size.Width);
     }
 
-    public IObservable<byte[]> Bytes => byteArrayObservableDataStream.Bytes;
-    public long Length => byteArrayObservableDataStream.Length;
+    public IObservable<byte[]> Bytes => byteArrayData.Bytes;
+    public long Length => byteArrayData.Length;
 
     public int Size { get; }
 }

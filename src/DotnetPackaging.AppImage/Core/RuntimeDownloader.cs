@@ -9,7 +9,7 @@ public static class RuntimeDownloader
     {
         { Architecture.X86, "https://github.com/AppImage/AppImageKit/releases/download/continuous/runtime-x86_64" },
         { Architecture.X64, "https://github.com/AppImage/AppImageKit/releases/download/continuous/runtime-x86_64" },
-        { Architecture.Arm, "https://github.com/AppImage/AppImageKit/releases/download/continuous/runtime-armhf" },
+        { Architecture.Arm32, "https://github.com/AppImage/AppImageKit/releases/download/continuous/runtime-armhf" },
         { Architecture.Arm64, "https://github.com/AppImage/AppImageKit/releases/download/continuous/runtime-aarch64" },
     };
 
@@ -19,8 +19,10 @@ public static class RuntimeDownloader
         {
             return Result.Failure<Stream>($"Cannot retrieve runtime for the architecture '{architecture}'.");
         }
+        
         return await FetchStream(runtimeUrl);
     }
+    
     private static Task<Result<Stream>> FetchStream(string runtimeUrl)
     {
         return Http.Instance.GetStream(runtimeUrl).Map(stream => (Stream)stream);

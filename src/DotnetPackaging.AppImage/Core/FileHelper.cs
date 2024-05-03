@@ -14,11 +14,11 @@ public class FileHelper
             .Map(tuples => tuples.Select(tuple => tuple.Item2));
     }
 
-    private static Task<Result<IEnumerable<(bool IsExec, RootedFile IMyFile)>>> ToExecutableEntries(IEnumerable<RootedFile> files)
+    private static Task<Result<IEnumerable<(bool IsExec, RootedFile IMyFile)>>> ToExecutableEntries(IEnumerable<IRootedFile> files)
     {
         return files
             .Select(x => x.IsExecutable()
-                .Map(isExec => (IsExec: isExec, (RootedFile) new RootedFile(x.Path, x.File))))
+                .Map(isExec => (IsExec: isExec, new RootedFile(x.Path, x.Rooted))))
             .Combine();
     }
 }

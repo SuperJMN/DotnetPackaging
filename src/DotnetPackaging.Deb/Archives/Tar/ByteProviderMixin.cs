@@ -5,8 +5,8 @@ namespace DotnetPackaging.Deb.Archives.Tar;
 
 public static class ByteProviderMixin
 {
-    public static IObservableDataStream PadToNearestMultiple(this IObservableDataStream observableDataStream, int multiple)
+    public static IData PadToNearestMultiple(this IData data, int multiple)
     {
-        return new CompositeObservableDataStream(observableDataStream, new PaddingProvider(0, (int)(observableDataStream.Length.RoundUpToNearestMultiple(multiple) - observableDataStream.Length)));
+        return new CompositeData(data, new PaddingProvider(0, (int)(data.Length.RoundUpToNearestMultiple(multiple) - data.Length)));
     }
 }

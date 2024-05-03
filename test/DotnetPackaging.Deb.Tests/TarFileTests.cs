@@ -23,7 +23,7 @@ public class TarFileTests
     {
         var entries = new List<TarEntry>
         {
-            new FileTarEntry("My entry", new StringObservableDataStream("My content", Encoding.ASCII), new TarFileProperties()
+            new FileTarEntry("My entry", new StringData("My content", Encoding.ASCII), new TarFileProperties()
             {
                 FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("777"),
                 GroupId = 1000,
@@ -32,7 +32,7 @@ public class TarFileTests
                 OwnerId = 1000,
                 LastModification = 1.January(2023),
             }),
-            new FileTarEntry("Other entry", new StringObservableDataStream("Other content", Encoding.ASCII), new TarFileProperties()
+            new FileTarEntry("Other entry", new StringData("Other content", Encoding.ASCII), new TarFileProperties()
             {
                 FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("755"),
                 GroupId = 123,

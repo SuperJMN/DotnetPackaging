@@ -4,7 +4,7 @@ using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.Deb.Archives.Tar;
 
-public class PaddingProvider : IObservableDataStream
+public class PaddingProvider : IData
 {
     private readonly byte value;
     private readonly int count;

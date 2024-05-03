@@ -10,6 +10,15 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="AppImageComparer.cs" />
+	  <Compile Remove="AppStreamXmlGeneratorTests.cs" />
+	  <Compile Remove="GlobalUsings.cs" />
+	  <Compile Remove="SquashFSTests.cs" />
+	  <Compile Remove="StreamGenerator.cs" />
+	  <Compile Remove="TestRuntime.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="coverlet.collector" Version="6.0.2">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -24,7 +33,10 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="CSharpFunctionalExtensions.FluentAssertions" Version="2.0.0" />
-		<PackageReference Include="Zafiro.FileSystem.Lightweight" Version="5.2.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\src\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -10,7 +10,5 @@ public class ScriptAppRun : IAppRun
     {
         Script = script;
     }
-
-    public Func<Task<Result<Stream>>> Open => () => Task.FromResult(Result.Success((Stream)new MemoryStream(Script.GetAsciiBytes())));
 }
 

@@ -11,7 +11,7 @@ namespace DotnetPackaging.Deb.Tests;
 
 public static class DebMixin
 {
-    public static IObservableDataStream ToByteProvider(this DebFile debFile)
+    public static IData ToByteProvider(this DebFile debFile)
     {
         ArFile arFile = new ArFile(Signature(debFile), ControlTar(debFile), DataTar(debFile));
         return arFile.ToByteProvider();

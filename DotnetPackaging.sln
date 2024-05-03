@@ -5,8 +5,6 @@ VisualStudioVersion = 17.7.34202.233
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "build\_build.csproj", "{E11D9F39-3856-4626-A3C1-58BE7ECCD13A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Console", "src\DotnetPackaging.Console\DotnetPackaging.Console.csproj", "{23FC6D0A-4385-45CC-947D-93A1FD3211D2}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging", "src\DotnetPackaging\DotnetPackaging.csproj", "{BD2F6800-8509-480D-8F01-0E698375052B}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Deb", "src\DotnetPackaging.Deb\DotnetPackaging.Deb.csproj", "{6F7052C1-50DB-4826-9893-02656FBB7B69}"
@@ -19,6 +17,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro.FileSystem", "..\..\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro", "..\..\SuperJMN-Zafiro\Zafiro\src\Zafiro\Zafiro.csproj", "{E9A44FA7-3E15-4C29-8C8D-27D524431C88}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.AppImage", "src\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj", "{1CEF57FA-1EBA-48A6-8A1E-CD41DB04DD38}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.AppImage.Tests", "test\DotnetPackaging.AppImage.Tests\DotnetPackaging.AppImage.Tests.csproj", "{BAAAED2F-D1E7-47A0-A1D1-21EA83135D8B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,10 +31,6 @@ Global
 		{E11D9F39-3856-4626-A3C1-58BE7ECCD13A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E11D9F39-3856-4626-A3C1-58BE7ECCD13A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E11D9F39-3856-4626-A3C1-58BE7ECCD13A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{23FC6D0A-4385-45CC-947D-93A1FD3211D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{23FC6D0A-4385-45CC-947D-93A1FD3211D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{23FC6D0A-4385-45CC-947D-93A1FD3211D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{23FC6D0A-4385-45CC-947D-93A1FD3211D2}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -57,6 +55,14 @@ Global
 		{E9A44FA7-3E15-4C29-8C8D-27D524431C88}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E9A44FA7-3E15-4C29-8C8D-27D524431C88}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E9A44FA7-3E15-4C29-8C8D-27D524431C88}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1CEF57FA-1EBA-48A6-8A1E-CD41DB04DD38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1CEF57FA-1EBA-48A6-8A1E-CD41DB04DD38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1CEF57FA-1EBA-48A6-8A1E-CD41DB04DD38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1CEF57FA-1EBA-48A6-8A1E-CD41DB04DD38}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BAAAED2F-D1E7-47A0-A1D1-21EA83135D8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BAAAED2F-D1E7-47A0-A1D1-21EA83135D8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BAAAED2F-D1E7-47A0-A1D1-21EA83135D8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BAAAED2F-D1E7-47A0-A1D1-21EA83135D8B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -4,8 +4,12 @@ public class Architecture
 {
     public string Name { get; }
     public string PackagePrefix { get; }
-    public static Architecture All = new("all", "all");
+
+    public static Architecture X86 = new("i386", "i386");
     public static Architecture X64 = new("amd64", "x86_64");
+    public static Architecture Arm64 = new("arm64", "aarch64");  // Usar aarch64 como prefijo si es común en tu contexto
+    public static Architecture Arm32 = new("armhf", "armhf");
+    public static Architecture All = new("all", "all");
 
     private Architecture(string name, string packagePrefix)
     {

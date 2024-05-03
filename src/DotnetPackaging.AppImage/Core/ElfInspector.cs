@@ -1,5 +1,10 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Reactive.Linq;
+using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
+using DynamicData;
+using Zafiro.FileSystem;
+using Zafiro.Mixins;
+using Zafiro.Reactive;
 
 namespace DotnetPackaging.AppImage.Core;
 
@@ -38,26 +43,24 @@ public static class ElfInspector
         {
             0x03 => Architecture.X86,
             0x3E => Architecture.X64,
-            0x28 => Architecture.Arm,
+            0x28 => Architecture.Arm32,
             0xB7 => Architecture.Arm64,
             _ => Result.Failure<Architecture>("Unknown architecture")
         };
     }
 
-    public static Result<bool> IsElf(this Stream stream)
+    public static Result<bool> IsElf(this IData stream)
     {
-        using var reader = new BinaryReader(stream);
+        var interestingBytes = stream.Bytes.ToEnumerable().Flatten().Take(18).ToList();
         var magicBytes = new byte[] { 0x7F, (byte)'E', (byte)'L', (byte)'F' };
-        var fileMagicBytes = reader.ReadBytes(4);
                 
-        if (!magicBytes.SequenceEqual(fileMagicBytes))
+        if (!magicBytes.SequenceEqual(interestingBytes[0..4]))
         {
             return false; // No es un archivo ELF.
         }
-
-        // Saltar a la posición 16 para leer e_type (teniendo en cuenta ELF 32 y 64 bits)
-        stream.Seek(16, SeekOrigin.Begin);
-        var eType = reader.ReadUInt16(); // e_type es un campo de 2 bytes.
+        
+        // Posición 16 para leer e_type (teniendo en cuenta ELF 32 y 64 bits)
+        var eType = BitConverter.ToInt16(interestingBytes[16..17].ToArray()); // e_type es un campo de 2 bytes.
 
         var isExecutable = eType == EtExec || eType == EtDyn;
         return isExecutable; // Verdadero si el archivo es un ejecutable ELF.

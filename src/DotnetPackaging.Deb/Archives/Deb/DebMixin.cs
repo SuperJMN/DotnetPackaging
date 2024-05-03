@@ -8,16 +8,16 @@ namespace DotnetPackaging.Deb.Archives.Deb;
 
 public class ByteProviderFile : IFile
 {
-    private readonly IObservableDataStream observableDataStream;
+    private readonly IData data;
 
-    public ByteProviderFile(string name, IObservableDataStream observableDataStream)
+    public ByteProviderFile(string name, IData data)
     {
-        this.observableDataStream = observableDataStream;
+        this.data = data;
         Name = name;
     }
     
     public string Name { get; }
-    public IObservable<byte[]> Bytes => observableDataStream.Bytes;
-    public long Length => observableDataStream.Length;
+    public IObservable<byte[]> Bytes => data.Bytes;
+    public long Length => data.Length;
 }
 

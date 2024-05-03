@@ -3,9 +3,9 @@ using Zafiro.FileSystem;
 
 namespace DotnetPackaging;
 
-public class CompositeObservableDataStream : IObservableDataStream
+public class CompositeData : IData
 {
-    public CompositeObservableDataStream(params IObservableDataStream[] byteProviders)
+    public CompositeData(params IData[] byteProviders)
     {
         Bytes = byteProviders.Select(x => x.Bytes).Concat();
         Length = byteProviders.Sum(x => x.Length);

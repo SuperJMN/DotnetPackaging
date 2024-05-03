@@ -5,7 +5,7 @@ namespace DotnetPackaging.Deb.Archives.Tar;
 
 public static class TarFileMixin
 {
-    public static IObservableDataStream ToByteProvider(this TarFile tarFile)
+    public static IData ToByteProvider(this TarFile tarFile)
     {
         var entries = tarFile.Entries.Select(tarEntry =>
         {
@@ -17,7 +17,7 @@ public static class TarFileMixin
             };
         });
 
-        var entriesProvider = new CompositeObservableDataStream(entries.ToArray());
+        var entriesProvider = new CompositeData(entries.ToArray());
         //return entriesProvider;
         return entriesProvider.PadToNearestMultiple(2 * 512);
     }

@@ -1,6 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 
-namespace DotnetPackaging.Deb;
+namespace DotnetPackaging;
 
 public record UnixFileProperties
 {
