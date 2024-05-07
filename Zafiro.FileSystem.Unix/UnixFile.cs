@@ -1,15 +1,26 @@
 ﻿using CSharpFunctionalExtensions;
+using DotnetPackaging;
 
 namespace Zafiro.FileSystem.Unix;
 
-public class UnixFile : UnixNode
+public class UnixFile : UnixNode, IData
 {
-    public UnixFileProperties Properties { get; }
-
-    public UnixFile(string name, Maybe<UnixFileProperties> properties) : base(name)
+    public UnixFile(string name, IData data) : this(name, data, Maybe<UnixFileProperties>.None)
     {
+    }
+
+    public UnixFile(string name, IData data, Maybe<UnixFileProperties> properties) : base(name)
+    {
+        Data = data;
         Properties = properties.GetValueOrDefault(UnixFileProperties.RegularFileProperties);
     }
 
-    public UnixFile(string name) : this(name, Maybe<UnixFileProperties>.None) { }
+    public UnixFile(string name) : this(name, new ByteArrayData(Array.Empty<byte>()), Maybe<UnixFileProperties>.None)
+    {
+    }
+
+    public IData Data { get; }
+    public UnixFileProperties Properties { get; }
+    public IObservable<byte[]> Bytes => Data.Bytes;
+    public long Length => Data.Length;
 }

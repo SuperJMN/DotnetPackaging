@@ -36,6 +36,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro.FileSystem\test\Zafiro.FileSystem.VNext.Tests\Zafiro.FileSystem.VNext.Tests.csproj" />
 	  <ProjectReference Include="..\..\src\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj" />
 	</ItemGroup>
 

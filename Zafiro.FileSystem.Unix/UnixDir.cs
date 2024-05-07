@@ -1,5 +1,4 @@
 ﻿using CSharpFunctionalExtensions;
-using Zafiro.FileSystem.Lightweight;
 
 namespace Zafiro.FileSystem.Unix;
 
@@ -13,7 +12,7 @@ public class UnixDir : UnixNode
     
     public UnixDir(string name, Maybe<UnixFileProperties> properties) : this(name, Maybe<IEnumerable<UnixNode>>.None, properties){ }
     
-    public UnixDir(string name, Maybe<IEnumerable<UnixNode>> nodes, Maybe<UnixFileProperties> properties) : base(name)
+    public UnixDir(Maybe<string> name, Maybe<IEnumerable<UnixNode>> nodes, Maybe<UnixFileProperties> properties) : base(name.GetValueOrDefault(""))
     {
         Nodes = nodes.GetValueOrDefault(Enumerable.Empty<UnixNode>());
         Properties = properties.GetValueOrDefault(UnixFileProperties.RegularDirectoryProperties);
