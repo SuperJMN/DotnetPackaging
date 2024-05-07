@@ -5,6 +5,7 @@ using DotnetPackaging.Deb.Archives.Deb;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
+using Zafiro.FileSystem.Unix;
 using File = Zafiro.FileSystem.Lightweight.File;
 
 namespace DotnetPackaging.Deb.Tests;

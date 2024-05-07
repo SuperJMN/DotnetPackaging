@@ -4,6 +4,7 @@ using DotnetPackaging.Deb.Archives.Deb;
 using DotnetPackaging.Deb.Archives.Tar;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
+using Zafiro.FileSystem.Unix;
 using Zafiro.Mixins;
 
 namespace DotnetPackaging.Deb.Tests;

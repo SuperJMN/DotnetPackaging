@@ -10,6 +10,7 @@ using SharpCompress;
 using Xunit;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
+using Zafiro.FileSystem.Unix;
 using Zafiro.Mixins;
 using static System.IO.File;
 using File = System.IO.File;

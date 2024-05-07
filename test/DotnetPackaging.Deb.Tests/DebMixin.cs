@@ -5,6 +5,7 @@ using FluentAssertions.Common;
 using FluentAssertions.Extensions;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
+using Zafiro.FileSystem.Unix;
 using File = Zafiro.FileSystem.Lightweight.File;
 
 namespace DotnetPackaging.Deb.Tests;

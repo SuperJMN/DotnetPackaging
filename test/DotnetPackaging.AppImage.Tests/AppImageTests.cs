@@ -1,5 +1,4 @@
 ﻿using Zafiro.FileSystem.Lightweight;
-using Directory = Zafiro.FileSystem.Lightweight.Directory;
 
 namespace DotnetPackaging.AppImage.Tests;
 
@@ -9,7 +8,7 @@ public class AppImageTests
     public void Test()
     {
         var builder = new DebFileBuilder()
-            .FromDirectory(new Directory("mama", new List<IFile>(), new List<IDirectory>()))
+            .FromDirectory(new RegularDirectory("mama"))
             .Configure(setup => setup
                 .Package("AvaloniaSyncer")
                 .PackageId("com.SuperJMN.AvaloniaSyncer")

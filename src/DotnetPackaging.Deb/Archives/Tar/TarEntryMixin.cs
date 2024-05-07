@@ -3,6 +3,7 @@ using System.Text;
 using CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
+using Zafiro.FileSystem.Unix;
 using Zafiro.Reactive;
 
 namespace DotnetPackaging.Deb.Archives.Tar;

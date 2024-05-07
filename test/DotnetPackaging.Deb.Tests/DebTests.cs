@@ -7,6 +7,7 @@ using FluentAssertions.Common;
 using FluentAssertions.Extensions;
 using Xunit;
 using Zafiro.FileSystem.Lightweight;
+using Zafiro.FileSystem.Unix;
 using Zafiro.Reactive;
 using IoFile = System.IO.File;
 

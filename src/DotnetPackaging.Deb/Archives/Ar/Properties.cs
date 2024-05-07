@@ -1,4 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
+using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.Deb.Archives.Ar;
 
