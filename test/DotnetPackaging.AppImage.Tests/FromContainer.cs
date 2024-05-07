@@ -21,10 +21,19 @@ public class FromContainer
 
     private UnixRoot CreateRoot(ISlimDirectory directory)
     {
-        var usr = Create(directory);
-        return new UnixRoot(new [] { usr });
+        return new UnixRoot(new [] { new UnixDir("usr", directory.Children.Select(Create)) });
     }
 
+    private UnixNode Create(INode node)
+    {
+        return node switch
+        {
+            IFile f => Create(f),
+            ISlimDirectory d => Create(d),
+            _ => throw new ArgumentOutOfRangeException(nameof(node), node, null)
+        };
+    }
+    
     private UnixNode Create(ISlimDirectory directory)
     {
         return new UnixDir(directory.Name, directory.Children.Select(node =>
