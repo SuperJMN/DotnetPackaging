@@ -1,6 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
-using System.IO;
 using System.Reactive.Linq;
+using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 using Zafiro.FileSystem.Unix;
 
@@ -9,10 +9,10 @@ namespace DotnetPackaging.AppImage.Tests;
 public class FromContainer
 {
     private readonly ISlimDirectory root;
-    private readonly FakeRuntimeFactory runtimeFactory;
+    private readonly RuntimeFactory runtimeFactory;
     private readonly ContainerOptionsSetup setup;
 
-    public FromContainer(ISlimDirectory root, FakeRuntimeFactory runtimeFactory, ContainerOptionsSetup setup)
+    public FromContainer(ISlimDirectory root, RuntimeFactory runtimeFactory, ContainerOptionsSetup setup)
     {
         this.root = root;
         this.runtimeFactory = runtimeFactory;
@@ -21,24 +21,34 @@ public class FromContainer
 
     public Task<Result<AppImage>> Build()
     {
-        var executable = root.Files().TryFirst(x => x.Name == setup.ExecutableName).ToResult($"Could not find executable file '{setup.ExecutableName}'");
+        var execResult = root.Files().TryFirst(x => x.Name == setup.ExecutableName).ToResult($"Could not find executable file '{setup.ExecutableName}'");
 
-        var build = executable
-            .Bind(async exec =>
-            {
-                if (setup.DetectArchitecture)
-                {
-                    var archResult = await LinuxElfInspector.GetArchitecture(exec.Bytes);
-                    return archResult
-                        .Map(arch => new AppImage(runtimeFactory.Create(arch), CreateRoot(root, exec)));
-                }
+        var build = execResult
+            .Bind(exec => GetArch(exec)
+                .Bind(architecture => runtimeFactory.Create(architecture))
+                .Map(rt => new AppImage(rt, CreateRoot(root, exec))));
 
-                return setup.Architecture
-                    .Map(ar => new AppImage(runtimeFactory.Create(ar), CreateRoot(root, exec)))
-                    .ToResult("The architecture has not be specified");
-            });
-        
         return build;
+    }
+
+    private async Task<Result<Architecture>> GetArch(IData exec)
+    {
+        if (setup.DetectArchitecture)
+        {
+            return await LinuxElfInspector.GetArchitecture(exec.Bytes);
+        }
+
+        if (setup.Architecture.Equals(Architecture.All))
+        {
+            return Result.Failure<Architecture>("The 'All' architecture is not valid for AppImages since they require an specific AppImage Runtime.");    
+        }
+
+        if (setup.Architecture.HasNoValue)
+        {
+            return Result.Failure<Architecture>("Could not detect architecture");    
+        }
+
+        return setup.Architecture.Value;
     }
 
     private UnixRoot CreateRoot(ISlimDirectory directory, IFile executable)

@@ -4,9 +4,9 @@ namespace DotnetPackaging.AppImage.Tests;
 
 public class DebFileBuilder
 {
-    private readonly FakeRuntimeFactory runtimeFactory;
+    private readonly RuntimeFactory runtimeFactory;
 
-    public DebFileBuilder(FakeRuntimeFactory runtimeFactory)
+    public DebFileBuilder(RuntimeFactory runtimeFactory)
     {
         this.runtimeFactory = runtimeFactory;
     }
