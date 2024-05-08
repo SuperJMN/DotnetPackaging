@@ -4,10 +4,10 @@ namespace DotnetPackaging.AppImage.Tests;
 
 public class FromContainerOptions
 {
-    private readonly RuntimeFactory runtimeFactory;
+    private readonly FakeRuntimeFactory runtimeFactory;
     private readonly ISlimDirectory container;
 
-    public FromContainerOptions(RuntimeFactory runtimeFactory, ISlimDirectory container)
+    public FromContainerOptions(FakeRuntimeFactory runtimeFactory, ISlimDirectory container)
     {
         this.runtimeFactory = runtimeFactory;
         this.container = container;

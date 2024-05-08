@@ -1,5 +1,7 @@
-﻿namespace DotnetPackaging.AppImage.Tests;
+﻿using Zafiro.FileSystem;
 
-public interface IRuntime
+namespace DotnetPackaging.AppImage.Tests;
+
+public interface IRuntime : IData
 {
 }

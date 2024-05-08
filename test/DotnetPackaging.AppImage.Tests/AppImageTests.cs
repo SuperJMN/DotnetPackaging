@@ -1,4 +1,6 @@
-﻿using Zafiro.FileSystem.Lightweight;
+﻿using CSharpFunctionalExtensions;
+using Zafiro.FileSystem;
+using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage.Tests;
 
@@ -7,7 +9,7 @@ public class AppImageTests
     [Fact]
     public async Task Test()
     {
-        var builder = await new DebFileBuilder(new RuntimeFactory())
+        var appImageResult = await new DebFileBuilder(new FakeRuntimeFactory())
             .FromDirectory(new SlimDirectory("AvaloniaSyncer", new List<INode>()
             {
                 new SlimFile("MyExecutable",(StringData)"echo Hello"),
@@ -19,12 +21,22 @@ public class AppImageTests
                 .WithArchitecture(Architecture.All)
                 .WithExecutableName("MyExecutable"))
             .Build();
+
+        var bytes = appImageResult.Map(image => image.ToData());
     }
 }
 
-public class RuntimeFactory
+public static class AppImageMixin
 {
-    public IRuntime Create(Architecture architecture1)
+    public static IData ToData(this AppImage appImage)
+    {
+        return new CompositeData(appImage.Runtime);
+    }
+}
+
+public class FakeRuntimeFactory
+{
+    public IRuntime Create(Architecture architecture)
     {
         return new FakeRuntime();
     }
