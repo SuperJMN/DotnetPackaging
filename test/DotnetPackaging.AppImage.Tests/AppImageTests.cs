@@ -1,24 +1,31 @@
-﻿using System.Text;
-using Zafiro.FileSystem.Lightweight;
-using File = Zafiro.FileSystem.Lightweight.File;
+﻿using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.AppImage.Tests;
 
 public class AppImageTests
 {
     [Fact]
-    public void Test()
+    public async Task Test()
     {
-        var builder = new DebFileBuilder()
+        var builder = await new DebFileBuilder(new RuntimeFactory())
             .FromDirectory(new SlimDirectory("AvaloniaSyncer", new List<INode>()
             {
-                new SlimFile("File1.txt",(StringData)"Content"),
+                new SlimFile("MyExecutable",(StringData)"echo Hello"),
                 new SlimFile("File2.txt", (StringData)"Content")
             }))
             .Configure(setup => setup
-                .Package("AvaloniaSyncer")
-                .PackageId("com.SuperJMN.AvaloniaSyncer")
-                .ExecutableName("AvaloniaSyncer.Desktop"))
+                .WithPackage("AvaloniaSyncer")
+                .WithPackageId("com.SuperJMN.AvaloniaSyncer")
+                .WithArchitecture(Architecture.All)
+                .WithExecutableName("MyExecutable"))
             .Build();
+    }
+}
+
+public class RuntimeFactory
+{
+    public IRuntime Create(Architecture architecture1)
+    {
+        return new FakeRuntime();
     }
 }

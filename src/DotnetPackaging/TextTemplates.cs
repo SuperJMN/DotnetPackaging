@@ -3,7 +3,7 @@ using Zafiro.Mixins;
 
 namespace DotnetPackaging;
 
-public static class MiscMixin
+public static class TextTemplates
 {
     public static string DesktopFileContents(string appDir, PackageMetadata metadata)
     {

@@ -1,27 +1,44 @@
-﻿namespace DotnetPackaging.AppImage.Tests;
+﻿using CSharpFunctionalExtensions;
+
+namespace DotnetPackaging.AppImage.Tests;
 
 public class ContainerOptionsSetup
 {
-    private string package;
-    private string packageId;
-    private string executableName;
+    public bool DetectArchitecture { get; private set; }
+    public string Package { get; private set; }
+    public string PackageId { get; private set; }
+    public string ExecutableName { get; private set; }
+    public Maybe<Architecture> Architecture { get; private set; }
 
-    public ContainerOptionsSetup Package(string package)
+    public ContainerOptionsSetup WithPackage(string package)
     {
-        this.package = package;
+        this.Package = package;
         return this;
     }
 
-    public ContainerOptionsSetup PackageId(string packageId)
+    public ContainerOptionsSetup WithPackageId(string packageId)
     {
-        this.packageId = packageId;
+        this.PackageId = packageId;
         return this;
 
     }
 
-    public ContainerOptionsSetup ExecutableName(string executableName)
+    public ContainerOptionsSetup WithExecutableName(string executableName)
     {
-        this.executableName = executableName;
+        this.ExecutableName = executableName;
+        return this;
+    }
+    
+    public ContainerOptionsSetup WithArchitecture(Architecture architecture)
+    {
+        this.Architecture = architecture;
+        return this;
+    }
+
+
+    public ContainerOptionsSetup AutoDetectArchitecture()
+    {
+        DetectArchitecture = true;
         return this;
     }
 }

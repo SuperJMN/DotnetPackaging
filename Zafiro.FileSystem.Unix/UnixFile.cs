@@ -1,10 +1,17 @@
 ﻿using CSharpFunctionalExtensions;
 using DotnetPackaging;
+using System.Reactive.Linq;
+using System.Runtime.InteropServices;
+using Zafiro.FileSystem.Lightweight;
 
 namespace Zafiro.FileSystem.Unix;
 
 public class UnixFile : UnixNode, IData
 {
+    public UnixFile(IFile file, UnixFileProperties properties) : this(file.Name, file, properties)
+    {
+    }
+    
     public UnixFile(string name, IData data) : this(name, data, Maybe<UnixFileProperties>.None)
     {
     }
