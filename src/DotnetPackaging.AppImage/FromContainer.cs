@@ -55,9 +55,11 @@ public class FromContainer
     {
         return new UnixRoot(new UnixNode[]
         {
-            new UnixDir("usr", directory.Children.Select(Create)),
-            new UnixDir("bin", new UnixNode [] { new UnixFile(executable, UnixFileProperties.ExecutableFileProperties()) }),
-            new UnixFile("AppRun", new StringData(TextTemplates.RunScript("$APPDIR" + "/" + directory.Name + "/" + executable.Name))),
+            new UnixDir("usr", new List<UnixNode>()
+            {
+                new UnixDir("bin", directory.Children.Select(Create)),
+            }),
+            new UnixFile("AppRun", new StringData(TextTemplates.RunScript("$APPDIR" + "/usr/bin/" + executable.Name)), UnixFileProperties.ExecutableFileProperties()),
         });
     }
 
@@ -86,6 +88,7 @@ public class FromContainer
 
     private UnixNode Create(IFile file)
     {
-        return new UnixFile(file.Name, file);
+        var permissions = setup.ExecutableName.Equals(file.Name) ? UnixFileProperties.ExecutableFileProperties() : UnixFileProperties.RegularFileProperties();
+        return new UnixFile(file.Name, file, permissions);
     }
 }

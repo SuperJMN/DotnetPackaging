@@ -1,5 +1,4 @@
-﻿using Zafiro.FileSystem;
-using Zafiro.FileSystem.Unix;
+﻿using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.Deb.Archives.Tar;
 

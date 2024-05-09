@@ -14,6 +14,7 @@ using Zafiro.FileSystem.Unix;
 using Zafiro.Mixins;
 using static System.IO.File;
 using File = System.IO.File;
+using UnixFileMode = Zafiro.FileSystem.Unix.UnixFileMode;
 
 namespace DotnetPackaging.Deb.Tests;
 
@@ -26,7 +27,7 @@ public class TarFileTests
         {
             new FileTarEntry("My entry", new StringData("My content", Encoding.ASCII), new TarFileProperties()
             {
-                FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("777"),
+                FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("777"),
                 GroupId = 1000,
                 GroupName = "group1",
                 OwnerUsername = "owner1",
@@ -35,7 +36,7 @@ public class TarFileTests
             }),
             new FileTarEntry("Other entry", new StringData("Other content", Encoding.ASCII), new TarFileProperties()
             {
-                FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("755"),
+                FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("755"),
                 GroupId = 123,
                 OwnerId = 567,
                 GroupName = "group2",

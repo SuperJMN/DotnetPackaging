@@ -1,6 +1,4 @@
 ﻿using System.Text;
-using Zafiro.FileSystem;
-using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.Deb.Archives.Ar;
 

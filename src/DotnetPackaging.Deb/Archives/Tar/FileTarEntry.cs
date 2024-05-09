@@ -1,7 +1,4 @@
-﻿using Zafiro.FileSystem;
-using Zafiro.FileSystem.Lightweight;
-
-namespace DotnetPackaging.Deb.Archives.Tar;
+﻿namespace DotnetPackaging.Deb.Archives.Tar;
 
 public record FileTarEntry : TarEntry
 {

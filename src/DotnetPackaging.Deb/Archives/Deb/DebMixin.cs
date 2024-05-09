@@ -1,10 +1,4 @@
-﻿using DotnetPackaging.Deb.Archives.Ar;
-using DotnetPackaging.Deb.Archives.Tar;
-using Zafiro.FileSystem;
-using Zafiro.FileSystem.Lightweight;
-using File = Zafiro.FileSystem.Lightweight.File;
-
-namespace DotnetPackaging.Deb.Archives.Deb;
+﻿namespace DotnetPackaging.Deb.Archives.Deb;
 
 public class ByteProviderFile : IFile
 {
@@ -20,4 +14,3 @@ public class ByteProviderFile : IFile
     public IObservable<byte[]> Bytes => data.Bytes;
     public long Length => data.Length;
 }
-

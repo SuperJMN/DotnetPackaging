@@ -7,6 +7,7 @@ using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 using Zafiro.FileSystem.Unix;
 using File = Zafiro.FileSystem.Lightweight.File;
+using UnixFileMode = Zafiro.FileSystem.Unix.UnixFileMode;
 
 namespace DotnetPackaging.Deb.Tests;
 
@@ -23,7 +24,7 @@ public static class DebMixin
         TarFile dataTarFile = new TarFile(debFile.Entries);
         var properties = new Properties()
         {
-            FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("644"),
+            FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("644"),
             GroupId = 0,
             LastModification = debFile.Metadata.ModificationTime,
             OwnerId = 0,
@@ -35,7 +36,7 @@ public static class DebMixin
     {
         var properties = new Properties()
         {
-            FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("644"),
+            FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("644"),
             GroupId = 0,
             LastModification = debFile.Metadata.ModificationTime,
             OwnerId = 0,
@@ -53,7 +54,7 @@ public static class DebMixin
     {
         var properties = new Properties()
         {
-            FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("644"),
+            FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("644"),
             GroupId = 0,
             LastModification = debFile.Metadata.ModificationTime,
             OwnerId = 0,
@@ -67,7 +68,7 @@ public static class DebMixin
     {
         var fileProperties = new TarFileProperties()
         {
-            FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("644"),
+            FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("644"),
             GroupId = 0,
             GroupName = "root",
             OwnerId = 0,
@@ -77,7 +78,7 @@ public static class DebMixin
         
         var dirProperties = new TarDirectoryProperties()
         {
-            FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("755"),
+            FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("755"),
             GroupId = 0,
             GroupName = "root",
             OwnerId = 0,

@@ -10,6 +10,7 @@ using Zafiro.FileSystem.Lightweight;
 using Zafiro.FileSystem.Unix;
 using Zafiro.Reactive;
 using IoFile = System.IO.File;
+using UnixFileMode = Zafiro.FileSystem.Unix.UnixFileMode;
 
 namespace DotnetPackaging.Deb.Tests;
 
@@ -41,7 +42,7 @@ public class DebTests
 
         var defaultFileProperties = new TarFileProperties
         {
-            FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("777"),
+            FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("777"),
             GroupId = 0,
             GroupName = "root",
             LastModification = DateTimeOffset.Now,
@@ -51,7 +52,7 @@ public class DebTests
 
         var defaultDirProperties = new TarDirectoryProperties
         {
-            FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("755"),
+            FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("755"),
             GroupId = 0,
             GroupName = "root",
             LastModification = 25.April(2024).AddHours(9).AddMinutes(47).AddSeconds(22).ToDateTimeOffset(),
@@ -67,7 +68,7 @@ public class DebTests
             new DirectoryTarEntry("./etc/", defaultDirProperties with { LastModification = DateTimeOffset.Parse("24/04/2024 12:10:10 +00:00") }),
             new FileTarEntry("./etc/test.conf", new StringData(confContents, Encoding.ASCII), defaultFileProperties with
             {
-                FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("644"),
+                FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("644"),
                 LastModification = DateTimeOffset.Parse("24/04/2024 12:06:22 +00:00")
             })
         };

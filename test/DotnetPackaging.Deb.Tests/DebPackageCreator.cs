@@ -6,6 +6,7 @@ using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 using Zafiro.FileSystem.Unix;
 using Zafiro.Mixins;
+using UnixFileMode = Zafiro.FileSystem.Unix.UnixFileMode;
 
 namespace DotnetPackaging.Deb.Tests;
 
@@ -67,7 +68,7 @@ public static class DebPackageCreator
     {
         var directoryProperties = new TarDirectoryProperties
         {
-            FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("755"),
+            FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("755"),
             GroupId = 1000,
             OwnerId = 1000,
             GroupName = "root",

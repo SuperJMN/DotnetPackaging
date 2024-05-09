@@ -1,6 +1,4 @@
 ﻿using System.Reactive.Linq;
-using Zafiro.FileSystem;
-using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.Deb.Archives.Tar;
 

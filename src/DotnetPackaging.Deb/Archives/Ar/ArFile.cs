@@ -1,6 +1,5 @@
 ﻿using System.Reactive.Linq;
 using System.Xml.Linq;
-using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging.Deb.Archives.Ar;
 

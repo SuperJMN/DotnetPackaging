@@ -1,12 +1,11 @@
 ﻿using System.Reactive.Linq;
 using System.Text;
 using DotnetPackaging.Deb.Archives.Ar;
-using DotnetPackaging.Deb.Archives.Deb;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Zafiro.FileSystem.Unix;
 using File = Zafiro.FileSystem.Lightweight.File;
+using UnixFileMode = Zafiro.FileSystem.Unix.UnixFileMode;
 
 namespace DotnetPackaging.Deb.Tests;
 
@@ -38,7 +37,7 @@ public class ArFileTests
 
     private static Properties DefaultProperties() => new()
     {
-        FileMode = UnixFilePermissions.AllPermissions,
+        FileMode = UnixFileMode.All,
         GroupId = 0,
         LastModification = 20.January(2020),
         OwnerId = 0

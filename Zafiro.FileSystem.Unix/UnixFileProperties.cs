@@ -5,7 +5,7 @@ namespace Zafiro.FileSystem.Unix;
 public record UnixFileProperties
 {
     public required DateTimeOffset LastModification { get; init; }
-    public required UnixFilePermissions FileMode { get; init; }
+    public required UnixFileMode FileMode { get; init; }
     public required Maybe<string> OwnerUsername { get; init; }
     public required Maybe<string> GroupName { get; init; }
     public required Maybe<int> OwnerId { get; init; }
@@ -13,7 +13,7 @@ public record UnixFileProperties
     
     public static UnixFileProperties RegularFileProperties() => new()
     {
-        FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("644"),
+        FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("644"),
         GroupId = 1000,
         OwnerId = 1000,
         GroupName = "root",
@@ -23,7 +23,7 @@ public record UnixFileProperties
     
     public static UnixFileProperties RegularDirectoryProperties() => new()
     {
-        FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("755"),
+        FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("755"),
         GroupId = 1000,
         OwnerId = 1000,
         GroupName = "root",
@@ -31,5 +31,5 @@ public record UnixFileProperties
         LastModification = DateTimeOffset.Now
     };
 
-    public static UnixFileProperties ExecutableFileProperties() => RegularFileProperties() with { FileMode = UnixFilePermissionsMixin.ParseUnixPermissions("755") };
+    public static UnixFileProperties ExecutableFileProperties() => RegularFileProperties() with { FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("755") };
 }
