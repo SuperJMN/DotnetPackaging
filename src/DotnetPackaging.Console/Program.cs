@@ -1,12 +1,12 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Parsing;
-using System.ComponentModel;
-using System.Globalization;
+using System.Diagnostics;
 using System.IO.Abstractions;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
 using DotnetPackaging.AppImage.Kernel;
 using DotnetPackaging.Console;
+using Serilog;
 using Zafiro.DataModel;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
@@ -18,6 +18,10 @@ class Program
     
     public static Task<int> Main(string[] args)
     {
+        Log.Logger = new LoggerConfiguration()
+            .WriteTo.Console()
+            .CreateLogger();
+        
         var rootCommand = new RootCommand();
         //rootCommand.AddCommand(DebCommand());
         rootCommand.AddCommand(AppImageCommand());
@@ -96,7 +100,10 @@ class Program
     {
         await AppImage.Create()
             .FromDirectory(new DotnetDir(FileSystem.DirectoryInfo.New(inputDir.FullName)))
-            .Configure(setup => { })
+            .Configure(setup => setup
+                .WithExecutableName("AvaloniaSyncer.Desktop")
+                .AutoDetectArchitecture()
+                .AutoDetectIcon())
             .Build()
             .Bind(x => AppImageMixin.ToData(x).Bind(async data =>
             {
@@ -104,7 +111,8 @@ class Program
                 {
                     return await data.DumpTo(fileSystemStream);
                 }
-            }));
+            }))
+            .WriteResult();
     }
 
     private static IIcon GetIcon(SymbolResult argumentResult, ArgumentResult result)
@@ -117,42 +125,6 @@ class Program
         }
                 
         return null;
-    }
-}
-
-internal class DirectoryInfoTypeConverter : TypeConverter
-{
-    public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)
-    {
-        return sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
-    }
-    
-    public override object? ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object value)
-    {
-        if (value is string stringValue)
-        {
-            return Program.FileSystem.DirectoryInfo.New(stringValue);
-        }
-
-        return base.ConvertFrom(context, culture, value);
-    }
-}
-
-internal class FileInfoTypeConverter : TypeConverter
-{
-    public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)
-    {
-        return sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
-    }
-    
-    public override object? ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object value)
-    {
-        if (value is string stringValue)
-        {
-            return Program.FileSystem.FileInfo.New(stringValue);
-        }
-
-        return base.ConvertFrom(context, culture, value);
     }
 }
 
