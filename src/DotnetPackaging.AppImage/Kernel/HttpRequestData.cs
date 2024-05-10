@@ -1,6 +1,4 @@
-﻿using CSharpFunctionalExtensions;
-using DotnetPackaging.AppImage.Tests;
-using Zafiro.FileSystem;
+﻿using DotnetPackaging.AppImage.Tests;
 using Zafiro.Reactive;
 
 namespace DotnetPackaging.AppImage.Kernel;

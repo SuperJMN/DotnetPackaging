@@ -1,12 +1,5 @@
 ﻿using System.Reactive.Linq;
-using System.Runtime.CompilerServices;
-using CSharpFunctionalExtensions;
-using CSharpFunctionalExtensions.ValueTasks;
-using DotnetPackaging.AppImage.Kernel;
 using Serilog;
-using Zafiro.CSharpFunctionalExtensions;
-using Zafiro.FileSystem;
-using Zafiro.FileSystem.Lightweight;
 using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.AppImage.Builder;

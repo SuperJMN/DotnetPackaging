@@ -1,8 +1,6 @@
-﻿using CSharpFunctionalExtensions;
-using MoreLinq;
+﻿using MoreLinq;
 using NyaFs.Filesystem.SquashFs;
 using NyaFs.Filesystem.SquashFs.Types;
-using Zafiro.FileSystem;
 using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.AppImage.Kernel;

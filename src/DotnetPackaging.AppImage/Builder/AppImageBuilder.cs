@@ -1,7 +1,4 @@
-﻿using DotnetPackaging.AppImage.Kernel;
-using Zafiro.FileSystem.Lightweight;
-
-namespace DotnetPackaging.AppImage.Builder;
+﻿namespace DotnetPackaging.AppImage.Builder;
 
 public class AppImageBuilder
 {

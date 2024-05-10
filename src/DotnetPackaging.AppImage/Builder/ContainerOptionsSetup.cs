@@ -1,6 +1,4 @@
-﻿using CSharpFunctionalExtensions;
-
-namespace DotnetPackaging.AppImage.Builder;
+﻿namespace DotnetPackaging.AppImage.Builder;
 
 public class ContainerOptionsSetup
 {

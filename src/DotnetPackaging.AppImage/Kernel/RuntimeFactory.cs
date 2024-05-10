@@ -1,6 +1,4 @@
-﻿using CSharpFunctionalExtensions;
-
-namespace DotnetPackaging.AppImage.Kernel;
+﻿namespace DotnetPackaging.AppImage.Kernel;
 
 public class RuntimeFactory
 {
