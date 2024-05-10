@@ -1,4 +1,5 @@
 ﻿using System.IO.Abstractions;
+using DotnetPackaging.AppImage.Kernel;
 using Serilog;
 using Xunit.Abstractions;
 
@@ -6,11 +7,8 @@ namespace DotnetPackaging.AppImage.Tests.Integration;
 
 public class AppImageTests
 {
-    private readonly ITestOutputHelper testOutput;
-
     public AppImageTests(ITestOutputHelper testOutput)
     {
-        this.testOutput = testOutput;
         Log.Logger = new LoggerConfiguration().WriteTo.TestOutput(testOutput).CreateLogger();
     }
     
@@ -20,7 +18,7 @@ public class AppImageTests
         var fs = new FileSystem();
         var dir = new DotnetDir(fs.DirectoryInfo.New("C:\\Users\\JMN\\Desktop\\AppDir\\AvaloniaSyncer"));
         
-        var appImageResult = await new DebFileBuilder(new RuntimeFactory())
+        var appImageResult = await AppImage.Create()
             .FromDirectory(dir)
             .Configure(setup => setup
                 .WithPackage("AvaloniaSyncer")

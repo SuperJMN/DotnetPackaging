@@ -1,7 +1,7 @@
-﻿using DotnetPackaging.AppImage.Tests;
+﻿using DotnetPackaging.AppImage.Kernel;
 using Zafiro.FileSystem.Lightweight;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Builder;
 
 public class FromContainerOptions
 {

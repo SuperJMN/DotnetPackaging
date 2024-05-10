@@ -1,4 +1,4 @@
-﻿namespace DotnetPackaging.AppImage.Tests;
+﻿namespace DotnetPackaging.AppImage.Kernel;
 
 public class Application : IApplication
 {

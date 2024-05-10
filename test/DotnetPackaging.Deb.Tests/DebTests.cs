@@ -42,7 +42,7 @@ public class DebTests
 
         var defaultFileProperties = new TarFileProperties
         {
-            FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("777"),
+            FileMode = UnixFilePermissionsMixin.ToFileMode("777"),
             GroupId = 0,
             GroupName = "root",
             LastModification = DateTimeOffset.Now,
@@ -52,7 +52,7 @@ public class DebTests
 
         var defaultDirProperties = new TarDirectoryProperties
         {
-            FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("755"),
+            FileMode = UnixFilePermissionsMixin.ToFileMode("755"),
             GroupId = 0,
             GroupName = "root",
             LastModification = 25.April(2024).AddHours(9).AddMinutes(47).AddSeconds(22).ToDateTimeOffset(),
@@ -68,7 +68,7 @@ public class DebTests
             new DirectoryTarEntry("./etc/", defaultDirProperties with { LastModification = DateTimeOffset.Parse("24/04/2024 12:10:10 +00:00") }),
             new FileTarEntry("./etc/test.conf", new StringData(confContents, Encoding.ASCII), defaultFileProperties with
             {
-                FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("644"),
+                FileMode = UnixFilePermissionsMixin.ToFileMode("644"),
                 LastModification = DateTimeOffset.Parse("24/04/2024 12:06:22 +00:00")
             })
         };

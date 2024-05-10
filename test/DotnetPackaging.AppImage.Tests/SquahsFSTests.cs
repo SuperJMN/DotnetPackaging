@@ -1,4 +1,5 @@
-﻿using Zafiro.FileSystem.Unix;
+﻿using DotnetPackaging.AppImage.Kernel;
+using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.AppImage.Tests;
 

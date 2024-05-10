@@ -1,7 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 
-namespace DotnetPackaging.AppImage.Tests;
+namespace DotnetPackaging.AppImage.Kernel;
 
 public class UriRuntime : IRuntime
 {

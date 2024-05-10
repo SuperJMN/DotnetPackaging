@@ -4,10 +4,8 @@ using DotnetPackaging.Deb.Archives.Tar;
 using FluentAssertions.Common;
 using FluentAssertions.Extensions;
 using Zafiro.FileSystem;
-using Zafiro.FileSystem.Lightweight;
 using Zafiro.FileSystem.Unix;
 using File = Zafiro.FileSystem.Lightweight.File;
-using UnixFileMode = Zafiro.FileSystem.Unix.UnixFileMode;
 
 namespace DotnetPackaging.Deb.Tests;
 
@@ -24,9 +22,9 @@ public static class DebMixin
         TarFile dataTarFile = new TarFile(debFile.Entries);
         var properties = new Properties()
         {
-            FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("644"),
+            FileMode = UnixFilePermissionsMixin.ToFileMode("644"),
             GroupId = 0,
-            LastModification = debFile.Metadata.ModificationTime,
+            LastModification = debFile.Metadata.ModificationTime.GetValueOrDefault(DateTimeOffset.Now),
             OwnerId = 0,
         };
         return new Entry(new ByteProviderFile("data.tar", dataTarFile.ToByteProvider()), properties);
@@ -36,9 +34,9 @@ public static class DebMixin
     {
         var properties = new Properties()
         {
-            FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("644"),
+            FileMode = UnixFilePermissionsMixin.ToFileMode("644"),
             GroupId = 0,
-            LastModification = debFile.Metadata.ModificationTime,
+            LastModification = debFile.Metadata.ModificationTime.GetValueOrDefault(DateTimeOffset.Now),
             OwnerId = 0,
         };
 
@@ -54,9 +52,9 @@ public static class DebMixin
     {
         var properties = new Properties()
         {
-            FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("644"),
+            FileMode = "644".ToFileMode(),
             GroupId = 0,
-            LastModification = debFile.Metadata.ModificationTime,
+            LastModification = debFile.Metadata.ModificationTime.GetValueOrDefault(DateTimeOffset.Now),
             OwnerId = 0,
         };
         
@@ -68,7 +66,7 @@ public static class DebMixin
     {
         var fileProperties = new TarFileProperties()
         {
-            FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("644"),
+            FileMode = "644".ToFileMode(),
             GroupId = 0,
             GroupName = "root",
             OwnerId = 0,
@@ -78,7 +76,7 @@ public static class DebMixin
         
         var dirProperties = new TarDirectoryProperties()
         {
-            FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("755"),
+            FileMode = "755".ToFileMode(),
             GroupId = 0,
             GroupName = "root",
             OwnerId = 0,

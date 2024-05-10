@@ -2,7 +2,7 @@
 
 public static class UnixFilePermissionsMixin
 {
-    public static UnixFileMode ConvertToUnixFileMode(this string modeString)
+    public static UnixFileMode ToFileMode(this string modeString)
     {
         if (modeString.Length != 3)
         {

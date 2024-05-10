@@ -5,7 +5,7 @@ using NyaFs.Filesystem.SquashFs.Types;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Unix;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Kernel;
 
 public class SquashFS
 {
@@ -17,7 +17,7 @@ public class SquashFS
             .Map(() =>
             {
                 var filesystemImage = builder.GetFilesystemImage();
-                return (IData) new ByteArrayData(filesystemImage);
+                return (IData)new ByteArrayData(filesystemImage);
             });
     }
 

@@ -1,16 +1,9 @@
-﻿using DotnetPackaging.AppImage.Tests;
-using Zafiro.FileSystem.Unix;
+﻿using DotnetPackaging.AppImage.Builder;
+using DotnetPackaging.AppImage.Kernel;
 
 namespace DotnetPackaging.AppImage;
 
 public class AppImage
 {
-    public IRuntime Runtime { get; }
-    public UnixRoot Root { get; }
-
-    public AppImage(IRuntime runtime, UnixRoot root)
-    {
-        Runtime = runtime;
-        Root = root;
-    }
+    public static AppImageBuilder Create() => new(new RuntimeFactory());
 }

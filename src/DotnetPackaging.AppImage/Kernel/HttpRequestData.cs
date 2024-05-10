@@ -1,15 +1,14 @@
 ﻿using CSharpFunctionalExtensions;
-using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.AppImage.Tests;
 using Zafiro.FileSystem;
 using Zafiro.Reactive;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Kernel;
 
 public static class HttpRequestData
 {
     private static readonly IHttpClientFactory HttpClientFactory = new DefaultHttpClientFactory();
-    
+
     public static Task<Result<IData>> Create(Uri uri)
     {
         return Result

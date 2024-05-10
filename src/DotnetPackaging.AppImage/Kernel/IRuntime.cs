@@ -1,6 +1,6 @@
 ﻿using Zafiro.FileSystem;
 
-namespace DotnetPackaging.AppImage.Tests;
+namespace DotnetPackaging.AppImage.Kernel;
 
 public interface IRuntime : IData
 {

@@ -13,7 +13,7 @@ public record UnixFileProperties
     
     public static UnixFileProperties RegularFileProperties() => new()
     {
-        FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("644"),
+        FileMode = UnixFilePermissionsMixin.ToFileMode("644"),
         GroupId = 1000,
         OwnerId = 1000,
         GroupName = "root",
@@ -23,7 +23,7 @@ public record UnixFileProperties
     
     public static UnixFileProperties RegularDirectoryProperties() => new()
     {
-        FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("755"),
+        FileMode = UnixFilePermissionsMixin.ToFileMode("755"),
         GroupId = 1000,
         OwnerId = 1000,
         GroupName = "root",
@@ -31,5 +31,5 @@ public record UnixFileProperties
         LastModification = DateTimeOffset.Now
     };
 
-    public static UnixFileProperties ExecutableFileProperties() => RegularFileProperties() with { FileMode = UnixFilePermissionsMixin.ConvertToUnixFileMode("755") };
+    public static UnixFileProperties ExecutableFileProperties() => RegularFileProperties() with { FileMode = UnixFilePermissionsMixin.ToFileMode("755") };
 }

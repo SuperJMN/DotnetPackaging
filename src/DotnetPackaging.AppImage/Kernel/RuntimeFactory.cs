@@ -1,6 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 
-namespace DotnetPackaging.AppImage.Tests;
+namespace DotnetPackaging.AppImage.Kernel;
 
 public class RuntimeFactory
 {
@@ -11,7 +11,7 @@ public class RuntimeFactory
         { Architecture.Arm32, new("https://github.com/AppImage/AppImageKit/releases/download/continuous/runtime-armhf") },
         { Architecture.Arm64, new("https://github.com/AppImage/AppImageKit/releases/download/continuous/runtime-aarch64") },
     };
-    
+
     public Task<Result<IRuntime>> Create(Architecture architecture)
     {
         return RuntimeUrls

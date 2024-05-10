@@ -1,11 +1,14 @@
-﻿namespace DotnetPackaging.AppImage.Tests;
+﻿using DotnetPackaging.AppImage.Builder;
+using DotnetPackaging.AppImage.Kernel;
+
+namespace DotnetPackaging.AppImage.Tests;
 
 public class AppImageTests
 {
     [Fact]
     public async Task Test()
     {
-        var appImageResult = await new DebFileBuilder(new RuntimeFactory())
+        var appImageResult = await new AppImageBuilder(new RuntimeFactory())
             .FromDirectory(new SlimDirectory("AvaloniaSyncer", new List<INode>()
             {
                 new SlimFile("MyExecutable",(StringData)"echo Hello"),
