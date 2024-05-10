@@ -23,7 +23,7 @@ public static class DebMixin
         TarFile dataTarFile = new TarFile(debFile.Entries);
         var properties = new Properties()
         {
-            FileMode = UnixFilePermissionsMixin.ToFileMode("644"),
+            FileMode = "644".ToFileMode(),
             GroupId = 0,
             LastModification = debFile.Metadata.ModificationTime.GetValueOrDefault(DateTimeOffset.Now),
             OwnerId = 0,
@@ -35,7 +35,7 @@ public static class DebMixin
     {
         var properties = new Properties()
         {
-            FileMode = UnixFilePermissionsMixin.ToFileMode("644"),
+            FileMode = "644".ToFileMode(),
             GroupId = 0,
             LastModification = debFile.Metadata.ModificationTime.GetValueOrDefault(DateTimeOffset.Now),
             OwnerId = 0,

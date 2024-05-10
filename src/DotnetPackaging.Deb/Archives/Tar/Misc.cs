@@ -6,7 +6,7 @@ public class Misc
 {
     public static TarFileProperties RegularFileProperties() => new()
     {
-        FileMode = UnixFilePermissionsMixin.ToFileMode("644"),
+        FileMode = "644".ToFileMode(),
         GroupId = 1000,
         OwnerId = 1000,
         GroupName = "root",
@@ -14,5 +14,5 @@ public class Misc
         LastModification = DateTimeOffset.Now
     };
 
-    public static TarFileProperties ExecutableFileProperties() => RegularFileProperties() with { FileMode = UnixFilePermissionsMixin.ToFileMode("755") };
+    public static TarFileProperties ExecutableFileProperties() => RegularFileProperties() with { FileMode = "755".ToFileMode() };
 }

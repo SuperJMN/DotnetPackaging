@@ -69,7 +69,7 @@ public static class DebPackageCreator
     {
         var directoryProperties = new TarDirectoryProperties
         {
-            FileMode = UnixFilePermissionsMixin.ToFileMode("755"),
+            FileMode = "755".ToFileMode(),
             GroupId = 1000,
             OwnerId = 1000,
             GroupName = "root",

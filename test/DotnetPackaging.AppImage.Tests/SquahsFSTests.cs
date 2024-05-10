@@ -20,6 +20,6 @@ public class SquahsFSTests
         });
 
         await SquashFS.Create(root)
-            .Bind(data => ByteProviderMixin.DumpTo(data, "C:\\Users\\JMN\\Desktop\\File.squashfs"));
+            .Bind(data => data.DumpTo("C:\\Users\\JMN\\Desktop\\File.squashfs"));
     }
 }

@@ -4,7 +4,6 @@ using DotnetPackaging.Deb.Archives.Ar;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Zafiro.FileSystem.Lightweight;
 using File = Zafiro.FileSystem.Lightweight.File;
 using UnixFileMode = Zafiro.FileSystem.Unix.UnixFileMode;
 

@@ -28,7 +28,7 @@ public class TarFileTests
         {
             new FileTarEntry("My entry", new StringData("My content", Encoding.ASCII), new TarFileProperties()
             {
-                FileMode = UnixFilePermissionsMixin.ToFileMode("777"),
+                FileMode = "777".ToFileMode(),
                 GroupId = 1000,
                 GroupName = "group1",
                 OwnerUsername = "owner1",
@@ -37,7 +37,7 @@ public class TarFileTests
             }),
             new FileTarEntry("Other entry", new StringData("Other content", Encoding.ASCII), new TarFileProperties()
             {
-                FileMode = UnixFilePermissionsMixin.ToFileMode("755"),
+                FileMode = "755".ToFileMode(),
                 GroupId = 123,
                 OwnerId = 567,
                 GroupName = "group2",
