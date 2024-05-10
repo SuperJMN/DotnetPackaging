@@ -1,8 +1,6 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Binding;
 using CSharpFunctionalExtensions;
-using DotnetPackaging.AppImage;
-using DotnetPackaging.AppImage.Core;
 
 namespace DotnetPackaging.Console;
 
@@ -30,7 +28,7 @@ public class OptionsBinder(
             StartupWmClass = Maybe.From(bindingContext.ParseResult.GetValueForOption(wmClassOption)!),
             Keywords = Maybe.From(bindingContext.ParseResult.GetValueForOption(keywordsOption)!),
             Comment = Maybe.From(bindingContext.ParseResult.GetValueForOption(commentOption)!),
-            MainCategory = MaybeMixin.From(bindingContext.ParseResult.GetValueForOption(mainCategory)),
+            MainCategory = MaybeMixin.FromNullableStruct(bindingContext.ParseResult.GetValueForOption(mainCategory)),
             AdditionalCategories = Maybe.From(bindingContext.ParseResult.GetValueForOption(categoriesOption)!),
             Icon = Maybe<IIcon>.From(bindingContext.ParseResult.GetValueForOption(iconOption)!),
             Version = Maybe.From(bindingContext.ParseResult.GetValueForOption(versionOption)!),
@@ -41,4 +39,21 @@ public class OptionsBinder(
             AppId = Maybe.From(bindingContext.ParseResult.GetValueForOption(appIdOption)!),
         };
     }
+}
+
+public class Options
+{
+    public Maybe<string> AppName { get; set; }
+    public Maybe<string> StartupWmClass { get; set; }
+    public Maybe<IEnumerable<string>> Keywords { get; set; }
+    public Maybe<string> Comment { get; set; }
+    public Maybe<MainCategory> MainCategory { get; set; }
+    public Maybe<IEnumerable<AdditionalCategory>> AdditionalCategories { get; set; }
+    public Maybe<IIcon> Icon { get; set; }
+    public Maybe<string> Version { get; set; }
+    public Maybe<Uri> HomePage { get; set; }
+    public Maybe<string> License { get; set; }
+    public Maybe<IEnumerable<Uri>> ScreenshotUrls { get; set; }
+    public Maybe<string> Summary { get; set; }
+    public Maybe<string> AppId { get; set; }
 }

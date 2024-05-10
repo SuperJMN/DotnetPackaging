@@ -32,7 +32,7 @@
     <None Remove="TextFile1.txt" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CSharpFunctionalExtensions" Version="2.41.0" />
+    <PackageReference Include="CSharpFunctionalExtensions" Version="2.42.0" />
     <PackageReference Include="CSharpFunctionalExtensions.FluentAssertions" Version="2.0.0" />
     <PackageReference Include="FluentAssertions" Version="6.12.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
