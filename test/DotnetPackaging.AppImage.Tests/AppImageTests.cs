@@ -1,10 +1,4 @@
-﻿using System.Reactive.Linq;
-using CSharpFunctionalExtensions;
-using FluentAssertions;
-using Zafiro.FileSystem;
-using Zafiro.FileSystem.Lightweight;
-
-namespace DotnetPackaging.AppImage.Tests;
+﻿namespace DotnetPackaging.AppImage.Tests;
 
 public class AppImageTests
 {
@@ -29,4 +23,5 @@ public class AppImageTests
             .Bind(data => data.DumpTo("C:\\Users\\JMN\\Desktop\\File.AppImage"));
         dumpResult.Should().Succeed();
     }
+   
 }

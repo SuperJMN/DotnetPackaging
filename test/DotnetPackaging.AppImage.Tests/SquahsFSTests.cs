@@ -1,7 +1,4 @@
-﻿using CSharpFunctionalExtensions;
-using Zafiro.FileSystem;
-using Zafiro.FileSystem.Lightweight;
-using Zafiro.FileSystem.Unix;
+﻿using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.AppImage.Tests;
 

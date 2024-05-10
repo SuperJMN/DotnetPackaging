@@ -68,7 +68,7 @@ public class FromContainer
             new UnixFile("AppRun", new StringData(TextTemplates.RunScript("$APPDIR" + "/usr/bin/" + executable.Name)), UnixFileProperties.ExecutableFileProperties()),
         };
 
-        var optionalNodes = (await GetIcon(directory).Map(icon1 => new UnixFile(".AppDir", icon1)).TapError(Log.Warning)).AsMaybe().ToList();
+        var optionalNodes = (await GetIcon(directory).Map(data => new UnixFile(".AppDir", data)).TapError(Log.Warning)).AsMaybe().ToList();
         var nodes = mandatory.Concat(optionalNodes);
         
         return new UnixRoot(nodes);
@@ -79,7 +79,11 @@ public class FromContainer
         string[] icons = ["App.png", "Application.png", "AppImage.png", "Icon.png" ];
         if (setup.DetectIcon)
         {
-            var maybeFile = directory.Files().TryFirst(x => icons.Contains(x.Name, StringComparer.OrdinalIgnoreCase)).ToResult("Not found");
+            var maybeFile = directory.Files()
+                .TryFirst(x => icons.Contains(x.Name, StringComparer.OrdinalIgnoreCase))
+                .ToResult($"Icon autodetection: Could not find any icon in '{directory}'. We've looked for: {string.Join(",", icons.Select(x => $"\"{x}\""))}")
+                .Tap(f => Log.Information("Found icon in file {File}", f));
+            
             return await maybeFile.Map(Icon.FromData);
         }
 

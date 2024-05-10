@@ -30,4 +30,6 @@ public class UnixFile : UnixNode, IData
     public UnixFileProperties Properties { get; }
     public IObservable<byte[]> Bytes => Data.Bytes;
     public long Length => Data.Length;
+
+    public override string ToString() => Name;
 }
