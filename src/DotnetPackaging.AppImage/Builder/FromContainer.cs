@@ -71,7 +71,7 @@ public class FromContainer
     {
         var icon = await GetIcon(directory).TapError(Log.Warning);
 
-        PackageMetadata packageMetadata = new PackageMetadata()
+        var packageMetadata = new PackageMetadata()
         {
             Architecture = architecture,
             Icon = icon.AsMaybe(),
@@ -90,9 +90,9 @@ public class FromContainer
             Keywords = setup.Keywords,
             Recommends = setup.Recommends,
             Section = setup.Section,
-            Package = setup.Package,
+            Package = setup.Package.Or(setup.AppName).GetValueOrDefault(directory.Name),
             Version = setup.Version,
-            ExecutableName = setup.ExecutableName,
+            ExecutableName = executable.Name,
             VcsBrowser = setup.VcsBrowser,
             VcsGit = setup.VcsGit,
             InstalledSize = setup.InstalledSize,
