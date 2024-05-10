@@ -23,7 +23,7 @@ public class AppImageTests
             .Configure(setup => setup
                 .WithPackage("AvaloniaSyncer")
                 .WithPackageId("com.SuperJMN.AvaloniaSyncer")
-                .WithArchitecture(Architecture.X64)
+                .AutoDetectArchitecture()
                 .AutoDetectIcon()
                 .WithExecutableName("AvaloniaSyncer.Desktop"))
             .Build();

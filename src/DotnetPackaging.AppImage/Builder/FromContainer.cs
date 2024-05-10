@@ -22,7 +22,7 @@ public class FromContainer
         var execResult = root.Files().TryFirst(x => x.Name == setup.ExecutableName).ToResult($"Could not find executable file '{setup.ExecutableName}'");
 
         var build = execResult
-            .Bind(exec => GetArch(exec)
+            .Bind(exec => GetArch(exec).Tap(arch => Log.Information("Architecture set to {Arch}", arch))
                 .Bind(architecture => runtimeFactory.Create(architecture)
                     .Map(runtime => new
                     {
@@ -44,6 +44,7 @@ public class FromContainer
     {
         if (setup.DetectArchitecture)
         {
+            Log.Information("Trying to autodetect the architecture of the AppImage using {Exec}", exec);
             return await LinuxElfInspector.GetArchitecture(exec.Bytes);
         }
 
