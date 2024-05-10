@@ -1,4 +1,4 @@
-﻿using Zafiro.FileSystem;
+﻿using Zafiro.DataModel;
 
 namespace DotnetPackaging;
 

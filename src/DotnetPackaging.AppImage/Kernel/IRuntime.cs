@@ -1,4 +1,6 @@
-﻿namespace DotnetPackaging.AppImage.Kernel;
+﻿using Zafiro.DataModel;
+
+namespace DotnetPackaging.AppImage.Kernel;
 
 public interface IRuntime : IData
 {

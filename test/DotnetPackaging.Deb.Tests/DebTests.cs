@@ -6,6 +6,7 @@ using FluentAssertions;
 using FluentAssertions.Common;
 using FluentAssertions.Extensions;
 using Xunit;
+using Zafiro.DataModel;
 using Zafiro.FileSystem.Lightweight;
 using Zafiro.FileSystem.Unix;
 using Zafiro.Reactive;
@@ -88,9 +89,9 @@ public class DebTests
     //        "Somedirectory",
     //        new List<IFile>
     //        {
-    //            new File("MyApp", "Fake exe"),
-    //            new File("MyApp.dll", "Fake dll"),
-    //            new File("Some content.txt", "Hi")
+    //            new SlimFile("MyApp", "Fake exe"),
+    //            new SlimFile("MyApp.dll", "Fake dll"),
+    //            new SlimFile("Some content.txt", "Hi")
     //        }, new List<IDirectory>());
         
     //    var metadata = new PackageMetadata

@@ -1,5 +1,8 @@
 ﻿using DotnetPackaging.AppImage.Builder;
 using DotnetPackaging.AppImage.Kernel;
+using Zafiro.DataModel;
+using Directory = Zafiro.FileSystem.Lightweight.Directory;
+using File = Zafiro.FileSystem.Lightweight.File;
 
 namespace DotnetPackaging.AppImage.Tests;
 
@@ -9,10 +12,10 @@ public class AppImageTests
     public async Task Test()
     {
         var appImageResult = await new AppImageBuilder(new RuntimeFactory())
-            .FromDirectory(new SlimDirectory("AvaloniaSyncer", new List<INode>()
+            .FromDirectory(new Directory("AvaloniaSyncer", new List<INode>()
             {
-                new SlimFile("MyExecutable",(StringData)"echo Hello"),
-                new SlimFile("Content.txt", (StringData)"Content")
+                new File("MyExecutable",(StringData)"echo Hello"),
+                new File("Content.txt", (StringData)"Content")
             }))
             .Configure(setup => setup
                 .WithPackage("AvaloniaSyncer")

@@ -1,6 +1,7 @@
 ﻿using System.Reactive.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
+using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
 using Zafiro.Reactive;
 

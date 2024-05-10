@@ -1,4 +1,6 @@
-﻿namespace DotnetPackaging.Deb.Archives.Deb;
+﻿using Zafiro.DataModel;
+
+namespace DotnetPackaging.Deb.Archives.Deb;
 
 public class ByteProviderFile : IFile
 {

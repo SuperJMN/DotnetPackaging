@@ -1,6 +1,4 @@
-﻿using CSharpFunctionalExtensions;
-
-namespace Zafiro.FileSystem.Unix;
+﻿namespace Zafiro.FileSystem.Unix;
 
 public class UnixDir : UnixNode
 {

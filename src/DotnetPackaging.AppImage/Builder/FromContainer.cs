@@ -1,16 +1,17 @@
 ﻿using System.Reactive.Linq;
 using Serilog;
+using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.AppImage.Builder;
 
 public class FromContainer
 {
-    private readonly ISlimDirectory root;
+    private readonly IDirectory root;
     private readonly RuntimeFactory runtimeFactory;
     private readonly ContainerOptionsSetup setup;
 
-    public FromContainer(ISlimDirectory root, RuntimeFactory runtimeFactory, ContainerOptionsSetup setup)
+    public FromContainer(IDirectory root, RuntimeFactory runtimeFactory, ContainerOptionsSetup setup)
     {
         this.root = root;
         this.runtimeFactory = runtimeFactory;
@@ -61,7 +62,7 @@ public class FromContainer
         return setup.Architecture.Value;
     }
 
-    private async Task<UnixRoot> CreateRoot(ISlimDirectory directory, Architecture architecture, IFile executable)
+    private async Task<UnixRoot> CreateRoot(IDirectory directory, Architecture architecture, IFile executable)
     {
         var icon = await GetIcon(directory).TapError(Log.Warning);
 
@@ -111,7 +112,7 @@ public class FromContainer
         return new UnixRoot(nodes);
     }
 
-    private async Task<Result<IIcon>> GetIcon(ISlimDirectory directory)
+    private async Task<Result<IIcon>> GetIcon(IDirectory directory)
     {
         string[] icons = ["App.png", "Application.png", "AppImage.png", "Icon.png"];
         if (setup.DetectIcon)
@@ -132,19 +133,19 @@ public class FromContainer
         return node switch
         {
             IFile f => Create(f),
-            ISlimDirectory d => Create(d),
+            IDirectory d => Create(d),
             _ => throw new ArgumentOutOfRangeException(nameof(node), node, null)
         };
     }
 
-    private UnixNode Create(ISlimDirectory directory)
+    private UnixNode Create(IDirectory directory)
     {
         return new UnixDir(directory.Name, directory.Children.Select(node =>
         {
             return node switch
             {
                 IFile f => Create(f),
-                ISlimDirectory d => Create(d),
+                IDirectory d => Create(d),
                 _ => throw new ArgumentOutOfRangeException(nameof(node), node, null)
             };
         }));

@@ -3,7 +3,8 @@ using DotnetPackaging.Deb.Archives.Deb;
 using DotnetPackaging.Deb.Archives.Tar;
 using FluentAssertions.Common;
 using FluentAssertions.Extensions;
-using Zafiro.FileSystem;
+using Zafiro.DataModel;
+using Zafiro.FileSystem.Lightweight;
 using Zafiro.FileSystem.Unix;
 using File = Zafiro.FileSystem.Lightweight.File;
 

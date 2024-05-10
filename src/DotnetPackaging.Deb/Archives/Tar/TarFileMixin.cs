@@ -1,4 +1,6 @@
-﻿namespace DotnetPackaging.Deb.Archives.Tar;
+﻿using Zafiro.DataModel;
+
+namespace DotnetPackaging.Deb.Archives.Tar;
 
 public static class TarFileMixin
 {

@@ -1,6 +1,7 @@
 ﻿using MoreLinq;
 using NyaFs.Filesystem.SquashFs;
 using NyaFs.Filesystem.SquashFs.Types;
+using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.AppImage.Kernel;

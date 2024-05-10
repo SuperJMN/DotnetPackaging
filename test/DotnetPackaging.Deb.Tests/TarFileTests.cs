@@ -8,6 +8,7 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb.Archives.Deb;
 using SharpCompress;
 using Xunit;
+using Zafiro.DataModel;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 using Zafiro.FileSystem.Unix;

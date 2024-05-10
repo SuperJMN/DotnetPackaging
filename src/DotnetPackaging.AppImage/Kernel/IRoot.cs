@@ -1,5 +1,5 @@
 ﻿namespace DotnetPackaging.AppImage.Kernel;
 
-public interface IRoot : IDirectory
+public interface IRoot : IHeavyDirectory
 {
 }

@@ -3,9 +3,9 @@
 public class FromContainerOptions
 {
     private readonly RuntimeFactory runtimeFactory;
-    private readonly ISlimDirectory container;
+    private readonly IDirectory container;
 
-    public FromContainerOptions(RuntimeFactory runtimeFactory, ISlimDirectory container)
+    public FromContainerOptions(RuntimeFactory runtimeFactory, IDirectory container)
     {
         this.runtimeFactory = runtimeFactory;
         this.container = container;

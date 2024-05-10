@@ -2,6 +2,7 @@
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb.Archives.Deb;
 using DotnetPackaging.Deb.Archives.Tar;
+using Zafiro.DataModel;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 using Zafiro.FileSystem.Unix;
@@ -12,10 +13,10 @@ namespace DotnetPackaging.Deb.Tests;
 
 public static class DebPackageCreator
 {
-    public static async Task<Result<DebFile>> CreateFromDirectory(IDirectory directory, PackageMetadata metadata)
+    public static async Task<Result<DebFile>> CreateFromDirectory(IHeavyDirectory heavyDirectory, PackageMetadata metadata)
     {
         var appDir = $"/opt/{metadata.Package}";
-        var filesInDirectory = await directory.GetFilesInTree(ZafiroPath.Empty);
+        var filesInDirectory = await heavyDirectory.GetFilesInTree(ZafiroPath.Empty);
         return filesInDirectory.Map(files =>
         {
             var executablePath = $"{appDir}/{metadata.ExecutableName}";

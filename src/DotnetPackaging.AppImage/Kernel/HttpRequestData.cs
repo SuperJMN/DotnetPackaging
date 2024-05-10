@@ -1,4 +1,4 @@
-﻿using DotnetPackaging.AppImage.Tests;
+﻿using Zafiro.DataModel;
 using Zafiro.Reactive;
 
 namespace DotnetPackaging.AppImage.Kernel;

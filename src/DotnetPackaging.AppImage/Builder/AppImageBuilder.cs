@@ -9,7 +9,7 @@ public class AppImageBuilder
         this.runtimeFactory = runtimeFactory;
     }
 
-    public FromContainerOptions FromDirectory(ISlimDirectory root)
+    public FromContainerOptions FromDirectory(IDirectory root)
     {
         return new FromContainerOptions(runtimeFactory, root);
     }

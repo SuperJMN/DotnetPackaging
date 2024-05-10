@@ -1,4 +1,5 @@
-﻿using Zafiro.FileSystem.Lightweight;
+﻿using Zafiro.FileSystem;
+using Zafiro.FileSystem.Lightweight;
 
 public class UnixNode : INode
 {

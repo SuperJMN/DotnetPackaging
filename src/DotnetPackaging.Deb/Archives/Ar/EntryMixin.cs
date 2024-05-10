@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.Deb.Archives.Ar;

@@ -1,4 +1,5 @@
 ﻿using System.Reactive.Linq;
+using Zafiro.DataModel;
 
 namespace DotnetPackaging.Deb.Archives.Tar;
 
