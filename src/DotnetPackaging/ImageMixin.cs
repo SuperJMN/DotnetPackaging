@@ -1,4 +1,5 @@
 ﻿using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using Zafiro.Reactive;
 
@@ -35,10 +36,26 @@ public static class ImageMixin
         return image.Height == image.Width && MathMixin.IsPowerOf2(image.Width);
     }
     
-    public static Image MakeAppIcon(this Image image)
+    public static Image Iconize(this Image image)
     {
         int maxSize = Math.Max(image.Width, image.Height);
-        var newSize = MathMixin.NextPowerOfTwo(maxSize);
-        return image.Resize(newSize, newSize);
+        var sideSide = MathMixin.NextPowerOfTwo(maxSize);
+        var newSize = new Size(sideSide, sideSide);
+
+        if (image.Size == newSize)
+        {
+            return image;
+        }
+        
+        var newCanvas = new Image<Rgba32>(newSize.Width, newSize.Height, Color.Transparent);
+        // Establecer el fondo transparente
+
+        // Calcular las posiciones para centrar la imagen original en el nuevo lienzo
+        int offsetX = (newSize.Width - image.Width) / 2;
+        int offsetY = (newSize.Height - image.Height) / 2;
+
+        // Dibujar la imagen original sobre el nuevo lienzo en la posición calculada
+        newCanvas.Mutate(ctx => ctx.DrawImage(image, new Point(offsetX, offsetY), 1f));
+        return newCanvas;
     }
 }

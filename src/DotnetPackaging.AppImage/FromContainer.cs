@@ -1,10 +1,15 @@
-﻿using CSharpFunctionalExtensions;
-using System.Reactive.Linq;
+﻿using System.Reactive.Linq;
+using System.Runtime.CompilerServices;
+using CSharpFunctionalExtensions;
+using CSharpFunctionalExtensions.ValueTasks;
+using DotnetPackaging.AppImage.Tests;
+using Serilog;
+using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 using Zafiro.FileSystem.Unix;
 
-namespace DotnetPackaging.AppImage.Tests;
+namespace DotnetPackaging.AppImage;
 
 public class FromContainer
 {
@@ -26,7 +31,8 @@ public class FromContainer
         var build = execResult
             .Bind(exec => GetArch(exec)
                 .Bind(architecture => runtimeFactory.Create(architecture))
-                .Map(rt => new AppImage(rt, CreateRoot(root, exec))));
+                .Map(async runtime => new { Root = await CreateRoot(root, exec), Runtime = runtime })
+                .Map(conf => new AppImage(conf.Runtime, conf.Root)));
 
         return build;
     }
@@ -51,16 +57,33 @@ public class FromContainer
         return setup.Architecture.Value;
     }
 
-    private UnixRoot CreateRoot(ISlimDirectory directory, IFile executable)
+    private async Task<UnixRoot> CreateRoot(ISlimDirectory directory, IFile executable)
     {
-        return new UnixRoot(new UnixNode[]
+        var mandatory = new UnixNode[]
         {
             new UnixDir("usr", new List<UnixNode>()
             {
                 new UnixDir("bin", directory.Children.Select(Create)),
             }),
             new UnixFile("AppRun", new StringData(TextTemplates.RunScript("$APPDIR" + "/usr/bin/" + executable.Name)), UnixFileProperties.ExecutableFileProperties()),
-        });
+        };
+
+        var optionalNodes = (await GetIcon(directory).Map(icon1 => new UnixFile(".AppDir", icon1)).TapError(Log.Warning)).AsMaybe().ToList();
+        var nodes = mandatory.Concat(optionalNodes);
+        
+        return new UnixRoot(nodes);
+    }
+
+    private async Task<Result<IIcon>> GetIcon(ISlimDirectory directory)
+    {
+        string[] icons = ["App.png", "Application.png", "AppImage.png", "Icon.png" ];
+        if (setup.DetectIcon)
+        {
+            var maybeFile = directory.Files().TryFirst(x => icons.Contains(x.Name, StringComparer.OrdinalIgnoreCase)).ToResult("Not found");
+            return await maybeFile.Map(Icon.FromData);
+        }
+
+        return setup.Icon.ToResult("No icon has been specified");
     }
 
     private UnixNode Create(INode node)

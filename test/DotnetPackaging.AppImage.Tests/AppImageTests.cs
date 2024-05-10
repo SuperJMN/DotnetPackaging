@@ -21,6 +21,7 @@ public class AppImageTests
                 .WithPackage("AvaloniaSyncer")
                 .WithPackageId("com.SuperJMN.AvaloniaSyncer")
                 .WithArchitecture(Architecture.X64)
+                .AutoDetectIcon()
                 .WithExecutableName("MyExecutable"))
             .Build();
 

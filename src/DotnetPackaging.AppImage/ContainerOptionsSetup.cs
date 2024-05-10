@@ -1,6 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 
-namespace DotnetPackaging.AppImage.Tests;
+namespace DotnetPackaging.AppImage;
 
 public class ContainerOptionsSetup
 {
@@ -9,6 +9,7 @@ public class ContainerOptionsSetup
     public string PackageId { get; private set; }
     public string ExecutableName { get; private set; }
     public Maybe<Architecture> Architecture { get; private set; }
+    public Maybe<IIcon> Icon { get; private set; }
 
     public ContainerOptionsSetup WithPackage(string package)
     {
@@ -41,4 +42,12 @@ public class ContainerOptionsSetup
         DetectArchitecture = true;
         return this;
     }
+
+    public ContainerOptionsSetup AutoDetectIcon()
+    {
+        DetectIcon = true;
+        return this;
+    }
+
+    public bool DetectIcon { get; set; }
 }
