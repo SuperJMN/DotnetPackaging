@@ -1,5 +1,7 @@
-﻿using System.Reactive.Linq;
+﻿using System.Diagnostics;
+using System.Reactive.Linq;
 using Serilog;
+using Zafiro;
 using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
 
@@ -20,7 +22,7 @@ public class FromContainer
 
     public Task<Result<Kernel.AppImage>> Build()
     {
-        var execResult = root.Files().TryFirst(x => x.Name == setup.ExecutableName).ToResult($"Could not find executable file '{setup.ExecutableName}'");
+        var execResult = GetExecutable();
 
         var build = execResult
             .Bind(exec => GetArch(exec).Tap(arch => Log.Information("Architecture set to {Arch}", arch))
@@ -41,25 +43,53 @@ public class FromContainer
         return build;
     }
 
-    private async Task<Result<Architecture>> GetArch(IData exec)
+    private Task<Result<IFile>> GetExecutable()
     {
-        if (setup.DetectArchitecture)
-        {
-            Log.Information("Trying to autodetect the architecture of the AppImage using {Exec}", exec);
-            return await LinuxElfInspector.GetArchitecture(exec.Bytes);
-        }
+        return setup.ExecutableName.Match(ExecutableLookupByName, ExecutableLookupWithoutName);
+    }
 
-        if (setup.Architecture.Equals(Architecture.All))
-        {
-            return Result.Failure<Architecture>("The 'All' architecture is not valid for AppImages since they require an specific AppImage Runtime.");
-        }
+    private async Task<Result<IFile>> ExecutableLookupByName(string execName)
+    {
+        var result = await Task.FromResult(root.Files().TryFirst(x => x.Name == execName).ToResult($"Could not find executable file '{setup.ExecutableName}'"));
+        Log.Information("Trying to lookup by executable name {ExecName}", execName);
+        return result;
+    }
 
-        if (setup.Architecture.HasNoValue)
-        {
-            return Result.Failure<Architecture>("Could not detect architecture");
-        }
+    private async Task<Result<IFile>> ExecutableLookupWithoutName()
+    {
+        Log.Information("No executable has been specified. Looking up for candidates.");
+        var execFiles = await root.Files()
+            .ToObservable()
+            .Select(async file => (await file.IsElf()).Map(isElf => new{ IsElf = isElf, File = file }))
+            .Concat()
+            .Successes()
+            .Where(x => x.IsElf && !x.File.Name.EndsWith(".so"))
+            .Select(x => x.File)
+            .ToList();
+        return execFiles
+            .TryFirst()
+            .ToResult("No executable has been specified Could not find any executable")
+            .Tap(file => Log.Information("Choosing {Executable}", file));
+    }
 
-        return setup.Architecture.Value;
+    private async Task<Result<Architecture>> GetArch(IFile exec)
+    {
+        return await setup.Architecture
+            .Tap(architecture => Log.Information("Architecture set to {Arch}", architecture))
+            .Map(x =>
+            {
+                if (x == Architecture.All)
+                {
+                    return Result.Failure<Architecture>("The 'All' architecture is not valid for AppImages since they require an specific AppImage Runtime");
+                }
+                else
+                {
+                    return Result.Success<Architecture>(x);
+                }
+            })
+            .Or(async () => await exec.GetArchitecture())
+            .ToResult("Could not determine the architecture")
+            .Bind(result => result);
     }
 
     private async Task<UnixRoot> CreateRoot(IDirectory directory, Architecture architecture, IFile executable)
@@ -115,7 +145,7 @@ public class FromContainer
     private async Task<Result<IIcon>> GetIcon(IDirectory directory)
     {
         string[] icons = ["App.png", "Application.png", "AppImage.png", "Icon.png"];
-        if (setup.DetectIcon)
+        if (setup.Icon.HasNoValue)
         {
             var maybeFile = directory.Files()
                 .TryFirst(x => icons.Contains(x.Name, StringComparer.OrdinalIgnoreCase))

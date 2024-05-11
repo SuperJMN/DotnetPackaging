@@ -2,13 +2,11 @@
 
 public class ContainerOptionsSetup
 {
-    public bool DetectArchitecture { get; private set; }
     public Maybe<string> Package { get; private set; } = Maybe<string>.None;
     public Maybe<string> PackageId { get; private set; } = Maybe<string>.None;
     public Maybe<string> ExecutableName { get; private set; }
     public Maybe<Architecture> Architecture { get; private set; } = Maybe<Architecture>.None;
     public Maybe<IIcon> Icon { get; private set; } = Maybe<IIcon>.None;
-    public bool DetectIcon { get; private set; } 
     public Maybe<string> AppName { get; private set; } = Maybe<string>.None;
     public Maybe<Categories> Categories { get; private set; } = Maybe<Categories>.None;
     public Maybe<string> StartupWmClass { get; private set; } = Maybe<string>.None;
@@ -50,19 +48,6 @@ public class ContainerOptionsSetup
     public ContainerOptionsSetup WithArchitecture(Architecture architecture)
     {
         Architecture = architecture;
-        return this;
-    }
-
-
-    public ContainerOptionsSetup AutoDetectArchitecture()
-    {
-        DetectArchitecture = true;
-        return this;
-    }
-
-    public ContainerOptionsSetup AutoDetectIcon()
-    {
-        DetectIcon = true;
         return this;
     }
 

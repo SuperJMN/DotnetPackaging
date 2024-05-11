@@ -101,9 +101,7 @@ class Program
         await AppImage.Create()
             .FromDirectory(new DotnetDir(FileSystem.DirectoryInfo.New(inputDir.FullName)))
             .Configure(setup => setup
-                .WithExecutableName("AvaloniaSyncer.Desktop")
-                .AutoDetectArchitecture()
-                .AutoDetectIcon())
+                .WithExecutableName("AvaloniaSyncer.Desktop"))
             .Build()
             .Bind(x => AppImageMixin.ToData(x).Bind(async data =>
             {

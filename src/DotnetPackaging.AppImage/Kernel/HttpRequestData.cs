@@ -16,7 +16,13 @@ public static class HttpRequestData
                 var httpRequestMessage = new HttpRequestMessage(HttpMethod.Head, uri);
                 return httpClient.SendAsync(httpRequestMessage);
             })
-            .Bind(message => MaybeMixin.FromNullableStruct(message.Content.Headers.ContentLength).ToResult("cannot"))
-            .Map(l => (IData)new Data(ObservableFactory.UsingAsync(() => HttpClientFactory.CreateClient().GetStreamAsync(uri), stream => stream.ToObservableChunked()), l));
+            .Bind(message => MaybeMixin.FromNullableStruct(message.Content.Headers.ContentLength).ToResult("Could not determine the Content Length"))
+            .Map(l =>
+            {
+                var usingAsync = ObservableFactory
+                    .UsingAsync(() => HttpClientFactory.CreateClient().GetStreamAsync(uri), stream => stream.ToObservableChunked());
+                var data = new Data(usingAsync, l);
+                return (IData) data;
+            });
     }
 }
