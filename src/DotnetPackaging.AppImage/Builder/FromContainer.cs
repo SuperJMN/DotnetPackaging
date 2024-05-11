@@ -130,7 +130,7 @@ public class FromContainer
         {
             new UnixDir("usr", new List<UnixNode>()
             {
-                new UnixDir("bin", directory.Children.Select(Create)),
+                new UnixDir("bin", BinDirectory.Create(directory.Children, executable)),
             }),
             new UnixFile("AppRun", new StringData(TextTemplates.RunScript(localExecPath)), UnixFileProperties.ExecutableFileProperties()),
             new UnixFile("application.desktop", new StringData(TextTemplates.DesktopFileContents(localExecPath, packageMetadata)), UnixFileProperties.ExecutableFileProperties()),
@@ -156,34 +156,5 @@ public class FromContainer
         }
 
         return setup.Icon.ToResult("No icon has been specified");
-    }
-
-    private UnixNode Create(INode node)
-    {
-        return node switch
-        {
-            IFile f => Create(f),
-            IDirectory d => Create(d),
-            _ => throw new ArgumentOutOfRangeException(nameof(node), node, null)
-        };
-    }
-
-    private UnixNode Create(IDirectory directory)
-    {
-        return new UnixDir(directory.Name, directory.Children.Select(node =>
-        {
-            return node switch
-            {
-                IFile f => Create(f),
-                IDirectory d => Create(d),
-                _ => throw new ArgumentOutOfRangeException(nameof(node), node, null)
-            };
-        }));
-    }
-
-    private UnixNode Create(IFile file)
-    {
-        var permissions = setup.ExecutableName.Equals(file.Name) ? UnixFileProperties.ExecutableFileProperties() : UnixFileProperties.RegularFileProperties();
-        return new UnixFile(file.Name, file, permissions);
     }
 }
