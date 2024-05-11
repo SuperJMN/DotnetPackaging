@@ -1,4 +1,5 @@
-﻿using Zafiro.DataModel;
+﻿using System.Reactive.Linq;
+using Zafiro.DataModel;
 using Zafiro.Reactive;
 
 namespace DotnetPackaging.AppImage.Kernel;
@@ -19,8 +20,14 @@ public static class HttpRequestData
             .Bind(message => MaybeMixin.FromNullableStruct(message.Content.Headers.ContentLength).ToResult("Could not determine the Content Length"))
             .Map(l =>
             {
-                var usingAsync = ObservableFactory
-                    .UsingAsync(() => HttpClientFactory.CreateClient().GetStreamAsync(uri), stream => stream.ToObservableChunked());
+                var usingAsync = Observable
+                    .Using(
+                        () => HttpClientFactory.CreateClient(),
+                        client => ObservableFactory.UsingAsync(
+                            () => client.GetStreamAsync(uri),
+                            stream => stream.ToObservableChunked())
+                    );
+
                 var data = new Data(usingAsync, l);
                 return (IData) data;
             });
