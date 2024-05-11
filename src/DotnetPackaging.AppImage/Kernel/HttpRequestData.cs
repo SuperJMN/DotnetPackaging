@@ -1,8 +1,5 @@
-﻿using System.Diagnostics;
-using System.Reactive.Linq;
+﻿using System.Reactive.Linq;
 using Zafiro.DataModel;
-using Zafiro.Reactive;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace DotnetPackaging.AppImage.Kernel;
 
@@ -25,19 +22,9 @@ public static class HttpRequestData
                 var usingAsync = Observable
                     .Using(
                         () => HttpClientFactory.CreateClient(),
-                        client => StreamMixin.ToObservableChunked(() => client.GetStreamAsync(uri))
+                        client => ReactiveData.Chunked(() => client.GetStreamAsync(uri))
                     );
                 return (IData)new Data(usingAsync, l);
-
-                //using (var client = HttpClientFactory.CreateClient())
-                //{
-                //    await using (var stream = await client.GetStreamAsync(uri))
-                //    {
-                //        var readBytes = await stream.ReadBytes();
-                //        var data = new ByteArrayData(readBytes);
-                //        return (IData) data;
-                //    }
-                //}
             });
     }
 }
