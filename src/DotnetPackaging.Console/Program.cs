@@ -53,6 +53,7 @@ class Program
         var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls", "Screenshot URLs") { IsRequired = false };
         var summary = new Option<string>("--summary", "Summary. Short description that should not end in a dot.") { IsRequired = false };
         var appId = new Option<string>("--appId", "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication") { IsRequired = false };
+        var executableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
         var iconOption = new Option<IIcon>("--icon", result => GetIcon(result, result))
         {
             IsRequired = false,
@@ -76,6 +77,7 @@ class Program
         fromBuildDir.AddOption(screenshotUrls);
         fromBuildDir.AddOption(summary);
         fromBuildDir.AddOption(appId);
+        fromBuildDir.AddOption(executableName);
 
         var options = new OptionsBinder(
             appName, 
@@ -90,18 +92,66 @@ class Program
             license, 
             screenshotUrls, 
             summary, 
-            appId);
+            appId,
+            executableName);
         
-        fromBuildDir.SetHandler(DoIt, buildDir, appImageFile, options);
+        fromBuildDir.SetHandler(CreateAppImage, buildDir, appImageFile, options);
         return fromBuildDir;
     }
 
-    private static async Task DoIt(DirectoryInfo inputDir, FileInfo outputFile, Options options)
+    private static async Task CreateAppImage(DirectoryInfo inputDir, FileInfo outputFile, Options options)
     {
         await AppImage.Create()
             .FromDirectory(new DotnetDir(FileSystem.DirectoryInfo.New(inputDir.FullName)))
-            .Configure(setup => setup
-                .WithExecutableName("AvaloniaSyncer.Desktop"))
+            .Configure(setup =>
+            {
+                if (options.ExecutableName.HasValue)
+                {
+                    setup
+                        .WithExecutableName(options.ExecutableName.Value);
+                }
+                if (options.Icon.HasValue)
+                {
+                    setup
+                        .WithIcon(options.Icon.Value);
+                }
+                if (options.AppName.HasValue)
+                {
+                    setup.WithAppName(options.AppName.Value);
+                }
+                if (options.StartupWmClass.HasValue)
+                {
+                    setup.WithStartupWmClass(options.StartupWmClass.Value);
+                }
+                if (options.Comment.HasValue)
+                {
+                    setup.WithComment(options.Comment.Value);
+                }
+                if (options.HomePage.HasValue)
+                {
+                    setup.WithHomepage(options.HomePage.Value);
+                }
+                if (options.License.HasValue)
+                {
+                    setup.WithLicense(options.License.Value);
+                }
+                if (options.ScreenshotUrls.HasValue)
+                {
+                    setup.WithScreenshotUrls(options.ScreenshotUrls.Value);
+                }
+                if (options.Summary.HasValue)
+                {
+                    setup.WithSummary(options.Summary.Value);
+                }
+                if (options.Keywords.HasValue)
+                {
+                    setup.WithKeywords(options.Keywords.Value);
+                }
+                if (options.Version.HasValue)
+                {
+                    setup.WithVersion(options.Version.Value);
+                }
+            })
             .Build()
             .Bind(x => AppImageMixin.ToData(x).Bind(async data =>
             {

@@ -17,7 +17,8 @@ public class OptionsBinder(
     Option<string> licenseOption,
     Option<IEnumerable<Uri>> screenshotUrlsOption,
     Option<string> summaryOption,
-    Option<string> appIdOption)
+    Option<string> appIdOption,
+    Option<string> executableName)
     : BinderBase<Options>
 {
     protected override Options GetBoundValue(BindingContext bindingContext)
@@ -37,6 +38,7 @@ public class OptionsBinder(
             ScreenshotUrls = Maybe.From(bindingContext.ParseResult.GetValueForOption(screenshotUrlsOption)!),
             Summary = Maybe.From(bindingContext.ParseResult.GetValueForOption(summaryOption)!),
             AppId = Maybe.From(bindingContext.ParseResult.GetValueForOption(appIdOption)!),
+            ExecutableName = Maybe.From(bindingContext.ParseResult.GetValueForOption(executableName)!),
         };
     }
 }
@@ -56,4 +58,5 @@ public class Options
     public Maybe<IEnumerable<Uri>> ScreenshotUrls { get; set; }
     public Maybe<string> Summary { get; set; }
     public Maybe<string> AppId { get; set; }
+    public Maybe<string> ExecutableName { get; set; }
 }

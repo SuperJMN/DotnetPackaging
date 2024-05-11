@@ -51,8 +51,8 @@ public class FromContainer
     private async Task<Result<IFile>> ExecutableLookupByName(string execName)
     {
         var result = await Task.FromResult(root.Files().TryFirst(x => x.Name == execName).ToResult($"Could not find executable file '{setup.ExecutableName}'"));
-        Log.Information("Trying to lookup by executable name {ExecName}", execName);
-        return result;
+        Log.Information("Looking up for executable named '{ExecName}'", execName);
+        return result.Tap(() => Log.Information("Executable found successfully"));
     }
 
     private async Task<Result<IFile>> ExecutableLookupWithoutName()
