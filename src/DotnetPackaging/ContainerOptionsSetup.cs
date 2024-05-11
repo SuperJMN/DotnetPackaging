@@ -1,4 +1,6 @@
-﻿namespace DotnetPackaging.AppImage.Builder;
+﻿using CSharpFunctionalExtensions;
+
+namespace DotnetPackaging;
 
 public class ContainerOptionsSetup
 {
@@ -12,13 +14,13 @@ public class ContainerOptionsSetup
     public Maybe<string> StartupWmClass { get; private set; } = Maybe<string>.None;
     public Maybe<string> Comment { get; private set; } = Maybe<string>.None;
     public Maybe<string> Description { get; private set; } = Maybe<string>.None;
-    public Maybe<Uri> Homepage { get; set; }
+    public Maybe<Uri> Homepage { get; private set; } = Maybe<Uri>.None;
     public Maybe<string> License { get; private set; } = Maybe<string>.None;
     public Maybe<string> Priority { get; private set; } = Maybe<string>.None;
     public Maybe<IEnumerable<Uri>> ScreenshotUrls { get; private set; } = Maybe<IEnumerable<Uri>>.None;
     public Maybe<string> Maintainer { get; private set; } = Maybe<string>.None;
     public Maybe<string> Summary { get; private set; } = Maybe<string>.None;
-    public Maybe<IEnumerable<string>> Keywords { get; set; }
+    public Maybe<IEnumerable<string>> Keywords { get; private set; } = Maybe<IEnumerable<string>>.None;
     public Maybe<string> Recommends { get; private set; } = Maybe<string>.None;
     public Maybe<string> Section { get; private set; } = Maybe<string>.None;
     public Maybe<string> Version { get; private set; } = Maybe<string>.None;
