@@ -24,8 +24,8 @@ public class SquashFS
     {
         switch (unixDir)
         {
-            case UnixDir subdir:
-                CreateDir(subdir, currentPath, builder);
+            case UnixDir subdirectory:
+                CreateDir(subdirectory, currentPath, builder);
                 break;
             case UnixFile unixFile:
                 CreateFile(unixFile, currentPath, builder);
