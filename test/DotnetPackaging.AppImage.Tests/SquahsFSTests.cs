@@ -4,7 +4,7 @@ using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.AppImage.Tests;
 
-public class SquahsFSTests
+public class SquashFSTests
 {
     [Fact]
     public async Task Create_SquashFS()
