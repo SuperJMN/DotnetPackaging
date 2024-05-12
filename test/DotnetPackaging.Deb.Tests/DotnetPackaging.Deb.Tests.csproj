@@ -57,5 +57,8 @@
     <ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Unix\Zafiro.FileSystem.Unix.csproj" />
     <ProjectReference Include="..\..\src\DotnetPackaging.Deb\DotnetPackaging.Deb.csproj" />
     <ProjectReference Include="..\..\src\DotnetPackaging\DotnetPackaging.csproj" />
+  </ItemGroup>									
+  <ItemGroup>
+    <Folder Include="Integration\" />
   </ItemGroup>
 </Project>

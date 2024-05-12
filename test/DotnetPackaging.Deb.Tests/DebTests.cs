@@ -114,33 +114,5 @@ public class DebTests
     //    await using var fileStream = IoFile.Open("C:\\Users\\JMN\\Desktop\\testing.deb", FileMode.Create);
     //    await result.Value.ToByteProvider().DumpTo(fileStream);
     //}
-    
-    //[Fact]
-    //public async Task Integration()
-    //{
-    //    var fileSystem = new FileSystem();
-    //    var directory = new SystemIODirectory(fileSystem.DirectoryInfo.New(@"C:\Users\JMN\Desktop\AppDir\AvaloniaSyncer"));
-        
-    //    var metadata = new PackageMetadata
-    //    {
-    //        AppName = "Avalonia Syncer",
-    //        AppId = "com.SuperJMN.AvaloniaSyncer",
-    //        Package = "avaloniasyncer",
-    //        Version = "1.0.0",
-    //        Section = "utils",
-    //        Priority = "optional",
-    //        Architecture = Architecture.X64,
-    //        Maintainer = "SuperJMN <jmn@superjmn.com>",
-    //        Description = "Application for cool file exploring",
-    //        ModificationTime = DateTimeOffset.Now,
-    //        ExecutableName = "AvaloniaSyncer.Desktop",
-    //        Icon = Maybe.From(await Icon.FromImage(await Image.LoadAsync("E:\\Repos\\SuperJMN\\AvaloniaSyncer\\AppImage.png"))),
-    //    };
-    //    var result = await DebPackageCreator.CreateFromDirectory(directory, metadata);
-    //    result.Should().Succeed();
-    //    await using (var fileStream = IoFile.Open($"C:\\Users\\JMN\\Desktop\\{FileName.FromMetadata(metadata)}.deb", FileMode.Create))
-    //    {
-    //        (await result.Value.ToByteProvider().DumpTo(fileStream).ToList()).Combine();
-    //    }
-    //}
+   
 }

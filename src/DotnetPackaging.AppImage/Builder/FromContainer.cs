@@ -117,7 +117,6 @@ public class FromContainer
             Section = setup.Section,
             Package = setup.Package.Or(setup.AppName).GetValueOrDefault(directory.Name),
             Version = setup.Version,
-            ExecutableName = executable.Name,
             VcsBrowser = setup.VcsBrowser,
             VcsGit = setup.VcsGit,
             InstalledSize = setup.InstalledSize,

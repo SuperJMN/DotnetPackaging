@@ -5,7 +5,7 @@ namespace DotnetPackaging;
 
 public static class TextTemplates
 {
-    public static string DesktopFileContents(string appDir, PackageMetadata metadata)
+    public static string DesktopFileContents(string executablePath, PackageMetadata metadata)
     {
         List<IEnumerable<string>> items =
         [
@@ -16,7 +16,7 @@ public static class TextTemplates
             Item(metadata.Comment.Map(n => $"Comment={n}")),
             Item(metadata.Icon.Map(_ => $"Icon={metadata.Package}")),
             Item("Terminal=False"),
-            Item($"Exec=\"{appDir}/{metadata.ExecutableName}\""),
+            Item($"Exec=\"{executablePath}\""),
             Item(metadata.Categories.Map(x => $"Categories={x}")),
             Item(metadata.Keywords.Map(keywords => $"Keywords={string.Join((string?) ";", (IEnumerable<string?>) keywords)}")),
             Item(metadata.Version.Map(version => $"X-AppImage-Version={version}")),

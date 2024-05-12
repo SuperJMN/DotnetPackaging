@@ -19,7 +19,6 @@
   <ItemGroup>
     <Compile Remove="Archives\PackageDefinition.cs" />
     <Compile Remove="Archives\PackageDefinitionMixin.cs" />
-    <Compile Remove="Create.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="2.42.0" />

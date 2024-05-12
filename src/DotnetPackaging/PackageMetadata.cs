@@ -27,5 +27,4 @@ public record PackageMetadata
     public Maybe<string> VcsBrowser { get; set; }
     public Maybe<long> InstalledSize { get; set; }
     public Maybe<DateTimeOffset> ModificationTime { get; set; }
-    public string ExecutableName { get; set; }
 }

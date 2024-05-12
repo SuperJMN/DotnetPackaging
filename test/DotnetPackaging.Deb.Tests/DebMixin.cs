@@ -4,9 +4,9 @@ using DotnetPackaging.Deb.Archives.Tar;
 using FluentAssertions.Common;
 using FluentAssertions.Extensions;
 using Zafiro.DataModel;
-using Zafiro.FileSystem.Lightweight;
 using Zafiro.FileSystem.Unix;
 using File = Zafiro.FileSystem.Lightweight.File;
+using DebFile = DotnetPackaging.Deb.Archives.Deb.DebFile;
 
 namespace DotnetPackaging.Deb.Tests;
 

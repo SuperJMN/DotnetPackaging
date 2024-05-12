@@ -1,7 +1,6 @@
 ﻿using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb.Archives.Deb;
-using DotnetPackaging.Deb.Archives.Tar;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.DataModel;
@@ -26,25 +25,14 @@ public class FromContainer
 
         var build = execResult
             .Bind(exec => GetArch(exec).Tap(arch => Log.Information("Architecture set to {Arch}", arch))
-                .Map(architecture => new
+                .Map(async architecture => new
                 {
-                    Architecture = architecture,
+                    PackageMetadata = await GetPackageMetadata(root, architecture, exec),
                     Executable = exec
                 }))
-            .Map(async conf => new
-            {
-                Root = await CreateRoot(root, conf.Architecture, conf.Executable),
-                Architecture = conf.Architecture,
-                Executable = conf.Executable,
-            })
-            .Map(async conf => new DebFile(await GetPackageMetadata(root, conf.Architecture, conf.Executable), GetTarEntries(conf.Root)));
+            .Map(conf => new DebFile(conf.PackageMetadata, TarEntryBuilder.From(root, conf.PackageMetadata, conf.Executable).ToArray()));
 
         return build;
-    }
-
-    private TarEntry[] GetTarEntries(UnixRoot unixRoot)
-    {
-        return TarEntryBuilder.From(unixRoot).ToArray();
     }
 
     private async Task<PackageMetadata> GetPackageMetadata(IDirectory directory, Architecture architecture, IFile executable)
@@ -72,7 +60,6 @@ public class FromContainer
             Section = setup.Section,
             Package = setup.Package.Or(setup.AppName).GetValueOrDefault(directory.Name),
             Version = setup.Version,
-            ExecutableName = executable.Name,
             VcsBrowser = setup.VcsBrowser,
             VcsGit = setup.VcsGit,
             InstalledSize = setup.InstalledSize,
@@ -111,9 +98,9 @@ public class FromContainer
             .Tap(file => Log.Information("Choosing {Executable}", file));
     }
 
-    private async Task<Result<Architecture>> GetArch(IFile exec)
+    private Task<Result<Architecture>> GetArch(IFile exec)
     {
-        return await setup.Architecture
+        return setup.Architecture
             .Tap(architecture => Log.Information("Architecture set to {Arch}", architecture))
             .Map(x =>
             {
@@ -121,10 +108,8 @@ public class FromContainer
                 {
                     return Result.Failure<Architecture>("The 'All' architecture is not valid for AppImages since they require an specific AppImage Runtime");
                 }
-                else
-                {
-                    return Result.Success<Architecture>(x);
-                }
+
+                return Result.Success(x);
             })
             .Or(async () => await exec.GetArchitecture())
             .ToResult("Could not determine the architecture")
@@ -156,7 +141,6 @@ public class FromContainer
             Section = setup.Section,
             Package = setup.Package.Or(setup.AppName).GetValueOrDefault(directory.Name),
             Version = setup.Version,
-            ExecutableName = executable.Name,
             VcsBrowser = setup.VcsBrowser,
             VcsGit = setup.VcsGit,
             InstalledSize = setup.InstalledSize,
