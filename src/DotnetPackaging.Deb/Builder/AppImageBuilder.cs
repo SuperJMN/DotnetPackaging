@@ -1,6 +1,4 @@
-﻿using DotnetPackaging.Deb.Builder;
-
-namespace DotnetPackaging.AppImage.Builder;
+﻿namespace DotnetPackaging.Deb.Builder;
 
 public class DebBuilder
 {

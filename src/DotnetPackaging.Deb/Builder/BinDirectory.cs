@@ -1,6 +1,6 @@
 ﻿using Zafiro.FileSystem.Unix;
 
-namespace DotnetPackaging.AppImage.Builder;
+namespace DotnetPackaging.Deb.Builder;
 
 public class BinDirectory
 {

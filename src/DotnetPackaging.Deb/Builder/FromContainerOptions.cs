@@ -1,6 +1,4 @@
-﻿using DotnetPackaging.AppImage.Builder;
-
-namespace DotnetPackaging.Deb.Builder;
+﻿namespace DotnetPackaging.Deb.Builder;
 
 public class FromContainerOptions
 {

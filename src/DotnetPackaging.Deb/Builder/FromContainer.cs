@@ -1,16 +1,13 @@
-﻿using System.Diagnostics;
-using System.Reactive.Linq;
+﻿using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb.Archives.Deb;
 using DotnetPackaging.Deb.Archives.Tar;
-using DotnetPackaging.Deb.Builder;
 using Serilog;
-using Zafiro;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
 
-namespace DotnetPackaging.AppImage.Builder;
+namespace DotnetPackaging.Deb.Builder;
 
 public class FromContainer
 {
