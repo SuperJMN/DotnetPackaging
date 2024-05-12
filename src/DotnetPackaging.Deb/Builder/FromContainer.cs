@@ -3,8 +3,6 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb.Archives.Deb;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
-using Zafiro.DataModel;
-using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.Deb.Builder;
 
@@ -27,7 +25,7 @@ public class FromContainer
             .Bind(exec => GetArch(exec).Tap(arch => Log.Information("Architecture set to {Arch}", arch))
                 .Map(async architecture => new
                 {
-                    PackageMetadata = await GetPackageMetadata(root, architecture, exec),
+                    PackageMetadata = await GetPackageMetadata(root, architecture),
                     Executable = exec
                 }))
             .Map(conf => new DebFile(conf.PackageMetadata, TarEntryBuilder.From(root, conf.PackageMetadata, conf.Executable).ToArray()));
@@ -35,7 +33,7 @@ public class FromContainer
         return build;
     }
 
-    private async Task<PackageMetadata> GetPackageMetadata(IDirectory directory, Architecture architecture, IFile executable)
+    private async Task<PackageMetadata> GetPackageMetadata(IDirectory directory, Architecture architecture)
     {
         var icon = await GetIcon(directory).TapError(Log.Warning);
 
@@ -114,55 +112,6 @@ public class FromContainer
             .Or(async () => await exec.GetArchitecture())
             .ToResult("Could not determine the architecture")
             .Bind(result => result);
-    }
-
-    private async Task<UnixRoot> CreateRoot(IDirectory directory, Architecture architecture, IFile executable)
-    {
-        var icon = await GetIcon(directory).TapError(Log.Warning);
-
-        var packageMetadata = new PackageMetadata()
-        {
-            Architecture = architecture,
-            Icon = icon.AsMaybe(),
-            AppId = setup.PackageId,
-            AppName = setup.AppName.GetValueOrDefault(directory.Name),
-            Categories = setup.Categories,
-            StartupWmClass = setup.StartupWmClass,
-            Comment = setup.Comment,
-            Description = setup.Description,
-            Homepage = setup.Homepage,
-            License = setup.License,
-            Priority = setup.Priority,
-            ScreenshotUrls = setup.ScreenshotUrls,
-            Maintainer = setup.Maintainer,
-            Summary = setup.Summary,
-            Keywords = setup.Keywords,
-            Recommends = setup.Recommends,
-            Section = setup.Section,
-            Package = setup.Package.Or(setup.AppName).GetValueOrDefault(directory.Name),
-            Version = setup.Version,
-            VcsBrowser = setup.VcsBrowser,
-            VcsGit = setup.VcsGit,
-            InstalledSize = setup.InstalledSize,
-            ModificationTime = setup.ModificationTime,
-        };
-
-        var localExecPath = "$APPDIR" + "/usr/bin/" + executable.Name;
-
-        var mandatory = new UnixNode[]
-        {
-            new UnixDir("usr", new List<UnixNode>()
-            {
-                new UnixDir("bin", BinDirectory.Create(directory.Children, executable)),
-            }),
-            new UnixFile("AppRun", new StringData(TextTemplates.RunScript(localExecPath)), UnixFileProperties.ExecutableFileProperties()),
-            new UnixFile("application.desktop", new StringData(TextTemplates.DesktopFileContents(localExecPath, packageMetadata)), UnixFileProperties.ExecutableFileProperties()),
-        };
-
-        var optionalNodes = icon.Map(data => new UnixFile(".AppDir", data)).TapError(Log.Warning).AsMaybe().ToList();
-        var nodes = mandatory.Concat(optionalNodes);
-
-        return new UnixRoot(nodes);
     }
 
     private async Task<Result<IIcon>> GetIcon(IDirectory directory)
