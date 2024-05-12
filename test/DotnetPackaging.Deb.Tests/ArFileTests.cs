@@ -21,7 +21,7 @@ public class ArFileTests
         };
 
         var arFile = new ArFile(entries.ToArray());
-        var byteProvider = arFile.ToByteProvider();
+        var byteProvider = arFile.ToData();
         
         var expected = """
                       !<arch>

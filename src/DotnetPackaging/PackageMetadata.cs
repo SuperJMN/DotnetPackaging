@@ -4,7 +4,7 @@ namespace DotnetPackaging;
 
 public record PackageMetadata
 {
-    public string AppName { get; init; }
+    public required string AppName { get; init; }
     public Maybe<string> StartupWmClass { get; set; }
     public Maybe<IEnumerable<string>> Keywords { get; init; }
     public Maybe<string> Comment { get; init; }
@@ -15,7 +15,7 @@ public record PackageMetadata
     public Maybe<string> Summary { get; init; }
     public Maybe<string> License { get; init; }
     public Maybe<string> AppId { get; init; }
-    public string Package { get; set; }
+    public required string Package { get; set; }
     public Maybe<string> Section { get; set; }
     public Maybe<string> Priority { get; set; }
     public required Architecture Architecture { get; init; }

@@ -47,7 +47,7 @@ public class TarFileTests
         };
 
         var tarFile = new TarFile(entries.ToArray());
-        var byteProvider = tarFile.ToByteProvider();
+        var byteProvider = tarFile.ToData();
         var bytes = byteProvider.Bytes();
         var actualString = Encoding.ASCII.GetString(bytes);
         actualString.Should().BeEquivalentTo(await ReadAllTextAsync("TestFiles\\Sample.tar"));
@@ -63,7 +63,7 @@ public class TarFileTests
     //    var result = await allFiles
     //        .Map(x => x.Select(t => new FileTarEntry(t.FullPath(), t.Rooted, Misc.RegularFileProperties())))
     //        .Map(entries => new TarFile(entries.ToArray()))
-    //        .Map(file => file.ToByteProvider())
+    //        .Map(file => file.ToData())
     //        .Bind(async byteProvider =>
     //        {
     //            await using (var fileStream = Open("C:\\Users\\JMN\\Desktop\\mytarfile.tar", FileMode.Create))

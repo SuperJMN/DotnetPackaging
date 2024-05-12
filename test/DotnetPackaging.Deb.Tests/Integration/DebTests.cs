@@ -17,7 +17,7 @@ public class DebTests
 
         var result = await DebFile2.Create().FromDirectory(directory).Configure(setup => { })
             .Build()
-            .Bind(file => file.ToByteProvider().DumpTo(@"\\wsl.localhost\Ubuntu\home\jmn\Sample.deb"));
+            .Bind(file => file.ToData().DumpTo(@"\\wsl.localhost\Ubuntu\home\jmn\Sample.deb"));
         result.Should().Succeed();
     }
 }

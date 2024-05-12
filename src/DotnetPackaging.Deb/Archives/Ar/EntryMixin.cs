@@ -6,7 +6,7 @@ namespace DotnetPackaging.Deb.Archives.Ar;
 
 public static class EntryMixin 
 {
-    public static IData ToByteProvider(this Entry entry)
+    public static IData ToData(this Entry entry)
     {
         return new CompositeData
         (

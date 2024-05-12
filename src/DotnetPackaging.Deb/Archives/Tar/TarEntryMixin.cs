@@ -9,12 +9,12 @@ namespace DotnetPackaging.Deb.Archives.Tar;
 
 public static class TarEntryMixin
 {
-    public static IData ToByteProvider(this FileTarEntry entry)
+    public static IData ToData(this FileTarEntry entry)
     {
         return new CompositeData(entry.Header(entry.Content.Length, 0).PadToNearestMultiple(512), entry.Content.PadToNearestMultiple(512));
     }
 
-    public static IData ToByteProvider(this DirectoryTarEntry entry)
+    public static IData ToData(this DirectoryTarEntry entry)
     {
         return new CompositeData(entry.Header(0, 5).PadToNearestMultiple(512));
     }

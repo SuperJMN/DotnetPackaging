@@ -12,10 +12,10 @@ namespace DotnetPackaging.Deb.Tests;
 
 public static class DebMixin
 {
-    public static IData ToByteProvider(this DebFile debFile)
+    public static IData ToData(this DebFile debFile)
     {
         ArFile arFile = new ArFile(Signature(debFile), ControlTar(debFile), DataTar(debFile));
-        return arFile.ToByteProvider();
+        return arFile.ToData();
     }
 
     private static Entry DataTar(DebFile debFile)
@@ -28,7 +28,7 @@ public static class DebMixin
             LastModification = debFile.Metadata.ModificationTime.GetValueOrDefault(DateTimeOffset.Now),
             OwnerId = 0,
         };
-        return new Entry(new ByteProviderFile("data.tar", dataTarFile.ToByteProvider()), properties);
+        return new Entry(new ByteProviderFile("data.tar", dataTarFile.ToData()), properties);
     }
 
     private static Entry Signature(DebFile debFile)
@@ -60,7 +60,7 @@ public static class DebMixin
         };
         
         var controlTarFile = ControlTarFile(debFile);
-        return new Entry(new ByteProviderFile("control.tar", controlTarFile.ToByteProvider()), properties);
+        return new Entry(new ByteProviderFile("control.tar", controlTarFile.ToData()), properties);
     }
     
      private static TarFile ControlTarFile(DebFile deb)

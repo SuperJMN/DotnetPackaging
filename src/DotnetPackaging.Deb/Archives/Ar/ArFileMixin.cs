@@ -5,9 +5,9 @@ namespace DotnetPackaging.Deb.Archives.Ar;
 
 public static class ArFileMixin
 {
-    public static IData ToByteProvider(this ArFile arFile)
+    public static IData ToData(this ArFile arFile)
     {
-        return new CompositeData(Signature(), new CompositeData(arFile.Entries.Select(x => x.ToByteProvider()).ToArray()));
+        return new CompositeData(Signature(), new CompositeData(arFile.Entries.Select(x => x.ToData()).ToArray()));
     }
 
     private static IData Signature()
