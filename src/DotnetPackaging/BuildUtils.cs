@@ -32,7 +32,7 @@ public static class BuildUtils
             Keywords = setup.Keywords,
             Recommends = setup.Recommends,
             Section = setup.Section,
-            Package = setup.Package.Or(setup.AppName).GetValueOrDefault(exec.Name.Replace("Desktop", "")),
+            Package = setup.Package.Or(setup.AppName).GetValueOrDefault(exec.Name.Replace(".Desktop", "")),
             Version = setup.Version.GetValueOrDefault("1.0.0"),
             VcsBrowser = setup.VcsBrowser,
             VcsGit = setup.VcsGit,
