@@ -16,8 +16,7 @@ public static class TarFileMixin
             };
         });
 
-        var entriesProvider = new CompositeData(entries.ToArray());
-        //return entriesProvider;
-        return entriesProvider.PadToNearestMultiple(2 * 512);
+        var endOfFileMarker = new ByteArrayData(new byte[2 * 512]);
+        return new CompositeData(new CompositeData(entries.ToArray()), endOfFileMarker);
     }
 }

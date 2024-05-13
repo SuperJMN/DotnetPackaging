@@ -1,21 +1,15 @@
-﻿using System.IO.Abstractions;
-using System.Reactive.Linq;
+﻿using System.Reactive.Linq;
 using DotnetPackaging.Deb.Archives.Tar;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using System.Text;
-using CSharpFunctionalExtensions;
-using DotnetPackaging.Deb.Archives.Deb;
-using SharpCompress;
 using Xunit;
 using Zafiro.DataModel;
 using Zafiro.FileSystem;
-using Zafiro.FileSystem.Lightweight;
 using Zafiro.FileSystem.Unix;
 using Zafiro.Mixins;
+using Zafiro.Reactive;
 using static System.IO.File;
-using File = System.IO.File;
-using UnixFileMode = Zafiro.FileSystem.Unix.UnixFileMode;
 
 namespace DotnetPackaging.Deb.Tests;
 
@@ -47,30 +41,23 @@ public class TarFileTests
         };
 
         var tarFile = new TarFile(entries.ToArray());
-        var byteProvider = tarFile.ToData();
-        var bytes = byteProvider.Bytes();
-        var actualString = Encoding.ASCII.GetString(bytes);
-        actualString.Should().BeEquivalentTo(await ReadAllTextAsync("TestFiles\\Sample.tar"));
+        var data = tarFile.ToData();
+        await data.DumpTo("C:\\Users\\JMN\\Desktop\\actual.tar");
+        var compare = await IsTarDataEquals(data, new ByteArrayData(await ReadAllBytesAsync("TestFiles\\Sample.tar")));
+        compare.Should().BeTrue();
     }
 
-    //[Fact]
-    //public async Task Integration()
-    //{
-    //    var fileSystem = new FileSystem();
-    //    var systemIODirectory = new SystemIODirectory(fileSystem.DirectoryInfo.New("C:\\Users\\JMN\\Desktop\\AppDir\\AvaloniaSyncer"));
-    //    var allFiles = systemIODirectory.GetFilesInTree(ZafiroPath.Empty);
+    private static async Task<bool> IsTarDataEquals(IData first, IData second)
+    {
+        var shorter = first.Length > second.Length ? second : first;
+        var dataUntilEof = await shorter.Bytes.Flatten()
+            .Buffer(1024)
+            .Select(x => x.Any(y => !Equals(y, default(byte))) ? x : Enumerable.Empty<byte>())
+            .TakeWhile(x => x.Any()).ToList();
 
-    //    var result = await allFiles
-    //        .Map(x => x.Select(t => new FileTarEntry(t.FullPath(), t.Rooted, Misc.RegularFileProperties())))
-    //        .Map(entries => new TarFile(entries.ToArray()))
-    //        .Map(file => file.ToData())
-    //        .Bind(async byteProvider =>
-    //        {
-    //            await using (var fileStream = Open("C:\\Users\\JMN\\Desktop\\mytarfile.tar", FileMode.Create))
-    //            {
-    //                return (await byteProvider.DumpTo(fileStream).ToList()).Combine();
-    //            }
-    //        });
-    //    result.Should().Succeed();
-    //}
+        var eof = dataUntilEof.Flatten();
+        var eofPosition = eof.Count();
+        
+        return first.Bytes().Take(eofPosition).SequenceEqual(second.Bytes().Take(eofPosition));
+    }
 }

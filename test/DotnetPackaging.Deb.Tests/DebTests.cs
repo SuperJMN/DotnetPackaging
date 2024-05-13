@@ -7,11 +7,9 @@ using FluentAssertions.Common;
 using FluentAssertions.Extensions;
 using Xunit;
 using Zafiro.DataModel;
-using Zafiro.FileSystem.Lightweight;
 using Zafiro.FileSystem.Unix;
 using Zafiro.Reactive;
 using IoFile = System.IO.File;
-using UnixFileMode = Zafiro.FileSystem.Unix.UnixFileMode;
 
 namespace DotnetPackaging.Deb.Tests;
 

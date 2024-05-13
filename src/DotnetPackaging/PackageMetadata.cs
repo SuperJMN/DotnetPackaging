@@ -5,26 +5,26 @@ namespace DotnetPackaging;
 public record PackageMetadata
 {
     public required string AppName { get; init; }
-    public Maybe<string> StartupWmClass { get; set; }
-    public Maybe<IEnumerable<string>> Keywords { get; init; }
-    public Maybe<string> Comment { get; init; }
-    public Maybe<Categories> Categories { get; init; } = Maybe<Categories>.None;
-    public Maybe<IIcon> Icon { get; init; }
-    public Maybe<string> Version { get; init; }
-    public Maybe<IEnumerable<Uri>> ScreenshotUrls { get; init; }
-    public Maybe<string> Summary { get; init; }
-    public Maybe<string> License { get; init; }
-    public Maybe<string> AppId { get; init; }
-    public required string Package { get; set; }
-    public Maybe<string> Section { get; set; }
-    public Maybe<string> Priority { get; set; }
     public required Architecture Architecture { get; init; }
-    public Maybe<string> Maintainer { get; set; }
-    public Maybe<string> Description { get; set; }
-    public Maybe<Uri> Homepage { get; set; }
-    public Maybe<string> Recommends { get; set; }
-    public Maybe<string> VcsGit { get; set; }
-    public Maybe<string> VcsBrowser { get; set; }
-    public Maybe<long> InstalledSize { get; set; }
-    public Maybe<DateTimeOffset> ModificationTime { get; set; }
+    public required string Package { get; init; }
+    public Maybe<string> StartupWmClass { get; init; } = Maybe<string>.None;
+    public Maybe<IEnumerable<string>> Keywords { get; init; } = Maybe<IEnumerable<string>>.None;
+    public Maybe<string> Comment { get; init; } = Maybe<string>.None;
+    public Maybe<Categories> Categories { get; init; } = Maybe<Categories>.None;
+    public Maybe<IIcon> Icon { get; init; } = Maybe<IIcon>.None;
+    public Maybe<string> Version { get; init; } = Maybe<string>.None;
+    public Maybe<IEnumerable<Uri>> ScreenshotUrls { get; init; } = Maybe<IEnumerable<Uri>>.None;
+    public Maybe<string> Summary { get; init; } = Maybe<string>.None;
+    public Maybe<string> License { get; init; } = Maybe<string>.None;
+    public Maybe<string> AppId { get; init; } = Maybe<string>.None;
+    public Maybe<string> Section { get; init; } = Maybe<string>.None;
+    public Maybe<string> Priority { get; init; } = Maybe<string>.None;
+    public Maybe<string> Maintainer { get; init; } = Maybe<string>.None;
+    public Maybe<string> Description { get; init; } = Maybe<string>.None;
+    public Maybe<Uri> Homepage { get; init; } = Maybe<Uri>.None;
+    public Maybe<string> Recommends { get; init; } = Maybe<string>.None;
+    public Maybe<string> VcsGit { get; init; } = Maybe<string>.None;
+    public Maybe<string> VcsBrowser { get; init; } = Maybe<string>.None;
+    public Maybe<long> InstalledSize { get; init; } = Maybe<long>.None;
+    public Maybe<DateTimeOffset> ModificationTime { get; init; } = Maybe<DateTimeOffset>.None;
 }
