@@ -1,8 +1,6 @@
 ﻿using System.IO.Abstractions;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb.Archives.Deb;
-using FluentAssertions;
-using Xunit;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
 

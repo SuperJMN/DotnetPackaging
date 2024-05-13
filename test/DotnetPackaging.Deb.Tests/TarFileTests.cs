@@ -1,9 +1,5 @@
-﻿using System.Reactive.Linq;
-using DotnetPackaging.Deb.Archives.Tar;
-using FluentAssertions;
+﻿using DotnetPackaging.Deb.Archives.Tar;
 using FluentAssertions.Extensions;
-using System.Text;
-using Xunit;
 using Zafiro.DataModel;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Unix;

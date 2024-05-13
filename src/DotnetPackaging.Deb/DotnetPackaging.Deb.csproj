@@ -5,21 +5,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <Import Project="..\Common.props" />
-  <ItemGroup>
-    <Compile Remove="Archives\DebOld\**" />
-    <Compile Remove="Archives\TarOld\**" />
-    <Compile Remove="Client\**" />
-    <EmbeddedResource Remove="Archives\DebOld\**" />
-    <EmbeddedResource Remove="Archives\TarOld\**" />
-    <EmbeddedResource Remove="Client\**" />
-    <None Remove="Archives\DebOld\**" />
-    <None Remove="Archives\TarOld\**" />
-    <None Remove="Client\**" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Remove="Archives\PackageDefinition.cs" />
-    <Compile Remove="Archives\PackageDefinitionMixin.cs" />
-  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="2.42.0" />
     <PackageReference Include="SharpCompress" Version="0.37.0" />

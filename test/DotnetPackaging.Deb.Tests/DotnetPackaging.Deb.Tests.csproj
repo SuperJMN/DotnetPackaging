@@ -21,11 +21,9 @@
     <None Remove="Tar\**" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="GlobalUsings.cs" />
     <Compile Remove="HelperTests.cs" />
     <Compile Remove="LinuxFileModeTests.cs" />
     <Compile Remove="StreamAssertionExtensions.cs" />
-    <Compile Remove="StringManipulationTests.cs" />
     <Compile Remove="TestMixin.cs" />
   </ItemGroup>
   <ItemGroup>

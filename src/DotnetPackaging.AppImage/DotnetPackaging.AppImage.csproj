@@ -7,11 +7,6 @@
 	</PropertyGroup>
 	<Import Project="..\Common.props" />
 	<ItemGroup>
-	  <Compile Remove="Core\**" />
-	  <EmbeddedResource Remove="Core\**" />
-	  <None Remove="Core\**" />
-	</ItemGroup>
-	<ItemGroup>
 	  <Compile Remove="Options.cs" />
 	</ItemGroup>
 	<ItemGroup>
@@ -24,12 +19,6 @@
 		<ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Lightweight\Zafiro.FileSystem.Lightweight.csproj" />
 		<ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Unix\Zafiro.FileSystem.Unix.csproj" />
 		<ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Update="Default.png">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
 	</ItemGroup>
 
 </Project>

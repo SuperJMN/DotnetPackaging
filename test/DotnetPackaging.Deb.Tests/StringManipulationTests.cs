@@ -1,6 +1,4 @@
-using FluentAssertions;
-
-namespace DotnetPackaging.Tests;
+namespace DotnetPackaging.Deb.Tests;
 
 public class StringManipulationTests
 {
