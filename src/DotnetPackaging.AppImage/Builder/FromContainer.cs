@@ -43,7 +43,16 @@ public class FromContainer
         var packageMetadata = await BuildUtils.CreateMetadata(setup, directory, architecture, executable);
 
         var localExecPath = "$APPDIR" + "/usr/bin/" + executable.Name;
-
+        
+        var files = new[]
+        {
+            new RootedUnixFile(ZafiroPath.Empty, new UnixFile("Sample1.txt", (StringData) "Content")),
+            new RootedUnixFile(ZafiroPath.Empty, new UnixFile("Sample2.txt", (StringData) "Content")),
+            new RootedUnixFile("Dir", new UnixFile("Sample3.txt", (StringData) "Content")),
+            new RootedUnixFile("Dir", new UnixFile("Sample4.txt", (StringData) "Content")),
+            new RootedUnixFile("Dir/Subdir", new UnixFile("Sample5.txt", (StringData) "Content")),
+        };
+        
         var mandatory = new UnixNode[]
         {
             new UnixDir("usr", new List<UnixNode>()
