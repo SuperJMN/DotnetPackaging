@@ -1,6 +1,7 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Binding;
 using CSharpFunctionalExtensions;
+using Zafiro.CSharpFunctionalExtensions;
 
 namespace DotnetPackaging.Console;
 
@@ -29,7 +30,7 @@ public class OptionsBinder(
             StartupWmClass = Maybe.From(bindingContext.ParseResult.GetValueForOption(wmClassOption)!),
             Keywords = Maybe.From(bindingContext.ParseResult.GetValueForOption(keywordsOption)!),
             Comment = Maybe.From(bindingContext.ParseResult.GetValueForOption(commentOption)!),
-            MainCategory = MaybeMixin.FromNullableStruct(bindingContext.ParseResult.GetValueForOption(mainCategory)),
+            MainCategory = ResultEx.FromNullableStruct(bindingContext.ParseResult.GetValueForOption(mainCategory)),
             AdditionalCategories = Maybe.From(bindingContext.ParseResult.GetValueForOption(categoriesOption)!),
             Icon = Maybe<IIcon>.From(bindingContext.ParseResult.GetValueForOption(iconOption)!),
             Version = Maybe.From(bindingContext.ParseResult.GetValueForOption(versionOption)!),

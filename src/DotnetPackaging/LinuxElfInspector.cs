@@ -1,8 +1,9 @@
-﻿using CSharpFunctionalExtensions;
-using System.Reactive.Linq;
-using DotnetPackaging;
+﻿using System.Reactive.Linq;
+using CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 using Zafiro.Reactive;
+
+namespace DotnetPackaging;
 
 public static class LinuxElfInspector
 {
