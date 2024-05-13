@@ -2,7 +2,7 @@
 
 namespace DotnetPackaging;
 
-public class ContainerOptionsSetup
+public class FromDirectoryOptions
 {
     public Maybe<string> Package { get; private set; } = Maybe<string>.None;
     public Maybe<string> PackageId { get; private set; } = Maybe<string>.None;
@@ -29,145 +29,145 @@ public class ContainerOptionsSetup
     public Maybe<long> InstalledSize { get; private set; } = Maybe<long>.None;
     public Maybe<DateTimeOffset> ModificationTime { get; private set; } = Maybe<DateTimeOffset>.None;
 
-    public ContainerOptionsSetup WithPackage(string package)
+    public FromDirectoryOptions WithPackage(string package)
     {
         Package = package;
         return this;
     }
 
-    public ContainerOptionsSetup WithPackageId(string packageId)
+    public FromDirectoryOptions WithPackageId(string packageId)
     {
         PackageId = packageId;
         return this;
     }
 
-    public ContainerOptionsSetup WithExecutableName(string executableName)
+    public FromDirectoryOptions WithExecutableName(string executableName)
     {
         ExecutableName = executableName;
         return this;
     }
 
-    public ContainerOptionsSetup WithArchitecture(Architecture architecture)
+    public FromDirectoryOptions WithArchitecture(Architecture architecture)
     {
         Architecture = architecture;
         return this;
     }
 
-    public ContainerOptionsSetup WithIcon(IIcon icon)
+    public FromDirectoryOptions WithIcon(IIcon icon)
     {
         Icon = Maybe<IIcon>.From(icon);
         return this;
     }
 
-    public ContainerOptionsSetup WithAppName(string appName)
+    public FromDirectoryOptions WithAppName(string appName)
     {
         AppName = Maybe<string>.From(appName);
         return this;
     }
 
-    public ContainerOptionsSetup WithCategories(Categories categories)
+    public FromDirectoryOptions WithCategories(Categories categories)
     {
         Categories = Maybe<Categories>.From(categories);
         return this;
     }
 
-    public ContainerOptionsSetup WithStartupWmClass(string startupWmClass)
+    public FromDirectoryOptions WithStartupWmClass(string startupWmClass)
     {
         StartupWmClass = Maybe<string>.From(startupWmClass);
         return this;
     }
 
-    public ContainerOptionsSetup WithComment(string comment)
+    public FromDirectoryOptions WithComment(string comment)
     {
         Comment = Maybe<string>.From(comment);
         return this;
     }
 
-    public ContainerOptionsSetup WithDescription(string description)
+    public FromDirectoryOptions WithDescription(string description)
     {
         Description = Maybe<string>.From(description);
         return this;
     }
 
-    public ContainerOptionsSetup WithHomepage(Uri homepage)
+    public FromDirectoryOptions WithHomepage(Uri homepage)
     {
         Homepage = Maybe<Uri>.From(homepage);
         return this;
     }
 
-    public ContainerOptionsSetup WithLicense(string license)
+    public FromDirectoryOptions WithLicense(string license)
     {
         License = Maybe<string>.From(license);
         return this;
     }
 
-    public ContainerOptionsSetup WithPriority(string priority)
+    public FromDirectoryOptions WithPriority(string priority)
     {
         Priority = Maybe<string>.From(priority);
         return this;
     }
 
-    public ContainerOptionsSetup WithScreenshotUrls(IEnumerable<Uri> screenshotUrls)
+    public FromDirectoryOptions WithScreenshotUrls(IEnumerable<Uri> screenshotUrls)
     {
         ScreenshotUrls = Maybe<IEnumerable<Uri>>.From(screenshotUrls);
         return this;
     }
 
-    public ContainerOptionsSetup WithMaintainer(string maintainer)
+    public FromDirectoryOptions WithMaintainer(string maintainer)
     {
         Maintainer = Maybe<string>.From(maintainer);
         return this;
     }
 
-    public ContainerOptionsSetup WithSummary(string summary)
+    public FromDirectoryOptions WithSummary(string summary)
     {
         Summary = Maybe<string>.From(summary);
         return this;
     }
 
-    public ContainerOptionsSetup WithKeywords(IEnumerable<string> keywords)
+    public FromDirectoryOptions WithKeywords(IEnumerable<string> keywords)
     {
         Keywords = Maybe<IEnumerable<string>>.From(keywords);
         return this;
     }
 
-    public ContainerOptionsSetup WithRecommends(string recommends)
+    public FromDirectoryOptions WithRecommends(string recommends)
     {
         Recommends = Maybe<string>.From(recommends);
         return this;
     }
 
-    public ContainerOptionsSetup WithSection(string section)
+    public FromDirectoryOptions WithSection(string section)
     {
         Section = Maybe<string>.From(section);
         return this;
     }
 
-    public ContainerOptionsSetup WithVersion(string version)
+    public FromDirectoryOptions WithVersion(string version)
     {
         Version = Maybe<string>.From(version);
         return this;
     }
 
-    public ContainerOptionsSetup WithVcsBrowser(string vcsBrowser)
+    public FromDirectoryOptions WithVcsBrowser(string vcsBrowser)
     {
         VcsBrowser = Maybe<string>.From(vcsBrowser);
         return this;
     }
 
-    public ContainerOptionsSetup WithVcsGit(string vcsGit)
+    public FromDirectoryOptions WithVcsGit(string vcsGit)
     {
         VcsGit = Maybe<string>.From(vcsGit);
         return this;
     }
 
-    public ContainerOptionsSetup WithInstalledSize(long installedSize)
+    public FromDirectoryOptions WithInstalledSize(long installedSize)
     {
         InstalledSize = Maybe<long>.From(installedSize);
         return this;
     }
 
-    public ContainerOptionsSetup WithModificationTime(DateTimeOffset modificationTime)
+    public FromDirectoryOptions WithModificationTime(DateTimeOffset modificationTime)
     {
         ModificationTime = Maybe<DateTimeOffset>.From(modificationTime);
         return this;

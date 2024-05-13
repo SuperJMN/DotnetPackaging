@@ -12,7 +12,7 @@ public class AppImageTests
     public async Task Test()
     {
         var appImageResult = await new AppImageBuilder(new RuntimeFactory())
-            .FromDirectory(new Directory("AvaloniaSyncer", new List<INode>()
+            .Directory(new Directory("AvaloniaSyncer", new List<INode>()
             {
                 new File("MyExecutable",(StringData)"echo Hello"),
                 new File("Content.txt", (StringData)"Content")

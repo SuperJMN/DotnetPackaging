@@ -36,8 +36,7 @@ public static class TarEntryMixin
     /// </summary>
     public static IData Owner(this TarEntry entry) => new StringData(entry.Properties.OwnerId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8), Encoding.ASCII);
 
-
-    /// <summary>
+        /// <summary>
     ///     From 116 to 124
     /// </summary>
     public static IData Group(this TarEntry entry) => new StringData(entry.Properties.GroupId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8), Encoding.ASCII);
@@ -74,7 +73,12 @@ public static class TarEntryMixin
     /// <summary>
     ///     From 136 to 148 Last modification time in numeric Unix time format (octal)
     /// </summary>
-    private static IData LastModification(this TarEntry entry) => new StringData(entry.Properties.LastModification.ToUnixTimeSeconds().ToOctalField(), Encoding.ASCII);
+    private static IData LastModification(this TarEntry entry) => new StringData(CoerceLastModification(entry.Properties.LastModification).ToOctalField(), Encoding.ASCII);
+
+    private static long CoerceLastModification(DateTimeOffset propertiesLastModification)
+    {
+        return Math.Max(0, propertiesLastModification.ToUnixTimeSeconds());
+    }
 
     private static IData Checksum(Maybe<long> checksum)
     {

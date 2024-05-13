@@ -4,5 +4,5 @@ namespace DotnetPackaging.AppImage;
 
 public class AppImage
 {
-    public static AppImageBuilder Create() => new(new RuntimeFactory());
+    public static AppImageBuilder From() => new(new RuntimeFactory());
 }

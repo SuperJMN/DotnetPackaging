@@ -9,15 +9,15 @@ namespace DotnetPackaging.Deb.Builder;
 public class FromContainer
 {
     private readonly IDirectory root;
-    private readonly ContainerOptionsSetup setup;
+    private readonly FromDirectoryOptions setup;
 
-    public FromContainer(IDirectory root, ContainerOptionsSetup setup)
+    public FromContainer(IDirectory root, FromDirectoryOptions setup)
     {
         this.root = root;
         this.setup = setup;
     }
 
-    public Task<Result<DebFile>> Build()
+    public Task<Result<Archives.Deb.DebFile>> Build()
     {
         var execResult = GetExecutable();
 
@@ -28,7 +28,7 @@ public class FromContainer
                     PackageMetadata = await GetPackageMetadata(root, architecture),
                     Executable = exec
                 }))
-            .Map(conf => new DebFile(conf.PackageMetadata, TarEntryBuilder.From(root, conf.PackageMetadata, conf.Executable).ToArray()));
+            .Map(conf => new Archives.Deb.DebFile(conf.PackageMetadata, TarEntryBuilder.From(root, conf.PackageMetadata, conf.Executable).ToArray()));
 
         return build;
     }
@@ -61,7 +61,7 @@ public class FromContainer
             VcsBrowser = setup.VcsBrowser,
             VcsGit = setup.VcsGit,
             InstalledSize = setup.InstalledSize,
-            ModificationTime = setup.ModificationTime,
+            ModificationTime = setup.ModificationTime.GetValueOrDefault(DateTimeOffset.Now),
         };
 
         return packageMetadata;

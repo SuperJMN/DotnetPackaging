@@ -73,7 +73,7 @@ public class DebTests
             })
         };
 
-        var deb = new DebFile(metadata, tarEntries);
+        var deb = new Archives.Deb.DebFile(metadata, tarEntries);
         var actual = deb.ToData().Bytes.Flatten().ToEnumerable().ToArray();
         await IoFile.WriteAllBytesAsync(@"C:\Users\JMN\Desktop\actual.deb", actual);
         var expected = await IoFile.ReadAllBytesAsync("TestFiles/Sample.deb");

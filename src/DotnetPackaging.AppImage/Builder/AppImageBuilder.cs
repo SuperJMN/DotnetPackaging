@@ -9,8 +9,8 @@ public class AppImageBuilder
         this.runtimeFactory = runtimeFactory;
     }
 
-    public FromContainerOptions FromDirectory(IDirectory root)
+    public FromContainerConfiguration Directory(IDirectory root)
     {
-        return new FromContainerOptions(runtimeFactory, root);
+        return new FromContainerConfiguration(runtimeFactory, root);
     }
 }

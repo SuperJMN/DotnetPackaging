@@ -2,7 +2,7 @@
 
 public class DebBuilder
 {
-    public FromContainerOptions FromDirectory(IDirectory root)
+    public FromContainerOptions Directory(IDirectory root)
     {
         return new FromContainerOptions(root);
     }

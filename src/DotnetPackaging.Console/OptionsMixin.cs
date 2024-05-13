@@ -4,7 +4,7 @@ namespace DotnetPackaging.Console;
 
 public static class OptionsMixin
 {
-    public static void With(this ContainerOptionsSetup setup, Options options)
+    public static void From(this FromDirectoryOptions setup, Options options)
     {
         if (options.ExecutableName.HasValue)
         {

@@ -9,9 +9,9 @@ public class FromContainerOptions
         this.container = container;
     }
 
-    public FromContainer Configure(Action<ContainerOptionsSetup> setup)
+    public FromContainer Configure(Action<FromDirectoryOptions> setup)
     {
-        var options = new ContainerOptionsSetup();
+        var options = new FromDirectoryOptions();
         setup(options);
         return new FromContainer(container, options);
     }

@@ -1,19 +1,19 @@
 ﻿namespace DotnetPackaging.AppImage.Builder;
 
-public class FromContainerOptions
+public class FromContainerConfiguration
 {
     private readonly RuntimeFactory runtimeFactory;
     private readonly IDirectory container;
 
-    public FromContainerOptions(RuntimeFactory runtimeFactory, IDirectory container)
+    public FromContainerConfiguration(RuntimeFactory runtimeFactory, IDirectory container)
     {
         this.runtimeFactory = runtimeFactory;
         this.container = container;
     }
 
-    public FromContainer Configure(Action<ContainerOptionsSetup> setup)
+    public FromContainer Configure(Action<FromDirectoryOptions> setup)
     {
-        var options = new ContainerOptionsSetup();
+        var options = new FromDirectoryOptions();
         setup(options);
         return new FromContainer(container, runtimeFactory, options);
     }

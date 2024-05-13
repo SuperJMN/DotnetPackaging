@@ -18,8 +18,8 @@ public class AppImageTests
         var fs = new FileSystem();
         var dir = new DotnetDir(fs.DirectoryInfo.New("C:\\Users\\JMN\\Desktop\\AppDir\\AvaloniaSyncer"));
         
-        var appImageResult = await AppImage.Create()
-            .FromDirectory(dir)
+        var appImageResult = await AppImage.From()
+            .Directory(dir)
             .Configure(setup => setup
                 .WithPackage("AvaloniaSyncer")
                 .WithPackageId("com.SuperJMN.AvaloniaSyncer")

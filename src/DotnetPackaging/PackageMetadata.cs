@@ -26,5 +26,5 @@ public record PackageMetadata
     public Maybe<string> VcsGit { get; init; } = Maybe<string>.None;
     public Maybe<string> VcsBrowser { get; init; } = Maybe<string>.None;
     public Maybe<long> InstalledSize { get; init; } = Maybe<long>.None;
-    public Maybe<DateTimeOffset> ModificationTime { get; init; } = Maybe<DateTimeOffset>.None;
+    public required DateTimeOffset ModificationTime { get; init; }
 }

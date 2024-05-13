@@ -11,9 +11,9 @@ public class FromContainer
 {
     private readonly IDirectory root;
     private readonly RuntimeFactory runtimeFactory;
-    private readonly ContainerOptionsSetup setup;
+    private readonly FromDirectoryOptions setup;
 
-    public FromContainer(IDirectory root, RuntimeFactory runtimeFactory, ContainerOptionsSetup setup)
+    public FromContainer(IDirectory root, RuntimeFactory runtimeFactory, FromDirectoryOptions setup)
     {
         this.root = root;
         this.runtimeFactory = runtimeFactory;
@@ -120,7 +120,7 @@ public class FromContainer
             VcsBrowser = setup.VcsBrowser,
             VcsGit = setup.VcsGit,
             InstalledSize = setup.InstalledSize,
-            ModificationTime = setup.ModificationTime,
+            ModificationTime = setup.ModificationTime.GetValueOrDefault(DateTimeOffset.Now),
         };
 
         var localExecPath = "$APPDIR" + "/usr/bin/" + executable.Name;
