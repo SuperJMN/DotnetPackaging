@@ -1,4 +1,5 @@
-﻿using CSharpFunctionalExtensions;
+﻿using System.Diagnostics;
+using CSharpFunctionalExtensions;
 using Zafiro.Mixins;
 
 namespace DotnetPackaging;
@@ -7,27 +8,22 @@ public static class TextTemplates
 {
     public static string DesktopFileContents(string executablePath, PackageMetadata metadata)
     {
-        List<IEnumerable<string>> items =
-        [
-            Item(Maybe.From("[Desktop Entry]")),
-            Item(Maybe.From("Type=Application")),
-            Item(metadata.StartupWmClass.Map(n => $"Name={n}")),
-            Item(Maybe.From($"GenericName={metadata.AppName}")),
-            Item(metadata.Comment.Map(n => $"Comment={n}")),
-            Item(metadata.Icon.Map(_ => $"Icon={metadata.Package}")),
-            Item("Terminal=False"),
-            Item($"Exec=\"{executablePath}\""),
-            Item(metadata.Categories.Map(x => $"Categories={x}")),
-            Item(metadata.Keywords.Map(keywords => $"Keywords={string.Join((string?) ";", (IEnumerable<string?>) keywords)}")),
-            Item(metadata.Version),
-        ];
+        var items = new[]
+        {
+            Maybe.From("[Desktop Entry]"),
+            Maybe.From("Type=Application"),
+            Maybe.From($"Name={metadata.AppName}"),
+            metadata.StartupWmClass.Map(n => $"StartupWMClass={n}"),
+            metadata.Comment.Map(n => $"Comment={n}"),
+            metadata.Icon.Map(_ => $"Icon={metadata.Package}"),
+            Maybe.From("Terminal=False"),
+            Maybe.From($"Exec=\"{executablePath}\""),
+            metadata.Categories.Map(x => $"Categories={x}"),
+            metadata.Keywords.Map(keywords => $"Keywords={keywords.JoinWith(";")}"),
+            Maybe.From(metadata.Version).Map(s => $"X-AppImage-Version={s}"),
+        };
 
-        return string.Join("\n", items.Flatten());
-    }
-
-    private static IEnumerable<string> Item(Maybe<string> from)
-    {
-        return from.ToList();
+        return items.Compose() + "\n";
     }
 
     public static string RunScript(string executablePath)

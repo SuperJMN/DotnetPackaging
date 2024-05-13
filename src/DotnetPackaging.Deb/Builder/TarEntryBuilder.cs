@@ -38,7 +38,7 @@ public static class TarEntryBuilder
         }
 
         var size = metadata.Icon.Value.Size;
-        return [new FileTarEntry($"./usr/local/share/icons/apps/{size}x{size}/{metadata.Package}.png", metadata.Icon.Value, Misc.RegularFileProperties())];
+        return [new FileTarEntry($"./usr/share/icons/hicolor/{size}x{size}/apps/{metadata.Package}.png", metadata.Icon.Value, Misc.RegularFileProperties())];
     }
     
     private static IEnumerable<TarEntry> TarEntriesFromFiles(IEnumerable<IRootedFile> files, PackageMetadata metadata, IFile executable)

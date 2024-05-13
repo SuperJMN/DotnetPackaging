@@ -1,4 +1,6 @@
+using CSharpFunctionalExtensions;
 using System.Text;
+using Zafiro.Mixins;
 
 namespace DotnetPackaging;
 
@@ -18,4 +20,10 @@ public static class StringManipulationMixin
     public static string NullTerminatedPaddedField(this string str, int size) => str.PaddedField(size).NullTerminated();
 
     public static string NullTerminated(this string str) => str + "\0";
+    
+    public static string Compose(this Maybe<string>[] items)
+    {
+        var strings = items.Select(maybe => maybe.ToList()).Flatten();
+        return string.Join("\n", strings);
+    }
 }

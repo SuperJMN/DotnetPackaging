@@ -1,4 +1,5 @@
-﻿using CSharpFunctionalExtensions;
+﻿using System.Diagnostics;
+using CSharpFunctionalExtensions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using Zafiro.DataModel;
@@ -20,10 +21,11 @@ public class Icon : IIcon
     {
         return Result.Try(async () =>
         {
+            Debugger.Launch();
             await using var memoryStream = new MemoryStream();
             var icon = image.Iconize();
             await icon.SaveAsync(memoryStream, PngFormat.Instance);
-            return (IIcon)new Icon(new ByteArrayData(memoryStream.ToArray()), image.Size.Width);
+            return (IIcon)new Icon(new ByteArrayData(memoryStream.ToArray()), icon.Width);
         });
     }
 

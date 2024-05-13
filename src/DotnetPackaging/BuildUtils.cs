@@ -1,4 +1,5 @@
-﻿using System.Reactive.Linq;
+﻿using System.Diagnostics;
+using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;

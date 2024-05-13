@@ -88,16 +88,16 @@ public static class DebMixin
 
         var items = new[]
         {
-            Maybe.From(deb.Metadata.Package).Map(s => $"Package: {s}").AsEnumerable(),
-            Maybe.From(deb.Metadata.Version).Map(s => $"Version: {s}").AsEnumerable(),
-            Maybe.From(deb.Metadata.Architecture).Map(s => $"Architecture: {s.Name}").AsEnumerable(),
-            deb.Metadata.Section.Map(s => $"Section: {s}").AsEnumerable(),
-            deb.Metadata.Priority.Map(s => $"Priority: {s}").AsEnumerable(),
-            deb.Metadata.Maintainer.Map(s => $"Maintainer: {s}").AsEnumerable(),
-            deb.Metadata.Description.Map(s => $"Description: {s}").AsEnumerable(),
+            Maybe.From(deb.Metadata.Package).Map(s => $"Package: {s}"),
+            Maybe.From(deb.Metadata.Version).Map(s => $"Version: {s}"),
+            Maybe.From(deb.Metadata.Architecture).Map(s => $"Architecture: {s.Name}"),
+            deb.Metadata.Section.Map(s => $"Section: {s}"),
+            deb.Metadata.Priority.Map(s => $"Priority: {s}"),
+            deb.Metadata.Maintainer.Map(s => $"Maintainer: {s}"),
+            deb.Metadata.Description.Map(s => $"Description: {s}"),
         };
 
-        var content = string.Join("\n", items.Flatten().Values().Select(arg => arg)) + "\n";
+        var content = items.Compose() + "\n";
 
         var file = new File("control", content);
         
