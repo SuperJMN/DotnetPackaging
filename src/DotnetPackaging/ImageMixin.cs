@@ -17,23 +17,30 @@ public static class ImageMixin
         return image.Height == image.Width && MathMixin.IsPowerOf2(image.Width);
     }
     
-    public static Image Iconize(this Image image)
+    public static Image Iconize(this Image originalImage)
     {
-        int maxSize = Math.Max(image.Width, image.Height);
-        var sideSide = MathMixin.NextPowerOfTwo(maxSize);
-        var newSize = new Size(sideSide, sideSide);
+        // Determina la mayor dimensión de la imagen
+        int maxDimension = Math.Max(originalImage.Width, originalImage.Height);
 
-        if (image.Size == newSize)
-        {
-            return image;
-        }
-        
-        var newCanvas = new Image<Rgba32>(newSize.Width, newSize.Height, Color.Transparent);
+        // Encuentra la potencia de dos más cercana que sea mayor o igual a la mayor dimensión
+        int size = MathMixin.NextPowerOfTwo(maxDimension);
 
-        int offsetX = (newSize.Width - image.Width) / 2;
-        int offsetY = (newSize.Height - image.Height) / 2;
+        // Calcula el factor de escala para ajustar la imagen original al tamaño de la potencia de dos
+        float scaleFactor = Math.Min((float)size / originalImage.Width, (float)size / originalImage.Height);
 
-        newCanvas.Mutate(ctx => ctx.DrawImage(image, new Point(offsetX, offsetY), 1f));
-        return newCanvas;
+        // Crea una imagen con el tamaño escalado proporcionalmente
+        var resizedImage = originalImage.Clone(ctx => ctx.Resize((int)(originalImage.Width * scaleFactor), (int)(originalImage.Height * scaleFactor)));
+
+        // Crea una nueva imagen cuadrada con el fondo transparente o de otro color
+        var paddedImage = new Image<Rgba32>(size, size);
+
+        // Calcula las posiciones para centrar la imagen escalada en el lienzo cuadrado
+        int x = (size - resizedImage.Width) / 2;
+        int y = (size - resizedImage.Height) / 2;
+
+        // Dibuja la imagen escalada en el centro del lienzo cuadrado
+        paddedImage.Mutate(ctx => ctx.DrawImage(resizedImage, new Point(x, y), 1f));
+
+        return paddedImage;
     }
 }

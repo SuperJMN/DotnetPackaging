@@ -15,7 +15,7 @@ public static class TextTemplates
             Maybe.From($"Name={metadata.AppName}"),
             metadata.StartupWmClass.Map(n => $"StartupWMClass={n}"),
             metadata.Comment.Map(n => $"Comment={n}"),
-            metadata.Icon.Map(_ => $"Icon={metadata.Package}"),
+            metadata.Icon.Map(_ => $"Icon={metadata.Package.ToLower()}"),
             Maybe.From("Terminal=False"),
             Maybe.From($"Exec=\"{executablePath}\""),
             metadata.Categories.Map(x => $"Categories={x}"),
