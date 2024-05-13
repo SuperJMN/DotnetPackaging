@@ -1,4 +1,5 @@
-﻿using Serilog;
+﻿using System.Diagnostics;
+using Serilog;
 using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
 
@@ -43,29 +44,28 @@ public class FromContainer
         var packageMetadata = await BuildUtils.CreateMetadata(setup, directory, architecture, executable);
 
         var localExecPath = "$APPDIR" + "/usr/bin/" + executable.Name;
-        
-        var files = new[]
+
+        var bin = BinDirectory.Create(directory.Children, executable)
+            .OfType<UnixFile>()
+            .Select(x => new RootedUnixFile("usr/bin", new UnixFile(x, UnixFileProperties.RegularFileProperties())));
+
+        var second = packageMetadata.Icon.Match(icon => new[]
         {
-            new RootedUnixFile(ZafiroPath.Empty, new UnixFile("Sample1.txt", (StringData) "Content")),
-            new RootedUnixFile(ZafiroPath.Empty, new UnixFile("Sample2.txt", (StringData) "Content")),
-            new RootedUnixFile("Dir", new UnixFile("Sample3.txt", (StringData) "Content")),
-            new RootedUnixFile("Dir", new UnixFile("Sample4.txt", (StringData) "Content")),
-            new RootedUnixFile("Dir/Subdir", new UnixFile("Sample5.txt", (StringData) "Content")),
-        };
+            new RootedUnixFile(ZafiroPath.Empty, new UnixFile(".AppDir", icon)),
+            new RootedUnixFile($"usr/share/icons/hicolor/{icon.Size}x{icon.Size}/{packageMetadata.Package.ToLower()}", new UnixFile(".AppDir", icon))
+        }, Enumerable.Empty<RootedUnixFile>);
         
-        var mandatory = new UnixNode[]
-        {
-            new UnixDir("usr", new List<UnixNode>()
+        IEnumerable<RootedUnixFile> files = new[]
             {
-                new UnixDir("bin", BinDirectory.Create(directory.Children, executable)),
-            }),
-            new UnixFile("AppRun", new StringData(TextTemplates.RunScript(localExecPath)), UnixFileProperties.ExecutableFileProperties()),
-            new UnixFile("application.desktop", new StringData(TextTemplates.DesktopFileContents(localExecPath, packageMetadata)), UnixFileProperties.ExecutableFileProperties()),
-        };
+                new RootedUnixFile(ZafiroPath.Empty, new ("AppRun", (StringData) TextTemplates.RunScript(localExecPath), UnixFileProperties.ExecutableFileProperties())),
+                new RootedUnixFile(ZafiroPath.Empty, new ("application.desktop", new StringData(TextTemplates.DesktopFileContents(localExecPath, packageMetadata)), UnixFileProperties.ExecutableFileProperties())),
+            }
+            .Concat(bin)
+            .Concat(second);
 
-        var optionalNodes = packageMetadata.Icon.Map(data => new UnixFile(".AppDir", data)).ToList();
-        var nodes = mandatory.Concat(optionalNodes);
+        UnixDir dir = (UnixDir) files.ToList().FromRootedFiles(ZafiroPath.Empty);
 
-        return new UnixRoot(nodes);
+        Debugger.Launch();
+        return new UnixRoot(dir.Nodes);
     }
 }
