@@ -9,10 +9,6 @@
   </PropertyGroup>
   <Import Project="..\Common.props" />
   <ItemGroup>
-    <Compile Remove="FromAppDir.cs" />
-    <Compile Remove="FromSingleDirectory.cs" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
   </ItemGroup>
