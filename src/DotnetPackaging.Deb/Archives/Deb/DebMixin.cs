@@ -1,7 +1,12 @@
-﻿using DotnetPackaging.Deb.Archives.Ar;
+﻿using CSharpFunctionalExtensions;
+using DotnetPackaging.Deb.Archives.Ar;
 using DotnetPackaging.Deb.Archives.Tar;
+using MoreLinq;
+using SharpCompress;
+using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
+using Zafiro.Mixins;
 using File = Zafiro.FileSystem.Lightweight.File;
 
 namespace DotnetPackaging.Deb.Archives.Deb;
@@ -81,18 +86,20 @@ public static class DebMixin
             LastModification = deb.Metadata.ModificationTime,
         };
 
-        var content = $"""
-                 Package: {deb.Metadata.Package}
-                 Version: {deb.Metadata.Version}
-                 Section: {deb.Metadata.Section}
-                 Priority: {deb.Metadata.Priority}
-                 Architecture: {deb.Metadata.Architecture.Name}
-                 Maintainer: {deb.Metadata.Maintainer}
-                 Description: {deb.Metadata.Description}
+        var items = new[]
+        {
+            Maybe.From(deb.Metadata.Package).Map(s => $"Package: {s}").AsEnumerable(),
+            Maybe.From(deb.Metadata.Version).Map(s => $"Version: {s}").AsEnumerable(),
+            Maybe.From(deb.Metadata.Architecture).Map(s => $"Architecture: {s.Name}").AsEnumerable(),
+            deb.Metadata.Section.Map(s => $"Section: {s}").AsEnumerable(),
+            deb.Metadata.Priority.Map(s => $"Priority: {s}").AsEnumerable(),
+            deb.Metadata.Maintainer.Map(s => $"Maintainer: {s}").AsEnumerable(),
+            deb.Metadata.Description.Map(s => $"Description: {s}").AsEnumerable(),
+        };
 
-                 """;
+        var content = string.Join("\n", items.Flatten().Values().Select(arg => arg)) + "\n";
 
-        var file = new File("control", content.FromCrLfToLf());
+        var file = new File("control", content);
         
         var entries = new TarEntry[]
         {
@@ -100,6 +107,7 @@ public static class DebMixin
             new FileTarEntry("./control", file, fileProperties)
         };
         
+        // TODO: Add other properties, too
         //Homepage: {deb.ControlMetadata.Homepage}
         //Vcs-Git: {deb.ControlMetadata.VcsGit}
         //Vcs-Browser: {deb.ControlMetadata.VcsBrowser}

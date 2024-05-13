@@ -1,21 +1,19 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Parsing;
-using System.Diagnostics;
 using System.IO.Abstractions;
 using CSharpFunctionalExtensions;
-using DotnetPackaging;
 using DotnetPackaging.AppImage.Kernel;
-using DotnetPackaging.Console;
 using DotnetPackaging.Deb;
 using Serilog;
 using Zafiro.DataModel;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Lightweight;
-using AppImage = DotnetPackaging.AppImage.AppImage;
 
-class Program
+namespace DotnetPackaging.Console;
+
+static class Program
 {
-    public static readonly FileSystem FileSystem = new();
+    private static readonly FileSystem FileSystem = new();
     
     public static Task<int> Main(string[] args)
     {
@@ -24,24 +22,10 @@ class Program
             .CreateLogger();
         
         var rootCommand = new RootCommand();
-        rootCommand.AddCommand(DebCommand());
-        rootCommand.AddCommand(AppImageCommand());
+        rootCommand.AddCommand(DebFromBuildDirCommand());
+        rootCommand.AddCommand(AppImageFromBuildDirCommand());
         
         return rootCommand.InvokeAsync(args);
-    }
-
-    static Command AppImageCommand()
-    {
-        var fromBuildDir = new Command("appimage", "Creates AppImage packages");
-        fromBuildDir.AddCommand(AppImageFromBuildDirCommand());
-        return fromBuildDir;
-    }
-    
-    static Command DebCommand()
-    {
-        var fromBuildDir = new Command("deb", "Creates AppImage packages");
-        fromBuildDir.AddCommand(DebFromBuildDirCommand());
-        return fromBuildDir;
     }
 
     static Command AppImageFromBuildDirCommand()
@@ -61,13 +45,13 @@ class Program
         var summary = new Option<string>("--summary", "Summary. Short description that should not end in a dot.") { IsRequired = false };
         var appId = new Option<string>("--appId", "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication") { IsRequired = false };
         var executableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
-        var iconOption = new Option<IIcon>("--icon", result => GetIcon(result, result))
+        var iconOption = new Option<IIcon>("--icon", GetIcon )
         {
             IsRequired = false,
             Description = "Path to the application icon. When this option is not provided, the tool will look up for an image called 'AppImage.png'."
         };
 
-        var fromBuildDir = new Command("from-build", "Creates AppImage from a directory with the contents. Everything is inferred. For .NET applications, this is usually the \"publish\" directory.");
+        var fromBuildDir = new Command("appimage", "Creates AppImage from a directory with the contents. Everything is inferred. For .NET applications, this is usually the \"publish\" directory.");
 
         fromBuildDir.AddOption(buildDir);
         fromBuildDir.AddOption(appImageFile);
@@ -109,7 +93,7 @@ class Program
     static Command DebFromBuildDirCommand()
     {
         var buildDir = new Option<DirectoryInfo>("--directory", "The input directory to create the package from") { IsRequired = true };
-        var appImageFile = new Option<FileInfo>("--output", "Output file (.deb)") { IsRequired = true };
+        var appImageFile = new Option<FileInfo>("--output", "Output file (.deb)") { IsRequired = true, };
         var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
         var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
         var mainCategory = new Option<MainCategory?>("--main-category", "Main category") { IsRequired = false, Arity = ArgumentArity.ZeroOrOne, };
@@ -123,13 +107,13 @@ class Program
         var summary = new Option<string>("--summary", "Summary. Short description that should not end in a dot.") { IsRequired = false };
         var appId = new Option<string>("--appId", "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication") { IsRequired = false };
         var executableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
-        var iconOption = new Option<IIcon>("--icon", result => GetIcon(result, result))
+        var iconOption = new Option<IIcon>("--icon", GetIcon)
         {
             IsRequired = false,
             Description = "Path to the application icon. When this option is not provided, the tool will look up for an image called 'AppImage.png'."
         };
 
-        var fromBuildDir = new Command("from-build", "Creates AppImage from a directory with the contents. Everything is inferred. For .NET applications, this is usually the \"publish\" directory.");
+        var fromBuildDir = new Command("deb", "Creates AppImage from a directory with the contents. Everything is inferred. For .NET applications, this is usually the \"publish\" directory.");
 
         fromBuildDir.AddOption(buildDir);
         fromBuildDir.AddOption(appImageFile);
@@ -170,7 +154,7 @@ class Program
 
     private static Task CreateAppImage(DirectoryInfo inputDir, FileInfo outputFile, Options options)
     {
-        return AppImage.From()
+        return AppImage.AppImage.From()
             .Directory(new DotnetDir(FileSystem.DirectoryInfo.New(inputDir.FullName)))
             .Configure(configuration => configuration.From(options))
             .Build()
@@ -197,9 +181,9 @@ class Program
             .WriteResult();
     }
 
-    private static IIcon GetIcon(SymbolResult argumentResult, ArgumentResult result)
+    private static IIcon GetIcon(ArgumentResult result)
     {
-        var iconPath = argumentResult.Tokens[0].Value;
+        var iconPath = result.Tokens[0].Value;
         var icon = Icon.FromData(new FileInfoData(FileSystem.FileInfo.New(iconPath))).Result;
         if (icon.IsFailure)
         {

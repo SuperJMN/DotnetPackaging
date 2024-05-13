@@ -19,7 +19,7 @@ public static class TextTemplates
             Item($"Exec=\"{executablePath}\""),
             Item(metadata.Categories.Map(x => $"Categories={x}")),
             Item(metadata.Keywords.Map(keywords => $"Keywords={string.Join((string?) ";", (IEnumerable<string?>) keywords)}")),
-            Item(metadata.Version.Map(version => $"X-AppImage-Version={version}")),
+            Item(metadata.Version),
         ];
 
         return string.Join("\n", items.Flatten());
