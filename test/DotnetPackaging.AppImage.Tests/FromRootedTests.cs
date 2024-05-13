@@ -1,6 +1,5 @@
 ﻿using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
-using File = Zafiro.FileSystem.Lightweight.File;
 
 namespace DotnetPackaging.AppImage.Tests;
 
