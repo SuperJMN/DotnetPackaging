@@ -10,16 +10,16 @@ public class FromRootedTests
     {
         var files = new[]
         {
-            new RootedUnixFile(ZafiroPath.Empty, new UnixFile("Sample1.txt", (StringData) "Content")),
-            new RootedUnixFile(ZafiroPath.Empty, new UnixFile("Sample2.txt", (StringData) "Content")),
-            new RootedUnixFile("Dir", new UnixFile("Sample3.txt", (StringData) "Content")),
-            new RootedUnixFile("Dir", new UnixFile("Sample4.txt", (StringData) "Content")),
-            new RootedUnixFile("Dir/Subdir", new UnixFile("Sample5.txt", (StringData) "Content")),
+            new RootedFile(ZafiroPath.Empty, new UnixFile("Sample1.txt", (StringData) "Content")),
+            new RootedFile(ZafiroPath.Empty, new UnixFile("Sample2.txt", (StringData) "Content")),
+            new RootedFile("Dir", new UnixFile("Sample3.txt", (StringData) "Content")),
+            new RootedFile("Dir", new UnixFile("Sample4.txt", (StringData) "Content")),
+            new RootedFile("Dir/Subdir", new UnixFile("Sample5.txt", (StringData) "Content")),
         };
 
-        var root = files.ToRoot(ZafiroPath.Empty);
+        var root = files.ToRoot(ZafiroPath.Empty, (name, children) => new UnixDir(name, children.Cast<UnixNode>()));
 
-        var rutas = TreeHelper.GeneratePaths(root, x => x is UnixDir d ? d.Nodes : new List<UnixNode>(), x => x.Name)
+        var rutas = TreeHelper.GeneratePaths<UnixNode>(root, x => x is UnixDir d ? d.Nodes : new List<UnixNode>(), x => x.Name)
             .Select(x => x.path);
 
         rutas.Should().BeEquivalentTo
@@ -41,12 +41,12 @@ public class FromRootedTests
     {
         var files = new[]
         {
-            new RootedUnixFile("Dir/Subdir", new UnixFile("Sample.txt", (StringData) "Content")),
+            new RootedFile("Dir/Subdir", new UnixFile("Sample.txt", (StringData) "Content")),
         };
 
-        var root = files.ToRoot(ZafiroPath.Empty);
+        var root = files.ToRoot(ZafiroPath.Empty, (s, nodes) => new UnixDir(s, nodes.Cast<UnixNode>()));
 
-        var rutas = TreeHelper.GeneratePaths(root, x => x is UnixDir d ? d.Nodes : new List<UnixNode>(), x => x.Name)
+        var rutas = TreeHelper.GeneratePaths<UnixNode>(root, x => x is UnixDir d ? d.Nodes : new List<UnixNode>(), x => x.Name)
             .Select(x => x.path);
 
         rutas.Should().BeEquivalentTo

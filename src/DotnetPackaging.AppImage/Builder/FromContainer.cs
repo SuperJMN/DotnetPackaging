@@ -45,23 +45,22 @@ public class FromContainer
 
         var localExecPath = "$APPDIR" + "/usr/bin/" + executable.Name;
         
-        var binFiles = directory.FilesInTree(ZafiroPath.Empty).Select(file => new RootedUnixFile("usr/bin", new UnixFile(file, file.Name == executable.Name ? UnixFileProperties.ExecutableFileProperties() : UnixFileProperties.RegularFileProperties())));
+        var binFiles = directory.FilesInTree(ZafiroPath.Empty).Select(file => new RootedFile("usr/bin", new UnixFile(file, file.Name == executable.Name ? UnixFileProperties.ExecutableFileProperties() : UnixFileProperties.RegularFileProperties())));
         var iconFiles = packageMetadata.Icon.Match(icon => new[]
         {
-            new RootedUnixFile(ZafiroPath.Empty, new UnixFile(".AppDir", icon)),
-            new RootedUnixFile($"usr/share/icons/hicolor/{icon.Size}x{icon.Size}", new UnixFile(packageMetadata.Package.ToLower() + ".png", icon))
-        }, Enumerable.Empty<RootedUnixFile>);
+            new RootedFile(ZafiroPath.Empty, new UnixFile(".AppDir", icon)),
+            new RootedFile($"usr/share/icons/hicolor/{icon.Size}x{icon.Size}/apps", new UnixFile(packageMetadata.Package.ToLower() + ".png", icon))
+        }, Enumerable.Empty<RootedFile>);
 
-        var files = new[]
+        IEnumerable<IRootedFile> files = new[]
             {
-                new RootedUnixFile(ZafiroPath.Empty, new("AppRun", (StringData) TextTemplates.RunScript(localExecPath), UnixFileProperties.ExecutableFileProperties())),
-                new RootedUnixFile(ZafiroPath.Empty, new("application.desktop", new StringData(TextTemplates.DesktopFileContents(localExecPath, packageMetadata)), UnixFileProperties.ExecutableFileProperties())),
+                new RootedFile(ZafiroPath.Empty, new UnixFile("AppRun", (StringData) TextTemplates.RunScript(localExecPath), UnixFileProperties.ExecutableFileProperties())),
+                new RootedFile(ZafiroPath.Empty, new UnixFile("application.desktop", new StringData(TextTemplates.DesktopFileContents(localExecPath, packageMetadata)), UnixFileProperties.ExecutableFileProperties())),
             }
             .Concat(iconFiles)
             .Concat(binFiles);
 
-        UnixDir dir = (UnixDir) files.ToList().ToRoot(ZafiroPath.Empty);
-
+        var dir = files.ToList().ToRoot(ZafiroPath.Empty, (name, children) => new UnixDir(name, children.Cast<UnixNode>()));
         return new UnixRoot(dir.Nodes);
     }
 }
