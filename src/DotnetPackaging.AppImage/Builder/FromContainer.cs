@@ -52,7 +52,7 @@ public class FromContainer
         var second = packageMetadata.Icon.Match(icon => new[]
         {
             new RootedUnixFile(ZafiroPath.Empty, new UnixFile(".AppDir", icon)),
-            new RootedUnixFile($"usr/share/icons/hicolor/{icon.Size}x{icon.Size}/{packageMetadata.Package.ToLower()}", new UnixFile(".AppDir", icon))
+            new RootedUnixFile($"usr/share/icons/hicolor/{icon.Size}x{icon.Size}", new UnixFile(packageMetadata.Package.ToLower() + ".png", icon))
         }, Enumerable.Empty<RootedUnixFile>);
         
         IEnumerable<RootedUnixFile> files = new[]

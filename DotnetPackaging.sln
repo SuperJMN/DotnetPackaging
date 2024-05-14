@@ -29,6 +29,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro.FileSystem.Unix", ".
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Console", "src\DotnetPackaging.Console\DotnetPackaging.Console.csproj", "{F1BE6649-DFBE-4393-A651-CEBE5519CA56}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro.FileSystem.Tests", "..\..\SuperJMN-Zafiro\Zafiro.FileSystem\test\Zafiro.FileSystem.Tests\Zafiro.FileSystem.Tests.csproj", "{1E44A3DD-DEF8-4B6A-9986-6389B339EB73}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +89,10 @@ Global
 		{F1BE6649-DFBE-4393-A651-CEBE5519CA56}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F1BE6649-DFBE-4393-A651-CEBE5519CA56}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F1BE6649-DFBE-4393-A651-CEBE5519CA56}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E44A3DD-DEF8-4B6A-9986-6389B339EB73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E44A3DD-DEF8-4B6A-9986-6389B339EB73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E44A3DD-DEF8-4B6A-9986-6389B339EB73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E44A3DD-DEF8-4B6A-9986-6389B339EB73}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

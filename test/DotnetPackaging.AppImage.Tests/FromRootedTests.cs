@@ -6,7 +6,7 @@ namespace DotnetPackaging.AppImage.Tests;
 public class FromRootedTests
 {
     [Fact]
-    public void FromRooted()
+    public void Paths_without_leaps()
     {
         var files = new[]
         {
@@ -32,6 +32,29 @@ public class FromRootedTests
             "Dir/Sample4.txt",
             "Dir/Subdir",
             "Dir/Subdir/Sample5.txt"
+        );
+    }
+    
+    
+    [Fact]
+    public void Path_with_leap()
+    {
+        var files = new[]
+        {
+            new RootedUnixFile("Dir/Subdir", new UnixFile("Sample.txt", (StringData) "Content")),
+        };
+
+        var root = files.FromRootedFiles(ZafiroPath.Empty);
+
+        var rutas = TreeHelper.GeneratePaths(root, x => x is UnixDir d ? d.Nodes : new List<UnixNode>(), x => x.Name)
+            .Select(x => x.path);
+
+        rutas.Should().BeEquivalentTo
+        (
+            "",
+            "Dir",
+            "Dir/Subdir",
+            "Dir/Subdir/Sample.txt"
         );
     }
 }
