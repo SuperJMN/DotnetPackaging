@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Serilog;
+﻿using Serilog;
 using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
 
