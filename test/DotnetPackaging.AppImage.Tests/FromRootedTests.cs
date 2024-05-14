@@ -17,7 +17,7 @@ public class FromRootedTests
             new RootedUnixFile("Dir/Subdir", new UnixFile("Sample5.txt", (StringData) "Content")),
         };
 
-        var root = files.FromRootedFiles(ZafiroPath.Empty);
+        var root = files.ToRoot(ZafiroPath.Empty);
 
         var rutas = TreeHelper.GeneratePaths(root, x => x is UnixDir d ? d.Nodes : new List<UnixNode>(), x => x.Name)
             .Select(x => x.path);
@@ -44,7 +44,7 @@ public class FromRootedTests
             new RootedUnixFile("Dir/Subdir", new UnixFile("Sample.txt", (StringData) "Content")),
         };
 
-        var root = files.FromRootedFiles(ZafiroPath.Empty);
+        var root = files.ToRoot(ZafiroPath.Empty);
 
         var rutas = TreeHelper.GeneratePaths(root, x => x is UnixDir d ? d.Nodes : new List<UnixNode>(), x => x.Name)
             .Select(x => x.path);
