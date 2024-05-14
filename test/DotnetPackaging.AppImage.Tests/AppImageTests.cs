@@ -1,70 +1,32 @@
-﻿using System.IO.Abstractions;
-using System.Runtime.InteropServices;
-using DotnetPackaging.AppImage.Core;
-using FluentAssertions;
-using Zafiro.FileSystem.Lightweight;
-using Zafiro.Reactive;
-using File = System.IO.File;
+﻿using DotnetPackaging.AppImage.Builder;
+using DotnetPackaging.AppImage.Kernel;
+using Zafiro.DataModel;
+using Directory = Zafiro.FileSystem.Lightweight.Directory;
+using File = Zafiro.FileSystem.Lightweight.File;
 
 namespace DotnetPackaging.AppImage.Tests;
 
-public class CustomAppImageTests
+public class AppImageTests
 {
     [Fact]
-    public async Task Minimal_from_app_dir()
+    public async Task Test()
     {
-        var streamGenerator = StreamGenerator.Generate(stream =>
-        {
-            var fs = new FileSystem();
-            var directoryInfo = fs.DirectoryInfo.New("TestFiles/AppDir/Minimal");
-            var appDir = new DirectorioIODirectory(Maybe<string>.None, directoryInfo);
-            return AppImage.FromAppDir(stream, appDir, new UriRuntime(Architecture.X64));
-        });
-
-        var result = await streamGenerator().Map(streamFactory => AreEqual(
-            streamFactory,
-            () => File.OpenRead("TestFiles/Results/Minimal-FromAppDir.appimage")));
-        result.Should().SucceedWith(true);
-    }
-
-    [Fact]
-    public async Task Minimal_from_build_dir()
-    {
-        var streamGenerator = StreamGenerator.Generate(stream =>
-        {
-            var fs = new FileSystem();
-            var directoryInfo = fs.DirectoryInfo.New("TestFiles/AppDir/Minimal");
-            var appDir = new DirectorioIODirectory(Maybe<string>.None, directoryInfo);
-            return AppImage.WriteFromBuildDirectory(stream, appDir, new Options()
+        var appImageResult = await new AppImageBuilder(new RuntimeFactory())
+            .Directory(new Directory("AvaloniaSyncer", new List<INode>()
             {
-                StartupWmClass = "StartupWmClass",
-                Keywords = Maybe.From<IEnumerable<string>>(["Keyword", "Keyword2"]),
-                Comment = "Some comment",
-                MainCategory = Maybe<MainCategory>.From(MainCategory.Utility),
-                AdditionalCategories = Maybe<IEnumerable<AdditionalCategory>>.From(new [] { AdditionalCategory.FileManager }),
-                AppName = "TestApp",
-                Icon = Maybe<IIcon>.None,
-                Summary = "",
-                HomePage = new Maybe<Uri>(),
-                License = "MIT",
-                ScreenshotUrls = Maybe<IEnumerable<Uri>>.None,
-                Version = "1.0.0",
-                AppId = Maybe<string>.None
-            });
-        });
+                new File("MyExecutable",(StringData)"echo Hello"),
+                new File("Content.txt", (StringData)"Content")
+            }))
+            .Configure(setup => setup
+                .WithPackage("AvaloniaSyncer")
+                .WithPackageId("com.SuperJMN.AvaloniaSyncer")
+                .WithArchitecture(Architecture.X64)
+                .WithExecutableName("MyExecutable"))
+            .Build();
 
-        var result = await streamGenerator().Map(streamFactory => AreEqual(
-            streamFactory,
-            () => File.OpenRead("TestFiles/Results/Minimal-FromBuildDir.appimage")));
-        result.Should().SucceedWith(true);
+        var dumpResult = await appImageResult.Bind(image => image.ToData())
+            .Bind(data => data.DumpTo("C:\\Users\\JMN\\Desktop\\File.AppImage"));
+        dumpResult.Should().Succeed();
     }
-
-    private static Task<bool> AreEqual(Func<Stream> one, Func<Stream> another)
-    {
-        return new AppImageStreamComparer().AreEqual(() =>
-        {
-            var stream = one();
-            return stream.ToObservable();
-        }, () => another().ToObservable());
-    }
+   
 }

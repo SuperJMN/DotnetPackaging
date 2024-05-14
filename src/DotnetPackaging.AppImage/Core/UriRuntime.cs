@@ -1,16 +1,23 @@
-﻿using System.Runtime.InteropServices;
-using CSharpFunctionalExtensions;
+﻿using Zafiro.DataModel;
 
-namespace DotnetPackaging.AppImage.Core;
+namespace DotnetPackaging.AppImage.Kernel;
 
 public class UriRuntime : IRuntime
 {
-    private readonly Architecture architecture;
+    private readonly IData runtimeImplementation;
 
-    public UriRuntime(Architecture architecture)
+    private UriRuntime(IData data)
     {
-        this.architecture = architecture;
+        runtimeImplementation = data;
     }
 
-    public Func<Task<Result<Stream>>> Open => () => RuntimeDownloader.GetRuntimeStream(architecture);
+    public static async Task<Result<UriRuntime>> Create(Uri uri)
+    {
+        var data = await HttpRequestData.Create(uri);
+        return data.Map(data1 => new UriRuntime(data1));
+    }
+
+    public IObservable<byte[]> Bytes => runtimeImplementation.Bytes;
+
+    public long Length => runtimeImplementation.Length;
 }

@@ -2,10 +2,10 @@
 
 namespace DotnetPackaging.Deb.Archives.Ar;
 
-public class Properties
+public record Properties
 {
     public required DateTimeOffset LastModification { get; init; }
-    public required LinuxFileMode FileMode { get; init; }
+    public required UnixFileMode FileMode { get; init; }
     public required Maybe<int> OwnerId { get; init; }
     public required Maybe<int> GroupId { get; init; }
 }

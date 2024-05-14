@@ -1,7 +1,7 @@
-﻿using Zafiro.FileSystem.Lightweight;
+﻿using Zafiro.DataModel;
 
-namespace DotnetPackaging.AppImage.Core;
+namespace DotnetPackaging.AppImage.Kernel;
 
-public interface IRuntime : IStreamOpen
+public interface IRuntime : IData
 {
 }

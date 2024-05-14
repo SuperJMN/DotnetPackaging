@@ -3,19 +3,19 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34202.233
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Tests", "test\DotnetPackaging.Tests\DotnetPackaging.Tests.csproj", "{C972C0EF-7611-4FE8-B3FD-2B82E5CE15DF}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "build\_build.csproj", "{E11D9F39-3856-4626-A3C1-58BE7ECCD13A}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Console", "src\DotnetPackaging.Console\DotnetPackaging.Console.csproj", "{23FC6D0A-4385-45CC-947D-93A1FD3211D2}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging", "src\DotnetPackaging\DotnetPackaging.csproj", "{BD2F6800-8509-480D-8F01-0E698375052B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.AppImage", "src\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj", "{93EED3D2-D674-4EFF-BB8D-4C13BFA14B3E}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.AppImage.Tests", "test\DotnetPackaging.AppImage.Tests\DotnetPackaging.AppImage.Tests.csproj", "{ED43558C-FC54-46B6-934F-943DD43AEB4D}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Deb", "src\DotnetPackaging.Deb\DotnetPackaging.Deb.csproj", "{6F7052C1-50DB-4826-9893-02656FBB7B69}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Deb.Tests", "test\DotnetPackaging.Deb.Tests\DotnetPackaging.Deb.Tests.csproj", "{A1647892-BE20-4AC4-999D-4D10B3DD5A00}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.AppImage", "src\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj", "{1CEF57FA-1EBA-48A6-8A1E-CD41DB04DD38}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.AppImage.Tests", "test\DotnetPackaging.AppImage.Tests\DotnetPackaging.AppImage.Tests.csproj", "{BAAAED2F-D1E7-47A0-A1D1-21EA83135D8B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Console", "src\DotnetPackaging.Console\DotnetPackaging.Console.csproj", "{F1BE6649-DFBE-4393-A651-CEBE5519CA56}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,34 +23,34 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{C972C0EF-7611-4FE8-B3FD-2B82E5CE15DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C972C0EF-7611-4FE8-B3FD-2B82E5CE15DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C972C0EF-7611-4FE8-B3FD-2B82E5CE15DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C972C0EF-7611-4FE8-B3FD-2B82E5CE15DF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E11D9F39-3856-4626-A3C1-58BE7ECCD13A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E11D9F39-3856-4626-A3C1-58BE7ECCD13A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E11D9F39-3856-4626-A3C1-58BE7ECCD13A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E11D9F39-3856-4626-A3C1-58BE7ECCD13A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{23FC6D0A-4385-45CC-947D-93A1FD3211D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{23FC6D0A-4385-45CC-947D-93A1FD3211D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{23FC6D0A-4385-45CC-947D-93A1FD3211D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{23FC6D0A-4385-45CC-947D-93A1FD3211D2}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{93EED3D2-D674-4EFF-BB8D-4C13BFA14B3E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{93EED3D2-D674-4EFF-BB8D-4C13BFA14B3E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{93EED3D2-D674-4EFF-BB8D-4C13BFA14B3E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{93EED3D2-D674-4EFF-BB8D-4C13BFA14B3E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{ED43558C-FC54-46B6-934F-943DD43AEB4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{ED43558C-FC54-46B6-934F-943DD43AEB4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{ED43558C-FC54-46B6-934F-943DD43AEB4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{ED43558C-FC54-46B6-934F-943DD43AEB4D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6F7052C1-50DB-4826-9893-02656FBB7B69}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6F7052C1-50DB-4826-9893-02656FBB7B69}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6F7052C1-50DB-4826-9893-02656FBB7B69}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6F7052C1-50DB-4826-9893-02656FBB7B69}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1647892-BE20-4AC4-999D-4D10B3DD5A00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1647892-BE20-4AC4-999D-4D10B3DD5A00}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1647892-BE20-4AC4-999D-4D10B3DD5A00}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1647892-BE20-4AC4-999D-4D10B3DD5A00}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1CEF57FA-1EBA-48A6-8A1E-CD41DB04DD38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1CEF57FA-1EBA-48A6-8A1E-CD41DB04DD38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1CEF57FA-1EBA-48A6-8A1E-CD41DB04DD38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1CEF57FA-1EBA-48A6-8A1E-CD41DB04DD38}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BAAAED2F-D1E7-47A0-A1D1-21EA83135D8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BAAAED2F-D1E7-47A0-A1D1-21EA83135D8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BAAAED2F-D1E7-47A0-A1D1-21EA83135D8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BAAAED2F-D1E7-47A0-A1D1-21EA83135D8B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1BE6649-DFBE-4393-A651-CEBE5519CA56}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1BE6649-DFBE-4393-A651-CEBE5519CA56}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1BE6649-DFBE-4393-A651-CEBE5519CA56}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1BE6649-DFBE-4393-A651-CEBE5519CA56}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,67 +1,49 @@
-using CSharpFunctionalExtensions;
+﻿using MoreLinq;
 using NyaFs.Filesystem.SquashFs;
 using NyaFs.Filesystem.SquashFs.Types;
-using NyaFs.Filesystem.Universal;
-using Zafiro.FileSystem;
+using Zafiro.DataModel;
+using Zafiro.FileSystem.Unix;
 
-namespace DotnetPackaging.AppImage.Core;
+namespace DotnetPackaging.AppImage.Kernel;
 
-public static class SquashFS
+public class SquashFS
 {
-    public static Task<Result> Write(Stream stream, IList<UnixFile> fileEntries)
+    public static Result<IData> Create(UnixRoot root)
     {
         var builder = new SquashFsBuilder(SqCompressionType.Gzip);
-
-        return CreateDirs(fileEntries, builder)
-            .Check(_ => CreateFiles(fileEntries, builder))
-            .Bind(_ => Result.Try(() => stream.Write(builder.GetFilesystemImage())));
+        return Result
+            .Try(() => Create(root, "", builder))
+            .Map(() =>
+            {
+                var filesystemImage = builder.GetFilesystemImage();
+                return (IData)new ByteArrayData(filesystemImage);
+            });
     }
 
-    private static async Task<Result> CreateFiles(IList<UnixFile> files, SquashFsBuilder squashFsBuilder)
+    public static void Create(UnixNode unixDir, string currentPath, SquashFsBuilder builder)
     {
-        var resultFiles = await GetFilesAndContents(files);
-        resultFiles.Tap(contentFiles => AddFiles(contentFiles, squashFsBuilder));
-        return resultFiles.Map(_ => Result.Success());
-    }
-
-    private static Task<Result<IEnumerable<(byte[] bytes, ZafiroPath path, string owner, string group, UnixFilePermissions UnixFilePermissions)>>> GetFilesAndContents(IList<UnixFile> files)
-    {
-        return files.Combine(file => file.data.ToBytes().Map(bytes => (bytes, file.path, file.owner, file.group, file.UnixFilePermissions)));
-    }
-
-    private static void AddFiles(IEnumerable<(byte[] bytes, ZafiroPath path, string owner, string group, UnixFilePermissions UnixFilePermissions)> contentFiles, SquashFsBuilder squashFsBuilder)
-    {
-        foreach (var contentFile in contentFiles)
+        switch (unixDir)
         {
-            squashFsBuilder.File("/" + contentFile.Item2, contentFile.Item1, 0, 0, (uint)contentFile.UnixFilePermissions);
+            case UnixDir subdirectory:
+                CreateDir(subdirectory, currentPath, builder);
+                break;
+            case UnixFile unixFile:
+                CreateFile(unixFile, currentPath, builder);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(unixDir));
         }
     }
 
- 
-    private static Result<IList<UnixFile>> CreateDirs(IList<UnixFile> files, IFilesystemBuilder fs)
+    private static void CreateFile(UnixFile unixFile, string currentPath, SquashFsBuilder builder)
     {
-        var paths = GetDirectoryPaths(files);
-        AddDirectories(paths, fs);
-        return Result.Success(files);
+        builder.File(currentPath + "/" + unixFile.Name, unixFile.Bytes(), (uint)unixFile.Properties.OwnerId.GetValueOrDefault(), (uint)unixFile.Properties.OwnerId.GetValueOrDefault(), (uint)unixFile.Properties.FileMode);
     }
 
-    private static Result<IEnumerable<ZafiroPath>> AddDirectories(IEnumerable<ZafiroPath> paths, IFilesystemBuilder fs)
+    private static void CreateDir(UnixDir unixDir, string currentPath, SquashFsBuilder builder)
     {
-        var mode = Convert.ToUInt32("755", 8);
-        foreach (var path in paths)
-        {
-            fs.Directory("/" + path, 0, 0, mode);
-        }
-
-        return Result.Success(paths);
-    }
-
-    private static IEnumerable<ZafiroPath> GetDirectoryPaths(IList<UnixFile> files)
-    {
-        return files
-            .SelectMany(x => x.path.Parents())
-            .Concat(new[] { ZafiroPath.Empty })
-            .Distinct()
-            .OrderBy(path => path.RouteFragments.Count());
+        var unixDirName = currentPath + "/" + unixDir.Name;
+        builder.Directory(unixDirName, (uint)unixDir.Properties.OwnerId.GetValueOrDefault(), (uint)unixDir.Properties.OwnerId.GetValueOrDefault(), (uint)unixDir.Properties.FileMode);
+        unixDir.Nodes.ForEach(node => Create(node, unixDirName, builder));
     }
 }
