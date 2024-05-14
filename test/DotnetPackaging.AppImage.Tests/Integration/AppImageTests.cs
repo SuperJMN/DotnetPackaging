@@ -1,5 +1,5 @@
 ﻿using System.IO.Abstractions;
-using DotnetPackaging.AppImage.Kernel;
+using DotnetPackaging.AppImage.Core;
 using Serilog;
 using Xunit.Abstractions;
 

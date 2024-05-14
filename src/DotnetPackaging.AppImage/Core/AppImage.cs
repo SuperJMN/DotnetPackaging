@@ -1,6 +1,6 @@
 ﻿using Zafiro.FileSystem.Unix;
 
-namespace DotnetPackaging.AppImage.Kernel;
+namespace DotnetPackaging.AppImage.Core;
 
 public class AppImage
 {

@@ -1,5 +1,5 @@
 ﻿using DotnetPackaging.AppImage.Builder;
-using DotnetPackaging.AppImage.Kernel;
+using DotnetPackaging.AppImage.Core;
 using Zafiro.DataModel;
 using Directory = Zafiro.FileSystem.Lightweight.Directory;
 using File = Zafiro.FileSystem.Lightweight.File;

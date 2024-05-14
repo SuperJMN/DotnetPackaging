@@ -4,7 +4,7 @@ using NyaFs.Filesystem.SquashFs.Types;
 using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
 
-namespace DotnetPackaging.AppImage.Kernel;
+namespace DotnetPackaging.AppImage.Core;
 
 public class SquashFS
 {

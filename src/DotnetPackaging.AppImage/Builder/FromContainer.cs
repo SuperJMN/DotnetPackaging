@@ -1,4 +1,5 @@
-﻿using Serilog;
+﻿using DotnetPackaging.AppImage.Core;
+using Serilog;
 using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
 
@@ -17,7 +18,7 @@ public class FromContainer
         this.setup = setup;
     }
 
-    public Task<Result<Kernel.AppImage>> Build()
+    public Task<Result<Core.AppImage>> Build()
     {
         var build = BuildUtils.GetExecutable(root, setup)
             .Bind(exec => BuildUtils.GetArch(setup, exec).Tap(arch => Log.Information("Architecture set to {Arch}", arch))
@@ -33,7 +34,7 @@ public class FromContainer
                     Root = await CreateRoot(root, conf.Architecture, conf.Executable),
                     conf.Runtime,
                 })
-                .Map(conf => new Kernel.AppImage(conf.Runtime, conf.Root)));
+                .Map(conf => new Core.AppImage(conf.Runtime, conf.Root)));
 
         return build;
     }

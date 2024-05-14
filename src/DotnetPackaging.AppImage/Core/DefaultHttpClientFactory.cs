@@ -1,4 +1,4 @@
-﻿namespace DotnetPackaging.AppImage.Kernel;
+﻿namespace DotnetPackaging.AppImage.Core;
 
 public sealed class DefaultHttpClientFactory : IHttpClientFactory, IDisposable
 {

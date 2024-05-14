@@ -2,7 +2,7 @@
 using System.CommandLine.Parsing;
 using System.IO.Abstractions;
 using CSharpFunctionalExtensions;
-using DotnetPackaging.AppImage.Kernel;
+using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.Deb;
 using Serilog;
 using Zafiro.DataModel;

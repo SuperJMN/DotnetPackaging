@@ -1,4 +1,5 @@
 ﻿using DotnetPackaging.AppImage.Builder;
+using DotnetPackaging.AppImage.Core;
 
 namespace DotnetPackaging.AppImage;
 

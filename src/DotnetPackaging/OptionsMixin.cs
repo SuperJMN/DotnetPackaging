@@ -1,6 +1,4 @@
-﻿using DotnetPackaging.AppImage.Builder;
-
-namespace DotnetPackaging.Console;
+﻿namespace DotnetPackaging;
 
 public static class OptionsMixin
 {

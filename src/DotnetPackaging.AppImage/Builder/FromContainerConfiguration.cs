@@ -1,4 +1,6 @@
-﻿namespace DotnetPackaging.AppImage.Builder;
+﻿using DotnetPackaging.AppImage.Core;
+
+namespace DotnetPackaging.AppImage.Builder;
 
 public class FromContainerConfiguration
 {

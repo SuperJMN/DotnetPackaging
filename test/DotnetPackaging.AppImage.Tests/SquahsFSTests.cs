@@ -1,4 +1,4 @@
-﻿using DotnetPackaging.AppImage.Kernel;
+﻿using DotnetPackaging.AppImage.Core;
 using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
 

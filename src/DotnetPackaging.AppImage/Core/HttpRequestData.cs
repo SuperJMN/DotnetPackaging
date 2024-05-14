@@ -1,7 +1,7 @@
 ﻿using System.Reactive.Linq;
 using Zafiro.DataModel;
 
-namespace DotnetPackaging.AppImage.Kernel;
+namespace DotnetPackaging.AppImage.Core;
 
 public static class HttpRequestData
 {
