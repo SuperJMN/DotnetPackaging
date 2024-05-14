@@ -11,25 +11,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Deb", "src\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Deb.Tests", "test\DotnetPackaging.Deb.Tests\DotnetPackaging.Deb.Tests.csproj", "{A1647892-BE20-4AC4-999D-4D10B3DD5A00}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro.FileSystem.Lightweight", "..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Lightweight\Zafiro.FileSystem.Lightweight.csproj", "{4E73B9D2-28AA-46E2-A05D-98F018A071EA}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro.FileSystem", "..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem\Zafiro.FileSystem.csproj", "{2E653C93-2394-4BC0-9701-9F48AFFFE2BD}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro", "..\..\SuperJMN-Zafiro\Zafiro\src\Zafiro\Zafiro.csproj", "{E9A44FA7-3E15-4C29-8C8D-27D524431C88}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.AppImage", "src\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj", "{1CEF57FA-1EBA-48A6-8A1E-CD41DB04DD38}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.AppImage.Tests", "test\DotnetPackaging.AppImage.Tests\DotnetPackaging.AppImage.Tests.csproj", "{BAAAED2F-D1E7-47A0-A1D1-21EA83135D8B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro.FileSystem.VNext.Tests", "..\..\SuperJMN-Zafiro\Zafiro.FileSystem\test\Zafiro.FileSystem.VNext.Tests\Zafiro.FileSystem.VNext.Tests.csproj", "{7DB6DDD2-09E9-4632-84A7-8D2CF13E8A3D}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro.FileSystem.VNext", "..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.VNext\Zafiro.FileSystem.VNext.csproj", "{DB6167DA-FBED-45BD-BB66-37AE9AE8A3E4}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro.FileSystem.Unix", "..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Unix\Zafiro.FileSystem.Unix.csproj", "{49737119-527F-4BE1-AB95-8B854427910D}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Console", "src\DotnetPackaging.Console\DotnetPackaging.Console.csproj", "{F1BE6649-DFBE-4393-A651-CEBE5519CA56}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro.FileSystem.Tests", "..\..\SuperJMN-Zafiro\Zafiro.FileSystem\test\Zafiro.FileSystem.Tests\Zafiro.FileSystem.Tests.csproj", "{1E44A3DD-DEF8-4B6A-9986-6389B339EB73}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -53,18 +39,6 @@ Global
 		{A1647892-BE20-4AC4-999D-4D10B3DD5A00}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A1647892-BE20-4AC4-999D-4D10B3DD5A00}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A1647892-BE20-4AC4-999D-4D10B3DD5A00}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4E73B9D2-28AA-46E2-A05D-98F018A071EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4E73B9D2-28AA-46E2-A05D-98F018A071EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4E73B9D2-28AA-46E2-A05D-98F018A071EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4E73B9D2-28AA-46E2-A05D-98F018A071EA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2E653C93-2394-4BC0-9701-9F48AFFFE2BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2E653C93-2394-4BC0-9701-9F48AFFFE2BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2E653C93-2394-4BC0-9701-9F48AFFFE2BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2E653C93-2394-4BC0-9701-9F48AFFFE2BD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E9A44FA7-3E15-4C29-8C8D-27D524431C88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E9A44FA7-3E15-4C29-8C8D-27D524431C88}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E9A44FA7-3E15-4C29-8C8D-27D524431C88}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E9A44FA7-3E15-4C29-8C8D-27D524431C88}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1CEF57FA-1EBA-48A6-8A1E-CD41DB04DD38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1CEF57FA-1EBA-48A6-8A1E-CD41DB04DD38}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1CEF57FA-1EBA-48A6-8A1E-CD41DB04DD38}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -73,26 +47,10 @@ Global
 		{BAAAED2F-D1E7-47A0-A1D1-21EA83135D8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BAAAED2F-D1E7-47A0-A1D1-21EA83135D8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BAAAED2F-D1E7-47A0-A1D1-21EA83135D8B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7DB6DDD2-09E9-4632-84A7-8D2CF13E8A3D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7DB6DDD2-09E9-4632-84A7-8D2CF13E8A3D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7DB6DDD2-09E9-4632-84A7-8D2CF13E8A3D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7DB6DDD2-09E9-4632-84A7-8D2CF13E8A3D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{DB6167DA-FBED-45BD-BB66-37AE9AE8A3E4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DB6167DA-FBED-45BD-BB66-37AE9AE8A3E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DB6167DA-FBED-45BD-BB66-37AE9AE8A3E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DB6167DA-FBED-45BD-BB66-37AE9AE8A3E4}.Release|Any CPU.Build.0 = Release|Any CPU
-		{49737119-527F-4BE1-AB95-8B854427910D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{49737119-527F-4BE1-AB95-8B854427910D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{49737119-527F-4BE1-AB95-8B854427910D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{49737119-527F-4BE1-AB95-8B854427910D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F1BE6649-DFBE-4393-A651-CEBE5519CA56}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F1BE6649-DFBE-4393-A651-CEBE5519CA56}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F1BE6649-DFBE-4393-A651-CEBE5519CA56}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F1BE6649-DFBE-4393-A651-CEBE5519CA56}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1E44A3DD-DEF8-4B6A-9986-6389B339EB73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1E44A3DD-DEF8-4B6A-9986-6389B339EB73}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1E44A3DD-DEF8-4B6A-9986-6389B339EB73}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1E44A3DD-DEF8-4B6A-9986-6389B339EB73}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
