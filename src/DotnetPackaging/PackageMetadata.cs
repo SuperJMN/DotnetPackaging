@@ -4,9 +4,17 @@ namespace DotnetPackaging;
 
 public record PackageMetadata
 {
-    public required string AppName { get; init; }
+    /// <summary>
+    /// Application Name, like "Power Statistics" or "Avalonia Syncer"
+    /// </summary>
+    public required string Name { get; init; }
     public required Architecture Architecture { get; init; }
+    
+    /// <summary>
+    /// Package name like "PowerStatistics", usually commandline friendly. Will be used for icon names, executable names...
+    /// </summary>
     public required string Package { get; init; }
+    
     public required string Version { get; init; }
     public Maybe<string> StartupWmClass { get; init; } = Maybe<string>.None;
     public Maybe<IEnumerable<string>> Keywords { get; init; } = Maybe<IEnumerable<string>>.None;
@@ -16,7 +24,11 @@ public record PackageMetadata
     public Maybe<IEnumerable<Uri>> ScreenshotUrls { get; init; } = Maybe<IEnumerable<Uri>>.None;
     public Maybe<string> Summary { get; init; } = Maybe<string>.None;
     public Maybe<string> License { get; init; } = Maybe<string>.None;
-    public Maybe<string> AppId { get; init; } = Maybe<string>.None;
+    
+    /// <summary>
+    /// Identifier to univocally represent your application, like "org.gnome.gnome-power-statistics". Like a package full name.
+    /// </summary>
+    public Maybe<string> Id { get; init; } = Maybe<string>.None;
     public Maybe<string> Section { get; init; } = Maybe<string>.None;
     public Maybe<string> Priority { get; init; } = Maybe<string>.None;
     public Maybe<string> Maintainer { get; init; } = Maybe<string>.None;

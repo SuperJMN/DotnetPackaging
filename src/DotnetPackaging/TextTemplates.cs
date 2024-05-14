@@ -12,7 +12,7 @@ public static class TextTemplates
         {
             Maybe.From("[Desktop Entry]"),
             Maybe.From("Type=Application"),
-            Maybe.From($"Name={metadata.AppName}"),
+            Maybe.From($"Name={metadata.Name}"),
             metadata.StartupWmClass.Map(n => $"StartupWMClass={n}"),
             metadata.Comment.Map(n => $"Comment={n}"),
             metadata.Icon.Map(_ => $"Icon={metadata.Package.ToLower()}"),
@@ -29,5 +29,10 @@ public static class TextTemplates
     public static string RunScript(string executablePath)
     {
         return $"#!/usr/bin/env sh\n\"{executablePath}\" \"$@\"";
+    }
+
+    public static string AppStream(PackageMetadata packageMetadata)
+    {
+        return AppStreamXmlGenerator.GenerateXml(packageMetadata).ToString();
     }
 }

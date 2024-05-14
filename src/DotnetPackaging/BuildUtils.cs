@@ -18,8 +18,8 @@ public static class BuildUtils
         {
             Architecture = architecture,
             Icon = icon.AsMaybe(),
-            AppId = setup.PackageId,
-            AppName = setup.AppName.GetValueOrDefault(directory.Name),
+            Id = setup.PackageId,
+            Name = setup.AppName.GetValueOrDefault(directory.Name),
             Categories = setup.Categories,
             StartupWmClass = setup.StartupWmClass,
             Comment = setup.Comment,

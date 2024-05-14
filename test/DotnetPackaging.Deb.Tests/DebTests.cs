@@ -17,7 +17,7 @@ public class DebTests
         var metadata = new PackageMetadata
         {
             Package = "test",
-            AppName = "Testa",
+            Name = "Testa",
             Version = "1.0-1",
             Section = "utils",
             Priority = "optional",

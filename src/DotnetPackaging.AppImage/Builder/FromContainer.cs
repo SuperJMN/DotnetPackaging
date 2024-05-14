@@ -54,8 +54,10 @@ public class FromContainer
 
         IEnumerable<IRootedFile> files = new[]
             {
+                new RootedFile("usr/bin", new UnixFile(packageMetadata.Package.ToLower(), (StringData) TextTemplates.RunScript(localExecPath), UnixFileProperties.ExecutableFileProperties())),
                 new RootedFile(ZafiroPath.Empty, new UnixFile("AppRun", (StringData) TextTemplates.RunScript(localExecPath), UnixFileProperties.ExecutableFileProperties())),
-                new RootedFile(ZafiroPath.Empty, new UnixFile("application.desktop", new StringData(TextTemplates.DesktopFileContents(localExecPath, packageMetadata)), UnixFileProperties.ExecutableFileProperties())),
+                new RootedFile(ZafiroPath.Empty, new UnixFile("application.desktop", new StringData(TextTemplates.DesktopFileContents(localExecPath, packageMetadata)))),
+                new RootedFile("usr/share/metainfo", new UnixFile(packageMetadata.Package.ToLower() + ".appdata.xml", new StringData(TextTemplates.AppStream(packageMetadata)))),
             }
             .Concat(iconFiles)
             .Concat(binFiles);
