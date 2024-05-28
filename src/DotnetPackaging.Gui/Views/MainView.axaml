@@ -6,5 +6,19 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="DotnetPackaging.Gui.Views.MainView"
              x:DataType="vm:MainViewModel">
-  <Button Command="{Binding SelectFolder}" />
+	<StackPanel>
+		<HeaderedContentControl Header="Source">
+            <DockPanel>
+                <Button Content="…­­" DockPanel.Dock="Right" VerticalAlignment="Center" Command="{Binding SelectDirectory}" />
+                <TextBlock Text="{Binding Directory.Name}" />
+            </DockPanel>
+		</HeaderedContentControl>
+        <HeaderedContentControl Header="Destination">
+            <DockPanel>
+                <Button Content="…­­" DockPanel.Dock="Right" VerticalAlignment="Center" Command="{Binding SelectFile}" />
+                <TextBlock Text="{Binding File.Name}" />
+            </DockPanel>
+        </HeaderedContentControl>
+        <Button Command="{Binding CreatePackage}"></Button>
+	</StackPanel>
 </UserControl>

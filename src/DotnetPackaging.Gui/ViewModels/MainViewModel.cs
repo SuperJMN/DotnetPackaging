@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Reactive;
-using System.Windows.Input;
-using CSharpFunctionalExtensions;
+﻿using System.Reactive;
+using System.Reactive.Linq;
 using ReactiveUI;
 using Zafiro.Avalonia.Storage;
 using Zafiro.CSharpFunctionalExtensions;
+using Zafiro.FileSystem;
 using Zafiro.FileSystem.Mutable;
 
 namespace DotnetPackaging.Gui.ViewModels;
@@ -13,24 +11,27 @@ namespace DotnetPackaging.Gui.ViewModels;
 public class MainViewModel : ViewModelBase
 {
     private readonly AvaloniaFilePicker picker;
+    private readonly ObservableAsPropertyHelper<IDirectory> directory;
+    private readonly ObservableAsPropertyHelper<IMutableFile> file;
 
     public MainViewModel(AvaloniaFilePicker picker)
     {
         this.picker = picker;
-        SelectFolder = ReactiveCommand.CreateFromTask(picker.PickFolder);
-        SelectFolder.Values().Subscribe(async enumerable =>
-        {
-            foreach (var mutableDirectory in enumerable)
-            {
-                var children = await mutableDirectory.MutableChildren();
-                foreach (var mutableNode in children.Value)
-                {
-                }
-            }
-        });
+        SelectDirectory = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(picker.PickFolder).Values().SelectMany(x => x.ToLightweight()).Successes());
+        SelectFile = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(() => picker.PickForSave("Package", ".appImage")).Values());
+        
+        directory = SelectDirectory.ToProperty(this, x => x.Directory);
+        file = SelectFile.ToProperty(this, x => x.File);
+        CreatePackage = ReactiveCommand.Create(() => { }, this.WhenAnyValue(x => x.Directory, x => x.File).Select(x => x.Item1 != null && x.Item2 != null));
     }
 
-    public ReactiveCommand<Unit, Maybe<IEnumerable<IMutableDirectory>>> SelectFolder { get; set; }
+    public ReactiveCommand<Unit, Unit> CreatePackage { get; set; }
 
-    public string Greeting => "Welcome to Avalonia!";
+    public IMutableFile File => file.Value;
+
+    public ReactiveCommand<Unit, IMutableFile> SelectFile { get; set; }
+
+    public IDirectory Directory => directory.Value;
+    
+    public ReactiveCommand<Unit, IDirectory> SelectDirectory { get; set; }
 }
