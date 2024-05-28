@@ -4,6 +4,16 @@ public static class OptionsMixin
 {
     public static void From(this FromDirectoryOptions setup, Options options)
     {
+        if (setup == null)
+        {
+            throw new ArgumentNullException(nameof(setup));
+        }
+
+        if (options == null)
+        {
+            throw new ArgumentNullException(nameof(options));
+        }
+
         if (options.ExecutableName.HasValue)
         {
             setup.WithExecutableName(options.ExecutableName.Value);

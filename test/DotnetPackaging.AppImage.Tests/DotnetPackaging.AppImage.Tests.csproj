@@ -11,7 +11,6 @@
 
 	<ItemGroup>
 	  <Compile Remove="AppImageComparer.cs" />
-	  <Compile Remove="AppStreamXmlGeneratorTests.cs" />
 	  <Compile Remove="SquashFSTests.cs" />
 	  <Compile Remove="StreamGenerator.cs" />
 	  <Compile Remove="TestRuntime.cs" />
@@ -36,6 +35,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Unix\Zafiro.FileSystem.Unix.csproj" />
 	  <ProjectReference Include="..\..\src\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj" />
 	</ItemGroup>
 

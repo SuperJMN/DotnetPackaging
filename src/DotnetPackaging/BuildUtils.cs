@@ -1,10 +1,8 @@
-﻿using System.Diagnostics;
-using System.Reactive.Linq;
+﻿using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
-using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging;
 

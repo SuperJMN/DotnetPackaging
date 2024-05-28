@@ -10,7 +10,7 @@ public static class TarEntryBuilder
 {
     public static IEnumerable<TarEntry> From(IDirectory directory, PackageMetadata metadata, IFile executable)
     {
-        var files = directory.FilesInTree(ZafiroPath.Empty);
+        var files = directory.RootedFiles();
         var appDir = $"/opt/{metadata.Package}";
         var executablePath = $"{appDir}/{executable.Name}";
         var tarEntriesFromImplicitFiles = ImplicitFileEntries(metadata, executablePath);
@@ -43,7 +43,7 @@ public static class TarEntryBuilder
     
     private static IEnumerable<TarEntry> TarEntriesFromFiles(IEnumerable<IRootedFile> files, PackageMetadata metadata, IFile executable)
     {
-        return files.Select(x => new FileTarEntry($"./opt/{metadata.Package}/" + x.FullPath(), x.Rooted, GetFileProperties(x, executable.Name)));
+        return files.Select(x => new FileTarEntry($"./opt/{metadata.Package}/" + x.FullPath(), x.Value, GetFileProperties(x, executable.Name)));
     }
 
     private static TarFileProperties GetFileProperties(IRootedFile file, string executableName)

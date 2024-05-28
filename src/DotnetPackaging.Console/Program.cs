@@ -7,7 +7,7 @@ using DotnetPackaging.Deb;
 using Serilog;
 using Zafiro.DataModel;
 using Zafiro.FileSystem;
-using Zafiro.FileSystem.Lightweight;
+using Zafiro.FileSystem.Local;
 
 namespace DotnetPackaging.Console;
 
@@ -154,30 +154,34 @@ static class Program
 
     private static Task CreateAppImage(DirectoryInfo inputDir, FileInfo outputFile, Options options)
     {
-        return AppImage.AppImage.From()
-            .Directory(new DotnetDir(FileSystem.DirectoryInfo.New(inputDir.FullName)))
-            .Configure(configuration => configuration.From(options))
-            .Build()
-            .Bind(x => x.ToData().Bind(async data =>
+        return new DotNetDirectory(FileSystem.DirectoryInfo.New(inputDir.FullName)).ToLightweight()
+            .Bind(directory =>
             {
-                await using var fileSystemStream = outputFile.Open(FileMode.Create);
-                return await data.DumpTo(fileSystemStream);
-            }))
-            .WriteResult();
+                return AppImage.AppImage.From()
+                    .Directory(directory)
+                    .Configure(configuration => configuration.From(options))
+                    .Build()
+                    .Bind(x => x.ToData().Bind(async data =>
+                    {
+                        await using var fileSystemStream = outputFile.Open(FileMode.Create);
+                        return await data.DumpTo(fileSystemStream);
+                    }));
+            }).WriteResult();
     }
-    
+
     private static Task CreateDeb(DirectoryInfo inputDir, FileInfo outputFile, Options options)
     {
-        return DebFile.From()
-            .Directory(new DotnetDir(FileSystem.DirectoryInfo.New(inputDir.FullName)))
-            .Configure(configuration => configuration.From(options))
-            .Build()
-            .Map(DotnetPackaging.Deb.Archives.Deb.DebMixin.ToData)
-            .Bind(async data =>
-            {
-                await using var fileSystemStream = outputFile.Open(FileMode.Create);
-                return await data.DumpTo(fileSystemStream);
-            })
+        return new DotNetDirectory(FileSystem.DirectoryInfo.New(inputDir.FullName)).ToLightweight()
+            .Bind(directory => DebFile.From()
+                .Directory(directory)
+                .Configure(configuration => configuration.From(options))
+                .Build()
+                .Map(DotnetPackaging.Deb.Archives.Deb.DebMixin.ToData)
+                .Bind(async data =>
+                {
+                    await using var fileSystemStream = outputFile.Open(FileMode.Create);
+                    return await data.DumpTo(fileSystemStream);
+                }))
             .WriteResult();
     }
 
