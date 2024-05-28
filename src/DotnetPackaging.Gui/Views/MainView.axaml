@@ -3,22 +3,24 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:DotnetPackaging.Gui.ViewModels"
+             xmlns:controls="clr-namespace:Zafiro.Avalonia.Controls;assembly=Zafiro.Avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="DotnetPackaging.Gui.Views.MainView"
              x:DataType="vm:MainViewModel">
 	<StackPanel>
 		<HeaderedContentControl Header="Source">
-            <DockPanel>
-                <Button Content="…­­" DockPanel.Dock="Right" VerticalAlignment="Center" Command="{Binding SelectDirectory}" />
-                <TextBlock Text="{Binding Directory.Name}" />
-            </DockPanel>
+			<DockPanel>
+				<Button Content="…­­" DockPanel.Dock="Right" VerticalAlignment="Center" Command="{Binding SelectDirectory}" />
+				<TextBlock Text="{Binding Directory.Name, FallbackValue='Select a directory'}" />
+			</DockPanel>
 		</HeaderedContentControl>
-        <HeaderedContentControl Header="Destination">
-            <DockPanel>
-                <Button Content="…­­" DockPanel.Dock="Right" VerticalAlignment="Center" Command="{Binding SelectFile}" />
-                <TextBlock Text="{Binding File.Name}" />
-            </DockPanel>
-        </HeaderedContentControl>
-        <Button Command="{Binding CreatePackage}"></Button>
+		<HeaderedContentControl Header="Destination">
+			<DockPanel>
+				<Button Content="…­­" DockPanel.Dock="Right" VerticalAlignment="Center" Command="{Binding SelectFile}" />
+				<TextBlock Text="{Binding File.Name, FallbackValue='Select a file'}" />
+			</DockPanel>
+		</HeaderedContentControl>
+		<ProgressBar IsIndeterminate="True" IsVisible="{Binding IsCreatingPackage^}" />
+		<Button HorizontalAlignment="Center" Content="Create package" Command="{Binding CreatePackage}"></Button>
 	</StackPanel>
 </UserControl>

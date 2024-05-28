@@ -1,4 +1,5 @@
-﻿using System.Reactive;
+﻿using System;
+using System.Reactive;
 using System.Reactive.Linq;
 using ReactiveUI;
 using Zafiro.Avalonia.Storage;
@@ -10,13 +11,11 @@ namespace DotnetPackaging.Gui.ViewModels;
 
 public class MainViewModel : ViewModelBase
 {
-    private readonly AvaloniaFilePicker picker;
-    private readonly ObservableAsPropertyHelper<IDirectory> directory;
-    private readonly ObservableAsPropertyHelper<IMutableFile> file;
+    private readonly ObservableAsPropertyHelper<IDirectory?> directory;
+    private readonly ObservableAsPropertyHelper<IMutableFile?> file;
 
     public MainViewModel(AvaloniaFilePicker picker)
     {
-        this.picker = picker;
         SelectDirectory = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(picker.PickFolder).Values().SelectMany(x => x.ToLightweight()).Successes());
         SelectFile = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(() => picker.PickForSave("Package", ".appImage")).Values());
         
@@ -27,11 +26,12 @@ public class MainViewModel : ViewModelBase
 
     public ReactiveCommand<Unit, Unit> CreatePackage { get; set; }
 
-    public IMutableFile File => file.Value;
+    public IMutableFile? File => file.Value;
 
     public ReactiveCommand<Unit, IMutableFile> SelectFile { get; set; }
 
-    public IDirectory Directory => directory.Value;
+    public IDirectory? Directory => directory.Value;
     
     public ReactiveCommand<Unit, IDirectory> SelectDirectory { get; set; }
+    public IObservable<bool> IsCreatingPackage => CreatePackage.IsExecuting;
 }
