@@ -60,7 +60,11 @@ public static class BuildUtils
 
                 return Result.Success(x);
             })
-            .Or(async () => (await exec.GetArchitecture()).MapError(err => $"Invalid architecture of file \"{exec}\": {err}"))
+            .Or(async () =>
+            {
+                var architecture = await exec.GetArchitecture();
+                return architecture.MapError(err => $"Invalid architecture of file \"{exec}\": {err}");
+            })
             .ToResult("Could not determine the architecture")
             .Bind(result => result);
     }
@@ -93,8 +97,8 @@ public static class BuildUtils
         Log.Information("No executable has been specified. Looking up for candidates.");
         var execFiles = await directory.Files()
             .ToObservable()
-            .Select(async file => (await file.IsElf()).Map(isElf => new { IsElf = isElf, File = file }))
-            .Concat()
+            .Select(file => Observable.FromAsync(async () => await file.IsElf()).Map(isElf => new { IsElf = isElf, File = file }))
+            .Merge(3)
             .Successes()
             .Where(x => x.IsElf && !x.File.Name.EndsWith(".so") && x.File.Name != "createdump")
             .Select(x => x.File)
