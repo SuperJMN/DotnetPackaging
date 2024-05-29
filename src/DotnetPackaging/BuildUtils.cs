@@ -60,7 +60,7 @@ public static class BuildUtils
 
                 return Result.Success(x);
             })
-            .Or(async () => await exec.GetArchitecture())
+            .Or(async () => (await exec.GetArchitecture()).MapError(err => $"Invalid architecture of file \"{exec}\": {err}"))
             .ToResult("Could not determine the architecture")
             .Bind(result => result);
     }
