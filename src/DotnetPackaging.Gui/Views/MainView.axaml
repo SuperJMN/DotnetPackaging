@@ -3,24 +3,65 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:DotnetPackaging.Gui.ViewModels"
-             xmlns:controls="clr-namespace:Zafiro.Avalonia.Controls;assembly=Zafiro.Avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="DotnetPackaging.Gui.Views.MainView"
              x:DataType="vm:MainViewModel">
-	<StackPanel>
-		<HeaderedContentControl Header="Source">
-			<DockPanel>
-				<Button Content="…­­" DockPanel.Dock="Right" VerticalAlignment="Center" Command="{Binding SelectDirectory}" />
-				<TextBlock Text="{Binding Directory.Name, FallbackValue='Select a directory'}" />
-			</DockPanel>
-		</HeaderedContentControl>
-		<HeaderedContentControl Header="Destination">
-			<DockPanel>
-				<Button Content="…­­" DockPanel.Dock="Right" VerticalAlignment="Center" Command="{Binding SelectFile}" />
-				<TextBlock Text="{Binding File.Name, FallbackValue='Select a file'}" />
-			</DockPanel>
-		</HeaderedContentControl>
-		<ProgressBar IsIndeterminate="True" IsVisible="{Binding IsCreatingPackage^}" />
-		<Button HorizontalAlignment="Center" Content="Create package" Command="{Binding CreatePackage}"></Button>
-	</StackPanel>
+	<DockPanel Margin="10">
+		<StackPanel DockPanel.Dock="Bottom" Spacing="10">
+			<ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy^}" />
+			<Button HorizontalAlignment="Center" Content="Create package" Command="{Binding CreatePackage}"></Button>
+		</StackPanel>
+		<TabControl>
+			<TabItem Header="General">
+				<StackPanel Spacing="10" Grid.IsSharedSizeScope="True">
+					<HeaderedContentControl Header="Source">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+								<ColumnDefinition SharedSizeGroup="Name" />
+								<ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" Text="{Binding Directory.Name, FallbackValue='Select a directory'}" />
+                            <Button Margin="10 0" Grid.Column="1" Content="Browse…­­" DockPanel.Dock="Right" VerticalAlignment="Center"
+                                    Command="{Binding SelectDirectory}" />
+                        </Grid>
+					</HeaderedContentControl>
+					<HeaderedContentControl Header="Destination">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition SharedSizeGroup="Name" />
+                                <ColumnDefinition />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" Text="{Binding File.Name, FallbackValue='Select a file'}" />
+                            <Button Grid.Column="1" Margin="10 0" Content="Browse…­­" DockPanel.Dock="Right" VerticalAlignment="Center"
+                                    Command="{Binding SelectFile}" />
+                        </Grid>
+					</HeaderedContentControl>
+				</StackPanel>
+			</TabItem>
+			<TabItem Header="Metadata">
+				<StackPanel Spacing="10" Grid.IsSharedSizeScope="True" DataContext="{Binding OptionsViewModel}">
+					<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="AppName">
+						<TextBox Text="{Binding Name.Value, Mode=TwoWay}" />
+					</HeaderedContentControl>
+					<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Id">
+						<TextBox Text="{Binding Id.Value, Mode=TwoWay}" />
+					</HeaderedContentControl>
+					<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Version">
+						<TextBox Text="{Binding Version.Value, Mode=TwoWay}" />
+					</HeaderedContentControl>
+					<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Summary">
+						<TextBox Text="{Binding Summary.Value, Mode=TwoWay}" />
+					</HeaderedContentControl>
+					<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}"
+											Header="StartupWMClass">
+						<TextBox Text="{Binding StartupWMClass.Value, Mode=TwoWay}" />
+					</HeaderedContentControl>
+					<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Homepage">
+						<TextBox Text="{Binding Homepage.Value, Mode=TwoWay}" />
+					</HeaderedContentControl>
+				</StackPanel>
+
+			</TabItem>
+		</TabControl>
+	</DockPanel>
 </UserControl>

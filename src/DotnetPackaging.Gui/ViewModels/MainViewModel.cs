@@ -28,6 +28,7 @@ public class MainViewModel : ViewModelBase
         var canCreatePackage = this.WhenAnyValue(x => x.Directory, x => x.File);
         CreatePackage = ReactiveCommand.CreateFromTask(() => CreateAppImage(Directory!, File!, Options!), canCreatePackage.Select(x => x.Item1 != null && x.Item2 != null));
         CreatePackage.HandleErrorsWith(notificationService);
+        IsBusy = CreatePackage.IsExecuting.Merge(SelectDirectory.IsExecuting);
     }
 
     private static Task<Result> CreateAppImage(IDirectory directory, IMutableFile mutableFile, Options options)
@@ -55,6 +56,11 @@ public class MainViewModel : ViewModelBase
                 .Bind(mutableFile.SetContents));
     }
 
+    public IObservable<bool> IsBusy { get; }
+
+
+    public OptionsViewModel OptionsViewModel { get; set; } = new OptionsViewModel();
+    
     public Options? Options { get; set; } = new Options()
     {
         AppName = "Test",
@@ -69,5 +75,4 @@ public class MainViewModel : ViewModelBase
     public IDirectory? Directory => directory.Value;
     
     public ReactiveCommand<Unit, IDirectory> SelectDirectory { get; set; }
-    public IObservable<bool> IsCreatingPackage => CreatePackage.IsExecuting;
 }
