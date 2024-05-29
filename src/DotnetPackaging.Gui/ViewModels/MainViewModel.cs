@@ -21,7 +21,7 @@ public class MainViewModel : ViewModelBase
     public MainViewModel(AvaloniaFilePicker picker, INotificationService notificationService)
     {
         SelectDirectory = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(picker.PickFolder).Values().SelectMany(x => x.ToImmutable()).Successes());
-        SelectFile = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(() => picker.PickForSave(Directory?.Name ?? "Package", "appImage")).Values());
+        SelectFile = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(() => picker.PickForSave(Directory?.Name ?? "Package", "appImage", new FileTypeFilter("AppImage", ["appimage"]))).Values());
         
         directory = SelectDirectory.ToProperty(this, x => x.Directory);
         file = SelectFile.ToProperty(this, x => x.File);
@@ -57,8 +57,7 @@ public class MainViewModel : ViewModelBase
 
     public Options? Options { get; set; } = new Options()
     {
-        AppName = "Telegram",
-        ExecutableName = "Telegram.exe",
+        AppName = "Test",
     };
 
     public ReactiveCommand<Unit, Result> CreatePackage { get; set; }
