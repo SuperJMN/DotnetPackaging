@@ -14,4 +14,22 @@ public class ImageSelector : TemplatedControl
         get => GetValue(ControllerProperty);
         set => SetValue(ControllerProperty, value);
     }
+
+    public static readonly StyledProperty<double> MaxImageWidthProperty = AvaloniaProperty.Register<ImageSelector, double>(
+        "MaxImageWidth");
+
+    public double MaxImageWidth
+    {
+        get => GetValue(MaxImageWidthProperty);
+        set => SetValue(MaxImageWidthProperty, value);
+    }
+
+    public static readonly StyledProperty<double> MaxImageHeightProperty = AvaloniaProperty.Register<ImageSelector, double>(
+        "MaxImageHeight");
+
+    public double MaxImageHeight
+    {
+        get => GetValue(MaxImageHeightProperty);
+        set => SetValue(MaxImageHeightProperty, value);
+    }
 }

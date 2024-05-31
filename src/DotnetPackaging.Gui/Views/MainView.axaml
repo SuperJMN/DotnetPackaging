@@ -59,7 +59,7 @@
 					</HeaderedContentControl>
 
 					<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Icon">
-						<controls:ImageSelector Controller="{Binding Icon}" />
+						<controls:ImageSelector BorderBrush="Black" CornerRadius="4" BorderThickness="1" MaxImageWidth="200" MaxImageHeight="200" Controller="{Binding Icon}" />
                     </HeaderedContentControl>
                 </StackPanel>
 

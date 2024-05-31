@@ -2,13 +2,14 @@ using System;
 using System.Globalization;
 using Avalonia.Data;
 using Avalonia.Data.Converters;
+using Avalonia.Media.Imaging;
 using Zafiro.Avalonia.Misc;
 using Zafiro.DataModel;
 using Zafiro.FileSystem;
 
 namespace DotnetPackaging.Gui;
 
-public class IDataToBitmapConverter : IValueConverter
+public class DataToBitmapConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -18,7 +19,7 @@ public class IDataToBitmapConverter : IValueConverter
             return BitmapFactory.Load(bytes);
         }
 
-        return BindingOperations.DoNothing;
+        return BindingValue<Bitmap>.Unset;
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();
