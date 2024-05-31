@@ -6,6 +6,11 @@
 	<!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="Controls/ImageSelector.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
         <converters:MaybeToStringConverter x:Key="MaybeToStringConverter" />
     </Application.Resources>
     <Application.Styles>

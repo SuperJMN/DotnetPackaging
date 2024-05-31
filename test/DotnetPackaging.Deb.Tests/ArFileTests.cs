@@ -1,6 +1,5 @@
 ﻿using DotnetPackaging.Deb.Archives.Ar;
 using FluentAssertions.Extensions;
-using File = Zafiro.FileSystem.Lightweight.File;
 using UnixFileMode = Zafiro.FileSystem.Unix.UnixFileMode;
 
 namespace DotnetPackaging.Deb.Tests;

@@ -10,6 +10,7 @@ using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Mutable;
 using Zafiro.UI;
+using Option = Optional.Option;
 
 namespace DotnetPackaging.Gui.ViewModels;
 
@@ -18,10 +19,11 @@ public class MainViewModel : ViewModelBase
     private readonly ObservableAsPropertyHelper<IDirectory?> directory;
     private readonly ObservableAsPropertyHelper<IMutableFile?> file;
 
-    public MainViewModel(AvaloniaFilePicker picker, INotificationService notificationService)
+    public MainViewModel(IFileSystemPicker systemPicker, INotificationService notificationService)
     {
-        SelectDirectory = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(picker.PickFolder).Values().SelectMany(x => x.ToImmutable()).Successes());
-        SelectFile = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(() => picker.PickForSave(Directory?.Name ?? "Package", "appImage", new FileTypeFilter("AppImage", ["appimage"]))).Values());
+        OptionsViewModel = new OptionsViewModel(systemPicker);
+        SelectDirectory = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(systemPicker.PickFolder).Values().SelectMany(x => x.ToImmutable()).Successes());
+        SelectFile = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(() => systemPicker.PickForSave(Directory?.Name ?? "Package", "appImage", new FileTypeFilter("AppImage", ["appimage"]))).Values());
         
         directory = SelectDirectory.ToProperty(this, x => x.Directory);
         file = SelectFile.ToProperty(this, x => x.File);
@@ -59,7 +61,7 @@ public class MainViewModel : ViewModelBase
     public IObservable<bool> IsBusy { get; }
 
 
-    public OptionsViewModel OptionsViewModel { get; set; } = new OptionsViewModel();
+    public OptionsViewModel OptionsViewModel { get; set; }
     
     public Options? Options { get; set; } = new Options()
     {

@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:DotnetPackaging.Gui.ViewModels"
+             xmlns:controls="clr-namespace:DotnetPackaging.Gui.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="DotnetPackaging.Gui.Views.MainView"
              x:DataType="vm:MainViewModel">
@@ -56,10 +57,11 @@
 											Header="StartupWMClass">
 						<TextBox Text="{Binding StartupWMClass.Value, Mode=TwoWay}" />
 					</HeaderedContentControl>
-					<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Homepage">
-						<TextBox Text="{Binding Homepage.Value, Mode=TwoWay}" />
-					</HeaderedContentControl>
-				</StackPanel>
+
+					<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Icon">
+						<controls:ImageSelector Controller="{Binding Icon}" />
+                    </HeaderedContentControl>
+                </StackPanel>
 
 			</TabItem>
 		</TabControl>

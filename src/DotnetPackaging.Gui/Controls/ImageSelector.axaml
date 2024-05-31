@@ -1,0 +1,22 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:DotnetPackaging.Gui.Controls"
+             xmlns:gui="clr-namespace:DotnetPackaging.Gui"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450">
+    <gui:IDataToBitmapConverter x:Key="FileToImageConverter" />
+    <ControlTheme x:Key="{x:Type controls:ImageSelector}" TargetType="controls:ImageSelector">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:ImageSelector">
+                    <DockPanel>
+                        <Image Source="{Binding Path=Controller.File.Value, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource FileToImageConverter}}" />
+                        <TextBlock Text="{Binding Path=Controller.File.Value.Name, RelativeSource={RelativeSource TemplatedParent}}"></TextBlock>
+                        <Button Content="Browse…" Command="{Binding Path=Controller.PickFile, RelativeSource={RelativeSource TemplatedParent}}"></Button>
+                    </DockPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </ControlTheme>
+</ResourceDictionary>

@@ -25,7 +25,7 @@ public partial class App : Application
         Zafiro.Avalonia.Mixins.ApplicationMixin.Connect(this, () => new MainView(), control =>
         {
             var topLevel = TopLevel.GetTopLevel(control)!;
-            var picker = new AvaloniaFilePicker(topLevel.StorageProvider);
+            var picker = new AvaloniaFileSystemPicker(topLevel.StorageProvider);
             return new MainViewModel(picker, new NotificationService(new WindowNotificationManager(topLevel)));
         }, () => new MainWindow());
     }
