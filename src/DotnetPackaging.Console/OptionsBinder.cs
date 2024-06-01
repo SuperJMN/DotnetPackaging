@@ -30,7 +30,7 @@ public class OptionsBinder(
             StartupWmClass = Maybe.From(bindingContext.ParseResult.GetValueForOption(wmClassOption)!),
             Keywords = MaybeList(bindingContext, keywordsOption),
             Comment = Maybe.From(bindingContext.ParseResult.GetValueForOption(commentOption)!),
-            MainCategory = ResultEx.FromNullableStruct(bindingContext.ParseResult.GetValueForOption(mainCategoryOption)),
+            MainCategory = MaybeEx.FromNullableStruct(bindingContext.ParseResult.GetValueForOption(mainCategoryOption)),
             AdditionalCategories = MaybeList(bindingContext, additionalCategoriesOption),
             Icon = Maybe<IIcon>.From(bindingContext.ParseResult.GetValueForOption(iconOption)!),
             Version = Maybe.From(bindingContext.ParseResult.GetValueForOption(versionOption)!),

@@ -1,34 +1,42 @@
 ﻿using System;
 using System.Reactive;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Core;
 using ReactiveUI;
+using ReactiveUI.Validation.Extensions;
 using Zafiro.Avalonia.Storage;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 using Zafiro.FileSystem.Mutable;
+using Zafiro.Reactive;
 using Zafiro.UI;
-using Option = Optional.Option;
 
 namespace DotnetPackaging.Gui.ViewModels;
 
-public class MainViewModel : ViewModelBase
+public class MainViewModel : ViewModelBase, IDisposable
 {
     private readonly ObservableAsPropertyHelper<IDirectory?> directory;
     private readonly ObservableAsPropertyHelper<IMutableFile?> file;
+    private readonly CompositeDisposable disposable = new();
 
     public MainViewModel(IFileSystemPicker systemPicker, INotificationService notificationService)
     {
         OptionsViewModel = new OptionsViewModel(systemPicker);
         SelectDirectory = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(systemPicker.PickFolder).Values().SelectMany(x => x.ToImmutable()).Successes());
+        SelectDirectory
+            .Do(d => OptionsViewModel.Id.Value = d.Name)
+            .Subscribe()
+            .DisposeWith(disposable);
+
         SelectFile = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(() => systemPicker.PickForSave(Directory?.Name ?? "Package", "appImage", new FileTypeFilter("AppImage", ["appimage"]))).Values());
-        
+
         directory = SelectDirectory.ToProperty(this, x => x.Directory);
         file = SelectFile.ToProperty(this, x => x.File);
-        var canCreatePackage = this.WhenAnyValue(x => x.Directory, x => x.File);
-        CreatePackage = ReactiveCommand.CreateFromTask(() => CreateAppImage(Directory!, File!, Options!), canCreatePackage.Select(x => x.Item1 != null && x.Item2 != null));
+        var canCreatePackage = this.WhenAnyValue(x => x.Directory, x => x.File).NotNull().And(OptionsViewModel.IsValid());
+        CreatePackage = ReactiveCommand.CreateFromTask(() => OptionsViewModel.ToOptions().Bind(options => CreateAppImage(Directory!, File!, options)), canCreatePackage);
         CreatePackage.HandleErrorsWith(notificationService);
         IsBusy = CreatePackage.IsExecuting.Merge(SelectDirectory.IsExecuting);
     }
@@ -62,11 +70,6 @@ public class MainViewModel : ViewModelBase
 
 
     public OptionsViewModel OptionsViewModel { get; set; }
-    
-    public Options? Options { get; set; } = new Options()
-    {
-        AppName = "Test",
-    };
 
     public ReactiveCommand<Unit, Result> CreatePackage { get; set; }
 
@@ -75,6 +78,17 @@ public class MainViewModel : ViewModelBase
     public ReactiveCommand<Unit, IMutableFile> SelectFile { get; set; }
 
     public IDirectory? Directory => directory.Value;
-    
+
     public ReactiveCommand<Unit, IDirectory> SelectDirectory { get; set; }
+
+    public void Dispose()
+    {
+        directory.Dispose();
+        file.Dispose();
+        disposable.Dispose();
+        OptionsViewModel.Dispose();
+        CreatePackage.Dispose();
+        SelectFile.Dispose();
+        SelectDirectory.Dispose();
+    }
 }

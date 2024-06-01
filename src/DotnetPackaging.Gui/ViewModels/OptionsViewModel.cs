@@ -12,6 +12,7 @@ public class OptionsViewModel : ReactiveValidationObject
         Name.Validate(s => s.Length < 120, "Name can't be that long");
         Name.Validate(s => !Match(s, "/s+").Success, "Name can't contain whitespaces");
         Icon = new ImageSelectorViewModel(fileSystemPicker);
+        this.IncludeValidationOf(Name);
     }
 
     public StringField Name { get; } = new StringField("");
