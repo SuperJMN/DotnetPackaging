@@ -4,6 +4,11 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:DotnetPackaging.Gui.ViewModels"
              xmlns:controls="clr-namespace:DotnetPackaging.Gui.Controls"
+             xmlns:system="clr-namespace:System;assembly=System.Runtime"
+             xmlns:dp="clr-namespace:DotnetPackaging;assembly=DotnetPackaging"
+             xmlns:misc="clr-namespace:Zafiro.Avalonia.Misc;assembly=Zafiro.Avalonia"
+             xmlns:componentModel="clr-namespace:System.ComponentModel;assembly=System.ComponentModel.TypeConverter"
+             xmlns:converters="clr-namespace:Zafiro.Avalonia.Converters;assembly=Zafiro.Avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="DotnetPackaging.Gui.Views.MainView"
              x:DataType="vm:MainViewModel">
@@ -16,52 +21,82 @@
 			<TabItem Header="General">
 				<StackPanel Spacing="10" Grid.IsSharedSizeScope="True">
 					<HeaderedContentControl Header="Source">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
+						<Grid>
+							<Grid.ColumnDefinitions>
 								<ColumnDefinition SharedSizeGroup="Name" />
 								<ColumnDefinition />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock VerticalAlignment="Center" Text="{Binding Directory.Name, FallbackValue='Select a directory'}" />
-                            <Button Margin="10 0" Grid.Column="1" Content="Browse…­­" DockPanel.Dock="Right" VerticalAlignment="Center"
+							</Grid.ColumnDefinitions>
+							<TextBlock VerticalAlignment="Center" Text="{Binding Directory.Name, FallbackValue='Select a directory'}" />
+							<Button Margin="10 0" Grid.Column="1" Content="Browse…­­" DockPanel.Dock="Right" VerticalAlignment="Center"
                                     Command="{Binding SelectDirectory}" />
-                        </Grid>
+						</Grid>
 					</HeaderedContentControl>
 					<HeaderedContentControl Header="Destination">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition SharedSizeGroup="Name" />
-                                <ColumnDefinition />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock VerticalAlignment="Center" Text="{Binding File.Name, FallbackValue='Select a file'}" />
-                            <Button Grid.Column="1" Margin="10 0" Content="Browse…­­" DockPanel.Dock="Right" VerticalAlignment="Center"
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition SharedSizeGroup="Name" />
+								<ColumnDefinition />
+							</Grid.ColumnDefinitions>
+							<TextBlock VerticalAlignment="Center" Text="{Binding File.Name, FallbackValue='Select a file'}" />
+							<Button Grid.Column="1" Margin="10 0" Content="Browse…­­" DockPanel.Dock="Right" VerticalAlignment="Center"
                                     Command="{Binding SelectFile}" />
-                        </Grid>
+						</Grid>
 					</HeaderedContentControl>
 				</StackPanel>
 			</TabItem>
 			<TabItem Header="Metadata">
-				<StackPanel Spacing="10" Grid.IsSharedSizeScope="True" DataContext="{Binding OptionsViewModel}">
-					<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="AppName">
-						<TextBox Text="{Binding Name.Value, Mode=TwoWay}" />
-					</HeaderedContentControl>
-					<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Id">
-						<TextBox Text="{Binding Id.Value, Mode=TwoWay}" />
-					</HeaderedContentControl>
-					<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Version">
-						<TextBox Text="{Binding Version.Value, Mode=TwoWay}" />
-					</HeaderedContentControl>
-					<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Summary">
-						<TextBox Text="{Binding Summary.Value, Mode=TwoWay}" />
-					</HeaderedContentControl>
-					<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}"
-											Header="StartupWMClass">
-						<TextBox Text="{Binding StartupWMClass.Value, Mode=TwoWay}" />
-					</HeaderedContentControl>
+				<ScrollViewer>
+					<StackPanel Spacing="10" Grid.IsSharedSizeScope="True" DataContext="{Binding OptionsViewModel}">
+						<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="AppName" ToolTip.Tip="Application name">
+							<TextBox Text="{Binding Name.Value, Mode=TwoWay}" />
+						</HeaderedContentControl>
+						<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Id" ToolTip.Tip="Package Id">
+							<TextBox Text="{Binding Id.Value, Mode=TwoWay}" />
+						</HeaderedContentControl>
+						<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Version">
+							<TextBox Text="{Binding Version.Value, Mode=TwoWay}" />
+						</HeaderedContentControl>
+						<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Summary">
+							<TextBox Text="{Binding Summary.Value, Mode=TwoWay}" />
+						</HeaderedContentControl>
+						<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}"
+                                                Header="StartupWMClass">
+							<TextBox Text="{Binding StartupWMClass.Value, Mode=TwoWay}" />
+						</HeaderedContentControl>
 
-					<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Icon">
-						<controls:ImageSelector BorderBrush="Black" CornerRadius="4" BorderThickness="1" MaxImageWidth="200" MaxImageHeight="200" Controller="{Binding Icon}" />
-                    </HeaderedContentControl>
-                </StackPanel>
+						<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Icon">
+							<controls:ImageSelector BorderBrush="Black" CornerRadius="4" BorderThickness="1"
+                                                    MaxImageWidth="200" MaxImageHeight="200"
+                                                    Controller="{Binding Icon}" />
+						</HeaderedContentControl>
+						<HeaderedContentControl Header="Categories">
+
+							<Grid ColumnDefinitions="* *">
+								<ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Source={x:Type dp:MainCategory}, Converter={x:Static converters:EnumConverters.Names}}" />
+                                <HeaderedContentControl Grid.Column="1">
+                                    <HeaderedContentControl.Header>
+                                        <DockPanel>
+											<TextBlock Text="Additional" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                                            <ItemsControl Margin="8 0" ItemsSource="{Binding AdditionalCategories}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal" Spacing="4" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                            </ItemsControl>
+                                        </DockPanel>
+                                    </HeaderedContentControl.Header>
+                                    <ListBox SelectedItems="{Binding AdditionalCategories}"
+                                             MaxHeight="250"
+                                             SelectionMode="Multiple"
+                                             ItemsSource="{Binding Source={x:Type dp:AdditionalCategory}, Converter={x:Static converters:EnumConverters.Names}}" />
+                                    </HeaderedContentControl>
+
+							</Grid>
+						</HeaderedContentControl>
+
+					</StackPanel>
+				</ScrollViewer>
 
 			</TabItem>
 		</TabControl>

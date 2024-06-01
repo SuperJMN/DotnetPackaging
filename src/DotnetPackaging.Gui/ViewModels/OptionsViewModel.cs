@@ -1,4 +1,6 @@
-﻿using ReactiveUI.Validation.Helpers;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using ReactiveUI.Validation.Helpers;
 using Zafiro.UI;
 using Zafiro.UI.Fields;
 using static System.Text.RegularExpressions.Regex;
@@ -23,4 +25,5 @@ public class OptionsViewModel : ReactiveValidationObject
     public StringField License { get; } = new StringField("");
     public StringField Summary { get; } = new StringField("");
     public ImageSelectorViewModel Icon { get; }
+    public ObservableCollection<string> AdditionalCategories { get; } = new();
 }
