@@ -19,9 +19,4 @@
 		<StyleInclude Source="avares://Zafiro.Avalonia/Styles.axaml" />
 		<StyleInclude Source="avares://Zafiro.Avalonia.Dialogs/Styles.axaml" />
 	</Application.Styles>
-	<Application.DataTemplates>
-		<DataTemplate DataType="dialogs:MessageDialogViewModel">
-			<dialogs:MessageDialogView />
-        </DataTemplate>
-    </Application.DataTemplates>
 </Application>
