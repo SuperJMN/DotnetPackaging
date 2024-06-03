@@ -1,15 +1,33 @@
-﻿using CSharpFunctionalExtensions;
-
-namespace DotnetPackaging;
+﻿namespace DotnetPackaging;
 
 public record PackageMetadata
 {
+    public PackageMetadata(string name, Architecture architecture, string package, string version)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            throw new ArgumentNullException(nameof(name), "El nombre no puede ser nulo o vacío");
+        }
+        if (string.IsNullOrEmpty(package))
+        {
+            throw new ArgumentNullException(nameof(package), "El paquete no puede ser nulo o vacío");
+        }
+        if (string.IsNullOrEmpty(version))
+        {
+            throw new ArgumentNullException(nameof(version), "La versión no puede ser nula o vacía");
+        }
+        
+        Architecture = architecture ?? throw new ArgumentNullException(nameof(architecture));
+        Name = name;
+        Package = package ?? throw new ArgumentNullException(nameof(package));
+        Version = version ?? throw new ArgumentNullException(nameof(version));
+    }
+
     /// <summary>
     /// Application Name, like "Power Statistics" or "Avalonia Syncer"
     /// </summary>
     public required string Name { get; init; }
     public required Architecture Architecture { get; init; }
-    
     /// <summary>
     /// Package name like "PowerStatistics", usually commandline friendly. Will be used for icon names, executable names...
     /// </summary>

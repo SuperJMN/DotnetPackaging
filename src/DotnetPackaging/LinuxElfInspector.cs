@@ -1,5 +1,4 @@
 ﻿using System.Reactive.Linq;
-using CSharpFunctionalExtensions;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 using Zafiro.Reactive;

@@ -1,5 +1,4 @@
-﻿using CSharpFunctionalExtensions;
-using SixLabors.ImageSharp;
+﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using Zafiro.DataModel;
 using Zafiro.FileSystem;

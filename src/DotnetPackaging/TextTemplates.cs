@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using CSharpFunctionalExtensions;
-using Zafiro.Mixins;
+﻿using Zafiro.Mixins;
 
 namespace DotnetPackaging;
 

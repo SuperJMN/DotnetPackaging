@@ -39,6 +39,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro.FileSystem.Local", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro.FileSystem.VNext", "..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.VNext\Zafiro.FileSystem.VNext.csproj", "{92B07BB1-0529-4578-A051-4C8E0BD96BF0}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zafiro.Avalonia.Dialogs", "..\..\SuperJMN-Zafiro\Zafiro.Avalonia\src\Zafiro.Avalonia.Dialogs\Zafiro.Avalonia.Dialogs.csproj", "{A77F46A7-A7CA-4DDD-9E2A-40B1B7AE4E0C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -109,6 +111,10 @@ Global
 		{92B07BB1-0529-4578-A051-4C8E0BD96BF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{92B07BB1-0529-4578-A051-4C8E0BD96BF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{92B07BB1-0529-4578-A051-4C8E0BD96BF0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A77F46A7-A7CA-4DDD-9E2A-40B1B7AE4E0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A77F46A7-A7CA-4DDD-9E2A-40B1B7AE4E0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A77F46A7-A7CA-4DDD-9E2A-40B1B7AE4E0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A77F46A7-A7CA-4DDD-9E2A-40B1B7AE4E0C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -125,6 +131,7 @@ Global
 		{E2558278-C118-4D90-BFD6-573B83A829E6} = {A8A728FD-6333-4DB8-BFCE-447C3400AA39}
 		{96F66CA9-B3E3-4A10-8673-AD52D42D4C8E} = {A8A728FD-6333-4DB8-BFCE-447C3400AA39}
 		{92B07BB1-0529-4578-A051-4C8E0BD96BF0} = {A8A728FD-6333-4DB8-BFCE-447C3400AA39}
+		{A77F46A7-A7CA-4DDD-9E2A-40B1B7AE4E0C} = {A8A728FD-6333-4DB8-BFCE-447C3400AA39}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1D869DF1-9147-472D-A3D9-D519518A6951}

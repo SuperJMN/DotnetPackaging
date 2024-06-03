@@ -1,6 +1,4 @@
-﻿using CSharpFunctionalExtensions;
-
-namespace DotnetPackaging;
+﻿namespace DotnetPackaging;
 
 public class Options
 {

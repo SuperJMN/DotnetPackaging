@@ -1,0 +1,67 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:DotnetPackaging.Gui.Controls"
+             xmlns:dp="clr-namespace:DotnetPackaging;assembly=DotnetPackaging"
+             xmlns:converters="clr-namespace:Zafiro.Avalonia.Converters;assembly=Zafiro.Avalonia"
+             xmlns:viewModels="clr-namespace:DotnetPackaging.Gui.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="DotnetPackaging.Gui.MetadataView"
+             x:DataType="viewModels:MainViewModel">
+	<ScrollViewer>
+		<StackPanel Spacing="10" Grid.IsSharedSizeScope="True" DataContext="{Binding OptionsViewModel}">
+			<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="AppName" ToolTip.Tip="Application name">
+				<TextBox Text="{Binding Name.Value, Mode=TwoWay}" />
+			</HeaderedContentControl>
+			<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Id" ToolTip.Tip="Package Id">
+				<TextBox Text="{Binding Id.Value, Mode=TwoWay}" />
+			</HeaderedContentControl>
+			<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Version">
+				<TextBox Text="{Binding Version.Value, Mode=TwoWay}" />
+			</HeaderedContentControl>
+			<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Summary">
+				<TextBox Text="{Binding Summary.Value, Mode=TwoWay}" />
+			</HeaderedContentControl>
+			<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}"
+									Header="StartupWMClass">
+				<TextBox Text="{Binding StartupWMClass.Value, Mode=TwoWay}" />
+			</HeaderedContentControl>
+            <HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}"
+                                    Header="Comment">
+                <TextBox Text="{Binding Comment.Value, Mode=TwoWay}" />
+            </HeaderedContentControl>
+
+			<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Icon">
+				<controls:ImageSelector BorderBrush="Black" CornerRadius="4" BorderThickness="1"
+										MaxImageWidth="200" MaxImageHeight="200"
+										Controller="{Binding Icon}" />
+			</HeaderedContentControl>
+			<HeaderedContentControl Header="Categories">
+
+				<Grid ColumnDefinitions="* *">
+					<ComboBox Margin="10" HorizontalAlignment="Stretch" ItemsSource="{Binding Source={x:Type dp:MainCategory}, Converter={x:Static converters:EnumConverters.Names}}" />
+					<HeaderedContentControl Margin="10" Grid.Column="1">
+						<HeaderedContentControl.Header>
+							<DockPanel>
+								<TextBlock Text="Additional" DockPanel.Dock="Left" VerticalAlignment="Center" />
+								<ItemsControl Margin="8 0" ItemsSource="{Binding AdditionalCategories}">
+									<ItemsControl.ItemsPanel>
+										<ItemsPanelTemplate>
+											<StackPanel Orientation="Horizontal" Spacing="4" />
+										</ItemsPanelTemplate>
+									</ItemsControl.ItemsPanel>
+								</ItemsControl>
+							</DockPanel>
+						</HeaderedContentControl.Header>
+						<ListBox SelectedItems="{Binding AdditionalCategories}"
+								 MaxHeight="250"
+								 SelectionMode="Multiple"
+								 ItemsSource="{Binding Source={x:Type dp:AdditionalCategory}, Converter={x:Static converters:EnumConverters.Names}}" />
+					</HeaderedContentControl>
+				</Grid>
+			</HeaderedContentControl>
+
+		</StackPanel>
+	</ScrollViewer>
+</UserControl>

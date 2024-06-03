@@ -7,6 +7,7 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Core;
 using ReactiveUI;
 using ReactiveUI.Validation.Extensions;
+using Zafiro.Avalonia.Dialogs;
 using Zafiro.Avalonia.Storage;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
@@ -22,7 +23,7 @@ public class MainViewModel : ViewModelBase, IDisposable
     private readonly ObservableAsPropertyHelper<IMutableFile?> file;
     private readonly CompositeDisposable disposable = new();
 
-    public MainViewModel(IFileSystemPicker systemPicker, INotificationService notificationService)
+    public MainViewModel(IFileSystemPicker systemPicker, INotificationService notificationService, IDialogService dialogService)
     {
         OptionsViewModel = new OptionsViewModel(systemPicker);
         SelectDirectory = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(systemPicker.PickFolder).Values().SelectMany(x => x.ToImmutable()).Successes());
@@ -39,6 +40,11 @@ public class MainViewModel : ViewModelBase, IDisposable
         CreatePackage = ReactiveCommand.CreateFromTask(() => OptionsViewModel.ToOptions().Bind(options => CreateAppImage(Directory!, File!, options)), canCreatePackage);
         CreatePackage.HandleErrorsWith(notificationService);
         IsBusy = CreatePackage.IsExecuting.Merge(SelectDirectory.IsExecuting);
+        
+        CreatePackage.Successes()
+            .SelectMany(_ => Observable.FromAsync(() => dialogService.ShowMessage("Package creation", "The creation of the AppImage has been successful!")))
+            .Subscribe()
+            .DisposeWith(disposable);
     }
 
     private static Task<Result> CreateAppImage(IDirectory directory, IMutableFile mutableFile, Options options)

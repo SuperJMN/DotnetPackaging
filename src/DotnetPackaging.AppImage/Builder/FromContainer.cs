@@ -53,6 +53,8 @@ public class FromContainer
             new RootedFile($"usr/share/icons/hicolor/{icon.Size}x{icon.Size}/apps", new UnixFile(packageMetadata.Package.ToLower() + ".png", icon))
         }, Enumerable.Empty<RootedFile>);
 
+        
+        // TODO: PackageMetadata.Package should not be null.
         IEnumerable<IRootedFile> files = new[]
             {
                 new RootedFile("usr/bin", new UnixFile(packageMetadata.Package.ToLower(), (StringData) TextTemplates.RunScript(localExecPath), UnixFileProperties.ExecutableFileProperties())),

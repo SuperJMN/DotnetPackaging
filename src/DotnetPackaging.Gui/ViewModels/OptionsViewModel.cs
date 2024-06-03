@@ -15,9 +15,11 @@ public class OptionsViewModel : ReactiveValidationObject
         Name.Validate(s => !Match(s, "/s+").Success, "Name can't contain whitespaces");
         Icon = new ImageSelectorViewModel(fileSystemPicker);
         this.IncludeValidationOf(Name);
+        
     }
 
     public StringField Name { get; } = new StringField("");
+    public StringField Comment { get; } = new StringField("");
     public StringField Id { get; } = new StringField("");
     public StringField StartupWMClass { get; } = new StringField("");
     public StringField Version { get; } = new StringField("");
@@ -25,5 +27,6 @@ public class OptionsViewModel : ReactiveValidationObject
     public StringField License { get; } = new StringField("");
     public StringField Summary { get; } = new StringField("");
     public ImageSelectorViewModel Icon { get; }
+    public string MainCategory { get; }
     public ObservableCollection<string> AdditionalCategories { get; } = new();
 }

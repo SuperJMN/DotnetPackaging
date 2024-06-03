@@ -1,5 +1,4 @@
 ﻿using System.Reactive.Linq;
-using CSharpFunctionalExtensions;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
@@ -11,13 +10,16 @@ public static class BuildUtils
     public static async Task<PackageMetadata> CreateMetadata(FromDirectoryOptions setup, IDirectory directory, Architecture architecture, IFile exec)
     {
         var icon = await GetIcon(setup, directory).TapError(Log.Warning);
-
-        var packageMetadata = new PackageMetadata
+        var package = setup.Package.Or(setup.Name).GetValueOrDefault(exec.Name.Replace(".Desktop", ""));
+        var version = setup.Version.GetValueOrDefault("1.0.0");
+        var name = setup.Name.GetValueOrDefault(directory.Name);
+        
+        var packageMetadata = new PackageMetadata(name, architecture, package, version)
         {
             Architecture = architecture,
             Icon = icon.AsMaybe(),
             Id = setup.PackageId,
-            Name = setup.AppName.GetValueOrDefault(directory.Name),
+            Name = name,
             Categories = setup.Categories,
             StartupWmClass = setup.StartupWmClass,
             Comment = setup.Comment,
@@ -31,8 +33,8 @@ public static class BuildUtils
             Keywords = setup.Keywords,
             Recommends = setup.Recommends,
             Section = setup.Section,
-            Package = setup.Package.Or(setup.AppName).GetValueOrDefault(exec.Name.Replace(".Desktop", "")),
-            Version = setup.Version.GetValueOrDefault("1.0.0"),
+            Package = package,
+            Version = version,
             VcsBrowser = setup.VcsBrowser,
             VcsGit = setup.VcsGit,
             InstalledSize = setup.InstalledSize,
