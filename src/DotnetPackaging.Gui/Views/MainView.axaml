@@ -26,7 +26,7 @@
 								<ColumnDefinition SharedSizeGroup="Name" />
 								<ColumnDefinition />
 							</Grid.ColumnDefinitions>
-							<TextBlock VerticalAlignment="Center" Text="{Binding Directory.Name, FallbackValue='Select a directory'}" />
+							<TextBlock VerticalAlignment="Center" Text="{Binding Directory.Path, FallbackValue='Select a directory'}" />
 							<Button Margin="10 0" Grid.Column="1" Content="Browse…­­" DockPanel.Dock="Right" VerticalAlignment="Center"
                                     Command="{Binding SelectDirectory}" />
 						</Grid>
@@ -37,7 +37,7 @@
 								<ColumnDefinition SharedSizeGroup="Name" />
 								<ColumnDefinition />
 							</Grid.ColumnDefinitions>
-							<TextBlock VerticalAlignment="Center" Text="{Binding File.Name, FallbackValue='Select a file'}" />
+							<TextBlock VerticalAlignment="Center" Text="{Binding File.Path, FallbackValue='Select a file'}" />
 							<Button Grid.Column="1" Margin="10 0" Content="Browse…­­" DockPanel.Dock="Right" VerticalAlignment="Center"
                                     Command="{Binding SelectFile}" />
 						</Grid>
