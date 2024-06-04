@@ -1,7 +1,5 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
-using CSharpFunctionalExtensions;
 using Zafiro.CSharpFunctionalExtensions;
 
 namespace DotnetPackaging.Gui.ViewModels;

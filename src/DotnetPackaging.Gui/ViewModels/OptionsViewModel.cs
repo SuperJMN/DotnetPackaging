@@ -1,6 +1,5 @@
 ﻿using System.Collections.ObjectModel;
 using ReactiveUI.Validation.Helpers;
-using Zafiro.UI;
 using Zafiro.UI.Fields;
 using static System.Text.RegularExpressions.Regex;
 

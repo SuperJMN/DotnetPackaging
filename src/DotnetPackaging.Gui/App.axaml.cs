@@ -1,15 +1,11 @@
-﻿using System;
-using Avalonia;
-using Avalonia.Controls;
+﻿using Avalonia;
 using Avalonia.Controls.Notifications;
 using Avalonia.Markup.Xaml;
-using CSharpFunctionalExtensions;
 using DotnetPackaging.Gui.ViewModels;
 using DotnetPackaging.Gui.Views;
 using Zafiro.Avalonia.Dialogs;
 using Zafiro.Avalonia.Notifications;
 using Zafiro.Avalonia.Storage;
-using Zafiro.FileSystem;
 
 namespace DotnetPackaging.Gui;
 

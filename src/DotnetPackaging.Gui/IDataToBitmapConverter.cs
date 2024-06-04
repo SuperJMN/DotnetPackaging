@@ -1,11 +1,9 @@
-using System;
 using System.Globalization;
 using Avalonia.Data;
 using Avalonia.Data.Converters;
 using Avalonia.Media.Imaging;
 using Zafiro.Avalonia.Misc;
 using Zafiro.DataModel;
-using Zafiro.FileSystem;
 
 namespace DotnetPackaging.Gui;
 

@@ -1,20 +1,15 @@
-﻿using System;
-using System.Reactive;
+﻿using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
-using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Core;
-using ReactiveUI;
 using ReactiveUI.Validation.Extensions;
 using Zafiro.Avalonia.Dialogs;
 using Zafiro.Avalonia.Storage;
 using Zafiro.CSharpFunctionalExtensions;
-using Zafiro.FileSystem;
 using Zafiro.FileSystem.Mutable;
 using Zafiro.Reactive;
-using Zafiro.UI;
 
 namespace DotnetPackaging.Gui.ViewModels;
 

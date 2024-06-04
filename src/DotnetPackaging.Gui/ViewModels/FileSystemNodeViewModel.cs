@@ -1,6 +1,4 @@
-﻿using Zafiro.FileSystem;
-
-namespace DotnetPackaging.Gui.ViewModels;
+﻿namespace DotnetPackaging.Gui.ViewModels;
 
 public class FileSystemNodeViewModel<T>(T value) : INamed where T : INamed
 {
