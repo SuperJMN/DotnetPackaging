@@ -18,7 +18,7 @@ public static class BuildUtils
         {
             Architecture = architecture,
             Icon = icon.AsMaybe(),
-            Id = setup.PackageId,
+            Id = setup.Id,
             Name = name,
             Categories = setup.Categories,
             StartupWmClass = setup.StartupWmClass,

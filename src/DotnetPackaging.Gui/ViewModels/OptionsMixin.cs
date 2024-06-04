@@ -15,10 +15,10 @@ public static class OptionsMixin
         return maybeIcon.MapMaybe(i => new Options
         {
             Icon = i,
-            AppId = optionsViewModel.Id.Value.WhitespaceAsNone(),
+            Id = optionsViewModel.Id.Value.WhitespaceAsNone(),
             StartupWmClass= optionsViewModel.StartupWMClass.Value.WhitespaceAsNone(),
             Comment = optionsViewModel.Comment.Value.WhitespaceAsNone(),
-            AppName = optionsViewModel.Name.Value.WhitespaceAsNone(),
+            Name = optionsViewModel.Name.Value.WhitespaceAsNone(),
             Version = optionsViewModel.Version.Value.WhitespaceAsNone(),
             Summary = optionsViewModel.Summary.Value.WhitespaceAsNone(),
             AdditionalCategories = Maybe.From(optionsViewModel.AdditionalCategories.Select(Enum.Parse<AdditionalCategory>)),

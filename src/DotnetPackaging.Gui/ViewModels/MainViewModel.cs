@@ -54,8 +54,9 @@ public class MainViewModel : ViewModelBase, IDisposable
             .DisposeWith(disposable);
         ShowMetadata = ReactiveCommand.CreateFromTask(async () =>
         {
-            var optionsViewModel = new OptionsViewModel(systemPicker);
+            var optionsViewModel = new OptionsViewModel(systemPicker, OptionsViewModel);
             await dialog.Show(optionsViewModel, "Options", optionsViewModel.IsValid());
+            OptionsViewModel = optionsViewModel;
         });
     }
 

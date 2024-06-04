@@ -3,36 +3,39 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:DotnetPackaging.Gui.ViewModels"
-             xmlns:gui="clr-namespace:DotnetPackaging.Gui"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
              x:Class="DotnetPackaging.Gui.Views.MainView"
              x:DataType="vm:MainViewModel">
 
-	<Panel Margin="10">
-        <Button Command="{Binding ShowMetadata}">Metadata</Button>
-        <StackPanel Spacing="10" Grid.IsSharedSizeScope="True">
-			<HeaderedContentControl Header="Source" >
-				<Grid>
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition SharedSizeGroup="Name" />
-						<ColumnDefinition />
-					</Grid.ColumnDefinitions>
-					<TextBlock VerticalAlignment="Center" Text="{Binding Directory.Path, FallbackValue='Select a directory'}" />
-					<Button Margin="10 0" Grid.Column="1" Content="Browse…­­" DockPanel.Dock="Right" VerticalAlignment="Center"
+	<UserControl.Styles>
+		<Style Selector="HeaderedContentControl">
+			<!--<Setter Property="Theme" Value="{StaticResource InlineHeaderedContentControl}" />-->
+        </Style>
+    </UserControl.Styles>
+
+	<DockPanel Margin="32" Grid.IsSharedSizeScope="True">
+        <StackPanel DockPanel.Dock="Bottom" Spacing="32">
+            <ProgressBar IsVisible="{Binding IsBusy^}" />
+            <Button Command="{Binding CreatePackage}" Content="Create Package" HorizontalAlignment="Center" />
+        </StackPanel>
+		<StackPanel Spacing="10">
+			<HeaderedContentControl Header="Source directory" >
+				<DockPanel>
+                    <Button Content="Browse…­­" DockPanel.Dock="Right" VerticalAlignment="Center"
                             Command="{Binding SelectDirectory}" />
-				</Grid>
+                    <TextBlock VerticalAlignment="Center" Text="{Binding Directory.Path, FallbackValue='(nothing)'}" />
+                </DockPanel>
 			</HeaderedContentControl>
-			<HeaderedContentControl Header="Destination">
-				<Grid>
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition SharedSizeGroup="Name" />
-						<ColumnDefinition />
-					</Grid.ColumnDefinitions>
-					<TextBlock VerticalAlignment="Center" Text="{Binding File.Path, FallbackValue='Select a file'}" />
-					<Button Grid.Column="1" Margin="10 0" Content="Browse…­­" DockPanel.Dock="Right" VerticalAlignment="Center"
+			<HeaderedContentControl Header="Destination file">
+				<DockPanel>
+                    <Button Content="Browse…­­" DockPanel.Dock="Right" VerticalAlignment="Center"
                             Command="{Binding SelectFile}" />
-				</Grid>
+                    <TextBlock VerticalAlignment="Center" Text="{Binding File.Path, FallbackValue='(nothing)'}" />
+                </DockPanel>
+			</HeaderedContentControl>
+			<HeaderedContentControl Header="Metadata">
+				<Button HorizontalAlignment="Right" Command="{Binding ShowMetadata}" Content="Edit…" />
 			</HeaderedContentControl>
 		</StackPanel>
-	</Panel>
+	</DockPanel>
 </UserControl>

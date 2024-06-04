@@ -3,7 +3,7 @@
 public class FromDirectoryOptions
 {
     public Maybe<string> Package { get; private set; } = Maybe<string>.None;
-    public Maybe<string> PackageId { get; private set; } = Maybe<string>.None;
+    public Maybe<string> Id { get; private set; } = Maybe<string>.None;
     public Maybe<string> ExecutableName { get; private set; }
     public Maybe<Architecture> Architecture { get; private set; } = Maybe<Architecture>.None;
     public Maybe<IIcon> Icon { get; private set; } = Maybe<IIcon>.None;
@@ -42,14 +42,14 @@ public class FromDirectoryOptions
         return this;
     }
 
-    public FromDirectoryOptions WithPackageId(string packageId)
+    public FromDirectoryOptions WithId(string packageId)
     {
         if (string.IsNullOrWhiteSpace(packageId))
         {
             throw new ArgumentException("Can't be null or empty", packageId);
         }
         
-        PackageId = packageId;
+        Id = packageId;
         return this;
     }
 
@@ -81,7 +81,7 @@ public class FromDirectoryOptions
         return this;
     }
 
-    public FromDirectoryOptions WithAppName(string appName)
+    public FromDirectoryOptions WithName(string appName)
     {
         if (string.IsNullOrWhiteSpace(appName))
         {

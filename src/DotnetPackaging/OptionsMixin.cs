@@ -18,13 +18,17 @@ public static class OptionsMixin
         {
             setup.WithExecutableName(options.ExecutableName.Value);
         }
+        if (options.Id.HasValue)
+        {
+            setup.WithId(options.Id.Value);
+        }
         if (options.Icon.HasValue)
         {
             setup.WithIcon(options.Icon.Value);
         }
-        if (options.AppName.HasValue)
+        if (options.Name.HasValue)
         {
-            setup.WithAppName(options.AppName.Value);
+            setup.WithName(options.Name.Value);
         }
         if (options.StartupWmClass.HasValue)
         {
