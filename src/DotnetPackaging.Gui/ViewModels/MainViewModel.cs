@@ -2,6 +2,7 @@
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Core;
@@ -20,60 +21,45 @@ namespace DotnetPackaging.Gui.ViewModels;
 public class MainViewModel : ViewModelBase, IDisposable
 {
     private readonly ObservableAsPropertyHelper<FileSystemNodeViewModel<IMutableDirectory>?> directory;
-    private readonly ObservableAsPropertyHelper<FileSystemNodeViewModel<IMutableFile>?> file;
     private readonly CompositeDisposable disposable = new();
+    private readonly ObservableAsPropertyHelper<FileSystemNodeViewModel<IMutableFile>?> file;
 
-    public MainViewModel(IFileSystemPicker systemPicker, INotificationService notificationService, IDialogService dialogService)
+    public MainViewModel(IFileSystemPicker systemPicker, INotificationService notificationService, IDialogService dialogService, IDialog2 dialog)
     {
         OptionsViewModel = new OptionsViewModel(systemPicker);
-        SelectDirectory = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(systemPicker.PickFolder).Values().Select(x => new FileSystemNodeViewModel<IMutableDirectory>(x)));
+
+        var canBrowse = new Subject<bool>();
+        
+        SelectDirectory = ReactiveCommand.CreateFromObservable(() => SelectInputDirectory(systemPicker), canBrowse);
         SelectDirectory
-            .Do(d =>
-            {
-                OptionsViewModel.Id.Value = d.Name;
-            })
+            .Do(d => { OptionsViewModel.Id.Value = d.Name; })
             .Subscribe()
             .DisposeWith(disposable);
-
-        SelectFile = ReactiveCommand.CreateFromObservable(() => Observable.FromAsync(() => systemPicker.PickForSave(Directory?.Name ?? "Package", "appImage", new FileTypeFilter("AppImage", ["*.appimage"]))).Values().Select(x => new FileSystemNodeViewModel<IMutableFile>(x)));
-
         directory = SelectDirectory.ToProperty(this, x => x.Directory);
+        
+        SelectFile = ReactiveCommand.CreateFromObservable(() => SelectOutputFile(systemPicker), canBrowse);
         file = SelectFile.ToProperty(this, x => x.File);
+        
         var canCreatePackage = this.WhenAnyValue(x => x.Directory, x => x.File).NotNull().And(OptionsViewModel.IsValid());
-        CreatePackage = ReactiveCommand.CreateFromTask(() => Directory!.Value.ToImmutable().Bind(dir => OptionsViewModel.ToOptions().Bind(options => CreateAppImage(dir!, File!.Value, options))), canCreatePackage);
+        CreatePackage = ReactiveCommand.CreateFromTask(Pack, canCreatePackage);
         CreatePackage.HandleErrorsWith(notificationService);
-        IsBusy = CreatePackage.IsExecuting.Merge(SelectDirectory.IsExecuting);
 
+        CreatePackage.IsExecuting.Not().Subscribe(canBrowse).DisposeWith(disposable);
+        
+        IsBusy = CreatePackage.IsExecuting;
+        
         CreatePackage.Successes()
             .SelectMany(_ => Observable.FromAsync(() => dialogService.ShowMessage("Package creation", "The creation of the AppImage has been successful!")))
             .Subscribe()
             .DisposeWith(disposable);
+        ShowMetadata = ReactiveCommand.CreateFromTask(async () =>
+        {
+            var optionsViewModel = new OptionsViewModel(systemPicker);
+            await dialog.Show(optionsViewModel, "Options", optionsViewModel.IsValid());
+        });
     }
 
-    private static Task<Result> CreateAppImage(IDirectory directory, IMutableFile mutableFile, Options options)
-    {
-        if (directory == null)
-        {
-            throw new ArgumentNullException(nameof(directory));
-        }
-
-        if (mutableFile == null)
-        {
-            throw new ArgumentNullException(nameof(mutableFile));
-        }
-
-        if (options == null)
-        {
-            throw new ArgumentNullException(nameof(options));
-        }
-
-        return AppImage.AppImage
-            .From()
-            .Directory(directory)
-            .Configure(x => x.From(options)).Build()
-            .Bind(image => image.ToData()
-                .Bind(mutableFile.SetContents));
-    }
+    public ReactiveCommand<Unit, Unit> ShowMetadata { get; set; }
 
     public IObservable<bool> IsBusy { get; }
 
@@ -98,5 +84,37 @@ public class MainViewModel : ViewModelBase, IDisposable
         CreatePackage.Dispose();
         SelectFile.Dispose();
         SelectDirectory.Dispose();
+    }
+
+    private static IObservable<FileSystemNodeViewModel<IMutableDirectory>> SelectInputDirectory(IFileSystemPicker systemPicker)
+    {
+        return Observable.FromAsync(systemPicker.PickFolder).Values().Select(x => new FileSystemNodeViewModel<IMutableDirectory>(x));
+    }
+
+    private static Task<Result> CreateAppImage(IDirectory directory, IMutableFile mutableFile, Options options)
+    {
+        return AppImage.AppImage
+            .From()
+            .Directory(directory)
+            .Configure(x => x.From(options)).Build()
+            .Bind(image => image.ToData()
+                .Bind(mutableFile.SetContents));
+    }
+
+    private IObservable<FileSystemNodeViewModel<IMutableFile>> SelectOutputFile(IFileSystemPicker systemPicker)
+    {
+        return Observable
+            .FromAsync(() => systemPicker
+                .PickForSave(Directory?.Name ?? "Package", "appImage", new FileTypeFilter("AppImage", ["*.appimage"])))
+            .Values()
+            .Select(x => new FileSystemNodeViewModel<IMutableFile>(x));
+    }
+
+    private Task<Result> Pack()
+    {
+        return Directory!.Value.ToImmutable()
+            .Bind(dir => OptionsViewModel
+                .ToOptions()
+                .Bind(options => CreateAppImage(dir!, File!.Value, options)));
     }
 }

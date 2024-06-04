@@ -1,16 +1,26 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:converters="clr-namespace:Zafiro.Avalonia.Converters;assembly=Zafiro.Avalonia"
-             xmlns:dialogs="clr-namespace:Zafiro.Avalonia.Dialogs;assembly=Zafiro.Avalonia.Dialogs"
+             xmlns:viewModels="clr-namespace:DotnetPackaging.Gui.ViewModels"
+             xmlns:gui="clr-namespace:DotnetPackaging.Gui"
              x:Class="DotnetPackaging.Gui.App"
              RequestedThemeVariant="Default">
-	<!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
-
+	
 	<Application.Resources>
 		<ResourceDictionary>
 			<ResourceDictionary.MergedDictionaries>
 				<ResourceInclude Source="Controls/ImageSelector.axaml" />
 			</ResourceDictionary.MergedDictionaries>
+            <ControlTheme x:Key="{x:Type Button}" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                <Setter Property="Background">
+                    <Setter.Value>
+                        <LinearGradientBrush>
+                            <GradientStop Offset="0" Color="#C2E4F6" />
+                            <GradientStop Offset="1" Color="#95CDEC" />
+                        </LinearGradientBrush>
+                    </Setter.Value>
+                </Setter>
+            </ControlTheme>
 		</ResourceDictionary>
 		<converters:MaybeToStringConverter x:Key="MaybeToStringConverter" />
 	</Application.Resources>
@@ -18,5 +28,13 @@
 		<FluentTheme />
 		<StyleInclude Source="avares://Zafiro.Avalonia/Styles.axaml" />
 		<StyleInclude Source="avares://Zafiro.Avalonia.Dialogs/Styles.axaml" />
+		
 	</Application.Styles>
+
+	<Application.DataTemplates>
+        <DataTemplate DataType="viewModels:OptionsViewModel">
+            <gui:MetadataView Width="500" Height="400" />
+        </DataTemplate>
+    </Application.DataTemplates>
+
 </Application>

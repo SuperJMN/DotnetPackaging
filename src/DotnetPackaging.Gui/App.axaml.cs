@@ -28,7 +28,7 @@ public partial class App : Application
         {
             var topLevel = TopLevel.GetTopLevel(control)!;
             var picker = new AvaloniaFileSystemPicker(topLevel.StorageProvider);
-            return new MainViewModel(picker, new NotificationService(new WindowNotificationManager(topLevel)), DialogService.Create(ApplicationLifetime!, Maybe<Action<ConfigureWindowContext>>.None));
+            return new MainViewModel(picker, new NotificationService(new WindowNotificationManager(topLevel)), DialogService.Create(ApplicationLifetime!, Maybe<Action<ConfigureWindowContext>>.None), new DesktopDialogService2(Maybe<Action<ConfigureWindowContext>>.None));
         }, () => new MainWindow());
     }
 }

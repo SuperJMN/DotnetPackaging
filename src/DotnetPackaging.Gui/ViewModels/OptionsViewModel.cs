@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using ReactiveUI.Validation.Helpers;
 using Zafiro.UI;
 using Zafiro.UI.Fields;
@@ -15,7 +14,6 @@ public class OptionsViewModel : ReactiveValidationObject
         Name.Validate(s => !Match(s, "/s+").Success, "Name can't contain whitespaces");
         Icon = new ImageSelectorViewModel(fileSystemPicker);
         this.IncludeValidationOf(Name);
-        
     }
 
     public StringField Name { get; } = new StringField("");

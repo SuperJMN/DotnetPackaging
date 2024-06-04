@@ -2,66 +2,113 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:controls="clr-namespace:DotnetPackaging.Gui.Controls"
              xmlns:dp="clr-namespace:DotnetPackaging;assembly=DotnetPackaging"
-             xmlns:converters="clr-namespace:Zafiro.Avalonia.Converters;assembly=Zafiro.Avalonia"
              xmlns:viewModels="clr-namespace:DotnetPackaging.Gui.ViewModels"
+             xmlns:converters="clr-namespace:Zafiro.Avalonia.Converters;assembly=Zafiro.Avalonia"
+             xmlns:c="clr-namespace:DotnetPackaging.Gui.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="DotnetPackaging.Gui.MetadataView"
-             x:DataType="viewModels:MainViewModel">
-	<ScrollViewer>
-		<StackPanel Spacing="10" Grid.IsSharedSizeScope="True" DataContext="{Binding OptionsViewModel}">
-			<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="AppName" ToolTip.Tip="Application name">
-				<TextBox Text="{Binding Name.Value, Mode=TwoWay}" />
-			</HeaderedContentControl>
-			<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Id" ToolTip.Tip="Package Id">
-				<TextBox Text="{Binding Id.Value, Mode=TwoWay}" />
-			</HeaderedContentControl>
-			<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Version">
-				<TextBox Text="{Binding Version.Value, Mode=TwoWay}" />
-			</HeaderedContentControl>
-			<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Summary">
-				<TextBox Text="{Binding Summary.Value, Mode=TwoWay}" />
-			</HeaderedContentControl>
-			<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}"
-									Header="StartupWMClass">
-				<TextBox Text="{Binding StartupWMClass.Value, Mode=TwoWay}" />
-			</HeaderedContentControl>
-            <HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}"
-                                    Header="Comment">
-                <TextBox Text="{Binding Comment.Value, Mode=TwoWay}" />
-            </HeaderedContentControl>
+			 x:DataType="viewModels:OptionsViewModel">
 
-			<HeaderedContentControl Theme="{StaticResource InlineHeaderedContentControl}" Header="Icon">
-				<controls:ImageSelector BorderBrush="Black" CornerRadius="4" BorderThickness="1"
-										MaxImageWidth="200" MaxImageHeight="200"
-										Controller="{Binding Icon}" />
-			</HeaderedContentControl>
+	<UserControl.Styles>
+		<Style Selector="TabItem">
+			<Setter Property="Padding" Value="10" />
+		</Style>
+		<Style Selector="TabItem ContentPresenter">
+		</Style>
+		<Style Selector="TabItem > :is(Control)" >
+			<Setter Property="Grid.IsSharedSizeScope" Value="True" />
+		</Style>
+		<Style Selector="HeaderedContentControl">
+			<Setter Property="Margin" Value="10" />
+		</Style>
+	</UserControl.Styles>
+
+	<TabControl>
+		<TabItem Header="General">
+			<DockPanel>
+				<StackPanel DockPanel.Dock="Top">
+					<HeaderedContentControl Header="Name" ToolTip.Tip="Application name. This how your application is called. It can have spaces or several words.">
+						<TextBox Text="{Binding Name.Value, Mode=TwoWay}" />
+					</HeaderedContentControl>
+					<HeaderedContentControl Header="Id" ToolTip.Tip="Package Id. This will be used as the 'key' to locate the package in the filesystem or the packages manager of your OS.">
+						<TextBox Text="{Binding Id.Value, Mode=TwoWay}" />
+					</HeaderedContentControl>
+					<HeaderedContentControl Header="Version">
+						<TextBox Text="{Binding Version.Value, Mode=TwoWay}" />
+					</HeaderedContentControl>
+				</StackPanel>
+				<HeaderedContentControl Header="Icon" ToolTip.Tip="This will be used as your application icon. It will be resized to fit into a square.">
+					<c:ImageSelector BorderBrush="Black" CornerRadius="4" BorderThickness="1"
+                                     MaxImageWidth="200" MaxImageHeight="200"
+                                     Controller="{Binding Icon}" />
+				</HeaderedContentControl>
+			</DockPanel>
+		</TabItem>
+		<TabItem Header="Comments">
+			<StackPanel>
+				<HeaderedContentControl Header="Comment">
+					<TextBox Text="{Binding Comment.Value, Mode=TwoWay}" />
+				</HeaderedContentControl>
+
+				<HeaderedContentControl Header="Summary">
+					<TextBox Text="{Binding Summary.Value, Mode=TwoWay}" />
+				</HeaderedContentControl>
+			</StackPanel>
+		</TabItem>
+		<TabItem Header="Categories">
+			<Grid RowDefinitions="Auto *">
+				<HeaderedContentControl Header="Main">
+					<ComboBox HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding Source={x:Type dp:MainCategory}, Converter={x:Static converters:EnumConverters.Names}}" />
+				</HeaderedContentControl>
+				<HeaderedContentControl Grid.Row="1">
+					<HeaderedContentControl.Header>
+						<DockPanel>
+							<TextBlock Text="Additional" DockPanel.Dock="Left" VerticalAlignment="Center" />
+							<ItemsControl Margin="8 0" ItemsSource="{Binding AdditionalCategories}">
+								<ItemsControl.ItemsPanel>
+									<ItemsPanelTemplate>
+										<StackPanel Orientation="Horizontal" Spacing="4" />
+									</ItemsPanelTemplate>
+								</ItemsControl.ItemsPanel>
+							</ItemsControl>
+						</DockPanel>
+					</HeaderedContentControl.Header>
+					<ListBox FontSize="12" SelectedItems="{Binding AdditionalCategories}"
+                             SelectionMode="Multiple"
+                             ItemsSource="{Binding Source={x:Type dp:AdditionalCategory}, Converter={x:Static converters:EnumConverters.Names}}">
+						<ListBox.ItemsPanel>
+							<ItemsPanelTemplate>
+								<UniformGrid Columns="4" />
+							</ItemsPanelTemplate>
+						</ListBox.ItemsPanel>
+					</ListBox>
+				</HeaderedContentControl>
+			</Grid>
+
+		</TabItem>
+		<TabItem Header="Misc">
+			<StackPanel>
+				<HeaderedContentControl Header="StartupWMClass">
+					<TextBox Text="{Binding StartupWMClass.Value, Mode=TwoWay}" />
+				</HeaderedContentControl>
+			</StackPanel>
+		</TabItem>
+
+	</TabControl>
+	<!--<ScrollViewer>
+		<StackPanel Spacing="10" Grid.IsSharedSizeScope="True" DataContext="{Binding OptionsViewModel}">
+			
+			
+			
+          
+			
 			<HeaderedContentControl Header="Categories">
 
-				<Grid ColumnDefinitions="* *">
-					<ComboBox Margin="10" HorizontalAlignment="Stretch" ItemsSource="{Binding Source={x:Type dp:MainCategory}, Converter={x:Static converters:EnumConverters.Names}}" />
-					<HeaderedContentControl Margin="10" Grid.Column="1">
-						<HeaderedContentControl.Header>
-							<DockPanel>
-								<TextBlock Text="Additional" DockPanel.Dock="Left" VerticalAlignment="Center" />
-								<ItemsControl Margin="8 0" ItemsSource="{Binding AdditionalCategories}">
-									<ItemsControl.ItemsPanel>
-										<ItemsPanelTemplate>
-											<StackPanel Orientation="Horizontal" Spacing="4" />
-										</ItemsPanelTemplate>
-									</ItemsControl.ItemsPanel>
-								</ItemsControl>
-							</DockPanel>
-						</HeaderedContentControl.Header>
-						<ListBox SelectedItems="{Binding AdditionalCategories}"
-								 MaxHeight="250"
-								 SelectionMode="Multiple"
-								 ItemsSource="{Binding Source={x:Type dp:AdditionalCategory}, Converter={x:Static converters:EnumConverters.Names}}" />
-					</HeaderedContentControl>
-				</Grid>
+				
 			</HeaderedContentControl>
 
 		</StackPanel>
-	</ScrollViewer>
+	</ScrollViewer>-->
 </UserControl>
