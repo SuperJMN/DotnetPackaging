@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using DotnetPackaging.AppImage.Core;
 using ReactiveUI.Validation.Extensions;
 using Zafiro.Avalonia.Dialogs;
+using Zafiro.Avalonia.Dialogs.Simple;
 using Zafiro.Avalonia.Storage;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem.Mutable;
@@ -19,7 +20,7 @@ public class MainViewModel : ViewModelBase, IDisposable
     private readonly CompositeDisposable disposable = new();
     private readonly ObservableAsPropertyHelper<FileSystemNodeViewModel<IMutableFile>?> file;
 
-    public MainViewModel(IFileSystemPicker systemPicker, INotificationService notificationService, IDialogService dialogService, IDialog2 dialog)
+    public MainViewModel(IFileSystemPicker systemPicker, INotificationService notificationService, ISimpleDialog dialog)
     {
         OptionsViewModel = new OptionsViewModel(systemPicker);
 
@@ -44,7 +45,7 @@ public class MainViewModel : ViewModelBase, IDisposable
         IsBusy = CreatePackage.IsExecuting;
         
         CreatePackage.Successes()
-            .SelectMany(_ => Observable.FromAsync(() => dialogService.ShowMessage("Package creation", "The creation of the AppImage has been successful!")))
+            .SelectMany(_ => Observable.FromAsync(() => dialog.ShowMessage("Package creation", "The creation of the AppImage has been successful!")))
             .Subscribe()
             .DisposeWith(disposable);
         ShowMetadata = ReactiveCommand.CreateFromTask(async () =>

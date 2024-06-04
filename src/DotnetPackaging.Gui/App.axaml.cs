@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using DotnetPackaging.Gui.ViewModels;
 using DotnetPackaging.Gui.Views;
 using Zafiro.Avalonia.Dialogs;
+using Zafiro.Avalonia.Dialogs.Simple;
 using Zafiro.Avalonia.Notifications;
 using Zafiro.Avalonia.Storage;
 
@@ -24,7 +25,7 @@ public partial class App : Application
         {
             var topLevel = TopLevel.GetTopLevel(control)!;
             var picker = new AvaloniaFileSystemPicker(topLevel.StorageProvider);
-            return new MainViewModel(picker, new NotificationService(new WindowNotificationManager(topLevel)), DialogService.Create(ApplicationLifetime!, Maybe<Action<ConfigureWindowContext>>.None), new DesktopDialogService2(Maybe<Action<ConfigureWindowContext>>.None));
+            return new MainViewModel(picker, new NotificationService(new WindowNotificationManager(topLevel)), new SimpleDesktopDialogService(Maybe<Action<ConfigureWindowContext>>.None));
         }, () => new MainWindow());
     }
 }
