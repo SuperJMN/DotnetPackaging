@@ -14,20 +14,6 @@ public class OptionsViewModel : ReactiveValidationObject
         Icon = new ImageSelectorViewModel(fileSystemPicker);
         this.IncludeValidationOf(Name);
     }
-    
-    public OptionsViewModel(IFileSystemPicker fileSystemPicker, OptionsViewModel optionsViewModel) : this(fileSystemPicker)
-    {
-        Name.Value = optionsViewModel.Name.Value;
-        Id.Value = optionsViewModel.Id.Value;
-        Version.Value = optionsViewModel.Version.Value;
-        MainCategory = optionsViewModel.MainCategory;
-        Comment.Value = optionsViewModel.Comment.Value;
-        StartupWMClass.Value = optionsViewModel.StartupWMClass.Value;
-        Homepage.Value = optionsViewModel.Homepage.Value;
-        License.Value = optionsViewModel.License.Value;
-        Summary.Value = optionsViewModel.Summary.Value;
-        AdditionalCategories = new ObservableCollection<string>(optionsViewModel.AdditionalCategories);
-    }
 
     public StringField Name { get; } = new StringField("");
     public StringField Comment { get; } = new StringField("");
@@ -38,6 +24,6 @@ public class OptionsViewModel : ReactiveValidationObject
     public StringField License { get; } = new StringField("");
     public StringField Summary { get; } = new StringField("");
     public ImageSelectorViewModel Icon { get; }
-    public string MainCategory { get; } = "";
+    public string MainCategory { get; set; } = "";
     public ObservableCollection<string> AdditionalCategories { get; } = new();
 }

@@ -35,7 +35,7 @@
 
 	<Application.DataTemplates>
         <DataTemplate DataType="viewModels:OptionsViewModel">
-            <views:MetadataView Width="500" Height="400" />
+            <views:MetadataView Width="500" Height="480" />
         </DataTemplate>
 		<DataTemplate DataType="viewModels:PackageViewModel">
 			<views:PackageView />

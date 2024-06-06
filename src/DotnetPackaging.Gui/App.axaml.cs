@@ -30,7 +30,8 @@ public partial class App : Application
             var notificationService = new NotificationService(new WindowNotificationManager(topLevel));
             var packagers = new IPackager[] { new AppImagePackager(), new DebImagePackager() };
             var simpleDesktopDialogService = new SimpleDesktopDialogService(Maybe<Action<ConfigureWindowContext>>.None);
-            var main = new PackagerSelectionViewModel(packagers, packager => new PackageViewModel(packager, picker, notificationService, simpleDesktopDialogService));
+            var options = new OptionsViewModel(picker);
+            var main = new PackagerSelectionViewModel(packagers, packager => new PackageViewModel(packager, options, picker, notificationService, simpleDesktopDialogService));
             return main;
         }, () => new MainWindow());
     }

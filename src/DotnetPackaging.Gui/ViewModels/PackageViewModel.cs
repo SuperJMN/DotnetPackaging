@@ -21,10 +21,11 @@ public class PackageViewModel : ViewModelBase, IDisposable
     private readonly CompositeDisposable disposable = new();
     private readonly ObservableAsPropertyHelper<FileSystemNodeViewModel<IMutableFile>?> file;
 
-    public PackageViewModel(IPackager packager, IFileSystemPicker systemPicker, INotificationService notificationService, ISimpleDialog dialog)
+    public PackageViewModel(IPackager packager, OptionsViewModel options, IFileSystemPicker systemPicker,
+        INotificationService notificationService, ISimpleDialog dialog)
     {
         Packager = packager;
-        OptionsViewModel = new OptionsViewModel(systemPicker);
+        OptionsViewModel = options;
 
         var canBrowse = new Subject<bool>();
         
@@ -53,9 +54,10 @@ public class PackageViewModel : ViewModelBase, IDisposable
         
         ShowMetadata = ReactiveCommand.CreateFromTask(async () =>
         {
-            var optionsViewModel = new OptionsViewModel(systemPicker, OptionsViewModel);
+            var optionsViewModel = new OptionsViewModel(systemPicker);
+            OptionsViewModel.CopyTo(optionsViewModel);
             await dialog.Show(optionsViewModel, "Options", optionsViewModel.IsValid());
-            OptionsViewModel = optionsViewModel;
+            optionsViewModel.CopyTo(OptionsViewModel);
         });
     }
 
@@ -63,7 +65,7 @@ public class PackageViewModel : ViewModelBase, IDisposable
 
     public IObservable<bool> IsBusy { get; }
 
-    public OptionsViewModel OptionsViewModel { get; set; }
+    public OptionsViewModel OptionsViewModel { get; }
 
     public ReactiveCommand<Unit, Result> CreatePackage { get; set; }
 
