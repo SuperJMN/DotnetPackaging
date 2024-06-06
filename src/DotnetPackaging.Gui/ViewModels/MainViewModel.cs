@@ -48,6 +48,7 @@ public class MainViewModel : ViewModelBase, IDisposable
             .SelectMany(_ => Observable.FromAsync(() => dialog.ShowMessage("Package creation", "The creation of the AppImage has been successful!")))
             .Subscribe()
             .DisposeWith(disposable);
+        
         ShowMetadata = ReactiveCommand.CreateFromTask(async () =>
         {
             var optionsViewModel = new OptionsViewModel(systemPicker, OptionsViewModel);

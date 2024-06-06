@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:DotnetPackaging.Gui.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="DotnetPackaging.Gui.Views.PackagerSelectionView"
+             x:DataType="viewModels:PackagerSelectionViewModel">
+    <HeaderedContentControl Header="Packager">
+        <DockPanel>
+            <ComboBox HorizontalAlignment="Stretch" SelectedItem="{Binding SelectedPackager}"
+                      ItemsSource="{Binding Packagers}" DockPanel.Dock="Top" />
+            <ContentControl DataContext="{Binding SelectedPackager}" />
+        </DockPanel>
+    </HeaderedContentControl>
+</UserControl>

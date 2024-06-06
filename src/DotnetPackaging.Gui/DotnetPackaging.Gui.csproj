@@ -24,5 +24,6 @@
     <ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro.Avalonia\src\Zafiro.Avalonia.Dialogs\Zafiro.Avalonia.Dialogs.csproj" />
     <ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro.Avalonia\src\Zafiro.Avalonia\Zafiro.Avalonia.csproj" />
     <ProjectReference Include="..\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj" />
+    <ProjectReference Include="..\DotnetPackaging.Deb\DotnetPackaging.Deb.csproj" />
   </ItemGroup>
 </Project>
