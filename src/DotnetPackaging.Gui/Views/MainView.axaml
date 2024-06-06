@@ -15,7 +15,7 @@
 
 	<DockPanel Margin="32" Grid.IsSharedSizeScope="True">
         <StackPanel DockPanel.Dock="Bottom" Spacing="32">
-            <ProgressBar IsVisible="{Binding IsBusy^}" />
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy^}" />
             <Button Command="{Binding CreatePackage}" Content="Create Package" HorizontalAlignment="Center" />
         </StackPanel>
 		<StackPanel Spacing="10">
