@@ -4,31 +4,29 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:DotnetPackaging.Gui.ViewModels"
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
-             x:Class="DotnetPackaging.Gui.Views.MainView"
-             x:DataType="vm:MainViewModel">
+             x:Class="DotnetPackaging.Gui.Views.PackageView"
+             x:DataType="vm:PackageViewModel">
 
 	<UserControl.Styles>
-		<Style Selector="HeaderedContentControl">
-			<!--<Setter Property="Theme" Value="{StaticResource InlineHeaderedContentControl}" />-->
-        </Style>
-    </UserControl.Styles>
+		<Style Selector="HeaderedContentControl" />
+	</UserControl.Styles>
 
-	<DockPanel Margin="32" Grid.IsSharedSizeScope="True">
-        <StackPanel DockPanel.Dock="Bottom" Spacing="32">
+	<DockPanel Grid.IsSharedSizeScope="True">
+		<StackPanel DockPanel.Dock="Bottom" Spacing="32">
             <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy^}" />
             <Button Command="{Binding CreatePackage}" Content="Create Package" HorizontalAlignment="Center" />
         </StackPanel>
 		<StackPanel Spacing="10">
 			<HeaderedContentControl Header="Source directory" >
 				<DockPanel>
-                    <Button Content="Browse…­­" DockPanel.Dock="Right" VerticalAlignment="Center"
+                    <Button Content="Browse…" DockPanel.Dock="Right" VerticalAlignment="Center"
                             Command="{Binding SelectDirectory}" />
                     <TextBlock VerticalAlignment="Center" Text="{Binding Directory.Path, FallbackValue='(nothing)'}" />
                 </DockPanel>
 			</HeaderedContentControl>
 			<HeaderedContentControl Header="Destination file">
 				<DockPanel>
-                    <Button Content="Browse…­­" DockPanel.Dock="Right" VerticalAlignment="Center"
+                    <Button Content="Browse…" DockPanel.Dock="Right" VerticalAlignment="Center"
                             Command="{Binding SelectFile}" />
                     <TextBlock VerticalAlignment="Center" Text="{Binding File.Path, FallbackValue='(nothing)'}" />
                 </DockPanel>

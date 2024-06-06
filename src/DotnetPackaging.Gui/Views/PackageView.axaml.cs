@@ -1,8 +1,8 @@
 ﻿namespace DotnetPackaging.Gui.Views;
 
-public partial class MainView : UserControl
+public partial class PackageView : UserControl
 {
-    public MainView()
+    public PackageView()
     {
         InitializeComponent();
     }

@@ -3,14 +3,18 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModels="clr-namespace:DotnetPackaging.Gui.ViewModels"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="450"
              x:Class="DotnetPackaging.Gui.Views.PackagerSelectionView"
              x:DataType="viewModels:PackagerSelectionViewModel">
-    <HeaderedContentControl Header="Packager">
-        <DockPanel>
-            <ComboBox HorizontalAlignment="Stretch" SelectedItem="{Binding SelectedPackager}"
-                      ItemsSource="{Binding Packagers}" DockPanel.Dock="Top" />
-            <ContentControl DataContext="{Binding SelectedPackager}" />
-        </DockPanel>
+    <HeaderedContentControl Header="Package Type" Margin="32">
+        <Grid RowDefinitions="Auto Auto *">
+            <ComboBox HorizontalAlignment="Stretch" SelectedItem="{Binding SelectedPackager, Mode=TwoWay}"
+                      ItemsSource="{Binding PackagerViewModels}"
+                      DisplayMemberBinding="{Binding Packager.Name}"
+                      DockPanel.Dock="Top">
+            </ComboBox>
+            <Separator Grid.Row="1" Margin="0 16" Height="2" />
+            <ContentControl Grid.Row="2" Content="{Binding SelectedPackager}" />
+        </Grid>
     </HeaderedContentControl>
 </UserControl>

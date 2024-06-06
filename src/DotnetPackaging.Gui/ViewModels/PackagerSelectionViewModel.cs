@@ -1,15 +1,24 @@
+using System.Collections.Generic;
+using System.Linq;
 using DotnetPackaging.Gui.Core;
 
 namespace DotnetPackaging.Gui.ViewModels;
 
-public class PackagerSelectionViewModel
+public class PackagerSelectionViewModel : ReactiveObject
 {
-    public IPackager[] Packagers { get; }
+    private PackageViewModel selectedPackager;
 
-    public PackagerSelectionViewModel(IPackager[] packagers)
+    public PackagerSelectionViewModel(IPackager[] packagers, Func<IPackager, PackageViewModel> createFunc)
     {
-        Packagers = packagers;
+        PackagerViewModels = packagers.Select(createFunc).ToList();
+        selectedPackager = PackagerViewModels.First();
     }
 
-    public IPackager SelectedPackager { get; set; }
+    public IReadOnlyCollection<PackageViewModel> PackagerViewModels { get; }
+
+    public PackageViewModel SelectedPackager
+    {
+        get => selectedPackager;
+        set => this.RaiseAndSetIfChanged(ref selectedPackager, value);
+    }
 }

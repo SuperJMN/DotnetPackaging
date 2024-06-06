@@ -3,7 +3,7 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
-using DotnetPackaging.AppImage.Core;
+using DotnetPackaging.Gui.Core;
 using ReactiveUI.Validation.Extensions;
 using Zafiro.Avalonia.Dialogs;
 using Zafiro.Avalonia.Dialogs.Simple;
@@ -14,14 +14,16 @@ using Zafiro.Reactive;
 
 namespace DotnetPackaging.Gui.ViewModels;
 
-public class MainViewModel : ViewModelBase, IDisposable
+public class PackageViewModel : ViewModelBase, IDisposable
 {
+    public IPackager Packager { get; }
     private readonly ObservableAsPropertyHelper<FileSystemNodeViewModel<IMutableDirectory>?> directory;
     private readonly CompositeDisposable disposable = new();
     private readonly ObservableAsPropertyHelper<FileSystemNodeViewModel<IMutableFile>?> file;
 
-    public MainViewModel(IFileSystemPicker systemPicker, INotificationService notificationService, ISimpleDialog dialog)
+    public PackageViewModel(IPackager packager, IFileSystemPicker systemPicker, INotificationService notificationService, ISimpleDialog dialog)
     {
+        Packager = packager;
         OptionsViewModel = new OptionsViewModel(systemPicker);
 
         var canBrowse = new Subject<bool>();
@@ -89,21 +91,16 @@ public class MainViewModel : ViewModelBase, IDisposable
         return Observable.FromAsync(systemPicker.PickFolder).Values().Select(x => new FileSystemNodeViewModel<IMutableDirectory>(x));
     }
 
-    private static Task<Result> CreateAppImage(IDirectory directory, IMutableFile mutableFile, Options options)
+    private  Task<Result> CreateAppImage(IDirectory outputDirectory, IMutableFile outputFile, Options options)
     {
-        return AppImage.AppImage
-            .From()
-            .Directory(directory)
-            .Configure(x => x.From(options)).Build()
-            .Bind(image => image.ToData()
-                .Bind(mutableFile.SetContents));
+        return Packager.CreatePackage(outputDirectory, outputFile, options);
     }
 
     private IObservable<FileSystemNodeViewModel<IMutableFile>> SelectOutputFile(IFileSystemPicker systemPicker)
     {
         return Observable
             .FromAsync(() => systemPicker
-                .PickForSave(Directory?.Name ?? "Package", "appImage", new FileTypeFilter("AppImage", ["*.appimage"])))
+                .PickForSave(Directory?.Name ?? "Output", Packager.Extension, new FileTypeFilter(Packager.Name, [Packager.Extension])))
             .Values()
             .Select(x => new FileSystemNodeViewModel<IMutableFile>(x));
     }

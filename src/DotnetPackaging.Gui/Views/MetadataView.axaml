@@ -7,7 +7,7 @@
              xmlns:converters="clr-namespace:Zafiro.Avalonia.Converters;assembly=Zafiro.Avalonia"
              xmlns:c="clr-namespace:DotnetPackaging.Gui.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="DotnetPackaging.Gui.MetadataView"
+             x:Class="DotnetPackaging.Gui.Views.MetadataView"
 			 x:DataType="viewModels:OptionsViewModel">
 
 	<UserControl.Styles>

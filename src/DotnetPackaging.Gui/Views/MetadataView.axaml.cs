@@ -1,7 +1,4 @@
-using Avalonia;
-using Avalonia.Markup.Xaml;
-
-namespace DotnetPackaging.Gui;
+namespace DotnetPackaging.Gui.Views;
 
 public partial class MetadataView : UserControl
 {

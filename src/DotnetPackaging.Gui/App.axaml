@@ -3,6 +3,8 @@
              xmlns:converters="clr-namespace:Zafiro.Avalonia.Converters;assembly=Zafiro.Avalonia"
              xmlns:viewModels="clr-namespace:DotnetPackaging.Gui.ViewModels"
              xmlns:gui="clr-namespace:DotnetPackaging.Gui"
+             xmlns:views="clr-namespace:DotnetPackaging.Gui.Views"
+             xmlns:misc="clr-namespace:Zafiro.Avalonia.Misc;assembly=Zafiro.Avalonia"
              x:Class="DotnetPackaging.Gui.App"
              RequestedThemeVariant="Default">
 	
@@ -33,8 +35,12 @@
 
 	<Application.DataTemplates>
         <DataTemplate DataType="viewModels:OptionsViewModel">
-            <gui:MetadataView Width="500" Height="400" />
+            <views:MetadataView Width="500" Height="400" />
         </DataTemplate>
+		<DataTemplate DataType="viewModels:PackageViewModel">
+			<views:PackageView />
+		</DataTemplate>
+		<!-- <misc:NamingConventionViewLocator /> -->
     </Application.DataTemplates>
 
 </Application>
