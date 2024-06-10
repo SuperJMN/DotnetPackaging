@@ -1,10 +1,7 @@
-﻿using System.Diagnostics;
-using System.Reactive.Linq;
-using CSharpFunctionalExtensions;
+﻿using System.Reactive.Linq;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
-using Zafiro.FileSystem.Lightweight;
 
 namespace DotnetPackaging;
 
@@ -13,13 +10,16 @@ public static class BuildUtils
     public static async Task<PackageMetadata> CreateMetadata(FromDirectoryOptions setup, IDirectory directory, Architecture architecture, IFile exec)
     {
         var icon = await GetIcon(setup, directory).TapError(Log.Warning);
-
-        var packageMetadata = new PackageMetadata
+        var package = setup.Package.Or(setup.Name).GetValueOrDefault(exec.Name.Replace(".Desktop", ""));
+        var version = setup.Version.GetValueOrDefault("1.0.0");
+        var name = setup.Name.GetValueOrDefault(directory.Name);
+        
+        var packageMetadata = new PackageMetadata(name, architecture, package, version)
         {
             Architecture = architecture,
             Icon = icon.AsMaybe(),
-            Id = setup.PackageId,
-            Name = setup.AppName.GetValueOrDefault(directory.Name),
+            Id = setup.Id,
+            Name = name,
             Categories = setup.Categories,
             StartupWmClass = setup.StartupWmClass,
             Comment = setup.Comment,
@@ -33,8 +33,8 @@ public static class BuildUtils
             Keywords = setup.Keywords,
             Recommends = setup.Recommends,
             Section = setup.Section,
-            Package = setup.Package.Or(setup.AppName).GetValueOrDefault(exec.Name.Replace(".Desktop", "")),
-            Version = setup.Version.GetValueOrDefault("1.0.0"),
+            Package = package,
+            Version = version,
             VcsBrowser = setup.VcsBrowser,
             VcsGit = setup.VcsGit,
             InstalledSize = setup.InstalledSize,
@@ -62,7 +62,11 @@ public static class BuildUtils
 
                 return Result.Success(x);
             })
-            .Or(async () => await exec.GetArchitecture())
+            .Or(async () =>
+            {
+                var architecture = await exec.GetArchitecture();
+                return architecture.MapError(err => $"Invalid architecture of file \"{exec}\": {err}");
+            })
             .ToResult("Could not determine the architecture")
             .Bind(result => result);
     }
@@ -95,15 +99,15 @@ public static class BuildUtils
         Log.Information("No executable has been specified. Looking up for candidates.");
         var execFiles = await directory.Files()
             .ToObservable()
-            .Select(async file => (await file.IsElf()).Map(isElf => new { IsElf = isElf, File = file }))
-            .Concat()
+            .Select(file => Observable.FromAsync(async () => await file.IsElf()).Map(isElf => new { IsElf = isElf, File = file }))
+            .Merge(3)
             .Successes()
             .Where(x => x.IsElf && !x.File.Name.EndsWith(".so") && x.File.Name != "createdump")
             .Select(x => x.File)
             .ToList();
         return execFiles
             .TryFirst()
-            .ToResult("No executable has been specified Could not find any executable")
+            .ToResult(@$"Could not find any executable file in the input folder ""{directory}""")
             .Tap(file => Log.Information("Choosing {Executable}", file));
     }
 }

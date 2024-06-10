@@ -16,7 +16,7 @@ public static class HttpRequestData
                 var httpRequestMessage = new HttpRequestMessage(HttpMethod.Head, uri);
                 return httpClient.SendAsync(httpRequestMessage);
             })
-            .Bind(message => ResultEx.FromNullableStruct(message.Content.Headers.ContentLength).ToResult("Could not determine the Content Length"))
+            .Bind(message => MaybeEx.FromNullableStruct(message.Content.Headers.ContentLength).ToResult("Could not determine the Content Length"))
             .Map(l =>
             {
                 var usingAsync = Observable

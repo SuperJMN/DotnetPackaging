@@ -1,5 +1,5 @@
 ﻿using System.Reactive.Linq;
-using CSharpFunctionalExtensions;
+using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem;
 using Zafiro.Reactive;
 
@@ -18,7 +18,6 @@ public static class LinuxElfInspector
     
     public static IObservable<Result<Architecture>> GetArchitecture(IObservable<byte[]> byteChunks)
     {
-        var state = new List<byte>();
         var observable = byteChunks
             .Flatten() // Aplana los arrays en bytes individuales
             .Take(HeaderLength) // Solo toma la cantidad de bytes necesaria para determinar la arquitectura

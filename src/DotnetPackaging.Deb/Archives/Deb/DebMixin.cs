@@ -1,13 +1,8 @@
 ﻿using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb.Archives.Ar;
 using DotnetPackaging.Deb.Archives.Tar;
-using MoreLinq;
-using SharpCompress;
-using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
-using Zafiro.Mixins;
-using File = Zafiro.FileSystem.Lightweight.File;
 
 namespace DotnetPackaging.Deb.Archives.Deb;
 
@@ -47,7 +42,7 @@ public static class DebMixin
 
                         """.FromCrLfToLf();
 
-        return new Entry(new File("debian-binary", signature), properties);
+        return new Entry(new Zafiro.FileSystem.File("debian-binary", signature), properties);
     }
 
     private static Entry ControlTar(DebFile debFile)
@@ -99,7 +94,7 @@ public static class DebMixin
 
         var content = items.Compose() + "\n";
 
-        var file = new File("control", content);
+        var file = new Zafiro.FileSystem.File("control", content);
         
         var entries = new TarEntry[]
         {

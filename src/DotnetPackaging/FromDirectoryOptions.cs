@@ -1,15 +1,17 @@
-﻿using CSharpFunctionalExtensions;
-
-namespace DotnetPackaging;
+﻿namespace DotnetPackaging;
 
 public class FromDirectoryOptions
 {
     public Maybe<string> Package { get; private set; } = Maybe<string>.None;
-    public Maybe<string> PackageId { get; private set; } = Maybe<string>.None;
+    public Maybe<string> Id { get; private set; } = Maybe<string>.None;
     public Maybe<string> ExecutableName { get; private set; }
     public Maybe<Architecture> Architecture { get; private set; } = Maybe<Architecture>.None;
     public Maybe<IIcon> Icon { get; private set; } = Maybe<IIcon>.None;
-    public Maybe<string> AppName { get; private set; } = Maybe<string>.None;
+    
+    /// <summary>
+    /// Application name (AppName)
+    /// </summary>
+    public Maybe<string> Name { get; private set; } = Maybe<string>.None;
     public Maybe<Categories> Categories { get; private set; } = Maybe<Categories>.None;
     public Maybe<string> StartupWmClass { get; private set; } = Maybe<string>.None;
     public Maybe<string> Comment { get; private set; } = Maybe<string>.None;
@@ -31,66 +33,117 @@ public class FromDirectoryOptions
 
     public FromDirectoryOptions WithPackage(string package)
     {
+        if (string.IsNullOrWhiteSpace(package))
+        {
+            throw new ArgumentException("Can't be null or empty", package);
+        }
+        
         Package = package;
         return this;
     }
 
-    public FromDirectoryOptions WithPackageId(string packageId)
+    public FromDirectoryOptions WithId(string packageId)
     {
-        PackageId = packageId;
+        if (string.IsNullOrWhiteSpace(packageId))
+        {
+            throw new ArgumentException("Can't be null or empty", packageId);
+        }
+        
+        Id = packageId;
         return this;
     }
 
     public FromDirectoryOptions WithExecutableName(string executableName)
     {
+        if (string.IsNullOrWhiteSpace(executableName))
+        {
+            throw new ArgumentException("Can't be null or empty", executableName);
+        }
+        
         ExecutableName = executableName;
         return this;
     }
 
     public FromDirectoryOptions WithArchitecture(Architecture architecture)
     {
-        Architecture = architecture;
+        Architecture = architecture ?? throw new ArgumentNullException(nameof(architecture));
         return this;
     }
 
     public FromDirectoryOptions WithIcon(IIcon icon)
     {
+        if (icon == null)
+        {
+            throw new ArgumentNullException(nameof(icon));
+        }
+
         Icon = Maybe<IIcon>.From(icon);
         return this;
     }
 
-    public FromDirectoryOptions WithAppName(string appName)
+    public FromDirectoryOptions WithName(string appName)
     {
-        AppName = Maybe<string>.From(appName);
+        if (string.IsNullOrWhiteSpace(appName))
+        {
+            throw new ArgumentException("Can't be null or empty", appName);
+        }
+        
+        Name = Maybe<string>.From(appName);
         return this;
     }
 
     public FromDirectoryOptions WithCategories(Categories categories)
     {
+        if (categories == null)
+        {
+            throw new ArgumentNullException(nameof(categories));
+        }
+
         Categories = Maybe<Categories>.From(categories);
         return this;
     }
 
     public FromDirectoryOptions WithStartupWmClass(string startupWmClass)
     {
+        if (string.IsNullOrWhiteSpace(startupWmClass))
+        {
+            throw new ArgumentException("Can't be null or empty", startupWmClass);
+        }
+
+        
         StartupWmClass = Maybe<string>.From(startupWmClass);
         return this;
     }
 
     public FromDirectoryOptions WithComment(string comment)
     {
+        if (comment == null)
+        {
+            throw new ArgumentNullException(nameof(comment));
+        }
+
         Comment = Maybe<string>.From(comment);
         return this;
     }
 
     public FromDirectoryOptions WithDescription(string description)
     {
+        if (description == null)
+        {
+            throw new ArgumentNullException(nameof(description));
+        }
+
         Description = Maybe<string>.From(description);
         return this;
     }
 
     public FromDirectoryOptions WithHomepage(Uri homepage)
     {
+        if (homepage == null)
+        {
+            throw new ArgumentNullException(nameof(homepage));
+        }
+
         Homepage = Maybe<Uri>.From(homepage);
         return this;
     }
@@ -115,6 +168,11 @@ public class FromDirectoryOptions
 
     public FromDirectoryOptions WithMaintainer(string maintainer)
     {
+        if (string.IsNullOrWhiteSpace(maintainer))
+        {
+            throw new ArgumentException("Can't be null or empty", maintainer);
+        }
+        
         Maintainer = Maybe<string>.From(maintainer);
         return this;
     }

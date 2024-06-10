@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:DotnetPackaging.Gui.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             x:Class="DotnetPackaging.Gui.Views.PackageView"
+             x:DataType="vm:PackageViewModel">
+
+	<UserControl.Styles>
+		<Style Selector="HeaderedContentControl" />
+	</UserControl.Styles>
+
+	<DockPanel Grid.IsSharedSizeScope="True">
+		<StackPanel DockPanel.Dock="Bottom" Spacing="32">
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy^}" />
+            <Button Command="{Binding CreatePackage}" Content="Create Package" HorizontalAlignment="Center" />
+        </StackPanel>
+		<StackPanel Spacing="10">
+			<HeaderedContentControl Header="Source directory" >
+				<DockPanel>
+                    <Button Content="Browse…" DockPanel.Dock="Right" VerticalAlignment="Center"
+                            Command="{Binding SelectDirectory}" />
+                    <TextBlock VerticalAlignment="Center" Text="{Binding Directory.Path, FallbackValue='(nothing)'}" />
+                </DockPanel>
+			</HeaderedContentControl>
+			<HeaderedContentControl Header="Destination file">
+				<DockPanel>
+                    <Button Content="Browse…" DockPanel.Dock="Right" VerticalAlignment="Center"
+                            Command="{Binding SelectFile}" />
+                    <TextBlock VerticalAlignment="Center" Text="{Binding File.Path, FallbackValue='(nothing)'}" />
+                </DockPanel>
+			</HeaderedContentControl>
+			<HeaderedContentControl Header="Metadata">
+				<Button HorizontalAlignment="Right" Command="{Binding ShowMetadata}" Content="Edit…" />
+			</HeaderedContentControl>
+		</StackPanel>
+	</DockPanel>
+</UserControl>

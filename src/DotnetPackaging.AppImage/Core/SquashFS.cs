@@ -13,11 +13,8 @@ public class SquashFS
         var builder = new SquashFsBuilder(SqCompressionType.Gzip);
         return Result
             .Try(() => Create(root, "", builder))
-            .Map(() =>
-            {
-                var filesystemImage = builder.GetFilesystemImage();
-                return (IData)new ByteArrayData(filesystemImage);
-            });
+            .MapTry(() => builder.GetFilesystemImage())
+            .Map(bytes => (IData)new ByteArrayData(bytes));
     }
 
     public static void Create(UnixNode unixDir, string currentPath, SquashFsBuilder builder)

@@ -26,11 +26,11 @@ public class OptionsBinder(
     {
         return new Options
         {
-            AppName = Maybe.From(bindingContext.ParseResult.GetValueForOption(appNameOption)!),
+            Name = Maybe.From(bindingContext.ParseResult.GetValueForOption(appNameOption)!),
             StartupWmClass = Maybe.From(bindingContext.ParseResult.GetValueForOption(wmClassOption)!),
             Keywords = MaybeList(bindingContext, keywordsOption),
             Comment = Maybe.From(bindingContext.ParseResult.GetValueForOption(commentOption)!),
-            MainCategory = ResultEx.FromNullableStruct(bindingContext.ParseResult.GetValueForOption(mainCategoryOption)),
+            MainCategory = MaybeEx.FromNullableStruct(bindingContext.ParseResult.GetValueForOption(mainCategoryOption)),
             AdditionalCategories = MaybeList(bindingContext, additionalCategoriesOption),
             Icon = Maybe<IIcon>.From(bindingContext.ParseResult.GetValueForOption(iconOption)!),
             Version = Maybe.From(bindingContext.ParseResult.GetValueForOption(versionOption)!),
@@ -38,7 +38,7 @@ public class OptionsBinder(
             License = Maybe.From(bindingContext.ParseResult.GetValueForOption(licenseOption)!),
             ScreenshotUrls = MaybeList(bindingContext, screenshotUrlsOption),
             Summary = Maybe.From(bindingContext.ParseResult.GetValueForOption(summaryOption)!),
-            AppId = Maybe.From(bindingContext.ParseResult.GetValueForOption(appIdOption)!),
+            Id = Maybe.From(bindingContext.ParseResult.GetValueForOption(appIdOption)!),
             ExecutableName = Maybe.From(bindingContext.ParseResult.GetValueForOption(executableName)!),
         };
     }

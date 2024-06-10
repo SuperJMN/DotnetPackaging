@@ -1,0 +1,32 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:DotnetPackaging.Gui.Controls"
+             xmlns:gui="clr-namespace:DotnetPackaging.Gui"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450">
+	<gui:DataToBitmapConverter x:Key="FileToImageConverter" />
+	<ControlTheme x:Key="{x:Type controls:ImageSelector}" TargetType="controls:ImageSelector">
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="controls:ImageSelector">
+					<Border Padding="8" CornerRadius="{TemplateBinding CornerRadius}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+						<DockPanel>
+							<StackPanel DockPanel.Dock="Bottom" Spacing="4">
+								<TextBlock VerticalAlignment="Center" TextAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                           Text="{Binding Path=Controller.File.Name, RelativeSource={RelativeSource TemplatedParent}}" />
+								<Button Content="Browse…"
+                                        Command="{Binding Path=Controller.PickFile, RelativeSource={RelativeSource TemplatedParent}}" />
+							</StackPanel>
+							<Panel MaxHeight="{TemplateBinding MaxImageHeight}"
+                                   MaxWidth="{TemplateBinding MaxImageWidth}">
+								<Image Source="{Binding Path=Controller.File, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource FileToImageConverter}}" />
+								<Button HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding Path=Controller.File, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static ObjectConverters.IsNotNull}}" Command="{Binding Path=Controller.Reset, RelativeSource={RelativeSource TemplatedParent}}">X</Button>
+							</Panel>
+						</DockPanel>
+					</Border>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</ControlTheme>
+</ResourceDictionary>

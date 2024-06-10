@@ -1,0 +1,46 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:Zafiro.Avalonia.Converters;assembly=Zafiro.Avalonia"
+             xmlns:viewModels="clr-namespace:DotnetPackaging.Gui.ViewModels"
+             xmlns:gui="clr-namespace:DotnetPackaging.Gui"
+             xmlns:views="clr-namespace:DotnetPackaging.Gui.Views"
+             xmlns:misc="clr-namespace:Zafiro.Avalonia.Misc;assembly=Zafiro.Avalonia"
+             x:Class="DotnetPackaging.Gui.App"
+             RequestedThemeVariant="Default">
+	
+	<Application.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceInclude Source="Controls/ImageSelector.axaml" />
+			</ResourceDictionary.MergedDictionaries>
+            <ControlTheme x:Key="{x:Type Button}" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                <Setter Property="Background">
+                    <Setter.Value>
+                        <LinearGradientBrush>
+                            <GradientStop Offset="0" Color="#C2E4F6" />
+                            <GradientStop Offset="1" Color="#95CDEC" />
+                        </LinearGradientBrush>
+                    </Setter.Value>
+                </Setter>
+            </ControlTheme>
+		</ResourceDictionary>
+		<converters:MaybeToStringConverter x:Key="MaybeToStringConverter" />
+	</Application.Resources>
+	<Application.Styles>
+		<FluentTheme />
+		<StyleInclude Source="avares://Zafiro.Avalonia/Styles.axaml" />
+		<StyleInclude Source="avares://Zafiro.Avalonia.Dialogs/Styles.axaml" />
+		
+	</Application.Styles>
+
+	<Application.DataTemplates>
+        <DataTemplate DataType="viewModels:OptionsViewModel">
+            <views:MetadataView Width="500" Height="480" />
+        </DataTemplate>
+		<DataTemplate DataType="viewModels:PackageViewModel">
+			<views:PackageView />
+		</DataTemplate>
+		<!-- <misc:NamingConventionViewLocator /> -->
+    </Application.DataTemplates>
+
+</Application>
