@@ -107,7 +107,7 @@ public static class BuildUtils
             .ToList();
         return execFiles
             .TryFirst()
-            .ToResult("No executable has been specified Could not find any executable")
+            .ToResult(@$"Could not find any executable file in the input folder ""{directory}""")
             .Tap(file => Log.Information("Choosing {Executable}", file));
     }
 }
