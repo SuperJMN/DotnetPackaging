@@ -72,6 +72,7 @@ class Build : NukeBuild
 
     Target PublishGui => td => td
         .DependsOn(RestoreWorkloads)
+        .DependsOn(Clean)
         .OnlyWhenStatic(() => Repository.IsOnMainOrMasterBranch())
         .Requires(() => GitHubAuthenticationToken)
         .Executes(() =>
