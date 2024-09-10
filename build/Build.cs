@@ -60,35 +60,39 @@ class Build : NukeBuild
             DotNetWorkloadRestore(x => x.SetProject(Solution));
         });
     
-    Target PublishNuGetPackages => d => d
+    Target PublishDotNetTool => d => d
         .Requires(() => NuGetApiKey)
         .DependsOn(Clean)
         .OnlyWhenStatic(() => Repository.IsOnMainOrMasterBranch())
         .Executes(() =>
         {
-            var actions = new Actions(Solution, Repository, RootDirectory, GitVersion, Configuration);
-            actions.PushNuGetPackages(NuGetApiKey)
+            Actions.PushNuGetPackages(NuGetApiKey)
                 .TapError(error => throw new ApplicationException(error));
         });
 
-    Target PublishGitHubRelease => td => td
+    Target PublishGui => td => td
         .DependsOn(RestoreWorkloads)
         .OnlyWhenStatic(() => Repository.IsOnMainOrMasterBranch())
         .Requires(() => GitHubAuthenticationToken)
-        .Executes(async () =>
+        .Executes(() =>
         {
-            var windowsFiles = Task.FromResult(Actions.CreateWindowsPacks());
-            var options = Options();
-            var linuxAppImageFiles = Actions.CreateLinuxAppImages(options);
+            return Solution.Projects
+                .TryFirst(x => x.Name.EndsWith(".Desktop"))
+                .ToResult("Could not find the executable project in the solution")
+                .Map(async project =>
+                {
+                    var windowsFiles = Task.FromResult(Actions.CreateZip(project));
+                    var options = Options();
+                    var linuxAppImageFiles = Actions.CreateAppImages(project, options);
             
-            var allFiles = new[] { windowsFiles, linuxAppImageFiles }.Combine();
-            await allFiles
-                .Bind(paths => Actions.CreateGitHubRelease(GitHubAuthenticationToken, paths.Flatten().ToArray()))
-                .TapError(e => throw new ApplicationException(e));
+                    var allFiles = new[] { windowsFiles, linuxAppImageFiles }.Combine();
+                    return await allFiles
+                        .Bind(paths => Actions.CreateGitHubRelease(GitHubAuthenticationToken, paths.Flatten().ToArray()));
+                }).TapError(e => throw new ApplicationException(e)); 
         });
 
     Target Publish => td => td
-        .DependsOn(PublishGitHubRelease, PublishNuGetPackages);
+        .DependsOn(PublishGui, PublishDotNetTool);
 
     Options Options()
     {
