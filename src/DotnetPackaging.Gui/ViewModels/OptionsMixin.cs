@@ -12,6 +12,7 @@ public static class OptionsMixin
     {
         target.Icon.File = source.Icon.File;
         target.Id.Value = source.Id.Value;
+        target.IsTerminal = source.IsTerminal;
         target.StartupWMClass.Value = source.StartupWMClass.Value;
         target.Comment.Value = source.Comment.Value;
         target.Name.Value = source.Name.Value;
@@ -35,6 +36,7 @@ public static class OptionsMixin
             Name = optionsViewModel.Name.Value.WhitespaceAsNone(),
             Version = optionsViewModel.Version.Value.WhitespaceAsNone(),
             Summary = optionsViewModel.Summary.Value.WhitespaceAsNone(),
+            IsTerminal = optionsViewModel.IsTerminal,
             AdditionalCategories = Maybe.From(optionsViewModel.AdditionalCategories.Select(Enum.Parse<AdditionalCategory>)),
             MainCategory = optionsViewModel.MainCategory.WhitespaceAsNone().Bind(s => Maybe.From(Enum.Parse<MainCategory>(s)))
         });

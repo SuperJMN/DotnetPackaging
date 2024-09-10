@@ -15,6 +15,7 @@ public class OptionsViewModel : ReactiveValidationObject
         this.IncludeValidationOf(Name);
     }
 
+    public bool IsTerminal { get; set; }
     public StringField Name { get; } = new StringField("");
     public StringField Comment { get; } = new StringField("");
     public StringField Id { get; } = new StringField("");

@@ -1,5 +1,4 @@
-﻿
-using DotnetPackaging.AppImage.Core;
+﻿using DotnetPackaging.AppImage.Core;
 using Serilog;
 using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
@@ -32,7 +31,7 @@ public class FromContainer
                     }))
                 .Map(async conf => new
                 {
-                    Root = await CreateRoot(root, conf.Architecture, conf.Executable),
+                    Root = await CreateRoot(root, conf.Architecture, conf.Executable, setup.IsTerminal),
                     conf.Runtime,
                 })
                 .Map(conf => new Core.AppImage(conf.Runtime, conf.Root)));
@@ -40,25 +39,25 @@ public class FromContainer
         return build;
     }
 
-    private async Task<UnixRoot> CreateRoot(IDirectory directory, Architecture architecture, IFile executable)
+    private async Task<UnixRoot> CreateRoot(IDirectory directory, Architecture architecture, IFile executable, bool isTerminal)
     {
-        var packageMetadata = await BuildUtils.CreateMetadata(setup, directory, architecture, executable);
+        var packageMetadata = await BuildUtils.CreateMetadata(setup, directory, architecture, executable, isTerminal);
 
         var localExecPath = "$APPDIR" + "/usr/bin/" + executable.Name;
-        
+
         var binFiles = directory.RootedFiles().Select(file => new RootedFile("usr/bin", new UnixFile(file, file.Name == executable.Name ? UnixFileProperties.ExecutableFileProperties() : UnixFileProperties.RegularFileProperties())));
         var iconFiles = packageMetadata.Icon.Match(icon => new[]
         {
-            new RootedFile(ZafiroPath.Empty, new UnixFile(".AppDir", icon)),
+            new RootedFile(ZafiroPath.Empty, new UnixFile(".DirIcon", icon)),
+            new RootedFile(ZafiroPath.Empty, new UnixFile(packageMetadata.Package + ".png", icon)),
             new RootedFile($"usr/share/icons/hicolor/{icon.Size}x{icon.Size}/apps", new UnixFile(packageMetadata.Package.ToLower() + ".png", icon))
         }, Enumerable.Empty<RootedFile>);
 
-        
-        // TODO: PackageMetadata.Package should not be null.
+
         IEnumerable<IRootedFile> files = new[]
             {
-                new RootedFile("usr/bin", new UnixFile(packageMetadata.Package.ToLower(), (StringData) TextTemplates.RunScript(localExecPath), UnixFileProperties.ExecutableFileProperties())),
-                new RootedFile(ZafiroPath.Empty, new UnixFile("AppRun", (StringData) TextTemplates.RunScript(localExecPath), UnixFileProperties.ExecutableFileProperties())),
+                new RootedFile("usr/bin", new UnixFile(packageMetadata.Package.ToLower(), (StringData)TextTemplates.RunScript(localExecPath), UnixFileProperties.ExecutableFileProperties())),
+                new RootedFile(ZafiroPath.Empty, new UnixFile("AppRun", (StringData)TextTemplates.RunScript(localExecPath), UnixFileProperties.ExecutableFileProperties())),
                 new RootedFile(ZafiroPath.Empty, new UnixFile("application.desktop", new StringData(TextTemplates.DesktopFileContents(localExecPath, packageMetadata)))),
                 new RootedFile("usr/share/metainfo", new UnixFile(packageMetadata.Package.ToLower() + ".appdata.xml", new StringData(TextTemplates.AppStream(packageMetadata)))),
             }

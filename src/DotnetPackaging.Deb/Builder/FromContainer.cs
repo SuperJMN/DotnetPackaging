@@ -20,7 +20,7 @@ public class FromContainer
             .Bind(exec => BuildUtils.GetArch(setup, exec).Tap(arch => Log.Information("Architecture set to {Arch}", arch))
                 .Map(async architecture => new
                 {
-                    PackageMetadata = await BuildUtils.CreateMetadata(setup, root, architecture, exec),
+                    PackageMetadata = await BuildUtils.CreateMetadata(setup, root, architecture, exec, setup.IsTerminal),
                     Executable = exec
                 }))
             .Map(conf => new Archives.Deb.DebFile(conf.PackageMetadata, TarEntryBuilder.From(root, conf.PackageMetadata, conf.Executable).ToArray()));

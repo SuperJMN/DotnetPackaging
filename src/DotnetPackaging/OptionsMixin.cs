@@ -62,6 +62,10 @@ public static class OptionsMixin
         {
             setup.WithVersion(options.Version.Value);
         }
+        if (options.IsTerminal.HasValue)
+        {
+            setup.WithIsTerminal(options.IsTerminal.Value);   
+        }
         if (options.MainCategory.HasValue)
         {
             var categories = new Categories(options.MainCategory.Value,
