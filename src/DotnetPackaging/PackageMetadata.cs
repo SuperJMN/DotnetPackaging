@@ -2,7 +2,7 @@
 
 public record PackageMetadata
 {
-    public PackageMetadata(string name, Architecture architecture, string package, string version)
+    public PackageMetadata(string name, Architecture architecture, bool isTerminal, string package, string version)
     {
         if (string.IsNullOrEmpty(name))
         {
@@ -16,7 +16,8 @@ public record PackageMetadata
         {
             throw new ArgumentNullException(nameof(version), "La versión no puede ser nula o vacía");
         }
-        
+
+        IsTerminal = isTerminal;
         Architecture = architecture ?? throw new ArgumentNullException(nameof(architecture));
         Name = name;
         Package = package ?? throw new ArgumentNullException(nameof(package));
@@ -32,7 +33,8 @@ public record PackageMetadata
     /// Package name like "PowerStatistics", usually commandline friendly. Will be used for icon names, executable names...
     /// </summary>
     public required string Package { get; init; }
-    
+
+    public bool IsTerminal { get; }
     public required string Version { get; init; }
     public Maybe<string> StartupWmClass { get; init; } = Maybe<string>.None;
     public Maybe<IEnumerable<string>> Keywords { get; init; } = Maybe<IEnumerable<string>>.None;
@@ -42,11 +44,13 @@ public record PackageMetadata
     public Maybe<IEnumerable<Uri>> ScreenshotUrls { get; init; } = Maybe<IEnumerable<Uri>>.None;
     public Maybe<string> Summary { get; init; } = Maybe<string>.None;
     public Maybe<string> License { get; init; } = Maybe<string>.None;
-    
+
+
     /// <summary>
     /// Identifier to univocally represent your application, like "org.gnome.gnome-power-statistics". Like a package full name.
     /// </summary>
     public Maybe<string> Id { get; init; } = Maybe<string>.None;
+
     public Maybe<string> Section { get; init; } = Maybe<string>.None;
     public Maybe<string> Priority { get; init; } = Maybe<string>.None;
     public Maybe<string> Maintainer { get; init; } = Maybe<string>.None;

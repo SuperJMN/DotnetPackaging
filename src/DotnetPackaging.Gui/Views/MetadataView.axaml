@@ -37,6 +37,9 @@
 					<HeaderedContentControl Header="Version">
 						<TextBox Text="{Binding Version.Value, Mode=TwoWay}" />
 					</HeaderedContentControl>
+					<HeaderedContentControl Header="Is Terminal">
+						<CheckBox IsChecked="{Binding IsTerminal, Mode=TwoWay}" />
+					</HeaderedContentControl>
 				</StackPanel>
 				<HeaderedContentControl Header="Icon" ToolTip.Tip="This will be used as your application icon. It will be resized to fit into a square.">
 					<c:ImageSelector BorderBrush="Black" CornerRadius="4" BorderThickness="1"

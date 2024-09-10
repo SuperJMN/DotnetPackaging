@@ -30,7 +30,7 @@ public class Icon : IIcon
     public long Length => byteArrayData.Length;
 
     public int Size { get; }
-
+    
     public static Task<Result<IIcon>> FromData(IData data)
     {
         return FromImage(Image.Load(data.Bytes()));

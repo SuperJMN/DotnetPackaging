@@ -30,6 +30,7 @@ public class FromDirectoryOptions
     public Maybe<string> VcsGit { get; private set; } = Maybe<string>.None; 
     public Maybe<long> InstalledSize { get; private set; } = Maybe<long>.None;
     public Maybe<DateTimeOffset> ModificationTime { get; private set; } = Maybe<DateTimeOffset>.None;
+    public bool IsTerminal { get; private set; }
 
     public FromDirectoryOptions WithPackage(string package)
     {
@@ -229,5 +230,10 @@ public class FromDirectoryOptions
     {
         ModificationTime = Maybe<DateTimeOffset>.From(modificationTime);
         return this;
+    }
+
+    public void WithIsTerminal(bool isTerminalValue)
+    {
+        IsTerminal = isTerminalValue;
     }
 }

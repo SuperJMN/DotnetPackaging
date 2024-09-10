@@ -19,7 +19,9 @@ public class OptionsBinder(
     Option<IEnumerable<Uri>> screenshotUrlsOption,
     Option<string> summaryOption,
     Option<string> appIdOption,
-    Option<string> executableName)
+    Option<string> executableName,
+    Option<bool> isTerminal
+    )
     : BinderBase<Options>
 {
     protected override Options GetBoundValue(BindingContext bindingContext)
@@ -40,6 +42,7 @@ public class OptionsBinder(
             Summary = Maybe.From(bindingContext.ParseResult.GetValueForOption(summaryOption)!),
             Id = Maybe.From(bindingContext.ParseResult.GetValueForOption(appIdOption)!),
             ExecutableName = Maybe.From(bindingContext.ParseResult.GetValueForOption(executableName)!),
+            IsTerminal = Maybe.From(bindingContext.ParseResult.GetValueForOption(isTerminal))
         };
     }
 

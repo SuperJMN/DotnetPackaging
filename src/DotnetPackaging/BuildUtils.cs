@@ -7,14 +7,14 @@ namespace DotnetPackaging;
 
 public static class BuildUtils
 {
-    public static async Task<PackageMetadata> CreateMetadata(FromDirectoryOptions setup, IDirectory directory, Architecture architecture, IFile exec)
+    public static async Task<PackageMetadata> CreateMetadata(FromDirectoryOptions setup, IDirectory directory, Architecture architecture, IFile exec, bool isTerminal)
     {
         var icon = await GetIcon(setup, directory).TapError(Log.Warning);
         var package = setup.Package.Or(setup.Name).GetValueOrDefault(exec.Name.Replace(".Desktop", ""));
         var version = setup.Version.GetValueOrDefault("1.0.0");
         var name = setup.Name.GetValueOrDefault(directory.Name);
         
-        var packageMetadata = new PackageMetadata(name, architecture, package, version)
+        var packageMetadata = new PackageMetadata(name, architecture, isTerminal, package, version)
         {
             Architecture = architecture,
             Icon = icon.AsMaybe(),

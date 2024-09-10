@@ -14,7 +14,7 @@ public static class TextTemplates
             metadata.StartupWmClass.Map(n => $"StartupWMClass={n}"),
             metadata.Comment.Map(n => $"Comment={n}"),
             metadata.Icon.Map(_ => $"Icon={metadata.Package.ToLower()}"),
-            Maybe.From("Terminal=False"),
+            Maybe.From($"Terminal={metadata.IsTerminal}"),
             Maybe.From($"Exec=\"{executablePath}\""),
             metadata.Categories.Map(x => $"Categories={x}"),
             metadata.Keywords.Map(keywords => $"Keywords={keywords.JoinWith(";")}"),
