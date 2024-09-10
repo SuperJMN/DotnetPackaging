@@ -1,5 +1,7 @@
 variables:
-  Agent.Source.Git.ShallowFetchDepth: 0
+  - group: api-keys
+  - name: Agent.Source.Git.ShallowFetchDepth
+    value: 0
 
 steps:
 - checkout: self
