@@ -1,16 +1,10 @@
 ﻿using DotnetPackaging.AppImage.Core;
+using Zafiro.FileSystem.Readonly;
 
 namespace DotnetPackaging.AppImage.Builder;
 
-public class AppImageBuilder
+public class AppImageBuilder(RuntimeFactory runtimeFactory)
 {
-    private readonly RuntimeFactory runtimeFactory;
-
-    public AppImageBuilder(RuntimeFactory runtimeFactory)
-    {
-        this.runtimeFactory = runtimeFactory;
-    }
-
     public FromContainerConfiguration Directory(IDirectory root)
     {
         return new FromContainerConfiguration(runtimeFactory, root);

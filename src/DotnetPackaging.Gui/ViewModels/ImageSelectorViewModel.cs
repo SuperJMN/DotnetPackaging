@@ -1,8 +1,8 @@
 using System.Reactive;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
 using ReactiveUI.Fody.Helpers;
 using Zafiro.CSharpFunctionalExtensions;
+using Zafiro.FileSystem.Readonly;
 
 namespace DotnetPackaging.Gui.ViewModels;
 

@@ -1,7 +1,7 @@
 ﻿using System.Reactive.Linq;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
-using Zafiro.FileSystem;
+using Zafiro.FileSystem.Readonly;
 
 namespace DotnetPackaging;
 

@@ -1,6 +1,5 @@
 ﻿using System.Reactive.Linq;
-using Zafiro.CSharpFunctionalExtensions;
-using Zafiro.FileSystem;
+using Zafiro.FileSystem.Readonly;
 using Zafiro.Reactive;
 
 namespace DotnetPackaging;

@@ -1,17 +1,17 @@
 ﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using Zafiro.DataModel;
-using Zafiro.FileSystem;
+using Zafiro.FileSystem.Core;
 
 namespace DotnetPackaging;
 
 public class Icon : IIcon
 {
-    private readonly ByteArrayData byteArrayData;
+    private readonly IData data;
 
-    private Icon(ByteArrayData byteArrayData, int size)
+    private Icon(IData data, int size)
     {
-        this.byteArrayData = byteArrayData;
+        this.data = data;
         Size = size;
     }
 
@@ -22,12 +22,12 @@ public class Icon : IIcon
             await using var memoryStream = new MemoryStream();
             var icon = image.Iconize();
             await icon.SaveAsync(memoryStream, PngFormat.Instance);
-            return (IIcon)new Icon(new ByteArrayData(memoryStream.ToArray()), icon.Width);
+            return (IIcon)new Icon(Data.FromByteArray(memoryStream.ToArray()), icon.Width);
         });
     }
 
-    public IObservable<byte[]> Bytes => byteArrayData.Bytes;
-    public long Length => byteArrayData.Length;
+    public IObservable<byte[]> Bytes => data.Bytes;
+    public long Length => data.Length;
 
     public int Size { get; }
     

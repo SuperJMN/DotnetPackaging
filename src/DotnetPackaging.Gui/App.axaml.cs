@@ -1,17 +1,17 @@
 ﻿using Avalonia;
 using Avalonia.Controls.Notifications;
+using Avalonia.Controls.Templates;
 using Avalonia.Markup.Xaml;
 using DotnetPackaging.Gui.Core;
 using DotnetPackaging.Gui.ViewModels;
 using DotnetPackaging.Gui.Views;
-using Zafiro.Avalonia.Dialogs;
 using Zafiro.Avalonia.Dialogs.Simple;
 using Zafiro.Avalonia.Notifications;
 using Zafiro.Avalonia.Storage;
 
 namespace DotnetPackaging.Gui;
 
-public partial class App : Application
+public class App : Application
 {
     public override void Initialize()
     {
@@ -29,9 +29,9 @@ public partial class App : Application
 
             var notificationService = new NotificationService(new WindowNotificationManager(topLevel));
             var packagers = new IPackager[] { new AppImagePackager(), new DebImagePackager() };
-            var simpleDesktopDialogService = new SimpleDesktopDialogService(Maybe<Action<ConfigureWindowContext>>.None);
+            var dialogService = new DesktopDialog(Maybe<DataTemplates>.None);
             var options = new OptionsViewModel(picker);
-            var main = new PackagerSelectionViewModel(packagers, packager => new PackageViewModel(packager, options, picker, notificationService, simpleDesktopDialogService));
+            var main = new PackagerSelectionViewModel(packagers, packager => new PackageViewModel(packager, options, picker, notificationService, dialogService));
             return main;
         }, () => new MainWindow());
     }

@@ -1,4 +1,6 @@
-﻿using Zafiro.FileSystem.Unix;
+﻿using Zafiro.FileSystem.Core;
+using Zafiro.FileSystem.Readonly;
+using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.Deb.Builder;
 

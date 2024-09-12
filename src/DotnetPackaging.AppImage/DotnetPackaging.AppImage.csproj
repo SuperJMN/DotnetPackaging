@@ -13,8 +13,7 @@
 		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
 		<PackageReference Include="NyaFs" Version="1.0.1" />
 		<PackageReference Include="System.Security.Permissions" Version="8.0.0" />
-		<PackageReference Include="Zafiro.FileSystem.Local" Version="6.0.4" />
-		<PackageReference Include="Zafiro.FileSystem.Unix" Version="6.0.4" />
+		<PackageReference Include="Zafiro.FileSystem.Unix" Version="11.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>

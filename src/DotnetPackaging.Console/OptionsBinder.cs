@@ -12,7 +12,7 @@ public class OptionsBinder(
     Option<string> commentOption,
     Option<MainCategory?> mainCategoryOption,
     Option<IEnumerable<AdditionalCategory>> additionalCategoriesOption,
-    Option<IIcon> iconOption, 
+    Option<IIcon?> iconOption, 
     Option<string> versionOption,
     Option<Uri> homePageOption,
     Option<string> licenseOption,

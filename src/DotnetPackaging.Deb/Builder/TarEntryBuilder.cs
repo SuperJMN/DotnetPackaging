@@ -1,6 +1,8 @@
 ﻿using System.Text;
 using DotnetPackaging.Deb.Archives.Tar;
 using Zafiro.DataModel;
+using Zafiro.FileSystem.Core;
+using Zafiro.FileSystem.Readonly;
 using Zafiro.FileSystem.Unix;
 using Zafiro.Mixins;
 
@@ -25,8 +27,8 @@ public static class TarEntryBuilder
     {
         return new FileTarEntry[]
         {
-            new($"./usr/local/share/applications/{metadata.Package.ToLower()}.desktop", new StringData(TextTemplates.DesktopFileContents(executablePath, metadata), Encoding.ASCII), Misc.RegularFileProperties()),
-            new($"./usr/local/bin/{metadata.Package.ToLower()}", new StringData(TextTemplates.RunScript(executablePath), Encoding.ASCII), Misc.ExecutableFileProperties())
+            new($"./usr/local/share/applications/{metadata.Package.ToLower()}.desktop", Data.FromString(TextTemplates.DesktopFileContents(executablePath, metadata), Encoding.ASCII), Misc.RegularFileProperties()),
+            new($"./usr/local/bin/{metadata.Package.ToLower()}", Data.FromString(TextTemplates.RunScript(executablePath), Encoding.ASCII), Misc.ExecutableFileProperties())
         }.Concat(GetIconEntry(metadata));
     }
     

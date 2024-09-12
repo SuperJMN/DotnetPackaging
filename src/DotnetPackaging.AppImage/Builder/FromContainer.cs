@@ -1,6 +1,8 @@
 ﻿using DotnetPackaging.AppImage.Core;
 using Serilog;
 using Zafiro.DataModel;
+using Zafiro.FileSystem.Core;
+using Zafiro.FileSystem.Readonly;
 using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.AppImage.Builder;
@@ -56,10 +58,10 @@ public class FromContainer
 
         IEnumerable<IRootedFile> files = new[]
             {
-                new RootedFile("usr/bin", new UnixFile(packageMetadata.Package.ToLower(), (StringData)TextTemplates.RunScript(localExecPath), UnixFileProperties.ExecutableFileProperties())),
-                new RootedFile(ZafiroPath.Empty, new UnixFile("AppRun", (StringData)TextTemplates.RunScript(localExecPath), UnixFileProperties.ExecutableFileProperties())),
-                new RootedFile(ZafiroPath.Empty, new UnixFile("application.desktop", new StringData(TextTemplates.DesktopFileContents(localExecPath, packageMetadata)))),
-                new RootedFile("usr/share/metainfo", new UnixFile(packageMetadata.Package.ToLower() + ".appdata.xml", new StringData(TextTemplates.AppStream(packageMetadata)))),
+                new RootedFile("usr/bin", new UnixFile(packageMetadata.Package.ToLower(), Data.FromString(localExecPath), UnixFileProperties.ExecutableFileProperties())),
+                new RootedFile(ZafiroPath.Empty, new UnixFile("AppRun", Data.FromString(TextTemplates.RunScript(localExecPath)), UnixFileProperties.ExecutableFileProperties())),
+                new RootedFile(ZafiroPath.Empty, new UnixFile("application.desktop", Data.FromString(TextTemplates.DesktopFileContents(localExecPath, packageMetadata)))),
+                new RootedFile("usr/share/metainfo", new UnixFile(packageMetadata.Package.ToLower() + ".appdata.xml", Data.FromString(TextTemplates.AppStream(packageMetadata)))),
             }
             .Concat(iconFiles)
             .Concat(binFiles);

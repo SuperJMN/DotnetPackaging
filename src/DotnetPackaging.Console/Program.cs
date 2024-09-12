@@ -1,19 +1,17 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Parsing;
-using System.IO.Abstractions;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.Deb;
 using Serilog;
 using Zafiro.DataModel;
-using Zafiro.FileSystem;
-using Zafiro.FileSystem.Local;
+using Zafiro.FileSystem.Core;
 
 namespace DotnetPackaging.Console;
 
 static class Program
 {
-    private static readonly FileSystem FileSystem = new();
+    private static readonly System.IO.Abstractions.FileSystem FileSystem = new();
     
     public static Task<int> Main(string[] args)
     {
@@ -46,7 +44,7 @@ static class Program
         var appId = new Option<string>("--appId", "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication") { IsRequired = false };
         var executableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
         var isTerminal = new Option<bool>("--is-terminal", "Indicates whether your application is a terminal application") { IsRequired = false };
-        var iconOption = new Option<IIcon>("--icon", GetIcon )
+        var iconOption = new Option<IIcon?>("--icon", GetIcon )
         {
             IsRequired = false,
             Description = "Path to the application icon"
@@ -95,7 +93,8 @@ static class Program
 
     private static Task CreateAppImage(DirectoryInfo inputDir, FileInfo outputFile, Options options)
     {
-        return new DotNetDirectory(FileSystem.DirectoryInfo.New(inputDir.FullName)).ToLightweight()
+        return new Zafiro.FileSystem.Local.Directory(FileSystem.DirectoryInfo.New(inputDir.FullName))
+            .ToDirectory()
             .Bind(directory =>
             {
                 return AppImage.AppImage.From()
@@ -112,7 +111,8 @@ static class Program
 
     private static Task CreateDeb(DirectoryInfo inputDir, FileInfo outputFile, Options options)
     {
-        return new DotNetDirectory(FileSystem.DirectoryInfo.New(inputDir.FullName)).ToLightweight()
+        return new Zafiro.FileSystem.Local.Directory(FileSystem.DirectoryInfo.New(inputDir.FullName))
+            .ToDirectory()
             .Bind(directory => DebFile.From()
                 .Directory(directory)
                 .Configure(configuration => configuration.From(options))
@@ -126,10 +126,10 @@ static class Program
             .WriteResult();
     }
 
-    private static IIcon GetIcon(ArgumentResult result)
+    private static IIcon? GetIcon(ArgumentResult result)
     {
         var iconPath = result.Tokens[0].Value;
-        var icon = Icon.FromData(new FileInfoData(FileSystem.FileInfo.New(iconPath))).Result;
+        var icon = Data.FromFileInfo(FileSystem.FileInfo.New(iconPath)); icon.Map(Icon.FromData);
         if (icon.IsFailure)
         {
             result.ErrorMessage = $"Invalid icon '{iconPath}': {icon.Error}";
