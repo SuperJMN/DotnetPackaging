@@ -12,6 +12,6 @@ public static class ArFileMixin
 
     private static IData Signature()
     {
-        return new StringData("!<arch>\n", Encoding.ASCII);
+        return Data.FromString("!<arch>\n", Encoding.ASCII);
     }
 }

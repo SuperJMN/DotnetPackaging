@@ -1,4 +1,6 @@
-﻿namespace DotnetPackaging.Deb.Builder;
+﻿using Zafiro.FileSystem.Readonly;
+
+namespace DotnetPackaging.Deb.Builder;
 
 public class FromContainerOptions
 {

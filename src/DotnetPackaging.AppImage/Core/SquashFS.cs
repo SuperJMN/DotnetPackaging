@@ -2,6 +2,7 @@
 using NyaFs.Filesystem.SquashFs;
 using NyaFs.Filesystem.SquashFs.Types;
 using Zafiro.DataModel;
+using Zafiro.FileSystem.Core;
 using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.AppImage.Core;
@@ -14,7 +15,7 @@ public class SquashFS
         return Result
             .Try(() => Create(root, "", builder))
             .MapTry(() => builder.GetFilesystemImage())
-            .Map(bytes => (IData)new ByteArrayData(bytes));
+            .Map(bytes => (IData)Data.FromByteArray(bytes));
     }
 
     public static void Create(UnixNode unixDir, string currentPath, SquashFsBuilder builder)
@@ -34,7 +35,8 @@ public class SquashFS
 
     private static void CreateFile(UnixFile unixFile, string currentPath, SquashFsBuilder builder)
     {
-        builder.File(currentPath + "/" + unixFile.Name, unixFile.Bytes(), (uint)unixFile.Properties.OwnerId.GetValueOrDefault(), (uint)unixFile.Properties.OwnerId.GetValueOrDefault(), (uint)unixFile.Properties.FileMode);
+        var content = unixFile.Bytes();
+        builder.File(currentPath + "/" + unixFile.Name, content, (uint)unixFile.Properties.OwnerId.GetValueOrDefault(), (uint)unixFile.Properties.OwnerId.GetValueOrDefault(), (uint)unixFile.Properties.FileMode);
     }
 
     private static void CreateDir(UnixDir unixDir, string currentPath, SquashFsBuilder builder)

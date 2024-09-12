@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using Serilog;
+using Zafiro.FileSystem.Readonly;
 
 namespace DotnetPackaging.Deb.Builder;
 

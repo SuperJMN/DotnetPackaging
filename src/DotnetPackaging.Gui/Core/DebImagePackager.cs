@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using DotnetPackaging.Deb.Archives.Deb;
 using Zafiro.FileSystem.Mutable;
+using Zafiro.FileSystem.Readonly;
 
 namespace DotnetPackaging.Gui.Core;
 
@@ -17,6 +18,6 @@ public class DebImagePackager : IPackager
             .Directory(sourceDirectory)
             .Configure(x => x.From(options)).Build()
             .Map(deb => deb.ToData())
-            .Bind(outputFile.SetContents);
+            .Bind(data => outputFile.SetContents(data));
     }
 }

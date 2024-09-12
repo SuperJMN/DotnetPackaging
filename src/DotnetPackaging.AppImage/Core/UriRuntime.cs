@@ -14,7 +14,7 @@ public class UriRuntime : IRuntime
     public static async Task<Result<UriRuntime>> Create(Uri uri)
     {
         var data = await HttpRequestData.Create(uri);
-        return data.Map(data1 => new UriRuntime(data1));
+        return data.Map(data => new UriRuntime(data));
     }
 
     public IObservable<byte[]> Bytes => runtimeImplementation.Bytes;

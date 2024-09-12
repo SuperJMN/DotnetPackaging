@@ -3,6 +3,7 @@ using DotnetPackaging.Deb.Archives.Ar;
 using DotnetPackaging.Deb.Archives.Tar;
 using Zafiro.DataModel;
 using Zafiro.FileSystem.Unix;
+using File = Zafiro.FileSystem.Readonly.File;
 
 namespace DotnetPackaging.Deb.Archives.Deb;
 
@@ -24,7 +25,7 @@ public static class DebMixin
             LastModification = debFile.Metadata.ModificationTime,
             OwnerId = 0,
         };
-        return new Entry(new ByteProviderFile("data.tar", dataTarFile.ToData()), properties);
+        return new Entry(new File("data.tar", dataTarFile.ToData()), properties);
     }
 
     private static Entry Signature(DebFile debFile)
@@ -42,7 +43,7 @@ public static class DebMixin
 
                         """.FromCrLfToLf();
 
-        return new Entry(new Zafiro.FileSystem.File("debian-binary", signature), properties);
+        return new Entry(new File("debian-binary", Data.FromString(signature)), properties);
     }
 
     private static Entry ControlTar(DebFile debFile)
@@ -56,7 +57,7 @@ public static class DebMixin
         };
         
         var controlTarFile = ControlTarFile(debFile);
-        return new Entry(new ByteProviderFile("control.tar", controlTarFile.ToData()), properties);
+        return new Entry(new File("control.tar", controlTarFile.ToData()), properties);
     }
     
      private static TarFile ControlTarFile(DebFile deb)
@@ -94,7 +95,7 @@ public static class DebMixin
 
         var content = items.Compose() + "\n";
 
-        var file = new Zafiro.FileSystem.File("control", content);
+        var file = new File("control", Data.FromString(content));
         
         var entries = new TarEntry[]
         {

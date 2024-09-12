@@ -7,9 +7,10 @@ using DotnetPackaging.Gui.Core;
 using ReactiveUI.Validation.Extensions;
 using Zafiro.Avalonia.Dialogs;
 using Zafiro.Avalonia.Dialogs.Simple;
-using Zafiro.Avalonia.Storage;
 using Zafiro.CSharpFunctionalExtensions;
+using Zafiro.FileSystem.Core;
 using Zafiro.FileSystem.Mutable;
+using Zafiro.FileSystem.Readonly;
 using Zafiro.Reactive;
 
 namespace DotnetPackaging.Gui.ViewModels;
@@ -22,7 +23,7 @@ public class PackageViewModel : ViewModelBase, IDisposable
     private readonly ObservableAsPropertyHelper<FileSystemNodeViewModel<IMutableFile>?> file;
 
     public PackageViewModel(IPackager packager, OptionsViewModel options, IFileSystemPicker systemPicker,
-        INotificationService notificationService, ISimpleDialog dialog)
+        INotificationService notificationService, IDialog dialog)
     {
         Packager = packager;
         OptionsViewModel = options;
@@ -56,7 +57,7 @@ public class PackageViewModel : ViewModelBase, IDisposable
         {
             var optionsViewModel = new OptionsViewModel(systemPicker);
             OptionsViewModel.CopyTo(optionsViewModel);
-            await dialog.Show(optionsViewModel, "Options", optionsViewModel.IsValid());
+            await dialog.Show(optionsViewModel, "Options", optionsViewModel.IsValid(), Maybe<Action<ConfigureSizeContext>>.None);
             optionsViewModel.CopyTo(OptionsViewModel);
         });
     }
@@ -109,7 +110,7 @@ public class PackageViewModel : ViewModelBase, IDisposable
 
     private Task<Result> Pack()
     {
-        return Directory!.Value.ToImmutable()
+        return Directory!.Value.ToDirectory()
             .Bind(dir => OptionsViewModel
                 .ToOptions()
                 .Bind(options => CreateAppImage(dir!, File!.Value, options)));

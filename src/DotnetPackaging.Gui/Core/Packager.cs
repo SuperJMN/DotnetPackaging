@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Zafiro.FileSystem.Mutable;
+using Zafiro.FileSystem.Readonly;
 
 namespace DotnetPackaging.Gui.Core;
 

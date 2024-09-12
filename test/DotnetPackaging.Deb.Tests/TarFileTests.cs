@@ -16,7 +16,7 @@ public class TarFileTests
     {
         var entries = new List<TarEntry>
         {
-            new FileTarEntry("My entry", new StringData("My content", Encoding.ASCII), new TarFileProperties()
+            new FileTarEntry("My entry", Data.FromString("My content", Encoding.ASCII), new TarFileProperties()
             {
                 FileMode = "777".ToFileMode(),
                 GroupId = 1000,
@@ -25,7 +25,7 @@ public class TarFileTests
                 OwnerId = 1000,
                 LastModification = 1.January(2023),
             }),
-            new FileTarEntry("Other entry", new StringData("Other content", Encoding.ASCII), new TarFileProperties()
+            new FileTarEntry("Other entry", Data.FromString("Other content", Encoding.ASCII), new TarFileProperties()
             {
                 FileMode = "755".ToFileMode(),
                 GroupId = 123,
@@ -39,7 +39,7 @@ public class TarFileTests
         var tarFile = new TarFile(entries.ToArray());
         var data = tarFile.ToData();
         await data.DumpTo("C:\\Users\\JMN\\Desktop\\actual.tar");
-        var compare = await IsTarDataEquals(data, new ByteArrayData(await ReadAllBytesAsync("TestFiles\\Sample.tar")));
+        var compare = await IsTarDataEquals(data, Data.FromByteArray(await ReadAllBytesAsync("TestFiles\\Sample.tar")));
         compare.Should().BeTrue();
     }
 

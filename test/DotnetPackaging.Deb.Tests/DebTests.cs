@@ -60,9 +60,9 @@ public class DebTests
         {
             new DirectoryTarEntry("./", defaultDirProperties with { LastModification = DateTimeOffset.Parse("24/04/2024 12:11:05 +00:00") }),
             new DirectoryTarEntry("./bin/", defaultDirProperties with { LastModification = DateTimeOffset.Parse("24/04/2024 12:10:16 +00:00") }),
-            new FileTarEntry("./bin/test.sh", new StringData(shContents, Encoding.ASCII), defaultFileProperties with { LastModification = DateTimeOffset.Parse("24/04/2024 12:09:08 +00:00") }),
+            new FileTarEntry("./bin/test.sh", Data.FromString(shContents, Encoding.ASCII), defaultFileProperties with { LastModification = DateTimeOffset.Parse("24/04/2024 12:09:08 +00:00") }),
             new DirectoryTarEntry("./etc/", defaultDirProperties with { LastModification = DateTimeOffset.Parse("24/04/2024 12:10:10 +00:00") }),
-            new FileTarEntry("./etc/test.conf", new StringData(confContents, Encoding.ASCII), defaultFileProperties with
+            new FileTarEntry("./etc/test.conf", Data.FromString(confContents, Encoding.ASCII), defaultFileProperties with
             {
                 FileMode = "644".ToFileMode(),
                 LastModification = DateTimeOffset.Parse("24/04/2024 12:06:22 +00:00")
