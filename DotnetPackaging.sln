@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34202.233
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "build\_build.csproj", "{E11D9F39-3856-4626-A3C1-58BE7ECCD13A}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging", "src\DotnetPackaging\DotnetPackaging.csproj", "{BD2F6800-8509-480D-8F01-0E698375052B}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Deb", "src\DotnetPackaging.Deb\DotnetPackaging.Deb.csproj", "{6F7052C1-50DB-4826-9893-02656FBB7B69}"
@@ -13,11 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.AppImage", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Console", "src\DotnetPackaging.Console\DotnetPackaging.Console.csproj", "{F1BE6649-DFBE-4393-A651-CEBE5519CA56}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Gui", "src\DotnetPackaging.Gui\DotnetPackaging.Gui.csproj", "{B1B81155-E454-49DD-A483-6A5CC8652998}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Gui.Desktop", "src\DotnetPackaging.Gui.Desktop\DotnetPackaging.Gui.Desktop.csproj", "{008A9113-26F6-4B39-BB48-661D96C3C88D}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GUI", "GUI", "{3FA72CB7-AFBE-4646-8E5C-A71977A54B44}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,10 +19,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{E11D9F39-3856-4626-A3C1-58BE7ECCD13A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E11D9F39-3856-4626-A3C1-58BE7ECCD13A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E11D9F39-3856-4626-A3C1-58BE7ECCD13A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E11D9F39-3856-4626-A3C1-58BE7ECCD13A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -45,21 +35,12 @@ Global
 		{F1BE6649-DFBE-4393-A651-CEBE5519CA56}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F1BE6649-DFBE-4393-A651-CEBE5519CA56}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F1BE6649-DFBE-4393-A651-CEBE5519CA56}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B1B81155-E454-49DD-A483-6A5CC8652998}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B1B81155-E454-49DD-A483-6A5CC8652998}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B1B81155-E454-49DD-A483-6A5CC8652998}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B1B81155-E454-49DD-A483-6A5CC8652998}.Release|Any CPU.Build.0 = Release|Any CPU
-		{008A9113-26F6-4B39-BB48-661D96C3C88D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{008A9113-26F6-4B39-BB48-661D96C3C88D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{008A9113-26F6-4B39-BB48-661D96C3C88D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{008A9113-26F6-4B39-BB48-661D96C3C88D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{B1B81155-E454-49DD-A483-6A5CC8652998} = {3FA72CB7-AFBE-4646-8E5C-A71977A54B44}
-		{008A9113-26F6-4B39-BB48-661D96C3C88D} = {3FA72CB7-AFBE-4646-8E5C-A71977A54B44}
+		{F1BE6649-DFBE-4393-A651-CEBE5519CA56} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1D869DF1-9147-472D-A3D9-D519518A6951}
