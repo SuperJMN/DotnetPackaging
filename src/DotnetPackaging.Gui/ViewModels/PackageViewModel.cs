@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using DotnetPackaging.Gui.Core;
 using ReactiveUI.Validation.Extensions;
 using Zafiro.Avalonia.Dialogs;
-using Zafiro.Avalonia.Dialogs.Simple;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem.Core;
 using Zafiro.FileSystem.Mutable;
@@ -57,7 +56,7 @@ public class PackageViewModel : ViewModelBase, IDisposable
         {
             var optionsViewModel = new OptionsViewModel(systemPicker);
             OptionsViewModel.CopyTo(optionsViewModel);
-            await dialog.Show(optionsViewModel, "Options", optionsViewModel.IsValid(), Maybe<Action<ConfigureSizeContext>>.None);
+            await dialog.Show(optionsViewModel, "Options", optionsViewModel.IsValid());
             optionsViewModel.CopyTo(OptionsViewModel);
         });
     }

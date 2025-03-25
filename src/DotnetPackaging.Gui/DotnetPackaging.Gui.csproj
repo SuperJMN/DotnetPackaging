@@ -18,8 +18,8 @@
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="$(AvaloniaVersion)" />
     <PackageReference Include="ReactiveUI.Fody" Version="19.5.41" />
-    <PackageReference Include="Zafiro.Avalonia" Version="8.0.2" />
-    <PackageReference Include="Zafiro.Avalonia.Dialogs" Version="8.0.2" />
+    <PackageReference Include="Zafiro.Avalonia" Version="22.0.7" />
+    <PackageReference Include="Zafiro.Avalonia.Dialogs" Version="22.0.7" />
   </ItemGroup>
 
   <ItemGroup>
