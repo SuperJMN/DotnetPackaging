@@ -1,0 +1,3 @@
+[submodule "DeflateBlockCompressor"]
+	path = src/DeflateBlockCompressor
+	url = https://github.com/SuperJMN/DeflateBlockCompressor
