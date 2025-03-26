@@ -1,8 +1,6 @@
-using System.IO.Compression;
-using MsixPackaging.Core.Compression;
-using Zafiro.DivineBytes;
+using DotnetPackaging.Msix.Core.Compression;
 
-namespace MsixPackaging.Core;
+namespace DotnetPackaging.Msix.Core;
 
 public static class MsixEntryFactory
 {

@@ -1,6 +1,6 @@
-using System.Collections.Immutable;
+using Path = System.IO.Path;
 
-namespace MsixPackaging.Core.ContentTypes;
+namespace DotnetPackaging.Msix.Core.ContentTypes;
 
 /// <summary>
 /// Generador de Content Types que, a partir de la colección de nombres de partes,

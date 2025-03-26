@@ -1,10 +1,8 @@
-using System.IO.Compression;
-using System.Reactive.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
-using Zafiro.DivineBytes;
+using Zafiro.Mixins;
 
-namespace MsixPackaging.Core;
+namespace DotnetPackaging.Msix.Core;
 
 /// <summary>
 /// Class for creating a ZIP file from pre-compressed entries.

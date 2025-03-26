@@ -1,7 +1,7 @@
 using System.IO.Abstractions;
 using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
-using MsixPackaging.Core;
+using DotnetPackaging.Msix.Core;
 using Zafiro.DivineBytes;
 using MsixPackaging.Tests.Helpers;
 using Serilog;

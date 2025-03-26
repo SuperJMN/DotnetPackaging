@@ -1,16 +1,13 @@
-using System.Collections.Immutable;
-using System.IO.Compression;
-using System.Reactive.Linq;
 using System.Text;
 using BlockCompressor;
 using CSharpFunctionalExtensions;
-using MsixPackaging.Core.BlockMap;
-using MsixPackaging.Core.Compression;
-using MsixPackaging.Core.ContentTypes;
-using Zafiro.DivineBytes;
+using DotnetPackaging.Msix.Core.BlockMap;
+using DotnetPackaging.Msix.Core.Compression;
+using DotnetPackaging.Msix.Core.ContentTypes;
+using Zafiro.Mixins;
 using Zafiro.Reactive;
 
-namespace MsixPackaging.Core;
+namespace DotnetPackaging.Msix.Core;
 
 public class MsixPackager(Maybe<ILogger> logger)
 {

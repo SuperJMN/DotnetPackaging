@@ -1,4 +1,4 @@
-namespace MsixPackaging.Core.BlockMap;
+namespace DotnetPackaging.Msix.Core.BlockMap;
 
 public class CompressionBlockInfo
 {

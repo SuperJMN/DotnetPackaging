@@ -1,6 +1,4 @@
-using System.Collections.Immutable;
-
-namespace MsixPackaging.Core.BlockMap;
+namespace DotnetPackaging.Msix.Core.BlockMap;
 
 // Clases de modelo
 public class BlockMapModel

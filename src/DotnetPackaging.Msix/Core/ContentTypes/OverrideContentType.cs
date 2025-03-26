@@ -1,3 +1,3 @@
-namespace MsixPackaging.Core.ContentTypes;
+namespace DotnetPackaging.Msix.Core.ContentTypes;
 
 public record OverrideContentType(string PartName, string ContentType);

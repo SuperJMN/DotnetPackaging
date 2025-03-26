@@ -1,7 +1,6 @@
 ﻿using System.Reactive.Disposables;
-using System.Reactive.Linq;
 
-namespace MsixPackaging.Core.Compression;
+namespace DotnetPackaging.Msix.Core.Compression;
 
 public static class Extensions
 {
