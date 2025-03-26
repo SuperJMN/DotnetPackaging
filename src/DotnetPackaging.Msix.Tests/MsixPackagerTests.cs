@@ -58,7 +58,7 @@ public class MsixPackagerTests
     {
         var fs = new FileSystem();
         var directoryInfo = fs.DirectoryInfo.New($"TestFiles/{folderName}/Contents");
-        var package = new MsixPackager(Log.Logger).Pack(new IODir(directoryInfo));
+        var package = new MsixPackager(Log.Logger.AsMaybe()).Pack(new IODir(directoryInfo));
         await using (var fileStream = File.Create($"TestFiles/{folderName}/Actual.msix"))
         {
             await package.Value.DumpTo(fileStream);
