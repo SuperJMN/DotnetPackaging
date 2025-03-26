@@ -1,12 +1,16 @@
 using System.IO.Abstractions;
 using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Msix;
 using DotnetPackaging.Msix.Core;
+using DotnetPackaging.Msix.Core.Manifest;
 using Zafiro.DivineBytes;
 using MsixPackaging.Tests.Helpers;
 using Serilog;
+using Serilog.Core;
 using Xunit;
 using Xunit.Abstractions;
+using File = System.IO.File;
 
 namespace MsixPackaging.Tests;
 
@@ -50,6 +54,20 @@ public class MsixPackagerTests
     public async Task FullAvaloniaApp()
     {
         await EnsureValid("FullAvaloniaApp");
+    }
+    
+    [Fact]
+    public async Task MinimalWithMetadata()
+    {
+        var fs = new FileSystem();
+        var directoryInfo = fs.DirectoryInfo.New($"TestFiles/MinimalNoMetadata/Contents");
+        var ioDir = new IODir(directoryInfo);
+        await Msix.FromDirectoryAndMetadata(ioDir, new AppManifestMetadata(), Maybe<ILogger>.None)
+            .Map(async source =>
+            {
+                await using var fileStream = File.Open("TestFiles/MinimalNoMetadata/Actual.msix", FileMode.Create);
+                return await source.DumpTo(fileStream);
+            });
     }
 
     private static async Task EnsureValid(string folderName)
