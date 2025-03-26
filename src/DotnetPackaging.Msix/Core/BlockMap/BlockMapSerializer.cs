@@ -1,12 +1,10 @@
-using System.IO.Compression;
-using System.Reactive.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml;
 using CSharpFunctionalExtensions;
-using Zafiro.DivineBytes;
+using Zafiro.Mixins;
 
-namespace MsixPackaging.Core.BlockMap;
+namespace DotnetPackaging.Msix.Core.BlockMap;
 
 public class BlockMapSerializer(Maybe<ILogger> logger)
 {

@@ -1,5 +1,5 @@
 using BlockCompressor;
 
-namespace MsixPackaging.Core.BlockMap;
+namespace DotnetPackaging.Msix.Core.BlockMap;
 
 public record FileBlockInfo(MsixEntry Entry, IList<DeflateBlock> Blocks);

@@ -1,11 +1,9 @@
-﻿using System.IO.Compression;
-using System.IO.Pipelines;
+﻿using System.IO.Pipelines;
 using System.Reactive.Disposables;
-using System.Reactive.Linq;
 using BlockCompressor;
 using Zafiro.Reactive;
 
-namespace MsixPackaging.Core.Compression;
+namespace DotnetPackaging.Msix.Core.Compression;
 
 public static class Compressor
 {

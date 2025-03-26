@@ -2,7 +2,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace MsixPackaging.Core.ContentTypes;
+namespace DotnetPackaging.Msix.Core.ContentTypes;
 
 /// <summary>
 /// Serializador del modelo de Content Types a XML, generando un [Content_Types].xml conforme a la especificación.

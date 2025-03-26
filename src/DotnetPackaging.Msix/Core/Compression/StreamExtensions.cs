@@ -1,4 +1,4 @@
-﻿namespace MsixPackaging.Core.Compression;
+﻿namespace DotnetPackaging.Msix.Core.Compression;
 
 public static class StreamExtensions
 {

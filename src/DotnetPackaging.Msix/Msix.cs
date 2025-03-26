@@ -1,8 +1,7 @@
 using CSharpFunctionalExtensions;
-using MsixPackaging.Core;
-using Zafiro.DivineBytes;
+using DotnetPackaging.Msix.Core;
 
-namespace MsixPackaging;
+namespace DotnetPackaging.Msix;
 
 public class Msix
 {

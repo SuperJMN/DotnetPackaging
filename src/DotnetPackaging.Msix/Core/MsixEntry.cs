@@ -1,7 +1,4 @@
-using System.IO.Compression;
-using Zafiro.DivineBytes;
-
-namespace MsixPackaging.Core;
+namespace DotnetPackaging.Msix.Core;
 
 public class MsixEntry
 {

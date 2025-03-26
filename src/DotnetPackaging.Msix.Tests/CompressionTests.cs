@@ -1,5 +1,5 @@
 ﻿using System.Reactive.Linq;
-using MsixPackaging.Core.Compression;
+using DotnetPackaging.Msix.Core.Compression;
 using Xunit;
 using Zafiro.Reactive;
 
