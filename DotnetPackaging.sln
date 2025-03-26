@@ -17,6 +17,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Msix", "src
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlockCompressor", "src\DeflateBlockCompressor\BlockCompressor\BlockCompressor.csproj", "{420E36DD-9645-42B9-AFE7-07D8AA9F8870}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zafiro.DivineBytes", "..\..\SuperJMN-Zafiro\Zafiro\src\Zafiro.DivineBytes\Zafiro.DivineBytes.csproj", "{D208C078-ED96-43A9-BC26-A1E6B87AABFE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MsixPackaging.Tests", "src\DotnetPackaging.Msix.Tests\MsixPackaging.Tests.csproj", "{B1E45C87-34B6-46A8-9570-7D09C668F317}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,6 +51,14 @@ Global
 		{420E36DD-9645-42B9-AFE7-07D8AA9F8870}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{420E36DD-9645-42B9-AFE7-07D8AA9F8870}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{420E36DD-9645-42B9-AFE7-07D8AA9F8870}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D208C078-ED96-43A9-BC26-A1E6B87AABFE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D208C078-ED96-43A9-BC26-A1E6B87AABFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D208C078-ED96-43A9-BC26-A1E6B87AABFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D208C078-ED96-43A9-BC26-A1E6B87AABFE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1E45C87-34B6-46A8-9570-7D09C668F317}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1E45C87-34B6-46A8-9570-7D09C668F317}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1E45C87-34B6-46A8-9570-7D09C668F317}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1E45C87-34B6-46A8-9570-7D09C668F317}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
