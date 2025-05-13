@@ -47,7 +47,13 @@ public class FromContainer
 
         var localExecPath = "$APPDIR" + "/usr/bin/" + executable.Name;
 
-        var binFiles = directory.RootedFiles().Select(file => new RootedFile("usr/bin", new UnixFile(file, file.Name == executable.Name ? UnixFileProperties.ExecutableFileProperties() : UnixFileProperties.RegularFileProperties())));
+        // Those should go to usr/bin
+        var directoryFiles = directory.RootedFiles().Select(file =>
+        {
+            var newPath = ((ZafiroPath)"usr/bin").Combine(file.Path);
+            return new RootedFile(newPath, new UnixFile(file, file.Name == executable.Name ? UnixFileProperties.ExecutableFileProperties() : UnixFileProperties.RegularFileProperties()));
+        });
+        
         var iconFiles = packageMetadata.Icon.Match(icon => new[]
         {
             new RootedFile(ZafiroPath.Empty, new UnixFile(".DirIcon", icon)),
@@ -64,7 +70,7 @@ public class FromContainer
                 new RootedFile("usr/share/metainfo", new UnixFile(packageMetadata.Package.ToLower() + ".appdata.xml", Data.FromString(TextTemplates.AppStream(packageMetadata)))),
             }
             .Concat(iconFiles)
-            .Concat(binFiles);
+            .Concat(directoryFiles);
 
         var dir = files.ToList().ToRoot(ZafiroPath.Empty, (name, children) => new UnixDir(name, children.Cast<UnixNode>()));
         return new UnixRoot(dir.Nodes);
