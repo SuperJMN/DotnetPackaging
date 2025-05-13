@@ -1,8 +1,12 @@
 {
   "profiles": {
-    "DotnetPackage.Console": {
+    "Deb": {
       "commandName": "Project",
-      "commandLineArgs": "--directory c:\\users\\jmn\\desktop\\testing\\AvaloniaSyncer --metadata C:\\Users\\JMN\\Desktop\\Testing\\metadata.deb.json --output c:\\users\\jmn\\desktop\\testing\\AvaloniaSyncer.deb"
+      "commandLineArgs": "deb --directory /home/jmn/Escritorio/sample/ --output /home/jmn/Escritorio/pack.deb"
+    },
+    "AppImage": {
+      "commandName": "Project",
+      "commandLineArgs": "appimage --directory /home/jmn/Escritorio/sample/ --output /home/jmn/Escritorio/pack.appimage"
     }
   }
 }
