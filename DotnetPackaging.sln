@@ -13,12 +13,16 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Console", "
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "build\_build.csproj", "{C180C1E9-27B6-4F86-985F-96AC4D5C5FB2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C180C1E9-27B6-4F86-985F-96AC4D5C5FB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C180C1E9-27B6-4F86-985F-96AC4D5C5FB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BD2F6800-8509-480D-8F01-0E698375052B}.Release|Any CPU.ActiveCfg = Release|Any CPU
