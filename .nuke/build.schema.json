@@ -24,9 +24,7 @@
     "ExecutableTarget": {
       "type": "string",
       "enum": [
-        "Clean",
-        "Compile",
-        "Restore"
+        "Publish"
       ]
     },
     "Verbosity": {
@@ -100,13 +98,16 @@
   "allOf": [
     {
       "properties": {
-        "Configuration": {
+        "Force": {
+          "type": "boolean"
+        },
+        "NuGetApiKey": {
           "type": "string",
-          "description": "Configuration to build - Default is 'Debug' (local) or 'Release' (server)",
-          "enum": [
-            "Debug",
-            "Release"
-          ]
+          "default": "Secrets must be entered via 'nuke :secrets [profile]'"
+        },
+        "Solution": {
+          "type": "string",
+          "description": "Path to a solution file that is automatically loaded"
         }
       }
     },

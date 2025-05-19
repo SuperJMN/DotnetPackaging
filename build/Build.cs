@@ -21,7 +21,7 @@ class Build : NukeBuild
         .OnlyWhenStatic(() => Repository.IsOnMainOrMasterBranch() || Force)
         .Executes(async () =>
         {
-            var version = GitVersion.NuGetVersion;
+            var version = GitVersion.MajorMinorPatch;
             
             await Deployer.Instance.PublishPackages(PackableProjects, version, NuGetApiKey)
                 .TapError(error => Assert.Fail(error.ToString()));
