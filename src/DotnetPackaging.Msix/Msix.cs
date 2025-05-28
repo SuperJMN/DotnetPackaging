@@ -63,7 +63,7 @@ public class Dir
             }
             else
             {
-                // Si hay múltiples directorios con el mismo nombre, combinarlos recursivamente
+                // If there are multiple directories with the same name, combine them recursively
                 var combinedDir = Combine(dirName, dirs[0], dirs[1]);
                 
                 // Si hay más de dos, combinar los restantes

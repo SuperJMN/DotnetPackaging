@@ -4,7 +4,7 @@ using System.Xml.Linq;
 namespace DotnetPackaging.Msix.Core.Manifest;
 
 /// <summary>
-/// Clase para almacenar los metadatos esenciales del AppManifest.xml
+/// Class to store essential metadata for AppManifest.xml
 /// </summary>
 public class AppManifestMetadata
 {
@@ -35,10 +35,10 @@ public class AppManifestMetadata
 public class AppManifestGenerator
 {
     /// <summary>
-    /// Genera un string con el contenido XML del AppManifest a partir de los metadatos proporcionados
+    /// Generates a string with the XML content of the AppManifest from the provided metadata
     /// </summary>
-    /// <param name="metadata">Metadatos para el AppManifest</param>
-    /// <returns>String con el contenido XML del AppManifest</returns>
+    /// <param name="metadata">Metadata for the AppManifest</param>
+    /// <returns>String with the XML content of the AppManifest</returns>
     public static string GenerateAppManifest(AppManifestMetadata metadata)
     {
         using (var memoryStream = new MemoryStream())
@@ -53,10 +53,10 @@ public class AppManifestGenerator
     }
 
     /// <summary>
-    /// Escribe el contenido XML del AppManifest en un stream
+    /// Writes the XML content of the AppManifest to a stream
     /// </summary>
-    /// <param name="metadata">Metadatos para el AppManifest</param>
-    /// <param name="stream">Stream donde se escribirá el XML</param>
+    /// <param name="metadata">Metadata for the AppManifest</param>
+    /// <param name="stream">Stream where the XML will be written</param>
     public static void WriteToStream(AppManifestMetadata metadata, Stream stream)
     {
         XNamespace ns = "http://schemas.microsoft.com/appx/manifest/foundation/windows10";

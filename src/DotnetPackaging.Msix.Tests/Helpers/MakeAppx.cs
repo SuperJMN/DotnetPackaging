@@ -9,7 +9,7 @@ public static class MakeAppx
     /// </summary>
     /// <param name="msixPath">Ruta completa al archivo MSIX</param>
     /// <param name="outputDirectory">Directorio de destino para los archivos desempaquetados</param>
-    /// <param name="workingDirectory">Directorio de trabajo durante la ejecución (null para usar el directorio actual)</param>
+    /// <param name="workingDirectory">Working directory during execution (null to use the current directory)</param>
     /// <param name="timeoutSeconds">Tiempo máximo en segundos para esperar que termine el proceso (0 para esperar indefinidamente)</param>
     /// <returns>Un objeto con el resultado de la operación</returns>
     public static async Task<MsixUnpackResult> UnpackMsixAsync(
