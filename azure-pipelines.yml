@@ -5,6 +5,7 @@ variables:
 
 steps:
   - checkout: self
+    submodules: true
 
   - powershell: .\build.ps1
     env:

@@ -433,7 +433,6 @@ $RECYCLE.BIN/
 # Windows Installer files
 *.cab
 *.msi
-*.msix
 *.msm
 *.msp
 
@@ -452,3 +451,5 @@ $RECYCLE.BIN/
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+!*.msix/
+*.msix
