@@ -17,7 +17,7 @@ public static class BuildUtils
         var packageMetadata = new PackageMetadata(name, architecture, isTerminal, package, version)
         {
             Architecture = architecture,
-            Icon = icon.AsMaybe(),
+            Icon = FunctionalMixin.AsMaybe(icon),
             Id = setup.Id,
             Name = name,
             Categories = setup.Categories,

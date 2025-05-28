@@ -1,3 +1,3 @@
-[submodule "DeflateBlockCompressor"]
+[submodule "src/DeflateBlockCompressor"]
 	path = src/DeflateBlockCompressor
-	url = https://github.com/SuperJMN/DeflateBlockCompressor
+	url = https://github.com/SuperJMN/DeflateBlockCompressor.git

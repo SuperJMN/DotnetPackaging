@@ -26,14 +26,14 @@ public static class Compressor
     {
         return Observable.Create<byte[]>(observer =>
         {
-            // Aumentar el tamaño del buffer para evitar bloqueos
+            // Increase buffer size to avoid blocking
             var pipeOptions = new PipeOptions(pauseWriterThreshold: 1024 * 1024); // 1MB
             var pipe = new Pipe(pipeOptions);
 
-            // Primero configurar la suscripción de lectura para asegurar que se consumen los datos
+            // First configure the read subscription to ensure data is consumed
             var readSubscription = pipe.Reader.AsStream().ToObservable().Subscribe(observer);
 
-            // Crear el DeflateStream después de configurar la lectura
+            // Create DeflateStream after configuring the read
             var deflateStream = new DeflateStream(pipe.Writer.AsStream(), compressionLevel, leaveOpen: true);
 
             // Suscribirse a la fuente
