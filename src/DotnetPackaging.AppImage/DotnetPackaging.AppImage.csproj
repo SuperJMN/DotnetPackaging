@@ -13,10 +13,12 @@
 		<PackageReference Include="Microsoft.Extensions.Http" />
 		<PackageReference Include="NyaFs" />
 		<PackageReference Include="System.Security.Permissions" />
-		<PackageReference Include="Zafiro.FileSystem.Unix" />
+<!--		<PackageReference Include="Zafiro.FileSystem.Unix" />-->
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro\src\Zafiro.FileSystem.Unix\Zafiro.FileSystem.Unix.csproj" />
+		<ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro\src\Zafiro.FileSystem\Zafiro.FileSystem.csproj" />
 		<ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
 	</ItemGroup>
 

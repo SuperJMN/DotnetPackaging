@@ -7,6 +7,10 @@
   <Import Project="..\Common.props" />
   <ItemGroup>
     <PackageReference Include="SixLabors.ImageSharp" />
-    <PackageReference Include="Zafiro.FileSystem" />
+<!--    <PackageReference Include="Zafiro.FileSystem" />-->
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro\src\Zafiro.FileSystem\Zafiro.FileSystem.csproj" />
+    <ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro\src\Zafiro\Zafiro.csproj" />
   </ItemGroup>
 </Project>
