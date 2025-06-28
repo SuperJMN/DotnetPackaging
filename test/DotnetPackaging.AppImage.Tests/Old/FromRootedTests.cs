@@ -1,4 +1,5 @@
 ﻿using Zafiro.DataModel;
+using Zafiro.FileSystem.Core;
 using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.AppImage.Tests;

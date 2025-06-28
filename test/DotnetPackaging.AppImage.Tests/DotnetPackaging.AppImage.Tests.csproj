@@ -4,49 +4,41 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-
 		<IsPackable>false</IsPackable>
-		<IsTestProject>true</IsTestProject>
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <Compile Remove="AppImageComparer.cs" />
-	  <Compile Remove="SquashFSTests.cs" />
-	  <Compile Remove="StreamGenerator.cs" />
-	  <Compile Remove="TestRuntime.cs" />
+		<PackageReference Include="coverlet.collector"/>
+		<PackageReference Include="Microsoft.NET.Test.Sdk"/>
+		<PackageReference Include="Serilog.Sinks.XUnit"/>
+		<PackageReference Include="xunit"/>
+		<PackageReference Include="xunit.runner.visualstudio"/>
+		<PackageReference Include="Zafiro"/>
+		<PackageReference Include="FluentAssertions " />
+		<PackageReference Include="CSharpFunctionalExtensions" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="coverlet.collector">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="FluentAssertions" />
-		<PackageReference Include="Microsoft.NET.Test.Sdk" />
-		<PackageReference Include="Serilog.Sinks.XUnit" />
-		<PackageReference Include="System.IO.Abstractions.TestingHelpers" />
-		<PackageReference Include="TestableIO.System.IO.Abstractions.Extensions" />
-		<PackageReference Include="xunit" />
-		<PackageReference Include="xunit.runner.visualstudio">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="CSharpFunctionalExtensions.FluentAssertions" />
+		<Content Include="TestFiles\**\*">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro.FileSystem\src\Zafiro.FileSystem.Unix\Zafiro.FileSystem.Unix.csproj" />
-	  <ProjectReference Include="..\..\src\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj" />
+		<ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro\src\Zafiro.DivineBytes\Zafiro.DivineBytes.csproj" />
+		<ProjectReference Include="..\..\src\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<Using Include="Xunit" />
+	  <Compile Remove="Old\**" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Update="TestFiles\**">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
+	  <EmbeddedResource Remove="Old\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="Old\**" />
 	</ItemGroup>
 
 </Project>

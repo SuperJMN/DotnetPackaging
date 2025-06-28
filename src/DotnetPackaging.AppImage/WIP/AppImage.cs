@@ -1,5 +1,5 @@
 using DotnetPackaging.AppImage.Core;
-using Zafiro.DivineBytes.Permissioned;
+using Zafiro.DivineBytes.Unix;
 
 namespace DotnetPackaging.AppImage.WIP;
 

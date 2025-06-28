@@ -12,8 +12,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Nuke.Common" Version="9.0.4" />
-    <PackageReference Include="Zafiro.Deployment" Version="23.0.0" />
+    <PackageReference Include="Nuke.Common" />
+    <PackageReference Include="Zafiro.Deployment" />
   </ItemGroup>
 
   <ItemGroup>

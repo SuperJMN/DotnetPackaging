@@ -1,11 +1,12 @@
 ﻿using System.Text;
+using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.WIP;
-using Xunit;
+using FluentAssertions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.Unix;
 using File = Zafiro.DivineBytes.File;
 
-namespace DotnetPackaging.AppImage.Tests;
+namespace DotnetPackaging.AppImage.Tests2;
 
 public class SquashFSTests
 {
@@ -14,8 +15,9 @@ public class SquashFSTests
     {
         var root = new UnixDirectory("", 0, new UnixPermissions(), [], [UnixFile()]);
 
-        await SquashFS.Create(root)
+        var result = await SquashFS.Create(root)
             .Bind(data => data.DumpTo("/home/jmn/Escritorio/File.squashfs"));
+        result.Should().Succeed();
     }
 
     private static UnixFile UnixFile()

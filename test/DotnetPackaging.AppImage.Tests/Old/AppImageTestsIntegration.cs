@@ -1,13 +1,15 @@
 ﻿using System.IO.Abstractions;
+using CSharpFunctionalExtensions.FluentAssertions;
 using DotnetPackaging.AppImage.Core;
 using Serilog;
 using Xunit.Abstractions;
+using Zafiro.FileSystem.Core;
 
 namespace DotnetPackaging.AppImage.Tests.Integration;
 
-public class AppImageTests
+public class AppImageTestsIntegration
 {
-    public AppImageTests(ITestOutputHelper testOutput)
+    public AppImageTestsIntegration(ITestOutputHelper testOutput)
     {
         Log.Logger = new LoggerConfiguration().WriteTo.TestOutput(testOutput).CreateLogger();
     }
@@ -22,7 +24,7 @@ public class AppImageTests
             .Directory(dir)
             .Configure(setup => setup
                 .WithPackage("AvaloniaSyncer")
-                .WithPackageId("com.SuperJMN.AvaloniaSyncer")
+                .Id("com.SuperJMN.AvaloniaSyncer")
                 .WithExecutableName("AvaloniaSyncer.Desktop"))
             .Build();
 

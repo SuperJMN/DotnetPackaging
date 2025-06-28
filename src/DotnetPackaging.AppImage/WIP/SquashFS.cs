@@ -2,8 +2,8 @@
 using NyaFs.Filesystem.SquashFs;
 using NyaFs.Filesystem.SquashFs.Types;
 using Zafiro.DivineBytes;
-using Zafiro.DivineBytes.Permissioned;
-using UnixFile = Zafiro.DivineBytes.Permissioned.UnixFile;
+using Zafiro.DivineBytes.Unix;
+using UnixFile = Zafiro.DivineBytes.Unix.UnixFile;
 
 namespace DotnetPackaging.AppImage.WIP;
 
@@ -13,13 +13,15 @@ public class SquashFS
     {
         var builder = new SquashFsBuilder(SqCompressionType.Gzip);
         return Result
-            .Try(() => Create(directory, "", builder))
+            .Try(() => CreateRecursive(directory, "", builder))
             .MapTry(() => builder.GetFilesystemImage())
             .Map(bytes => ByteSource.FromBytes(bytes));
     }
 
-    public static void Create(UnixDirectory unixDir, string currentPath, SquashFsBuilder builder)
+    public static void CreateRecursive(UnixDirectory unixDir, string currentPath, SquashFsBuilder builder)
     {
+        CreateDir(unixDir, currentPath, builder);;
+        
         foreach (var subDir in unixDir.Subdirectories)
         {
             CreateDir(subDir, currentPath, builder);
