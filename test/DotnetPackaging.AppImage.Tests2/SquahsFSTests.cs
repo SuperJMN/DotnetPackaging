@@ -23,7 +23,7 @@ public class SquashFSTests
     private static UnixFile UnixFile()
     {
         var contents = ByteSource.FromString("Hola", Encoding.UTF8);
-        var unixPermissions = new UnixPermissions(true, true, true, true, true, true, true, true, true);
+        var unixPermissions = new UnixPermissions(Permission.All);
         return new UnixFile(new File("File", contents), unixPermissions, 0);
     }
 }

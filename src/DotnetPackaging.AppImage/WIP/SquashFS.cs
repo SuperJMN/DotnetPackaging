@@ -7,7 +7,7 @@ using UnixFile = Zafiro.DivineBytes.Unix.UnixFile;
 
 namespace DotnetPackaging.AppImage.WIP;
 
-public class SquashFS
+public static class SquashFS
 {
     public static Result<IByteSource> Create(UnixDirectory directory)
     {
@@ -20,7 +20,7 @@ public class SquashFS
 
     public static void CreateRecursive(UnixDirectory unixDir, string currentPath, SquashFsBuilder builder)
     {
-        CreateDir(unixDir, currentPath, builder);;
+        CreateDir(unixDir, currentPath, builder);
         
         foreach (var subDir in unixDir.Subdirectories)
         {
