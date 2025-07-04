@@ -1,4 +1,7 @@
 using System.Text;
+using CSharpFunctionalExtensions;
+using DotnetPackaging.AppImage.WIP;
+using FluentAssertions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.Unix;
 using Directory = Zafiro.DivineBytes.Directory;
@@ -9,40 +12,21 @@ namespace DotnetPackaging.AppImage.Tests2;
 public class CreateAppImage
 {
     [Fact]
-    public void Create()
+    public async Task Create()
     {
-        var runtime = new Runtime(ByteSource.FromString("THIS IS MY RUNTIME", Encoding.UTF8));
+        
         var file = new File("Hola", ByteSource.FromString("Hola Mundo", Encoding.UTF8));
         
         IEnumerable<IDirectory> directories = new List<IDirectory>();
         IEnumerable<File> files = [file];
         var dir = new Directory("", files, directories);
-        var unixDir = dir.ToUnixDirectory(new DefaultMetadataResolver());
-        var sut = new WIP.AppImage(runtime, unixDir);
+        var unixDir = dir.ToUnixDirectory();
+        
+        var save = await RuntimeFactory.Create(Architecture.X64)
+            .Map(rt => new WIP.AppImage(rt, unixDir))
+            .Bind(image => image.ToByteSource()
+                .Bind(source => source.WriteTo("/home/jmn/Escritorio/AppImage.appimage")));
+
+        save.Should().Succeed();
     }
-}
-
-public class DefaultMetadataResolver : IMetadataResolver
-{
-    public Metadata ResolveDirectory(IDirectory dir)
-    {
-        return new Metadata(Permission.All, 0);
-    }
-
-    public Metadata ResolveFile(INamedByteSource file)
-    {
-        return new Metadata(Permission.All, 0);
-    }
-}
-
-public class Runtime(IByteSource source) : IRuntime
-{
-    public IByteSource Source { get; } = source;
-
-    public IDisposable Subscribe(IObserver<byte[]> observer)
-    {
-        return Source.Subscribe(observer);
-    }
-
-    public IObservable<byte[]> Bytes => Source;
 }

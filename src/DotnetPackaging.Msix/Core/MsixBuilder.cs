@@ -44,7 +44,7 @@ public class MsixBuilder : IAsyncDisposable
 
         WriteLocalFileHeader(entry);
         logger.Debug("Dumping data for {Entry}", entry);
-        await entry.Compressed.DumpTo(baseStream);
+        await entry.Compressed.WriteTo(baseStream);
         await WriteDataDescriptor(entry);
 
         //// Add the entry for the central directory

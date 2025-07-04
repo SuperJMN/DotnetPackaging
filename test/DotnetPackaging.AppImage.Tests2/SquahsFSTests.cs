@@ -16,7 +16,7 @@ public class SquashFSTests
         var root = new UnixDirectory("", 0, new UnixPermissions(), [], [UnixFile()]);
 
         var result = await SquashFS.Create(root)
-            .Bind(data => data.DumpTo("/home/jmn/Escritorio/File.squashfs"));
+            .Bind(data => data.WriteTo("/home/jmn/Escritorio/File.squashfs"));
         result.Should().Succeed();
     }
 

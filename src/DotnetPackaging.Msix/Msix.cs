@@ -120,11 +120,6 @@ public class File(string name, IByteSource source) : INamedByteSource
     {
         return source.Subscribe(observer);
     }
-
-    public Task<Maybe<long>> GetLength()
-    {
-        return source.GetLength();
-    }
-
+    
     public IObservable<byte[]> Bytes => source.Bytes;
 }

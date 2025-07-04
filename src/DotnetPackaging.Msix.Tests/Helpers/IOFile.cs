@@ -23,9 +23,4 @@ internal class IOFile : INamedByteSource
     }
 
     public IObservable<byte[]> Bytes => Source.Bytes;
-
-    public Task<Maybe<long>> GetLength()
-    {
-        return Source.GetLength();
-    }
 }

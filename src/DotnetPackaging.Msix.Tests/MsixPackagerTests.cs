@@ -66,7 +66,7 @@ public class MsixPackagerTests
             .Map(async source =>
             {
                 await using var fileStream = File.Open("TestFiles/MinimalNoMetadata/Actual.msix", FileMode.Create);
-                return await source.DumpTo(fileStream);
+                return await source.WriteTo(fileStream);
             });
     }
 
@@ -78,7 +78,7 @@ public class MsixPackagerTests
         var package = new MsixPackager(Log.Logger.AsMaybe()).Pack(ioDir);
         await using (var fileStream = File.Create($"TestFiles/{folderName}/Actual.msix"))
         {
-            await package.Value.DumpTo(fileStream);
+            await package.Value.WriteTo(fileStream);
         }
 
         var result = await MakeAppx.UnpackMsixAsync($"TestFiles/{folderName}/Actual.msix", "Unpack");

@@ -27,5 +27,5 @@ public class AppImageTests
             .Bind(data => data.DumpTo("C:\\Users\\JMN\\Desktop\\File.AppImage"));
         dumpResult.Should().Succeed();
     }
-   
+
 }
