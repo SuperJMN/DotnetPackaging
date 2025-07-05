@@ -7,7 +7,7 @@ public static class AppImageExtensions
 {
     public static Result<IByteSource> ToByteSource(this AppImage appImage)
     {
-        return SquashFS.Create(appImage.Directory).Map(sqfs =>
+        return SquashFS.Create(appImage.Container).Map(sqfs =>
         {
             var bytes = sqfs.Bytes.Array();
             var concat = appImage.Runtime.Concat(sqfs);

@@ -9,37 +9,37 @@ namespace DotnetPackaging.Msix;
 
 public class Msix
 {
-    public static Result<IByteSource> FromDirectory(IDirectory directory, Maybe<ILogger> logger)
+    public static Result<IByteSource> FromDirectory(IContainer container, Maybe<ILogger> logger)
     {
-        return new MsixPackager(logger).Pack(directory);
+        return new MsixPackager(logger).Pack(container);
     }
     
-    public static Result<IByteSource> FromDirectoryAndMetadata(IDirectory directory, AppManifestMetadata metadata, Maybe<ILogger> logger)
+    public static Result<IByteSource> FromDirectoryAndMetadata(IContainer container, AppManifestMetadata metadata, Maybe<ILogger> logger)
     {
         var generateAppManifest = AppManifestGenerator.GenerateAppManifest(metadata);
         var appxManifiest = ByteSource.FromString(generateAppManifest, Encoding.UTF8);
-        var dir = Directory.Create("metadata", new File("AppxManifest.xml", appxManifiest));
+        var dir = Container.Create("metadata", new File("AppxManifest.xml", appxManifiest));
         
-        var merged = Dir.Combine("merged", directory, dir);
+        var merged = Dir.Combine("merged", container, dir);
         return new MsixPackager(logger).Pack(merged);
     }
 }
 
 public class Dir
 {
- public static Directory Combine(string newName, IDirectory a, IDirectory b)
+ public static Container Combine(string newName, IContainer a, IContainer b)
     {
         var combinedChildren = new List<INamed>();
-        var directoriesByName = new Dictionary<string, List<IDirectory>>();
+        var directoriesByName = new Dictionary<string, List<IContainer>>();
         
         // Primero, agrupar los subdirectorios por nombre
         foreach (var child in a.Children.Concat(b.Children))
         {
-            if (child is IDirectory dir)
+            if (child is IContainer dir)
             {
                 if (!directoriesByName.ContainsKey(dir.Name))
                 {
-                    directoriesByName[dir.Name] = new List<IDirectory>();
+                    directoriesByName[dir.Name] = new List<IContainer>();
                 }
                 directoriesByName[dir.Name].Add(dir);
             }
@@ -54,7 +54,7 @@ public class Dir
         foreach (var entry in directoriesByName)
         {
             string dirName = entry.Key;
-            List<IDirectory> dirs = entry.Value;
+            List<IContainer> dirs = entry.Value;
             
             if (dirs.Count == 1)
             {
@@ -76,30 +76,30 @@ public class Dir
             }
         }
         
-        return new Directory(newName, combinedChildren.ToArray());
+        return new Container(newName, combinedChildren.ToArray());
     }
 }
 
-public class Directory : IDirectory
+public class Container : IContainer
 {
     public string Name { get; }
     public IEnumerable<INamed> Children { get; }
     
     // Constructor privado para la implementación interna
-    private Directory(string name, IEnumerable<INamed> children)
+    private Container(string name, IEnumerable<INamed> children)
     {
         Name = name;
         Children = children.ToList();
     }
     
     // Método de fábrica estático que permite sintaxis fluida
-    public static Directory Create(string name, params INamed[] contents)
+    public static Container Create(string name, params INamed[] contents)
     {
-        return new Directory(name, contents);
+        return new Container(name, contents);
     }
     
     // Constructor público que permite la sintaxis sugerida
-    public Directory(string name, params INamed[] contents)
+    public Container(string name, params INamed[] contents)
     {
         Name = name;
         Children = contents.ToList();

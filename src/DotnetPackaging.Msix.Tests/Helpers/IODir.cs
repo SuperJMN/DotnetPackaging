@@ -1,10 +1,9 @@
 using System.IO.Abstractions;
 using Zafiro.DivineBytes;
-using IDirectory = Zafiro.DivineBytes.IDirectory;
 
 namespace MsixPackaging.Tests.Helpers;
 
-internal class IODir(IDirectoryInfo directoryInfo) : IDirectory
+internal class IODir(IDirectoryInfo directoryInfo) : IContainer
 {
     public string Name => directoryInfo.Name;
     public IEnumerable<INamed> Children => directoryInfo
