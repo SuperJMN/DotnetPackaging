@@ -21,12 +21,12 @@ public class CreateAppImage
                 Value = 42,
             })),
             ["Sample.md"] = ByteSource.FromString("**This is a sample file**"),
-        }.ToDirectoryTree();
+        }.ToRootContainer(); // Use root container without artificial name
 
         var appImage = 
             await from rt in RuntimeFactory.Create(Architecture.X64)
-            from container in containerResult.Map(container => container.ToUnixDirectory())
-            from unixDir in Result.Try(() => container.ToUnixDirectory())
+            from rootContainer in containerResult
+            from unixDir in Result.Try(() => rootContainer.AsContainer().ToUnixDirectory())
             select new WIP.AppImage(rt, unixDir);
 
         Result save = await appImage
