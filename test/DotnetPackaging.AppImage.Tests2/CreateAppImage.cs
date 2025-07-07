@@ -1,7 +1,7 @@
 using System.IO.Abstractions;
 using System.Text.Json;
 using CSharpFunctionalExtensions;
-using DotnetPackaging.AppImage.WIP;
+using DotnetPackaging.AppImage.Core;
 using FluentAssertions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
@@ -29,7 +29,7 @@ public class CreateAppImage
             from rt in Result.Success(new Runtime(ByteSource.FromString("THIS IS A RUNTIME")))
             from rootContainer in containerResult
             from unixDir in Result.Try(() => rootContainer.AsContainer().ToUnixDirectory())
-            select new WIP.AppImage(rt, unixDir);
+            select new AppImageContainer(rt, unixDir);
 
         Result save = await appImage
             .Bind(x => x.ToByteSource())
@@ -45,7 +45,7 @@ public class CreateAppImage
         var files = new DirContainer(fileSystem.DirectoryInfo.New("TestFiles/Minimal"));
         var root = files.AsRoot();
         
-        var builder = new AppImageBuilder();
+        var builder = new AppImageFactory();
         var appImage = builder.Create(root, "SampleApp");
 
         var save = await appImage
@@ -54,10 +54,4 @@ public class CreateAppImage
 
         save.Should().Succeed();
     }
-}
-
-public class MyClass
-{
-    public string Name { get; set; }
-    public int Value { get; set; }
 }

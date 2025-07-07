@@ -1,8 +1,8 @@
 using Zafiro.DivineBytes.Unix;
 
-namespace DotnetPackaging.AppImage.WIP;
+namespace DotnetPackaging.AppImage.Core;
 
-public class AppImage(IRuntime runtime, UnixDirectory container)
+public class AppImageContainer(IRuntime runtime, UnixDirectory container)
 {
     public IRuntime Runtime { get; } = runtime;
     public UnixDirectory Container { get; } = container;

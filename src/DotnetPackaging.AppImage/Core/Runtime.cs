@@ -1,6 +1,6 @@
 using Zafiro.DivineBytes;
 
-namespace DotnetPackaging.AppImage.Tests2;
+namespace DotnetPackaging.AppImage.Core;
 
 public class Runtime(IByteSource source) : IRuntime
 {

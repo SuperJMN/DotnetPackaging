@@ -1,6 +1,6 @@
 ﻿using System.Text;
 using CSharpFunctionalExtensions;
-using DotnetPackaging.AppImage.WIP;
+using DotnetPackaging.AppImage.Core;
 using FluentAssertions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.Unix;

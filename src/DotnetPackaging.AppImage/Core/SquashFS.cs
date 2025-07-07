@@ -1,48 +1,80 @@
-﻿using MoreLinq;
-using NyaFs.Filesystem.SquashFs;
+﻿using NyaFs.Filesystem.SquashFs;
 using NyaFs.Filesystem.SquashFs.Types;
-using Zafiro.DataModel;
-using Zafiro.FileSystem.Core;
-using Zafiro.FileSystem.Unix;
+using Zafiro.DivineBytes;
+using Zafiro.DivineBytes.Unix;
+using UnixFile = Zafiro.DivineBytes.Unix.UnixFile;
 
 namespace DotnetPackaging.AppImage.Core;
 
-public class SquashFS
+public static class SquashFS
 {
-    public static Result<IData> Create(UnixRoot root)
+    public static Result<IByteSource> Create(UnixDirectory container)
     {
         var builder = new SquashFsBuilder(SqCompressionType.Gzip);
         return Result
-            .Try(() => Create(root, "", builder))
+            .Try(() => CreateRecursive(container, "", builder))
             .MapTry(() => builder.GetFilesystemImage())
-            .Map(bytes => (IData)Data.FromByteArray(bytes));
+            .Map(bytes => ByteSource.FromBytes(bytes));
     }
 
-    public static void Create(UnixNode unixDir, string currentPath, SquashFsBuilder builder)
+    public static void CreateRecursive(UnixDirectory unixDir, string currentPath, SquashFsBuilder builder)
     {
-        switch (unixDir)
+        // Always create the directory, including root directory
+        string dirPath;
+        if (string.IsNullOrEmpty(unixDir.Name))
         {
-            case UnixDir subdirectory:
-                CreateDir(subdirectory, currentPath, builder);
-                break;
-            case UnixFile unixFile:
-                CreateFile(unixFile, currentPath, builder);
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(unixDir));
+            // This is the root directory
+            dirPath = "/";
+            builder.Directory(dirPath, (uint)unixDir.OwnerId, (uint)unixDir.OwnerId, GetFileMode(unixDir.Permissions));
+            currentPath = "";
+        }
+        else
+        {
+            // Regular directory
+            dirPath = string.IsNullOrEmpty(currentPath) ? unixDir.Name : currentPath + "/" + unixDir.Name;
+            builder.Directory(dirPath, (uint)unixDir.OwnerId, (uint)unixDir.OwnerId, GetFileMode(unixDir.Permissions));
+            currentPath = dirPath;
+        }
+
+        // Create all files in the current directory
+        foreach (var file in unixDir.Files)
+        {
+            CreateFile(file, currentPath, builder);
+        }
+
+        // Recursively create subdirectories
+        foreach (var subDir in unixDir.Subdirectories)
+        {
+            CreateRecursive(subDir, currentPath, builder);
         }
     }
 
     private static void CreateFile(UnixFile unixFile, string currentPath, SquashFsBuilder builder)
     {
-        var content = unixFile.Bytes();
-        builder.File(currentPath + "/" + unixFile.Name, content, (uint)unixFile.Properties.OwnerId.GetValueOrDefault(), (uint)unixFile.Properties.OwnerId.GetValueOrDefault(), (uint)unixFile.Properties.FileMode);
+        var filePath = string.IsNullOrEmpty(currentPath) ? unixFile.Name : currentPath + "/" + unixFile.Name;
+        var content = unixFile.Bytes.Array();
+        builder.File(filePath, content, (uint)unixFile.OwnerId, (uint)unixFile.OwnerId, GetFileMode(unixFile.Permissions));
     }
 
-    private static void CreateDir(UnixDir unixDir, string currentPath, SquashFsBuilder builder)
+    private static uint GetFileMode(UnixPermissions unixFilePermissions)
     {
-        var unixDirName = currentPath + "/" + unixDir.Name;
-        builder.Directory(unixDirName, (uint)unixDir.Properties.OwnerId.GetValueOrDefault(), (uint)unixDir.Properties.OwnerId.GetValueOrDefault(), (uint)unixDir.Properties.FileMode);
-        unixDir.Nodes.ForEach(node => Create(node, unixDirName, builder));
+        uint mode = 0;
+
+        // Owner
+        if (unixFilePermissions.OwnerRead) mode |= 0b100_000_000; // 0o400
+        if (unixFilePermissions.OwnerWrite) mode |= 0b010_000_000; // 0o200
+        if (unixFilePermissions.OwnerExec) mode |= 0b001_000_000; // 0o100
+
+        // Group
+        if (unixFilePermissions.GroupRead) mode |= 0b000_100_000; // 0o040
+        if (unixFilePermissions.GroupWrite) mode |= 0b000_010_000; // 0o020
+        if (unixFilePermissions.GroupExec) mode |= 0b000_001_000; // 0o010
+
+        // Others
+        if (unixFilePermissions.OtherRead) mode |= 0b000_000_100; // 0o004
+        if (unixFilePermissions.OtherWrite) mode |= 0b000_000_010; // 0o002
+        if (unixFilePermissions.OtherExec) mode |= 0b000_000_001; // 0o001
+
+        return mode;
     }
 }
