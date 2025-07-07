@@ -2,6 +2,7 @@ using System.IO.Abstractions;
 using System.Text.Json;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Core;
+using DotnetPackaging.AppImage.Metadata;
 using FluentAssertions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
@@ -46,7 +47,7 @@ public class CreateAppImage
         var root = files.AsRoot();
         
         var builder = new AppImageFactory();
-        var appImage = builder.Create(root, "SampleApp");
+        var appImage = builder.Create(root, new AppImageMetadata("com.superjmn.sampleapp", "Sample App", "sampleapp"));
 
         var save = await appImage
             .Bind(x => x.ToByteSource())

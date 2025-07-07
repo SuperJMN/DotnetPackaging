@@ -35,7 +35,6 @@ public class MetadataGenerator
             new XElement("summary", packageMetadata.Summary)
         };
 
-        // Add optional elements only if they have values
         packageMetadata.ProjectLicense.Match(
             license => elements.Add(new XElement("project_license", license)),
             () => { });
@@ -44,7 +43,7 @@ public class MetadataGenerator
             desc => elements.Add(new XElement("description", new XElement("p", desc))),
             () => { });
 
-        // Launchable is required for desktop-application, use DesktopId or fallback
+        // Launchable is required for desktop-application
         elements.Add(new XElement("launchable",
             new XAttribute("type", "desktop-id"),
             packageMetadata.DesktopId.GetValueOrDefault($"{packageMetadata.Name}.desktop")));
@@ -63,6 +62,17 @@ public class MetadataGenerator
 
         var xElement = new XElement("component", elements);
         return xElement.ToString();
+    }
+
+    // Método de conveniencia que usa AppImageMetadata directamente
+    public static string DesktopFileContents(AppImageMetadata metadata, string execPath)
+    {
+        return DesktopFileContents(metadata.ToDesktopFile(execPath));
+    }
+
+    public static string AppStreamXml(AppImageMetadata metadata)
+    {
+        return AppStreamXml(metadata.ToAppStream());
     }
 
     private static XElement GenerateScreenshots(IEnumerable<string> screenshots)

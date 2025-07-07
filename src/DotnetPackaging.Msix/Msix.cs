@@ -14,7 +14,6 @@ public class Msix
         return new MsixPackager(logger).Pack(container);
     }
     
-    
     // TODO: Fix this
     // public static Result<IByteSource> FromDirectoryAndMetadata(IContainer container, AppManifestMetadata metadata, Maybe<ILogger> logger)
     // {
