@@ -43,7 +43,7 @@ public class CreateAppImage
     public async Task Create_compliant_appimage()
     {
         var fileSystem = new FileSystem();
-        var files = new DirContainer(fileSystem.DirectoryInfo.New("TestFiles/Minimal"));
+        var files = new DirectoryContainer(fileSystem.DirectoryInfo.New("TestFiles/Minimal"));
         var root = files.AsRoot();
         
         var builder = new AppImageFactory();

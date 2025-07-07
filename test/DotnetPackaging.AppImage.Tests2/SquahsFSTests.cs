@@ -4,7 +4,6 @@ using DotnetPackaging.AppImage.Core;
 using FluentAssertions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.Unix;
-using File = Zafiro.DivineBytes.File;
 
 namespace DotnetPackaging.AppImage.Tests2;
 
@@ -24,6 +23,6 @@ public class SquashFSTests
     {
         var contents = ByteSource.FromString("Hola", Encoding.UTF8);
         var unixPermissions = new UnixPermissions(Permission.All);
-        return new UnixFile(new File("File", contents), unixPermissions, 0);
+        return new UnixFile(new Resource("File", contents), unixPermissions, 0);
     }
 }
