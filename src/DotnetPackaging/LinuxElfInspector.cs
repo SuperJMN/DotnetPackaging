@@ -1,4 +1,5 @@
 ﻿using System.Reactive.Linq;
+using Zafiro.DivineBytes;
 using Zafiro.FileSystem.Readonly;
 using Zafiro.Reactive;
 
@@ -13,6 +14,11 @@ public static class LinuxElfInspector
     public static IObservable<Result<Architecture>> GetArchitecture(this IFile file)
     {
         return GetArchitecture(file.Bytes);
+    }
+    
+    public static async Task<Result<Architecture>> GetArchitecture(this IByteSource file)
+    {
+        return await GetArchitecture(file.Bytes);
     }
     
     public static IObservable<Result<Architecture>> GetArchitecture(IObservable<byte[]> byteChunks)
@@ -66,6 +72,11 @@ public static class LinuxElfInspector
     }
 
     public static IObservable<Result<bool>> IsElf(this IFile file)
+    {
+        return IsElf(file.Bytes);
+    }
+    
+    public static IObservable<Result<bool>> IsElf(this IByteSource file)
     {
         return IsElf(file.Bytes);
     }

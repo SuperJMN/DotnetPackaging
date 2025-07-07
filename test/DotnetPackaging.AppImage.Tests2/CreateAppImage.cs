@@ -1,8 +1,10 @@
+using System.IO.Abstractions;
 using System.Text.Json;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.WIP;
 using FluentAssertions;
 using Zafiro.DivineBytes;
+using Zafiro.DivineBytes.System.IO;
 using Zafiro.DivineBytes.Unix;
 
 namespace DotnetPackaging.AppImage.Tests2;
@@ -10,7 +12,7 @@ namespace DotnetPackaging.AppImage.Tests2;
 public class CreateAppImage
 {
     [Fact]
-    public async Task Create()
+    public async Task Create_testing_appimage()
     {
         var containerResult = new Dictionary<string, IByteSource>()
         {
@@ -24,7 +26,7 @@ public class CreateAppImage
         }.ToRootContainer(); // Use root container without artificial name
 
         var appImage = 
-            await from rt in RuntimeFactory.Create(Architecture.X64)
+            from rt in Result.Success(new Runtime(ByteSource.FromString("THIS IS A RUNTIME")))
             from rootContainer in containerResult
             from unixDir in Result.Try(() => rootContainer.AsContainer().ToUnixDirectory())
             select new WIP.AppImage(rt, unixDir);
@@ -32,6 +34,23 @@ public class CreateAppImage
         Result save = await appImage
             .Bind(x => x.ToByteSource())
             .Bind(source => source.WriteTo("/home/jmn/Escritorio/AppImage.appimage"));
+
+        save.Should().Succeed();
+    }
+
+    [Fact]
+    public async Task Create_compliant_appimage()
+    {
+        var fileSystem = new FileSystem();
+        var files = new DirContainer(fileSystem.DirectoryInfo.New("TestFiles/Minimal"));
+        var root = files.AsRoot();
+        
+        var builder = new AppImageBuilder();
+        var appImage = builder.Create(root, "SampleApp");
+
+        var save = await appImage
+            .Bind(x => x.ToByteSource())
+            .Bind(source => source.WriteTo("/home/jmn/Escritorio/AppImageCompliant.appimage"));
 
         save.Should().Succeed();
     }

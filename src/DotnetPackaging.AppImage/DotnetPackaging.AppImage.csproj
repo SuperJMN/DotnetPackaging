@@ -21,6 +21,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\Zafiro\src\Zafiro.DivineBytes\Zafiro.DivineBytes.csproj" />
+		<ProjectReference Include="..\..\Zafiro\src\Zafiro\Zafiro.csproj" />
 		<ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
 	</ItemGroup>
 

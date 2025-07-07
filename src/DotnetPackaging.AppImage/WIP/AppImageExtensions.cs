@@ -9,9 +9,8 @@ public static class AppImageExtensions
     {
         return SquashFS.Create(appImage.Container).Map(sqfs =>
         {
-            var bytes = sqfs.Bytes.Array();
-            var concat = appImage.Runtime.Concat(sqfs);
-            return ByteSource.FromByteChunks(concat);
+            var appImageBytes = appImage.Runtime.Concat(sqfs);
+            return ByteSource.FromByteChunks(appImageBytes);
         });
     }
 }

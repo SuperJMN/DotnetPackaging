@@ -9,7 +9,7 @@ namespace DotnetPackaging.Msix;
 
 public class Msix
 {
-    public static Result<IByteSource> FromDirectory(IContainer container, Maybe<ILogger> logger)
+    public static Result<IByteSource> FromDirectory(INamedContainer container, Maybe<ILogger> logger)
     {
         return new MsixPackager(logger).Pack(container);
     }
