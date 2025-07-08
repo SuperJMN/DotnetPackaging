@@ -16,7 +16,7 @@ public class Packager(IDotnet dotnet, Maybe<ILogger> logger)
         return new AndroidDeployment(dotnet, path, options, logger).Create();
     }
     
-    public Task<Result<IEnumerable<INamedByteSource>>> CreateForLinux(Path path, DotnetPackaging.AppImage.Metadata.AppImageMetadata metadata)
+    public Task<Result<IEnumerable<INamedByteSource>>> CreateForLinux(Path path, AppImage.Metadata.AppImageMetadata metadata)
     {
         return new LinuxDeployment(dotnet, path, metadata, logger).Create();
     }

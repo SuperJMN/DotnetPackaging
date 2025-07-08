@@ -33,7 +33,7 @@ public class AppImageFactory
             var appdataContent = ByteSource.FromString(MetadataGenerator.AppStreamXml(appImageMetadata.ToAppStream()));
 
             // Get all application files with their relative paths
-            var namedByteSourceWithPaths = applicationRoot.FilesWithPathsRecursive();
+            var namedByteSourceWithPaths = applicationRoot.ResourcesWithPathsRecursive();
             
             var applicationFiles = namedByteSourceWithPaths
                 .ToDictionary(

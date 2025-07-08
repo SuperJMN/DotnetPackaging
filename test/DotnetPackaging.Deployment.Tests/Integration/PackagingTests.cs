@@ -14,8 +14,12 @@ namespace DotnetPackaging.Deployment.Tests.Integration;
 
 public class PackagingTests(ITestOutputHelper outputHelper)
 {
+    public static string OutputFolder = "/home/jmn/Escritorio/DotnetPackaging";
+    public static string DesktopProject = "/mnt/fast/Repos/SuperJMN-Zafiro/Zafiro.Avalonia/samples/TestApp/TestApp.Desktop/TestApp.Desktop.csproj";
+    public static string AndroidProject = "/mnt/fast/Repos/SuperJMN-Zafiro/Zafiro.Avalonia/samples/TestApp/TestApp.Android/TestApp.Android.csproj";
+    
     [Fact]
-    public async Task TestWindows()
+    public async Task Test_windows()
     {
         var dotnet = new Dotnet(new Command(Maybe<ILogger>.None), Maybe<ILogger>.None);
         
@@ -26,7 +30,9 @@ public class PackagingTests(ITestOutputHelper outputHelper)
         };
         
         var result = await new Packager(dotnet, Maybe<ILogger>.None)
-            .CreateForWindows("/mnt/fast/Repos/SuperJMN-Zafiro/Zafiro.Avalonia/samples/TestApp/TestApp.Desktop/TestApp.Desktop.csproj", options);
+            .CreateForWindows(DesktopProject, options)
+            .MapEach(source => source.WriteTo(OutputFolder + "/" + source.Name))
+            .CombineSequentially();
         
         result.Should().Succeed();
     }
@@ -38,12 +44,13 @@ public class PackagingTests(ITestOutputHelper outputHelper)
         
         var dotnet = new Dotnet(new Command(logger), logger);
         
-        var store = ByteSource.FromBytes(await File.ReadAllBytesAsync("Integration/test.keystore.b64"));
+        var store = ByteSource.FromBytes(await File.ReadAllBytesAsync("Integration/test.keystore"));
         
         var options = new AndroidDeployment.DeploymentOptions
         {
+            PackageName = "TestApp",
             AndroidSigningKeyStore = store,
-            ApplicationDisplayVersion = "1.0",
+            ApplicationDisplayVersion = "1.0.0",
             ApplicationVersion = 1,
             SigningKeyAlias = "android",
             SigningKeyPass = "test1234",
@@ -51,7 +58,9 @@ public class PackagingTests(ITestOutputHelper outputHelper)
         };
         
         var result = await new Packager(dotnet, logger)
-            .CreateForAndroid("/mnt/fast/Repos/SuperJMN/angor/src/Angor/Avalonia/AngorApp.Android/AngorApp.Android.csproj", options);
+            .CreateForAndroid(AndroidProject, options)
+            .MapEach(resource => resource.WriteTo(OutputFolder + "/" + resource.Name))
+            .CombineSequentially();
 
         result.Should().Succeed();
     }
@@ -63,8 +72,8 @@ public class PackagingTests(ITestOutputHelper outputHelper)
         var dotnet = new Dotnet(new Command(logger), logger);
         
         var result = await new Packager(dotnet, logger)
-            .CreateForLinux("/mnt/fast/Repos/SuperJMN/angor/src/Angor/Avalonia/AngorApp.Desktop/AngorApp.Desktop.csproj", new AppImageMetadata("Angor"))
-            .Map(resources => resources.Select(async path => await path.WriteTo($"/home/jmn/Escritorio/{path.Name}")))
+            .CreateForLinux(DesktopProject, new AppImageMetadata("TestApp", "Test App", "TestApp"))
+            .MapEach(resource => resource.WriteTo(OutputFolder + "/" + resource.Name))
             .CombineSequentially();
 
         result.Should().Succeed();

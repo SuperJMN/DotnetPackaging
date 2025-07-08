@@ -54,7 +54,7 @@ public class Dotnet : IDotnet
                 await Command.Execute("dotnet", string.Join(" ", "pack", projectPath, arguments));
                 return new DirectoryContainer(outputDir);
             })
-            .Map(directory => directory.FilesRecursive())
+            .Map(directory => directory.ResourcesRecursive())
             .Bind(sources => sources.TryFirst(file => file.Name.EndsWith(".nupkg")).ToResult("Cannot find any NuGet package in the output folder"));
 
     }

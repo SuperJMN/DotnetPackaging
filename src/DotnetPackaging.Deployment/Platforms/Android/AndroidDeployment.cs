@@ -45,10 +45,11 @@ public class AndroidDeployment(IDotnet dotnet, Path projectPath, AndroidDeployme
         });
     }
 
-    private static IEnumerable<INamedByteSource> ApkFiles(IContainer directory)
+    private IEnumerable<INamedByteSource> ApkFiles(IContainer directory)
     {
-        return directory.FilesWithPathsRecursive()
-            .Where(file => file.Name.EndsWith(".apk"));
+        return directory.ResourcesWithPathsRecursive()
+            .Where(file => file.Name.EndsWith(".apk"))
+            .Select(resource => new Resource(options.PackageName + "-" + options.ApplicationDisplayVersion + "-android" + ".apk", resource));
     }
 
     private static string CreateArgs(DeploymentOptions deploymentOptions, string keyStorePath, string androidSdkPath)
@@ -70,6 +71,7 @@ public class AndroidDeployment(IDotnet dotnet, Path projectPath, AndroidDeployme
 
     public class DeploymentOptions
     {
+        public required string PackageName { get; set; }
         public required int ApplicationVersion { get; init; }
         public required string ApplicationDisplayVersion { get; init; }
         public required IByteSource AndroidSigningKeyStore { get; init; }

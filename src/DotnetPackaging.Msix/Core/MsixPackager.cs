@@ -14,7 +14,7 @@ public class MsixPackager(Maybe<ILogger> logger)
     public Result<IByteSource> Pack(IContainer container)
     {
         return Result.Success()
-            .Map(container.FilesWithPathsRecursive)
+            .Map(() => container.ResourcesWithPathsRecursive())
             .Map(Compress);
     }
 

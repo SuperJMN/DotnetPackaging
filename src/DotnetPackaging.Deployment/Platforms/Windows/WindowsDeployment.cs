@@ -22,10 +22,10 @@ public class WindowsDeployment(IDotnet dotnet, Path projectPath, WindowsDeployme
     private Task<Result<INamedByteSource>> CreateFor(Architecture architecture, DeploymentOptions deploymentOptions)
     {
         var args = CreateArgs(architecture, deploymentOptions);
-        var finalName = deploymentOptions.PackageName + $"_{WindowsArchitecture[architecture].Suffix}" + ".exe";
+        var finalName = deploymentOptions.PackageName + "-" + deploymentOptions.Version + "-windows-" + $"{WindowsArchitecture[architecture].Suffix}" + ".exe";
         
         return dotnet.Publish(projectPath, args)
-            .Bind(directory => directory.FilesRecursive()
+            .Bind(directory => directory.ResourcesRecursive()
                 .TryFirst(file => file.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                 .ToResult($"Can't find any .exe file in publish result directory {directory}"))
             .Map(INamedByteSource (file) => new Resource(finalName, file));
