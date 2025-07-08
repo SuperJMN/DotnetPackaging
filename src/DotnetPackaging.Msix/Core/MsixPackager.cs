@@ -11,10 +11,10 @@ namespace DotnetPackaging.Msix.Core;
 
 public class MsixPackager(Maybe<ILogger> logger)
 {
-    public Result<IByteSource> Pack(IDirectory directory)
+    public Result<IByteSource> Pack(IContainer container)
     {
         return Result.Success()
-            .Map(directory.FilesWithPathsRecursive)
+            .Map(() => container.ResourcesWithPathsRecursive())
             .Map(Compress);
     }
 

@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Deployment;
 using Nuke.Common;
 using Nuke.Common.Git;
 using Nuke.Common.ProjectModel;
 using Nuke.Common.Tools.GitVersion;
-using Zafiro.Deployment;
 
 class Build : NukeBuild
 {
@@ -23,13 +23,14 @@ class Build : NukeBuild
         {
             var version = GitVersion.MajorMinorPatch;
             
-            await Deployer.Instance.PublishPackages(PackableProjects, version, NuGetApiKey)
+            await Deployer.Instance.PublishNugetPackages(PackableProjects, version, NuGetApiKey)
                 .TapError(error => Assert.Fail(error.ToString()));
         });
 
     IEnumerable<string> PackableProjects =>
         Solution.AllProjects
             .Where(x => x.GetProperty<bool>("IsPackable"))
+            .Where(project => project.Name.StartsWith("DotnetPackaging", StringComparison.InvariantCultureIgnoreCase))
             .Where(x => !(x.Path.ToString().Contains("Test", StringComparison.InvariantCultureIgnoreCase) || x.Path.ToString().Contains("Sample", StringComparison.InvariantCultureIgnoreCase)))
             .Select(x => x.Path.ToString());
 

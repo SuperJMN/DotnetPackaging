@@ -17,16 +17,31 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "build\_build.cspr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlockCompressor", "src\DeflateBlockCompressor\BlockCompressor\BlockCompressor.csproj", "{EFD55FD6-B165-468E-97EA-EAF14F8F6D2B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MsixPackaging.Tests", "src\DotnetPackaging.Msix.Tests\MsixPackaging.Tests.csproj", "{79928283-5F6E-49F4-ACC4-FE5994DA1116}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Msix.Tests", "src\DotnetPackaging.Msix.Tests\DotnetPackaging.Msix.Tests.csproj", "{79928283-5F6E-49F4-ACC4-FE5994DA1116}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Msix", "src\DotnetPackaging.Msix\DotnetPackaging.Msix.csproj", "{EDCAB7CC-741C-4DB0-95B8-F9CB1D89B475}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Misc", "Misc", "{62D724AD-1161-4EE3-AC71-9FFA01690F75}"
 	ProjectSection(SolutionItems) = preProject
-		src\Directory.Packages.props = src\Directory.Packages.props
 		src\Directory.Build.props = src\Directory.Build.props
 		src\Common.props = src\Common.props
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.AppImage.Tests", "test\DotnetPackaging.AppImage.Tests\DotnetPackaging.AppImage.Tests.csproj", "{DF914DC0-903B-4733-8F85-45F733F2DE5F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zafiro", "Zafiro\src\Zafiro\Zafiro.csproj", "{D5F4BF68-F5A7-4ADC-B460-15551397EB4D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zafiro.DivineBytes", "Zafiro\src\Zafiro.DivineBytes\Zafiro.DivineBytes.csproj", "{A279F734-814D-4F1E-8C69-6CB2E56F9547}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zafiro.FileSystem", "Zafiro\src\Zafiro.FileSystem\Zafiro.FileSystem.csproj", "{C6C6DAF1-7F75-4134-B022-97C423E60B63}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Deployment", "src\DotnetPackaging.Deployment\DotnetPackaging.Deployment.csproj", "{9A6BD29C-013B-439B-9B85-D46133052498}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{F33ABB7A-E6A3-4F45-BFB5-9A014B8C5F12}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Deployment.Tests", "test\DotnetPackaging.Deployment.Tests\DotnetPackaging.Deployment.Tests.csproj", "{F6DFEB3A-D396-48AB-BE6B-9585CBA3249D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zafiro.FileSystem.Unix", "Zafiro\src\Zafiro.FileSystem.Unix\Zafiro.FileSystem.Unix.csproj", "{2BA0144F-33A3-4D82-A89A-3744C6EB133E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -64,12 +79,43 @@ Global
 		{EDCAB7CC-741C-4DB0-95B8-F9CB1D89B475}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EDCAB7CC-741C-4DB0-95B8-F9CB1D89B475}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EDCAB7CC-741C-4DB0-95B8-F9CB1D89B475}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DF914DC0-903B-4733-8F85-45F733F2DE5F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DF914DC0-903B-4733-8F85-45F733F2DE5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DF914DC0-903B-4733-8F85-45F733F2DE5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DF914DC0-903B-4733-8F85-45F733F2DE5F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D5F4BF68-F5A7-4ADC-B460-15551397EB4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5F4BF68-F5A7-4ADC-B460-15551397EB4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5F4BF68-F5A7-4ADC-B460-15551397EB4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5F4BF68-F5A7-4ADC-B460-15551397EB4D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A279F734-814D-4F1E-8C69-6CB2E56F9547}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A279F734-814D-4F1E-8C69-6CB2E56F9547}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A279F734-814D-4F1E-8C69-6CB2E56F9547}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A279F734-814D-4F1E-8C69-6CB2E56F9547}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C6C6DAF1-7F75-4134-B022-97C423E60B63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C6C6DAF1-7F75-4134-B022-97C423E60B63}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C6C6DAF1-7F75-4134-B022-97C423E60B63}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C6C6DAF1-7F75-4134-B022-97C423E60B63}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9A6BD29C-013B-439B-9B85-D46133052498}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9A6BD29C-013B-439B-9B85-D46133052498}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9A6BD29C-013B-439B-9B85-D46133052498}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9A6BD29C-013B-439B-9B85-D46133052498}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F6DFEB3A-D396-48AB-BE6B-9585CBA3249D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6DFEB3A-D396-48AB-BE6B-9585CBA3249D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6DFEB3A-D396-48AB-BE6B-9585CBA3249D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6DFEB3A-D396-48AB-BE6B-9585CBA3249D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2BA0144F-33A3-4D82-A89A-3744C6EB133E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2BA0144F-33A3-4D82-A89A-3744C6EB133E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2BA0144F-33A3-4D82-A89A-3744C6EB133E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2BA0144F-33A3-4D82-A89A-3744C6EB133E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{F1BE6649-DFBE-4393-A651-CEBE5519CA56} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{79928283-5F6E-49F4-ACC4-FE5994DA1116} = {F33ABB7A-E6A3-4F45-BFB5-9A014B8C5F12}
+		{DF914DC0-903B-4733-8F85-45F733F2DE5F} = {F33ABB7A-E6A3-4F45-BFB5-9A014B8C5F12}
+		{F6DFEB3A-D396-48AB-BE6B-9585CBA3249D} = {F33ABB7A-E6A3-4F45-BFB5-9A014B8C5F12}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1D869DF1-9147-472D-A3D9-D519518A6951}

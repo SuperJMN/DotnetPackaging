@@ -12,12 +12,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Nuke.Common" Version="9.0.4" />
-    <PackageReference Include="Zafiro.Deployment" Version="23.0.0" />
+    <PackageReference Include="Nuke.Common" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageDownload Include="GitVersion.Tool" Version="[6.3.0]" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\DotnetPackaging.Deployment\DotnetPackaging.Deployment.csproj" />
   </ItemGroup>
 
 </Project>

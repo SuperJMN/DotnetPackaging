@@ -8,16 +8,37 @@
 	<Import Project="..\Common.props" />
 	<ItemGroup>
 	  <Compile Remove="Options.cs" />
+	  <Compile Remove="AppImage.cs" />
+	  <Compile Remove="Builder\**" />
+	  <Compile Remove="Core\**" />
+	  <Compile Include="Core\AppImageContainer.cs" />
+	  <Compile Include="Core\AppImageExtensions.cs" />
+	  <Compile Include="Core\IRuntime.cs" />
+	  <Compile Include="Core\Runtime.cs" />
+	  <Compile Include="Core\RuntimeFactory.cs" />
+	  <Compile Include="Core\SquashFS.cs" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Http" />
 		<PackageReference Include="NyaFs" />
 		<PackageReference Include="System.Security.Permissions" />
-		<PackageReference Include="Zafiro.FileSystem.Unix" />
+<!--		<PackageReference Include="Zafiro.FileSystem.Unix" />-->
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\Zafiro\src\Zafiro.DivineBytes\Zafiro.DivineBytes.csproj" />
+		<ProjectReference Include="..\..\Zafiro\src\Zafiro\Zafiro.csproj" />
 		<ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Remove="Builder\**" />
+	  <EmbeddedResource Remove="Core\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="Builder\**" />
+	  <None Remove="Core\**" />
 	</ItemGroup>
 
 </Project>

@@ -1,6 +1,8 @@
-﻿namespace DotnetPackaging.AppImage.Core;
+using Zafiro.DivineBytes;
 
-public class RuntimeFactory
+namespace DotnetPackaging.AppImage.Core;
+
+public static class RuntimeFactory
 {
     private static readonly Dictionary<Architecture, Uri> RuntimeUrls = new()
     {
@@ -10,10 +12,11 @@ public class RuntimeFactory
         { Architecture.Arm64, new("https://github.com/AppImage/AppImageKit/releases/download/continuous/runtime-aarch64") },
     };
 
-    public Task<Result<IRuntime>> Create(Architecture architecture)
+    public static Task<Result<IRuntime>> Create(Architecture architecture)
     {
         return RuntimeUrls
             .TryFind(architecture).ToResult($"Could not find architecture {architecture}")
-            .Bind(uri => UriRuntime.Create(uri).Map(x => (IRuntime)x));
+            .Bind(uri => uri.FromUri())
+            .Map(IRuntime (source) => new Runtime(source, architecture));
     }
 }

@@ -1,7 +1,8 @@
-﻿using Zafiro.DataModel;
+﻿using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.AppImage.Core;
 
-public interface IRuntime : IData
+public interface IRuntime : IByteSource
 {
+    Architecture Architecture { get; }
 }

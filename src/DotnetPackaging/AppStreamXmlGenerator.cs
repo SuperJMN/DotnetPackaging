@@ -37,19 +37,4 @@ public static class AppStreamXmlGenerator
        
         return screenshotsElement;
     }
-
-    private static XElement GenerateDescription(PackageMetadata options)
-    {
-        var p = new XElement("p", $"{options.Name} is a tool for file synchronization using AvaloniaUI.");
-        var ul = new XElement("ul");
-        options.Keywords.Execute(keywords =>
-        {
-            foreach (var keyword in keywords)
-            {
-                ul.Add(new XElement("li", keyword));
-            }
-        });
-
-        return new XElement("description", p, ul);
-    }
 }

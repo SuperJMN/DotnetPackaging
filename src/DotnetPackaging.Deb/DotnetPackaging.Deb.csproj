@@ -10,9 +10,9 @@
     <PackageReference Include="SharpCompress" />
     <PackageReference Include="SharpZipLib" />
     <PackageReference Include="SixLabors.ImageSharp" />
-    <PackageReference Include="Zafiro.FileSystem.Unix" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Zafiro\src\Zafiro.FileSystem.Unix\Zafiro.FileSystem.Unix.csproj" />
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
   </ItemGroup>
 </Project>

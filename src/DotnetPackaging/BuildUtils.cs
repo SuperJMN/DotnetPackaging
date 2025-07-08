@@ -1,7 +1,10 @@
-﻿using System.Reactive.Linq;
+﻿using System.IO.Abstractions;
+using System.Reactive.Linq;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.FileSystem.Readonly;
+using IDirectory = Zafiro.FileSystem.Readonly.IDirectory;
+using IFile = Zafiro.FileSystem.Readonly.IFile;
 
 namespace DotnetPackaging;
 
