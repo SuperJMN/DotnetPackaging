@@ -14,7 +14,11 @@ public class LinuxDeployment(IDotnet dotnet, string projectPath, AppImageMetadat
 
     public Task<Result<IEnumerable<INamedByteSource>>> Create()
     {
-        IEnumerable<Architecture> supportedArchitectures = [Architecture.Arm64, Architecture.X64];
+        IEnumerable<Architecture> supportedArchitectures = 
+        [
+            Architecture.Arm64, 
+            Architecture.X64
+        ];
 
         return supportedArchitectures
             .Select(architecture => CreateAppImage(architecture))
@@ -32,7 +36,7 @@ public class LinuxDeployment(IDotnet dotnet, string projectPath, AppImageMetadat
 
         var arguments = ArgumentsParser.Parse(publishOptions, []);
 
-        var appImageFilename = metadata.PackageName + "-" + metadata.Version.GetValueOrDefault("1.0.0") + "-" + LinuxArchitecture[architecture].RuntimeLinux + ".AppImage";
+        var appImageFilename = metadata.PackageName + "-" + metadata.Version.GetValueOrDefault("1.0.0") + "-" + LinuxArchitecture[architecture].RuntimeLinux + ".appimage";
 
         return dotnet.Publish(projectPath, arguments)
             .Bind(container => new AppImageFactory().Create(container, metadata))

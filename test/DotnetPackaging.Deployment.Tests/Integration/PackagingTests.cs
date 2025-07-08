@@ -49,7 +49,6 @@ public class PackagingTests(ITestOutputHelper outputHelper)
             SigningKeyPass = "test1234",
             SigningStorePass = "test1234",
         };
-
         
         var result = await new Packager(dotnet, logger)
             .CreateForAndroid("/mnt/fast/Repos/SuperJMN/angor/src/Angor/Avalonia/AngorApp.Android/AngorApp.Android.csproj", options);
@@ -65,7 +64,7 @@ public class PackagingTests(ITestOutputHelper outputHelper)
         
         var result = await new Packager(dotnet, logger)
             .CreateForLinux("/mnt/fast/Repos/SuperJMN/angor/src/Angor/Avalonia/AngorApp.Desktop/AngorApp.Desktop.csproj", new AppImageMetadata("Angor"))
-            .Map(paths => paths.Select(async path => await path.WriteTo(File.Create($"/home/jmn/Escritorio/{path.Name}"))))
+            .Map(resources => resources.Select(async path => await path.WriteTo($"/home/jmn/Escritorio/{path.Name}")))
             .CombineSequentially();
 
         result.Should().Succeed();
