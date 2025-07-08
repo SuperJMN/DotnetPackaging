@@ -6,18 +6,23 @@ namespace DotnetPackaging.Deployment;
 
 public class Packager(IDotnet dotnet, Maybe<ILogger> logger)
 {
-    public Task<Result<IEnumerable<INamedByteSource>>> CreateForWindows(Path path, WindowsDeployment.DeploymentOptions deploymentOptions)
+    public Task<Result<IEnumerable<INamedByteSource>>> CreateWindowsPackages(Path path, WindowsDeployment.DeploymentOptions deploymentOptions)
     {
         return new WindowsDeployment(dotnet, path, deploymentOptions, logger).Create();
     }
 
-    public Task<Result<IEnumerable<INamedByteSource>>> CreateForAndroid(Path path, AndroidDeployment.DeploymentOptions options)
+    public Task<Result<IEnumerable<INamedByteSource>>> CreateAndroidPackages(Path path, AndroidDeployment.DeploymentOptions options)
     {
         return new AndroidDeployment(dotnet, path, options, logger).Create();
     }
     
-    public Task<Result<IEnumerable<INamedByteSource>>> CreateForLinux(Path path, AppImage.Metadata.AppImageMetadata metadata)
+    public Task<Result<IEnumerable<INamedByteSource>>> CreateLinuxPackages(Path path, AppImage.Metadata.AppImageMetadata metadata)
     {
         return new LinuxDeployment(dotnet, path, metadata, logger).Create();
+    }
+    
+    public Task<Result<INamedByteSource>> CreateNugetPackage(Path path, string version)
+    {
+        return dotnet.Pack(path, version);
     }
 }

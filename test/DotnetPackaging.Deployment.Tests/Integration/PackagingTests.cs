@@ -1,4 +1,3 @@
-using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Metadata;
 using DotnetPackaging.Deployment.Core;
@@ -30,7 +29,7 @@ public class PackagingTests(ITestOutputHelper outputHelper)
         };
         
         var result = await new Packager(dotnet, Maybe<ILogger>.None)
-            .CreateForWindows(DesktopProject, options)
+            .CreateWindowsPackages(DesktopProject, options)
             .MapEach(source => source.WriteTo(OutputFolder + "/" + source.Name))
             .CombineSequentially();
         
@@ -58,7 +57,7 @@ public class PackagingTests(ITestOutputHelper outputHelper)
         };
         
         var result = await new Packager(dotnet, logger)
-            .CreateForAndroid(AndroidProject, options)
+            .CreateAndroidPackages(AndroidProject, options)
             .MapEach(resource => resource.WriteTo(OutputFolder + "/" + resource.Name))
             .CombineSequentially();
 
@@ -72,9 +71,22 @@ public class PackagingTests(ITestOutputHelper outputHelper)
         var dotnet = new Dotnet(new Command(logger), logger);
         
         var result = await new Packager(dotnet, logger)
-            .CreateForLinux(DesktopProject, new AppImageMetadata("TestApp", "Test App", "TestApp"))
+            .CreateLinuxPackages(DesktopProject, new AppImageMetadata("TestApp", "Test App", "TestApp"))
             .MapEach(resource => resource.WriteTo(OutputFolder + "/" + resource.Name))
             .CombineSequentially();
+
+        result.Should().Succeed();
+    }
+    
+    [Fact]
+    public async Task Test_nuget_pack()
+    {
+        var logger = new LoggerConfiguration().WriteTo.TestOutput(outputHelper).CreateLogger();
+        var dotnet = new Dotnet(new Command(logger), logger);
+        
+        var result = await new Packager(dotnet, logger)
+            .CreateNugetPackage(DesktopProject, "1.0.0")
+            .Bind(resource => resource.WriteTo(OutputFolder + "/" + resource.Name));
 
         result.Should().Succeed();
     }
