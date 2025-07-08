@@ -1,5 +1,6 @@
 using DotnetPackaging.Deployment.Platforms.Android;
 using DotnetPackaging.Deployment.Platforms.Linux;
+using DotnetPackaging.Deployment.Platforms.Wasm;
 using DotnetPackaging.Deployment.Platforms.Windows;
 
 namespace DotnetPackaging.Deployment;
@@ -24,5 +25,11 @@ public class Packager(IDotnet dotnet, Maybe<ILogger> logger)
     public Task<Result<INamedByteSource>> CreateNugetPackage(Path path, string version)
     {
         return dotnet.Pack(path, version);
+    }
+    
+    public Task<Result<AvaloniaSite>> CreateAvaloniaSite(string projectPath)
+    {
+        return dotnet.Publish(projectPath)
+            .Bind(AvaloniaSite.Create);
     }
 }
