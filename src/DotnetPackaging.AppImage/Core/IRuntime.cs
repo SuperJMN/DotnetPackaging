@@ -1,5 +1,8 @@
 ﻿using Zafiro.DivineBytes;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Core;
 
-public interface IRuntime : IByteSource;
+public interface IRuntime : IByteSource
+{
+    Architecture Architecture { get; }
+}

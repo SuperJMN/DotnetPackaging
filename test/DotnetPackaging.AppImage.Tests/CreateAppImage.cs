@@ -27,7 +27,7 @@ public class CreateAppImage
         }.ToRootContainer(); // Use root container without artificial name
 
         var appImage = 
-            from rt in Result.Success(new Runtime(ByteSource.FromString("THIS IS A RUNTIME")))
+            from rt in Result.Success(new Runtime(ByteSource.FromString("THIS IS A RUNTIME"), Architecture.All))
             from rootContainer in containerResult
             from unixDir in Result.Try(() => rootContainer.AsContainer().ToUnixDirectory())
             select new AppImageContainer(rt, unixDir);

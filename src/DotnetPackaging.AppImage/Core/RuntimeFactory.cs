@@ -17,6 +17,6 @@ public static class RuntimeFactory
         return RuntimeUrls
             .TryFind(architecture).ToResult($"Could not find architecture {architecture}")
             .Bind(uri => uri.FromUri())
-            .Map(IRuntime (source) => new Runtime(source));
+            .Map(IRuntime (source) => new Runtime(source, architecture));
     }
 }

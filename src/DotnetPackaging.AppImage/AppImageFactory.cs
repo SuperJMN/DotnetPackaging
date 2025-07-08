@@ -24,7 +24,7 @@ public class AppImageFactory
 
         return await executableResult.Bind(exec =>
         {
-            var executableName = appImageMetadata.PackageName;
+            var executableName = exec.Resource.Name;
             
             var desktopFile = appImageMetadata.ToDesktopFile($"/usr/bin/{executableName}");
 
@@ -32,17 +32,31 @@ public class AppImageFactory
             var desktopContent = ByteSource.FromString(MetadataGenerator.DesktopFileContents(desktopFile));
             var appdataContent = ByteSource.FromString(MetadataGenerator.AppStreamXml(appImageMetadata.ToAppStream()));
 
+            // Get all application files with their relative paths
+            var namedByteSourceWithPaths = applicationRoot.FilesWithPathsRecursive();
+            
+            var applicationFiles = namedByteSourceWithPaths
+                .ToDictionary(
+                    file => $"usr/bin/{file.FullPath()}", IByteSource (file) => file);
+
             var files = new Dictionary<string, IByteSource>
             {
                 ["AppRun"] = appRunContent,
                 [appImageMetadata.DesktopFileName] = desktopContent,
-                [$"usr/bin/{executableName}"] = exec.Resource,
                 [$"usr/share/metainfo/{appImageMetadata.AppDataFileName}"] = appdataContent,
-            }.ToRootContainer();
+            };
+
+            // Add all application files to the files dictionary
+            foreach (var appFile in applicationFiles)
+            {
+                files[appFile.Key] = appFile.Value;
+            }
+
+            var rootContainer = files.ToRootContainer();
 
             var appImage = from rt in RuntimeFactory.Create(exec.Architecture)
-                from rootContainer in files
-                from unixDir in Result.Try(() => rootContainer.AsContainer().ToUnixDirectory())
+                from rootCont in rootContainer
+                from unixDir in Result.Try(() => rootCont.AsContainer().ToUnixDirectory())
                 select new AppImageContainer(rt, unixDir);
 
             return appImage;
