@@ -13,7 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Services\" />
+      <PackageReference Include="Octokit" />
     </ItemGroup>
     
 </Project>

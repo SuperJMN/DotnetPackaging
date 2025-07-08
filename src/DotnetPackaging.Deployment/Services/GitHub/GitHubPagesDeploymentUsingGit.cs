@@ -3,7 +3,7 @@ using DotnetPackaging.Deployment.Platforms.Wasm;
 
 namespace DotnetPackaging.Deployment.Services.GitHub;
 
-public class GitHubPagesDeploymentUsingGit(Site site, Context context, string repositoryOwner, string repositoryName, string apiKey, string authorName, string authorEmail, string branchName = "master")
+public class GitHubPagesDeploymentUsingGit(WasmApp wasmApp, Context context, string repositoryOwner, string repositoryName, string apiKey, string authorName, string authorEmail, string branchName = "master")
 {
     public Context Context { get; } = context;
     public string RepositoryOwner { get; } = repositoryOwner;
@@ -18,7 +18,7 @@ public class GitHubPagesDeploymentUsingGit(Site site, Context context, string re
     public Task<Result> Publish()
     {
         return CloneRepository()
-            .Bind(repoDir => AddFilesToRepository(repoDir, site))
+            .Bind(repoDir => AddFilesToRepository(repoDir, wasmApp))
             .Bind(CommitAndPushChanges);
     }
 
@@ -33,10 +33,10 @@ public class GitHubPagesDeploymentUsingGit(Site site, Context context, string re
             });
     }
 
-    private async Task<Result<IDirectoryInfo>> AddFilesToRepository(IDirectoryInfo repoDir, Site site)
+    private async Task<Result<IDirectoryInfo>> AddFilesToRepository(IDirectoryInfo repoDir, WasmApp wasmApp)
     {
         var nojekyll = new ResourceWithPath(Path.Empty, new Resource(".nojekyll", ByteSource.FromString("No Jekyll file to disable Jekyll processing in GitHub Pages.")));
-        var resources = site.Contents.ResourcesWithPathsRecursive().Append(nojekyll);
+        var resources = wasmApp.Contents.ResourcesWithPathsRecursive().Append(nojekyll);
         
         foreach (var file in resources)
         {

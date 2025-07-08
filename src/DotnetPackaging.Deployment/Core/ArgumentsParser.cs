@@ -1,6 +1,6 @@
 using Zafiro.Mixins;
 
-namespace DotnetPackaging.Deployment;
+namespace DotnetPackaging.Deployment.Core;
 
 internal static class ArgumentsParser
 {

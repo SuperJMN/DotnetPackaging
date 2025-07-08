@@ -3,7 +3,7 @@ using DotnetPackaging.Deployment.Platforms.Linux;
 using DotnetPackaging.Deployment.Platforms.Wasm;
 using DotnetPackaging.Deployment.Platforms.Windows;
 
-namespace DotnetPackaging.Deployment;
+namespace DotnetPackaging.Deployment.Core;
 
 public class Packager(IDotnet dotnet, Maybe<ILogger> logger)
 {
@@ -27,9 +27,9 @@ public class Packager(IDotnet dotnet, Maybe<ILogger> logger)
         return dotnet.Pack(path, version);
     }
     
-    public Task<Result<Site>> CreateWasmSite(string projectPath)
+    public Task<Result<WasmApp>> CreateWasmSite(string projectPath)
     {
         return dotnet.Publish(projectPath)
-            .Bind(Site.Create);
+            .Bind(WasmApp.Create);
     }
 }
