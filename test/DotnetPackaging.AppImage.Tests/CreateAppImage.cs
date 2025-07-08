@@ -8,7 +8,7 @@ using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
 using Zafiro.DivineBytes.Unix;
 
-namespace DotnetPackaging.AppImage.Tests2;
+namespace DotnetPackaging.AppImage.Tests;
 
 public class CreateAppImage
 {

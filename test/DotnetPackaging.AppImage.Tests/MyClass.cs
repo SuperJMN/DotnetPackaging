@@ -1,4 +1,4 @@
-namespace DotnetPackaging.AppImage.Tests2;
+namespace DotnetPackaging.AppImage.Tests;
 
 public class MyClass
 {

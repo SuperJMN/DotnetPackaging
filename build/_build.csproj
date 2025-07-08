@@ -13,7 +13,6 @@
 
   <ItemGroup>
     <PackageReference Include="Nuke.Common" />
-    <PackageReference Include="Zafiro.Deployment" />
   </ItemGroup>
 
   <ItemGroup>

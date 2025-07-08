@@ -37,14 +37,11 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
-    <PackageVersion Include="Zafiro" Version="23.0.0" />
     <PackageVersion Include="Zafiro.Avalonia" Version="8.0.2" />
     <PackageVersion Include="Zafiro.Avalonia.Dialogs" Version="8.0.2" />
     <PackageVersion Include="Zafiro.FileSystem" Version="23.0.0" />
     <PackageVersion Include="Zafiro.FileSystem.Local" Version="23.0.0" />
-    <PackageVersion Include="Zafiro.FileSystem.Unix" Version="23.0.0" />
     <PackageVersion Include="Nuke.Common" Version="9.0.4" />
-    <PackageVersion Include="Zafiro.Deployment" Version="20.0.1" />
     <PackageVersion Include="System.IO.Hashing" Version="9.0.5" />
     <PackageVersion Include="Zafiro.DivineBytes" Version="23.0.0" />
   </ItemGroup>

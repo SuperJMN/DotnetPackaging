@@ -102,7 +102,7 @@ public static class LinuxElfInspector
         var magicBytes = new byte[] { 0x7F, (byte)'E', (byte)'L', (byte)'F' };
         if (!magicBytes.SequenceEqual(bytes[0..4]))
         {
-            return Result.Failure<bool>("Not an ELF file");
+            return false;
         }
 
         var eType = BitConverter.ToInt16(bytes, 16);

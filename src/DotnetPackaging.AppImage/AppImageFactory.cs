@@ -12,15 +12,17 @@ public class AppImageFactory
         IContainer applicationRoot,
         AppImageMetadata appImageMetadata)
     {
-        var executable = from exec in GetExecutable(applicationRoot)
+        Task<Result<Executable>> exectTask = from exec in GetExecutable(applicationRoot)
             from arch in exec.GetArchitecture()
-            select new
+            select new Executable
             {
                 Resource = exec,
                 Architecture = arch,
             };
 
-        return await executable.Bind(exec =>
+        Result<Executable> executableResult = await exectTask;
+
+        return await executableResult.Bind(exec =>
         {
             var executableName = appImageMetadata.PackageName;
             
@@ -50,7 +52,14 @@ public class AppImageFactory
     private static Task<Result<INamedByteSource>> GetExecutable(IContainer applicationRoot)
     {
         return applicationRoot.Resources
+            .Where(source => source.Name != "createdump" && !source.Name.EndsWith(".so"))
             .TryFirstResult(async source => await source.IsElf())
             .ToResult("No ELF executable found in the application root directory");
     }
+}
+
+public class Executable
+{
+    public INamedByteSource Resource { get; set; }
+    public Architecture Architecture { get; set; }
 }

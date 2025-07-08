@@ -1,43 +1,33 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<IsPackable>false</IsPackable>
-	</PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="coverlet.collector"/>
-		<PackageReference Include="Microsoft.NET.Test.Sdk"/>
-		<PackageReference Include="Serilog.Sinks.XUnit"/>
-		<PackageReference Include="xunit"/>
-		<PackageReference Include="xunit.runner.visualstudio"/>
-		<PackageReference Include="Zafiro"/>
-		<PackageReference Include="FluentAssertions " />
-		<PackageReference Include="CSharpFunctionalExtensions" />
-	</ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="coverlet.collector"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+        <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" />
+        <PackageReference Include="xunit"/>
+        <PackageReference Include="xunit.runner.visualstudio"/>
+        <PackageReference Include="CSharpFunctionalExtensions.FluentAssertions"/>
+    </ItemGroup>
 
-	<ItemGroup>
-		<Content Include="TestFiles\**\*">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-	</ItemGroup>
+    <ItemGroup>
+        <Using Include="Xunit"/>
+    </ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\..\..\..\SuperJMN-Zafiro\Zafiro\src\Zafiro.DivineBytes\Zafiro.DivineBytes.csproj" />
-	</ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj"/>
+    </ItemGroup>
 
-	<ItemGroup>
-	  <Compile Remove="Old\**" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <EmbeddedResource Remove="Old\**" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <None Remove="Old\**" />
-	</ItemGroup>
+    <ItemGroup>
+        <Content Include="TestFiles\**\*">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
 
 </Project>
