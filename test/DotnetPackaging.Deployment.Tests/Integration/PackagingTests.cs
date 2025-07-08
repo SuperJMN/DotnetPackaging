@@ -16,6 +16,7 @@ public class PackagingTests(ITestOutputHelper outputHelper)
     public static string OutputFolder = "/home/jmn/Escritorio/DotnetPackaging";
     public static string DesktopProject = "/mnt/fast/Repos/SuperJMN-Zafiro/Zafiro.Avalonia/samples/TestApp/TestApp.Desktop/TestApp.Desktop.csproj";
     public static string AndroidProject = "/mnt/fast/Repos/SuperJMN-Zafiro/Zafiro.Avalonia/samples/TestApp/TestApp.Android/TestApp.Android.csproj";
+    public static string WasmProject = "/mnt/fast/Repos/SuperJMN-Zafiro/Zafiro.Avalonia/samples/TestApp/TestApp.Browser/TestApp.Browser.csproj";
     
     [Fact]
     public async Task Test_windows()
@@ -87,6 +88,19 @@ public class PackagingTests(ITestOutputHelper outputHelper)
         var result = await new Packager(dotnet, logger)
             .CreateNugetPackage(DesktopProject, "1.0.0")
             .Bind(resource => resource.WriteTo(OutputFolder + "/" + resource.Name));
+
+        result.Should().Succeed();
+    }
+    
+    [Fact]
+    public async Task Test_wasm_site()
+    {
+        var logger = new LoggerConfiguration().WriteTo.TestOutput(outputHelper).CreateLogger();
+        var dotnet = new Dotnet(new Command(logger), logger);
+
+        var result = await new Packager(dotnet, logger)
+            .CreateWasmSite(WasmProject)
+            .Map(site => site.Contents.WriteTo(OutputFolder + "/" + "WasmSite"));
 
         result.Should().Succeed();
     }

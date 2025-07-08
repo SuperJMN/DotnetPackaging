@@ -27,9 +27,9 @@ public class Packager(IDotnet dotnet, Maybe<ILogger> logger)
         return dotnet.Pack(path, version);
     }
     
-    public Task<Result<AvaloniaSite>> CreateAvaloniaSite(string projectPath)
+    public Task<Result<Site>> CreateWasmSite(string projectPath)
     {
         return dotnet.Publish(projectPath)
-            .Bind(AvaloniaSite.Create);
+            .Bind(Site.Create);
     }
 }
