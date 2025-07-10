@@ -1,5 +1,6 @@
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.Misc;
+using Zafiro.Mixins;
 
 namespace DotnetPackaging.Deployment;
 
@@ -7,9 +8,16 @@ public class Deployer(Context context, Packager packager, Publisher publisher)
 {
     public Context Context { get; } = context;
 
-    public Task<Result> PublishNugetPackages(IEnumerable<string> projectToPublish, string version, string nuGetApiKey)
+    public async Task<Result> PublishNugetPackages(IList<string> projectToPublish, string version, string nuGetApiKey)
     {
-        return projectToPublish
+        if (projectToPublish.Any(s => string.IsNullOrWhiteSpace(s)))
+        {
+            return Result.Failure("One or more projects to publish are empty or null.");
+        }
+        
+        Context.Logger.Information("Publishing projects: {@Projects}", projectToPublish);
+        
+        return await projectToPublish
             .Select(project => packager.CreateNugetPackage(project, version).LogInfo($"Packing {project}"))
             .CombineSequentially()
             .MapEach(resource => publisher.ToNuGet(resource, nuGetApiKey).LogInfo($"Pushing package {resource}"))
@@ -18,7 +26,7 @@ public class Deployer(Context context, Packager packager, Publisher publisher)
     
     public Task<Result> PublishAvaloniaAppToGitHubPages(string projectToPublish, string ownerName, string repositoryName, string apiKey)
     {
-        Context.Logger.Execute(l => l.Information("Publishing WebAssembly application in {Project} to GitHub Pages with owner {Owner}, repository {Repository} ", projectToPublish, ownerName, repositoryName));
+        Context.Logger.Information("Publishing WebAssembly application in {Project} to GitHub Pages with owner {Owner}, repository {Repository} ", projectToPublish, ownerName, repositoryName);
         return packager.CreateWasmSite(projectToPublish).LogInfo("WebAssembly application has been packaged successfully")
             .Bind(site => publisher.PublishToGitHubPages(site, ownerName, repositoryName, apiKey));
     }

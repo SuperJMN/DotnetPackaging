@@ -45,6 +45,11 @@ public class Dotnet : IDotnet
 
     public Task<Result<INamedByteSource>> Pack(string projectPath, string version)
     {
+        if (projectPath == null)
+        {
+            throw new ArgumentNullException(nameof(projectPath), "Project path to pack cannot be null.");
+        }
+
         return Result.Try(() => filesystem.Directory.CreateTempSubdirectory())
             .Map(async outputDir =>
             {
@@ -56,6 +61,5 @@ public class Dotnet : IDotnet
             })
             .Map(directory => directory.ResourcesRecursive())
             .Bind(sources => sources.TryFirst(file => file.Name.EndsWith(".nupkg")).ToResult("Cannot find any NuGet package in the output folder"));
-
     }
 }

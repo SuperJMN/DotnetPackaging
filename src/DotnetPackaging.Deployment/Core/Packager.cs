@@ -24,6 +24,11 @@ public class Packager(IDotnet dotnet, Maybe<ILogger> logger)
     
     public Task<Result<INamedByteSource>> CreateNugetPackage(Path path, string version)
     {
+        if (path == null)
+        {
+            throw new ArgumentNullException(nameof(path), "Cannot create a NuGet package from a null path.");
+        }
+
         return dotnet.Pack(path, version);
     }
     

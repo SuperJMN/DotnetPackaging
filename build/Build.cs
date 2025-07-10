@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Deployment;
@@ -23,14 +24,18 @@ class Build : NukeBuild
         {
             var version = GitVersion.MajorMinorPatch;
             
-            await Deployer.Instance.PublishNugetPackages(PackableProjects, version, NuGetApiKey)
+            await Deployer.Instance.PublishNugetPackages(PackableProjects.ToList(), version, NuGetApiKey)
                 .TapError(error => Assert.Fail(error.ToString()));
         });
 
     IEnumerable<string> PackableProjects =>
         Solution.AllProjects
             .Where(x => x.GetProperty<bool>("IsPackable"))
-            .Where(project => project.Name.StartsWith("DotnetPackaging", StringComparison.InvariantCultureIgnoreCase))
+            .Where(project =>
+            {
+                Debugger.Launch();
+                return project.Name.StartsWith("DotnetPackaging", StringComparison.InvariantCultureIgnoreCase);
+            })
             .Where(x => !(x.Path.ToString().Contains("Test", StringComparison.InvariantCultureIgnoreCase) || x.Path.ToString().Contains("Sample", StringComparison.InvariantCultureIgnoreCase)))
             .Select(x => x.Path.ToString());
 
