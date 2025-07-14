@@ -11,8 +11,17 @@
     <PackageReference Include="SharpZipLib" />
     <PackageReference Include="SixLabors.ImageSharp" />
   </ItemGroup>
+  
   <ItemGroup>
-    <ProjectReference Include="..\..\Zafiro\src\Zafiro.FileSystem.Unix\Zafiro.FileSystem.Unix.csproj" />
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
   </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'true'">
+    <ProjectReference Include="..\..\libs\Zafiro\src\Zafiro.FileSystem.Unix\Zafiro.FileSystem.Unix.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'false'">
+    <PackageReference Include="Zafiro.FileSystem.Unix" />
+  </ItemGroup>
+  
 </Project>

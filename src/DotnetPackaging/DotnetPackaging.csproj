@@ -8,9 +8,16 @@
     <ItemGroup>
         <PackageReference Include="SixLabors.ImageSharp"/>
     </ItemGroup>
-    <ItemGroup>
-      <ProjectReference Include="..\..\Zafiro\src\Zafiro.DivineBytes\Zafiro.DivineBytes.csproj" />
-      <ProjectReference Include="..\..\Zafiro\src\Zafiro.FileSystem\Zafiro.FileSystem.csproj" />
-      <ProjectReference Include="..\..\Zafiro\src\Zafiro\Zafiro.csproj" />
+    
+    <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'true'">
+      <ProjectReference Include="..\..\libs\Zafiro\src\Zafiro.DivineBytes\Zafiro.DivineBytes.csproj" />
+      <ProjectReference Include="..\..\libs\Zafiro\src\Zafiro.FileSystem\Zafiro.FileSystem.csproj" />
+      <ProjectReference Include="..\..\libs\Zafiro\src\Zafiro\Zafiro.csproj" />
     </ItemGroup>
+    <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'false'">
+        <PackageReference Include="Zafiro.DivineBytes" />
+        <PackageReference Include="Zafiro.FileSystem" />
+        <PackageReference Include="Zafiro" />
+    </ItemGroup>
+    
 </Project>

@@ -7,7 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Zafiro\src\Zafiro.DivineBytes\Zafiro.DivineBytes.csproj" />
       <ProjectReference Include="..\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj" />
       <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
     </ItemGroup>
@@ -15,5 +14,5 @@
     <ItemGroup>
       <PackageReference Include="Octokit" />
     </ItemGroup>
-    
+
 </Project>

@@ -7,12 +7,16 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="DeflateBlockCompressor" />
       <PackageReference Include="System.IO.Hashing"  />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Zafiro\src\Zafiro.DivineBytes\Zafiro.DivineBytes.csproj" />
-      <ProjectReference Include="..\DeflateBlockCompressor\BlockCompressor\BlockCompressor.csproj" />
+        <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <PackageReference Include="DeflateBlockCompressor" />
+    </ItemGroup>
+    
 </Project>
