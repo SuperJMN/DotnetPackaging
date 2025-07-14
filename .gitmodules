@@ -1,3 +1,6 @@
-[submodule "src/DeflateBlockCompressor"]
-	path = src/DeflateBlockCompressor
+[submodule "libs/Zafiro"]
+	path = libs/Zafiro
+	url = https://github.com/SuperJMN-Zafiro/Zafiro.git
+[submodule "libs/DeflateBlockCompressor"]
+	path = libs/DeflateBlockCompressor
 	url = https://github.com/SuperJMN/DeflateBlockCompressor.git

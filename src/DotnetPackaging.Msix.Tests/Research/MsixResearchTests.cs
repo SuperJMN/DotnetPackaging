@@ -3,7 +3,6 @@ using System.IO.Hashing;
 using System.Security.Cryptography;
 using Xunit;
 using Xunit.Abstractions;
-using Zafiro.Mixins;
 
 namespace MsixPackaging.Tests.Research;
 

@@ -1,7 +1,6 @@
 <Project>
   <PropertyGroup>
     <Nullable>enable</Nullable>
-    <AvaloniaVersion>11.3.0</AvaloniaVersion>
     <!-- Use local project references in Debug, NuGet packages in Release -->
     <UseLocalZafiroReferences Condition="'$(UseLocalZafiroReferences)' == ''">true</UseLocalZafiroReferences>
     <UseLocalZafiroReferences Condition="'$(Configuration)' == 'Release'">false</UseLocalZafiroReferences>

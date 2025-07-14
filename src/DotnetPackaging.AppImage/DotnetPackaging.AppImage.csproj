@@ -22,23 +22,10 @@
 		<PackageReference Include="Microsoft.Extensions.Http" />
 		<PackageReference Include="NyaFs" />
 		<PackageReference Include="System.Security.Permissions" />
-<!--		<PackageReference Include="Zafiro.FileSystem.Unix" />-->
 	</ItemGroup>
-
+	
 	<ItemGroup>
-		<ProjectReference Include="..\..\Zafiro\src\Zafiro.DivineBytes\Zafiro.DivineBytes.csproj" />
-		<ProjectReference Include="..\..\Zafiro\src\Zafiro\Zafiro.csproj" />
 		<ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <EmbeddedResource Remove="Builder\**" />
-	  <EmbeddedResource Remove="Core\**" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <None Remove="Builder\**" />
-	  <None Remove="Core\**" />
 	</ItemGroup>
 
 </Project>

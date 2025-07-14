@@ -2,20 +2,15 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+    <ZafiroVersion>26.0.3</ZafiroVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Avalonia" Version="$(AvaloniaVersion)" />
-    <PackageVersion Include="Avalonia.Android" Version="$(AvaloniaVersion)" />
-    <PackageVersion Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
-    <PackageVersion Include="Avalonia.Diagnostics" Version="$(AvaloniaVersion)" />
-    <PackageVersion Include="Avalonia.Fonts.Inter" Version="$(AvaloniaVersion)" />
-    <PackageVersion Include="Avalonia.ReactiveUI" Version="$(AvaloniaVersion)" />
-    <PackageVersion Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
     <PackageVersion Include="CSharpFunctionalExtensions.FluentAssertions" Version="3.0.0" />
+    <PackageVersion Include="DeflateBlockCompressor" Version="0.0.10" />
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.5" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
@@ -38,12 +33,13 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
-    <PackageVersion Include="Zafiro.Avalonia" Version="8.0.2" />
-    <PackageVersion Include="Zafiro.Avalonia.Dialogs" Version="8.0.2" />
-    <PackageVersion Include="Zafiro.FileSystem" Version="23.0.0" />
-    <PackageVersion Include="Zafiro.FileSystem.Local" Version="23.0.0" />
+    <PackageVersion Include="Zafiro" Version="$(ZafiroVersion)" />
+    <PackageVersion Include="Zafiro.FileSystem" Version="$(ZafiroVersion)" />
+    <PackageVersion Include="Zafiro.FileSystem.Unix" Version="$(ZafiroVersion)" />
+    <PackageVersion Include="Zafiro.FileSystem.Local" Version="$(ZafiroVersion)" />
     <PackageVersion Include="Nuke.Common" Version="9.0.4" />
     <PackageVersion Include="System.IO.Hashing" Version="9.0.5" />
-    <PackageVersion Include="Zafiro.DivineBytes" Version="23.0.0" />
+    <PackageVersion Include="Zafiro.DivineBytes" Version="26.0.3" />
+    <PackageVersion Include="BlockCompressor" Version="2.0.16" />
   </ItemGroup>
 </Project>
