@@ -8,6 +8,7 @@ using Serilog;
 using Xunit.Abstractions;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
+using Zafiro.Misc;
 
 namespace DotnetPackaging.Deployment.Tests.Integration;
 
@@ -89,6 +90,20 @@ public class PackagingTests(ITestOutputHelper outputHelper)
             .CreateNugetPackage(DesktopProject, "1.0.0")
             .Bind(resource => resource.WriteTo(OutputFolder + "/" + resource.Name));
 
+        result.Should().Succeed();
+    }
+    
+    [Fact]
+    public async Task Test_nuget_push()
+    {
+        var logger = new LoggerConfiguration().WriteTo.TestOutput(outputHelper).CreateLogger();
+        var command = new Command(logger);
+        var dotnet = new Dotnet(command, logger);
+
+        var context = new Context(dotnet, command, logger, new DefaultHttpClientFactory());
+        var deployer = new Deployer(context, new Packager(dotnet, logger), new Publisher(context));
+
+        var result = await deployer.PublishNugetPackages(["PATH_TO_PROJECT"], "VERSION", "NUGET-API-KEY");
         result.Should().Succeed();
     }
     
