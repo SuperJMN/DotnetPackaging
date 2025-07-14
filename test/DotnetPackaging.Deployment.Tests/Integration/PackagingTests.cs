@@ -108,6 +108,30 @@ public class PackagingTests(ITestOutputHelper outputHelper)
     }
     
     [Fact]
+    public async Task Create_GitHub_release()
+    {
+        var logger = new LoggerConfiguration().WriteTo.TestOutput(outputHelper).CreateLogger();
+        var command = new Command(logger);
+        var dotnet = new Dotnet(command, logger);
+
+        var context = new Context(dotnet, command, logger, new DefaultHttpClientFactory());
+        var deployer = new Deployer(context, new Packager(dotnet, logger), new Publisher(context));
+
+        var releaseData = new ReleaseData("Test Release", "Tag", "BODY", isDraft: true);
+        var gitHubRepositoryConfig = new GitHubRepositoryConfig("SuperJMN", "DotnetPackaging", "API-KEY");
+        var result = await deployer.CreateGitHubRelease(packager =>
+        {
+            return packager.CreateWindowsPackages(DesktopProject, new WindowsDeployment.DeploymentOptions()
+            {
+                PackageName = "TestApp",
+                Version = "1.0.0",
+            });
+            
+        }, gitHubRepositoryConfig, releaseData);
+        result.Should().Succeed();
+    }
+    
+    [Fact]
     public async Task Test_wasm_site()
     {
         var logger = new LoggerConfiguration().WriteTo.TestOutput(outputHelper).CreateLogger();
