@@ -1,58 +1,111 @@
+using static System.IO.Path;
+
 namespace DotnetPackaging.Deployment.Platforms.Android;
 
 public class AndroidSdk(Maybe<ILogger> logger)
 {
     public Result<string> FindPath()
     {
-        logger.Execute(log => log.Information("Intentando autodetectar Android SDK..."));
+        logger.Execute(log => log.Information("Attempting to auto-detect Android SDK..."));
 
-        // Rutas comunes donde se suele instalar Android SDK
-        var commonPaths = new[]
-        {
-            System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Android", "Sdk"),
-            System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Android", "Sdk"),
-            "/usr/lib/android-sdk",
-            "/opt/android-sdk",
-            "/home/android-sdk"
-        };
+        // Get OS-specific common paths where Android SDK is typically installed
+        var commonPaths = GetOsSpecificPaths();
 
-        // También verificar variables de entorno
+        // Also check environment variables
         var envPath = Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT") ??
                       Environment.GetEnvironmentVariable("ANDROID_HOME");
 
         var pathsToCheck = envPath != null
-            ? new[] { envPath }.Concat(commonPaths)
-            : commonPaths;
+            ? new[] { envPath }.Concat(commonPaths).ToList()
+            : commonPaths.ToList();
 
         foreach (var path in pathsToCheck)
         {
             var validationResult = Check(path);
             if (validationResult.IsSuccess)
             {
-                logger.Execute(log => log.Information("Android SDK autodetectado en: {Path}", path));
+                logger.Execute(log => log.Information("Android SDK auto-detected at: {Path}", path));
                 return validationResult;
             }
         }
 
-        var errorMessage = "No se pudo autodetectar Android SDK. Rutas verificadas: " + string.Join(", ", pathsToCheck);
+        var errorMessage = "Could not auto-detect Android SDK. Verified paths: " + string.Join(", ", pathsToCheck);
         logger.Execute(log => log.Error(errorMessage));
         return Result.Failure<string>(errorMessage);
+    }
+
+    private static string[] GetOsSpecificPaths()
+    {
+        var paths = new List<string>();
+
+        if (OperatingSystem.IsWindows())
+        {
+            // Windows-specific paths
+            paths.AddRange(new[]
+            {
+                Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Android", "Sdk"),
+                Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Android", "Sdk"),
+                Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Android", "Sdk"),
+                Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Android", "Sdk"),
+                @"C:\Android\Sdk"
+            });
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            // macOS-specific paths
+            var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            paths.AddRange(new[]
+            {
+                Combine(homeDir, "Library", "Android", "sdk"),
+                Combine(homeDir, "Android", "Sdk"),
+                "/usr/local/android-sdk",
+                "/opt/android-sdk",
+                "/Applications/Android Studio.app/Contents/sdk"
+            });
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            // Linux-specific paths
+            var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            paths.AddRange(new[]
+            {
+                Combine(homeDir, "Android", "Sdk"),
+                Combine(homeDir, ".android-sdk"),
+                "/usr/lib/android-sdk",
+                "/opt/android-sdk",
+                "/snap/android-studio/current/android-studio/bin/sdk",
+                "/var/lib/snapd/snap/android-studio/current/android-studio/bin/sdk"
+            });
+        }
+        else
+        {
+            // Fallback for other Unix-like systems
+            var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            paths.AddRange(new[]
+            {
+                Combine(homeDir, "Android", "Sdk"),
+                "/usr/lib/android-sdk",
+                "/opt/android-sdk"
+            });
+        }
+
+        return paths.ToArray();
     }
 
     public Result<string> Check(string androidSdkPath)
     {
         if (string.IsNullOrWhiteSpace(androidSdkPath))
-            return Result.Failure<string>("La ruta del Android SDK está vacía");
+            return Result.Failure<string>("Android SDK path is empty");
 
-        if (!System.IO.Directory.Exists(androidSdkPath))
-            return Result.Failure<string>($"La ruta del Android SDK no existe: {androidSdkPath}");
+        if (!Directory.Exists(androidSdkPath))
+            return Result.Failure<string>($"Android SDK path does not exist: {androidSdkPath}");
 
-        // Verificar que contenga directorios típicos de Android SDK
+        // Verify that it contains typical Android SDK directories
         var requiredDirs = new[] { "platform-tools", "platforms" };
-        var missingDirs = requiredDirs.Where(dir => !System.IO.Directory.Exists(System.IO.Path.Combine(androidSdkPath, dir))).ToList();
+        var missingDirs = requiredDirs.Where(dir => !System.IO.Directory.Exists(Combine(androidSdkPath, dir))).ToList();
 
         if (missingDirs.Any())
-            return Result.Failure<string>($"La ruta no parece ser un Android SDK válido. Faltan directorios: {string.Join(", ", missingDirs)}");
+            return Result.Failure<string>($"Path does not appear to be a valid Android SDK. Missing directories: {string.Join(", ", missingDirs)}");
 
         return Result.Success(androidSdkPath);
     }
