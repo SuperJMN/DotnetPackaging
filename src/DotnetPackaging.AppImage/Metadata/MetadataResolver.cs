@@ -1,7 +1,7 @@
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.Unix;
 
-namespace DotnetPackaging.AppImage;
+namespace DotnetPackaging.AppImage.Metadata;
 
 internal class MetadataResolver : IMetadataResolver
 {
@@ -30,10 +30,12 @@ internal class MetadataResolver : IMetadataResolver
     {
         // Check if this is the main executable file
         var isExecutable = executableFile.Resource.Name.Equals(file.Name, StringComparison.OrdinalIgnoreCase);
+        // Check if this is the AppRun file, which is also executable
+        var isAppRun = file.Name.Equals("AppRun", StringComparison.OrdinalIgnoreCase);
         
         UnixPermissions filePermissions;
         
-        if (isExecutable)
+        if (isExecutable || isAppRun)
         {
             // Executable file permissions: 755 (rwxr-xr-x)
             // Owner: read, write, execute

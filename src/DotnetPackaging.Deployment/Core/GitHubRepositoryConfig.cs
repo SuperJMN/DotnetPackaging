@@ -1,4 +1,4 @@
-namespace DotnetPackaging.Deployment;
+namespace DotnetPackaging.Deployment.Core;
 
 public class GitHubRepositoryConfig(string ownerName, string repositoryName, string apiKey)
 {
