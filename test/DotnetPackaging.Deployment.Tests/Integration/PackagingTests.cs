@@ -134,7 +134,7 @@ public class PackagingTests(ITestOutputHelper outputHelper)
             AndroidSigningKeyStore = ByteSource.FromString("test.keystore")
         };
 
-        var releaseBuilder = Deployer.CreateRelease()
+        var releaseBuilder = deployer.CreateRelease()
             .WithVersion("1.0.0")
             .ForWindows(DesktopProject, "TestApp")
             .ForLinux(DesktopProject, "com.superjmn.testapp", "Test App", "TestApp")
@@ -184,7 +184,7 @@ public class PackagingTests(ITestOutputHelper outputHelper)
         };
 
         // Test the automatic project discovery method
-        var result = await deployer.CreateAvaloniaReleaseFromSolution(
+        var result = await deployer.CreateGitHubReleaseForAvalonia(
             SolutionPath, 
             "1.0.0", 
             "TestApp", 

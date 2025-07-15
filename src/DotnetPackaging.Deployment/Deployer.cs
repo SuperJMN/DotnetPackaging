@@ -225,8 +225,8 @@ public class Deployer(Context context, Packager packager, Publisher publisher)
             .Bind(files => CreateGitHubRelease(files.ToList(), repositoryConfig, releaseData));
     }
     
-    // Static method to create a new builder
-    public static ReleaseBuilder CreateRelease() => new();
+    // Instance method to create a new builder with Context
+    public ReleaseBuilder CreateRelease() => new(Context);
     
     // Convenience methods using the builder pattern
     public Task<Result> CreateDesktopRelease(string projectPath, string version, string packageName, string appId, string appName, GitHubRepositoryConfig repositoryConfig, ReleaseData releaseData)
@@ -240,10 +240,16 @@ public class Deployer(Context context, Packager packager, Publisher publisher)
     }
     
     // Convenience method for automatic Avalonia project discovery
-    public Task<Result> CreateAvaloniaReleaseFromSolution(string solutionPath, string version, string packageName, string appId, string appName, GitHubRepositoryConfig repositoryConfig, ReleaseData releaseData, AndroidDeployment.DeploymentOptions? androidOptions = null)
+    // This assumes the solution contains Avalonia projects and uses the solution path to find them
+    // It means that the solution names for the projects must follow a specific pattern. Like:
+    // - AvaloniaApp.Desktop (for Windows, macOS, Linux)
+    // - AvaloniaApp.Android (for Android)
+    // - AvaloniaApp.Browser (for WebAssembly)
+    // - Avalonia.iOS (for iOS, if applicable)
+    public Task<Result> CreateGitHubReleaseForAvalonia(string avaloniaSolutionPath, string version, string packageName, string appId, string appName, GitHubRepositoryConfig repositoryConfig, ReleaseData releaseData, AndroidDeployment.DeploymentOptions? androidOptions = null)
     {
         var releaseConfig = CreateRelease()
-            .ForAvaloniaProjectsFromSolution(solutionPath, version, packageName, appId, appName, androidOptions)
+            .ForAvaloniaProjectsFromSolution(avaloniaSolutionPath, version, packageName, appId, appName, androidOptions)
             .Build();
             
         return CreateGitHubRelease(releaseConfig, repositoryConfig, releaseData);
