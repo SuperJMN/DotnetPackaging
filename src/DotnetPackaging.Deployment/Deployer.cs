@@ -79,7 +79,8 @@ public class Deployer(Context context, Packager packager, Publisher publisher)
     public Task<Result> CreateGitHubReleaseForAvalonia(string avaloniaSolutionPath, string version, string packageName, string appId, string appName, GitHubRepositoryConfig repositoryConfig, ReleaseData releaseData, AndroidDeployment.DeploymentOptions? androidOptions = null)
     {
         var releaseConfig = CreateRelease()
-            .ForAvaloniaProjectsFromSolution(avaloniaSolutionPath, version, packageName, appId, appName, androidOptions)
+            .WithApplicationInfo(packageName, appId, appName)
+            .ForAvaloniaProjectsFromSolution(avaloniaSolutionPath, version, androidOptions)
             .Build();
 
         return CreateGitHubRelease(releaseConfig, repositoryConfig, releaseData);
