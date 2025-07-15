@@ -1,4 +1,4 @@
-namespace DotnetPackaging.Deployment;
+namespace DotnetPackaging.Deployment.Core;
 
 public class ReleaseData(string releaseName, string tag, string releaseBody, bool isDraft = false, bool isPrerelease = false)
 {

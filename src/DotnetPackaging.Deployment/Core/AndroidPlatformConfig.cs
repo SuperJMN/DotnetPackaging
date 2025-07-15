@@ -1,6 +1,6 @@
 using DotnetPackaging.Deployment.Platforms.Android;
 
-namespace DotnetPackaging.Deployment;
+namespace DotnetPackaging.Deployment.Core;
 
 public class AndroidPlatformConfig
 {

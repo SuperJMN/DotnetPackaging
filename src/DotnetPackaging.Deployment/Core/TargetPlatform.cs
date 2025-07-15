@@ -1,4 +1,4 @@
-namespace DotnetPackaging.Deployment;
+namespace DotnetPackaging.Deployment.Core;
 
 [Flags]
 public enum TargetPlatform

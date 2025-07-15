@@ -1,6 +1,6 @@
 using DotnetPackaging.AppImage.Metadata;
 
-namespace DotnetPackaging.Deployment;
+namespace DotnetPackaging.Deployment.Core;
 
 public class LinuxPlatformConfig
 {

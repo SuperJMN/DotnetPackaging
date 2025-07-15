@@ -1,6 +1,6 @@
 using DotnetPackaging.Deployment.Platforms.Windows;
 
-namespace DotnetPackaging.Deployment;
+namespace DotnetPackaging.Deployment.Core;
 
 public class WindowsPlatformConfig
 {
