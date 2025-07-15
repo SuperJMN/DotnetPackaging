@@ -31,11 +31,7 @@ class Build : NukeBuild
     IEnumerable<string> PackableProjects =>
         Solution.AllProjects
             .Where(x => x.GetProperty<bool>("IsPackable"))
-            .Where(project =>
-            {
-                Debugger.Launch();
-                return project.Name.StartsWith("DotnetPackaging", StringComparison.InvariantCultureIgnoreCase);
-            })
+            .Where(project => project.Name.StartsWith("DotnetPackaging", StringComparison.InvariantCultureIgnoreCase))
             .Where(x => !(x.Path.ToString().Contains("Test", StringComparison.InvariantCultureIgnoreCase) || x.Path.ToString().Contains("Sample", StringComparison.InvariantCultureIgnoreCase)))
             .Select(x => x.Path.ToString());
 

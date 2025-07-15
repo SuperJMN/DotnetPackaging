@@ -63,7 +63,10 @@ public class AndroidDeployment(IDotnet dotnet, Path projectPath, AndroidDeployme
             new[] { "AndroidSigningKeyAlias", deploymentOptions.SigningKeyAlias },
             new[] { "AndroidSigningStorePass", deploymentOptions.SigningStorePass },
             new[] { "AndroidSigningKeyPass", deploymentOptions.SigningKeyPass },
-            new[] { "AndroidSdkDirectory", androidSdkPath }
+            new[] { "AndroidSdkDirectory", androidSdkPath },
+            new[] { "AndroidSignV1", "true" },
+            new[] { "AndroidSignV2", "true" },
+            new[] { "AndroidPackageFormats", "apk" },
         };
 
         return ArgumentsParser.Parse([["configuration", "Release"]], properties);

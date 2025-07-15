@@ -106,8 +106,10 @@ public class Command(Maybe<ILogger> logger) : ICommand
             new Regex(@"(?<=\b-p\s+)\S+", RegexOptions.IgnoreCase),
             // password=secreto o token:secreto
             new Regex(@"(?<=\b(password|pass|pwd|token|secret|key)\s*[:=]\s*)\S+", RegexOptions.IgnoreCase),
-            // -p:ClaveSecreta=valor o /p:ClaveSecreta=valor
-            new Regex(@"(?<=(-p:|/p:)[^=]*\b(password|pass|pwd|token|secret|key)\b[^=]*=)\S+", RegexOptions.IgnoreCase)
+            // -p:PropertyName=valor o /p:PropertyName=valor where PropertyName contains sensitive keywords
+            new Regex(@"(?<=(-p:|/p:)[^=]*\b(password|pass|pwd|token|secret|key|auth)\b[^=]*=)\S+", RegexOptions.IgnoreCase),
+            // -p:PropertyContainingSensitiveWord=valor (like AndroidSigningKeyPass, AndroidSigningStorePass, etc.)
+            new Regex(@"(?<=(-p:|/p:)\w*(password|pass|pwd|token|secret|key|auth)\w*=)\S+", RegexOptions.IgnoreCase)
         };
 
         foreach (var rx in patterns)
