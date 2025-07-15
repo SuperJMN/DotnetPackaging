@@ -13,6 +13,18 @@ public class ReleaseBuilder(Context context)
         configuration.Version = version;
         return this;
     }
+
+    public ReleaseBuilder WithApplicationInfo(string packageName, string appId, string appName)
+    {
+        configuration.ApplicationInfo = new ApplicationInfo
+        {
+            PackageName = packageName,
+            AppId = appId,
+            AppName = appName
+        };
+
+        return this;
+    }
     
     public ReleaseBuilder ForWindows(string projectPath, WindowsDeployment.DeploymentOptions options)
     {
@@ -23,6 +35,17 @@ public class ReleaseBuilder(Context context)
         };
         configuration.Platforms |= TargetPlatform.Windows;
         return this;
+    }
+
+    public ReleaseBuilder ForWindows(string projectPath)
+    {
+        var windowsOptions = new WindowsDeployment.DeploymentOptions
+        {
+            PackageName = configuration.ApplicationInfo.PackageName,
+            Version = configuration.Version
+        };
+
+        return ForWindows(projectPath, windowsOptions);
     }
     
     public ReleaseBuilder ForWindows(string projectPath, string packageName, string? version = null)
@@ -45,6 +68,19 @@ public class ReleaseBuilder(Context context)
         configuration.Platforms |= TargetPlatform.Linux;
         return this;
     }
+
+    public ReleaseBuilder ForLinux(string projectPath)
+    {
+        var metadata = new AppImage.Metadata.AppImageMetadata(
+            configuration.ApplicationInfo.AppId,
+            configuration.ApplicationInfo.AppName,
+            configuration.ApplicationInfo.PackageName)
+        {
+            Version = Maybe<string>.From(configuration.Version)
+        };
+
+        return ForLinux(projectPath, metadata);
+    }
     
     public ReleaseBuilder ForLinux(string projectPath, string appId, string appName, string packageName, string? version = null)
     {
@@ -57,6 +93,11 @@ public class ReleaseBuilder(Context context)
     
     public ReleaseBuilder ForAndroid(string projectPath, AndroidDeployment.DeploymentOptions options)
     {
+        if (string.IsNullOrWhiteSpace(options.PackageName))
+        {
+            options.PackageName = configuration.ApplicationInfo.PackageName;
+        }
+
         configuration.AndroidConfig = new AndroidPlatformConfig
         {
             ProjectPath = projectPath,
@@ -76,19 +117,19 @@ public class ReleaseBuilder(Context context)
         return this;
     }
     
-    // Convenience methods for common combinations - now they require explicit project paths
-    public ReleaseBuilder ForDesktop(string desktopProjectPath, string packageName, string appId, string appName)
+    // Convenience methods for common combinations
+    public ReleaseBuilder ForDesktop(string desktopProjectPath)
     {
-        return ForWindows(desktopProjectPath, packageName)
-               .ForLinux(desktopProjectPath, appId, appName, packageName);
+        return ForWindows(desktopProjectPath)
+               .ForLinux(desktopProjectPath);
     }
-    
+
     // Method for typical Avalonia multi-project setup
-    public ReleaseBuilder ForAvaloniaProjects(string baseProjectName, string version, string packageName, string appId, string appName, AndroidDeployment.DeploymentOptions? androidOptions = null)
+    public ReleaseBuilder ForAvaloniaProjects(string baseProjectName, string version, AndroidDeployment.DeploymentOptions? androidOptions = null)
     {
         var builder = WithVersion(version)
-            .ForWindows($"{baseProjectName}.Desktop", packageName)
-            .ForLinux($"{baseProjectName}.Desktop", appId, appName, packageName)
+            .ForWindows($"{baseProjectName}.Desktop")
+            .ForLinux($"{baseProjectName}.Desktop")
             .ForWebAssembly($"{baseProjectName}.Browser");
             
         if (androidOptions != null)
@@ -100,7 +141,7 @@ public class ReleaseBuilder(Context context)
     }
     
     // Method for automatic project discovery based on solution name and Avalonia conventions
-    public ReleaseBuilder ForAvaloniaProjectsFromSolution(string solutionPath, string version, string packageName, string appId, string appName, AndroidDeployment.DeploymentOptions? androidOptions = null)
+    public ReleaseBuilder ForAvaloniaProjectsFromSolution(string solutionPath, string version, AndroidDeployment.DeploymentOptions? androidOptions = null)
     {
         context.Logger.Information("Starting Avalonia project discovery from solution: {SolutionPath}", solutionPath);
         
@@ -117,8 +158,8 @@ public class ReleaseBuilder(Context context)
         if (desktopProject.HasValue)
         {
             context.Logger.Information("Found Desktop project: {ProjectPath}", desktopProject.Value);
-            builder = builder.ForWindows(desktopProject.Value, packageName)
-                           .ForLinux(desktopProject.Value, appId, appName, packageName);
+            builder = builder.ForWindows(desktopProject.Value)
+                           .ForLinux(desktopProject.Value);
         }
         else
         {

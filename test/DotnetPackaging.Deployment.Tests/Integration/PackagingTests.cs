@@ -136,8 +136,9 @@ public class PackagingTests(ITestOutputHelper outputHelper)
 
         var releaseBuilder = deployer.CreateRelease()
             .WithVersion("1.0.0")
-            .ForWindows(DesktopProject, "TestApp")
-            .ForLinux(DesktopProject, "com.superjmn.testapp", "Test App", "TestApp")
+            .WithApplicationInfo("TestApp", "com.superjmn.testapp", "Test App")
+            .ForWindows(DesktopProject)
+            .ForLinux(DesktopProject)
             .ForAndroid(AndroidProject, androidOptions)
             .ForWebAssembly(WasmProject);
         
@@ -185,13 +186,13 @@ public class PackagingTests(ITestOutputHelper outputHelper)
 
         // Test the automatic project discovery method
         var result = await deployer.CreateGitHubReleaseForAvalonia(
-            SolutionPath, 
-            "1.0.0", 
-            "TestApp", 
-            "com.superjmn.testapp", 
-            "Test App", 
-            gitHubRepositoryConfig, 
-            releaseData, 
+            SolutionPath,
+            "1.0.0",
+            "TestApp",
+            "com.superjmn.testapp",
+            "Test App",
+            gitHubRepositoryConfig,
+            releaseData,
             androidOptions);
         
         result.Should().Succeed();
