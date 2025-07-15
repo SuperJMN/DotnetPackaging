@@ -14,7 +14,9 @@ namespace DotnetPackaging.Deployment.Tests.Integration;
 
 public class PackagingTests(ITestOutputHelper outputHelper)
 {
+    private const string GitHubApiKey = "API-KEY";
     public static string OutputFolder = "/home/jmn/Escritorio/DotnetPackaging";
+    public static string SolutionPath = "/mnt/fast/Repos/SuperJMN-Zafiro/Zafiro.Avalonia/samples/TestApp/TestApp.sln";
     public static string DesktopProject = "/mnt/fast/Repos/SuperJMN-Zafiro/Zafiro.Avalonia/samples/TestApp/TestApp.Desktop/TestApp.Desktop.csproj";
     public static string AndroidProject = "/mnt/fast/Repos/SuperJMN-Zafiro/Zafiro.Avalonia/samples/TestApp/TestApp.Android/TestApp.Android.csproj";
     public static string WasmProject = "/mnt/fast/Repos/SuperJMN-Zafiro/Zafiro.Avalonia/samples/TestApp/TestApp.Browser/TestApp.Browser.csproj";
@@ -103,7 +105,7 @@ public class PackagingTests(ITestOutputHelper outputHelper)
         var context = new Context(dotnet, command, logger, new DefaultHttpClientFactory());
         var deployer = new Deployer(context, new Packager(dotnet, logger), new Publisher(context));
 
-        var result = await deployer.PublishNugetPackages(["PATH_TO_PROJECT"], "VERSION", "NUGET-API-KEY");
+        var result = await deployer.PublishNugetPackages(["PATH_TO_PROJECT"], "VERSION", GitHubApiKey);
         result.Should().Succeed();
     }
     
@@ -118,16 +120,29 @@ public class PackagingTests(ITestOutputHelper outputHelper)
         var deployer = new Deployer(context, new Packager(dotnet, logger), new Publisher(context));
 
         var releaseData = new ReleaseData("Test Release", "Tag", "BODY", isDraft: true);
-        var gitHubRepositoryConfig = new GitHubRepositoryConfig("SuperJMN", "DotnetPackaging", "API-KEY");
-        var result = await deployer.CreateGitHubRelease(packager =>
+        var gitHubRepositoryConfig = new GitHubRepositoryConfig("SuperJMN", "DotnetPackaging", GitHubApiKey);
+        
+        // Using the new builder API that supports different projects per platform
+        var androidOptions = new AndroidDeployment.DeploymentOptions()
         {
-            return packager.CreateWindowsPackages(DesktopProject, new WindowsDeployment.DeploymentOptions()
-            {
-                PackageName = "TestApp",
-                Version = "1.0.0",
-            });
-            
-        }, gitHubRepositoryConfig, releaseData);
+            PackageName = "TestApp",
+            ApplicationDisplayVersion = "1.0.0",
+            ApplicationVersion = 1,
+            SigningKeyAlias = "android",
+            SigningKeyPass = "test1234",
+            SigningStorePass = "test1234",
+            AndroidSigningKeyStore = ByteSource.FromString("test.keystore")
+        };
+
+        var releaseBuilder = Deployer.CreateRelease()
+            .WithVersion("1.0.0")
+            .ForWindows(DesktopProject, "TestApp")
+            .ForLinux(DesktopProject, "com.superjmn.testapp", "Test App", "TestApp")
+            .ForAndroid(AndroidProject, androidOptions)
+            .ForWebAssembly(WasmProject);
+        
+        var result = await deployer.CreateGitHubRelease(releaseBuilder.Build(), gitHubRepositoryConfig, releaseData);
+        
         result.Should().Succeed();
     }
     
@@ -141,6 +156,44 @@ public class PackagingTests(ITestOutputHelper outputHelper)
             .CreateWasmSite(WasmProject)
             .Map(site => site.Contents.WriteTo(OutputFolder + "/" + "WasmSite"));
 
+        result.Should().Succeed();
+    }
+    
+    [Fact]
+    public async Task Create_GitHub_release_from_solution_discovery()
+    {
+        var logger = new LoggerConfiguration().WriteTo.TestOutput(outputHelper).CreateLogger();
+        var command = new Command(logger);
+        var dotnet = new Dotnet(command, logger);
+
+        var context = new Context(dotnet, command, logger, new DefaultHttpClientFactory());
+        var deployer = new Deployer(context, new Packager(dotnet, logger), new Publisher(context));
+
+        var releaseData = new ReleaseData("Test Release from Solution", "Tag", "BODY", isDraft: true);
+        var gitHubRepositoryConfig = new GitHubRepositoryConfig("SuperJMN", "DotnetPackaging", GitHubApiKey);
+        
+        var androidOptions = new AndroidDeployment.DeploymentOptions()
+        {
+            PackageName = "TestApp",
+            ApplicationDisplayVersion = "1.0.0",
+            ApplicationVersion = 1,
+            SigningKeyAlias = "android",
+            SigningKeyPass = "test1234",
+            SigningStorePass = "test1234",
+            AndroidSigningKeyStore = ByteSource.FromString("test.keystore")
+        };
+
+        // Test the automatic project discovery method
+        var result = await deployer.CreateAvaloniaReleaseFromSolution(
+            SolutionPath, 
+            "1.0.0", 
+            "TestApp", 
+            "com.superjmn.testapp", 
+            "Test App", 
+            gitHubRepositoryConfig, 
+            releaseData, 
+            androidOptions);
+        
         result.Should().Succeed();
     }
 }
