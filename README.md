@@ -21,7 +21,21 @@ Easy peasy. Install the tool by executing this command:
 dotnet tool install --global DotnetPackaging.Console
 ```
 
-After the tool is installed, just invoke it with the appropriate arguments. 
+After the tool is installed, just invoke it with the appropriate arguments.
+
+## Deploying with dotnetdeployer
+
+The repository also includes a CLI called `dotnetdeployer`. It automates the
+publishing of NuGet packages and GitHub releases so it can be easily invoked
+from CI pipelines like Azure DevOps.
+
+You can publish the tool itself using a single command:
+
+```powershell
+dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- \
+    nuget --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj \
+    --version 1.0.0 --api-key <YOUR_NUGET_API_KEY>
+```
 
 ## Samples
 
