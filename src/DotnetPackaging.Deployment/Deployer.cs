@@ -76,11 +76,11 @@ public class Deployer(Context context, Packager packager, Publisher publisher)
     // - AvaloniaApp.Android (for Android)
     // - AvaloniaApp.Browser (for WebAssembly)
     // - Avalonia.iOS (for iOS, if applicable)
-    public Task<Result> CreateGitHubReleaseForAvalonia(string avaloniaSolutionPath, string version, string packageName, string appId, string appName, GitHubRepositoryConfig repositoryConfig, ReleaseData releaseData, AndroidDeployment.DeploymentOptions? androidOptions = null)
+    public Task<Result> CreateGitHubReleaseForAvalonia(string avaloniaSolutionPath, string version, string packageName, string appId, string appName, GitHubRepositoryConfig repositoryConfig, ReleaseData releaseData, AndroidDeployment.DeploymentOptions? androidOptions = null, TargetPlatform platforms = TargetPlatform.All)
     {
         var releaseConfig = CreateRelease()
             .WithApplicationInfo(packageName, appId, appName)
-            .ForAvaloniaProjectsFromSolution(avaloniaSolutionPath, version, androidOptions)
+            .ForAvaloniaProjectsFromSolution(avaloniaSolutionPath, version, platforms, androidOptions)
             .Build();
 
         return CreateGitHubRelease(releaseConfig, repositoryConfig, releaseData);

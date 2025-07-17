@@ -118,5 +118,15 @@ Once installed, invoke the `dotnetdeployer` command. It exposes subcommands to
 publish NuGet packages and to create GitHub releases using the same
 conventions as the library.
 
+For the `create-release` command you can specify which platforms to package using the
+`--platforms` option. Example:
+
+```powershell
+dotnetdeployer create-release --solution MyApp.sln --version 1.0.0 \
+    --package-name MyApp --app-id com.sample.myapp --app-name MyApp \
+    --owner MyOrg --repository MyRepo --release-name "v1.0" --tag v1.0 \
+    --body "First release" --platforms "Windows, Linux"
+```
+
 # Acknowledgements
 - Huge thanks [Alexey Sonkin](https://github.com/teplofizik) for his wonderful SquashFS support in his [NyaFS](https://github.com/teplofizik/nyafs) library.

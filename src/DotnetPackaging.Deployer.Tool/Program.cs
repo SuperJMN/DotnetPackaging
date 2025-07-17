@@ -63,6 +63,7 @@ class Program
         var body = new Option<string>("--body") { IsRequired = true };
         var draft = new Option<bool>("--draft", () => false);
         var prerelease = new Option<bool>("--prerelease", () => false);
+        var platforms = new Option<string>("--platforms", () => "All", "Target platforms to package: Windows, Linux, Android, WebAssembly or combination like 'Windows, Linux'");
         var apiKey = new Option<string>("--api-key", () => Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? string.Empty,
             "GitHub API token (or set GITHUB_TOKEN)");
 
@@ -79,6 +80,7 @@ class Program
         cmd.AddOption(body);
         cmd.AddOption(draft);
         cmd.AddOption(prerelease);
+        cmd.AddOption(platforms);
         cmd.AddOption(apiKey);
 
         cmd.SetHandler(async (InvocationContext ctx) =>
@@ -95,6 +97,7 @@ class Program
             var bodyVal = ctx.ParseResult.GetValueForOption(body)!;
             var isDraft = ctx.ParseResult.GetValueForOption(draft);
             var isPrerelease = ctx.ParseResult.GetValueForOption(prerelease);
+            var platformsVal = ctx.ParseResult.GetValueForOption(platforms)!;
             var token = ctx.ParseResult.GetValueForOption(apiKey)!;
             if (string.IsNullOrWhiteSpace(token))
             {
@@ -103,7 +106,11 @@ class Program
             var deployer = Deployer.Instance;
             var repoConfig = new GitHubRepositoryConfig(ownerVal, repoVal, token);
             var releaseData = new ReleaseData(relName, tagVal, bodyVal, isDraft, isPrerelease);
-            var result = await deployer.CreateGitHubReleaseForAvalonia(sln.FullName, ver, pkgName, id, name, repoConfig, releaseData);
+            if (!Enum.TryParse<TargetPlatform>(platformsVal.Replace('|', ','), true, out var platformFlags))
+            {
+                throw new InvalidOperationException($"Invalid platforms value: {platformsVal}");
+            }
+            var result = await deployer.CreateGitHubReleaseForAvalonia(sln.FullName, ver, pkgName, id, name, repoConfig, releaseData, null, platformFlags);
             if (result.IsFailure) Log.Logger.Error("{Error}", result.Error); else Log.Logger.Information("Success");
         });
 
