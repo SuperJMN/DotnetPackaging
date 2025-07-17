@@ -104,6 +104,19 @@ Take a looks to this example:
 Feel free to ask in the Discussions section of this repo.
 If this has been useful for you, please consider sponsoring this project. Thanks!
 
+## Cloning the repository
+
+This repo contains the **Zafiro** library as a Git submodule under `libs/Zafiro`.
+When cloning for the first time make sure to initialize submodules so the
+solution can restore and build correctly:
+
+```bash
+git clone --recurse-submodules https://github.com/SuperJMN/DotnetPackaging.git
+# or, if you already cloned it
+git submodule update --init --recursive
+```
+
+
 # Deploying with the Deployer tool
 
 If you prefer to automate publishing NuGet packages and creating GitHub releases
