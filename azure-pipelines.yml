@@ -7,6 +7,15 @@ steps:
   - checkout: self
     submodules: true
 
+  - script: |
+      dotnet tool install --global GitVersion.Tool
+      export PATH="$PATH:$HOME/.dotnet/tools"
+      gitversion /output buildserver
+    displayName: GitVersion
+
+  - script: echo "##vso[build.updatebuildnumber]$(GitVersion.FullSemVer)"
+    displayName: Set Build Number
+
   - task: UseDotNet@2
     inputs:
       packageType: sdk

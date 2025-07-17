@@ -29,6 +29,9 @@ The repository also includes a CLI called `dotnetdeployer`. It automates the
 publishing of NuGet packages and GitHub releases so it can be easily invoked
 from CI pipelines like Azure DevOps.
 
+The Azure Pipeline determines the version using [GitVersion](https://gitversion.net),
+so releases automatically follow the Git history.
+
 You can publish the tool itself using a single command:
 
 ```powershell
