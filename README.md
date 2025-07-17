@@ -104,5 +104,19 @@ Take a looks to this example:
 Feel free to ask in the Discussions section of this repo.
 If this has been useful for you, please consider sponsoring this project. Thanks!
 
+# Deploying with the Deployer tool
+
+If you prefer to automate publishing NuGet packages and creating GitHub releases
+without a full-blown CI script, install the **DotnetPackaging.Deployer.Tool** as
+a .NET global tool:
+
+```powershell
+dotnet tool install --global DotnetPackaging.Deployer.Tool
+```
+
+Once installed, invoke the `dotnetdeployer` command. It exposes subcommands to
+publish NuGet packages and to create GitHub releases using the same
+conventions as the library.
+
 # Acknowledgements
 - Huge thanks [Alexey Sonkin](https://github.com/teplofizik) for his wonderful SquashFS support in his [NyaFS](https://github.com/teplofizik/nyafs) library.
