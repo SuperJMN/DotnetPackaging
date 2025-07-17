@@ -104,5 +104,42 @@ Take a looks to this example:
 Feel free to ask in the Discussions section of this repo.
 If this has been useful for you, please consider sponsoring this project. Thanks!
 
+## Cloning the repository
+
+This repo contains the **Zafiro** library as a Git submodule under `libs/Zafiro`.
+When cloning for the first time make sure to initialize submodules so the
+solution can restore and build correctly:
+
+```bash
+git clone --recurse-submodules https://github.com/SuperJMN/DotnetPackaging.git
+# or, if you already cloned it
+git submodule update --init --recursive
+```
+
+
+# Deploying with the Deployer tool
+
+If you prefer to automate publishing NuGet packages and creating GitHub releases
+without a full-blown CI script, install the **DotnetPackaging.Deployer.Tool** as
+a .NET global tool:
+
+```powershell
+dotnet tool install --global DotnetPackaging.Deployer.Tool
+```
+
+Once installed, invoke the `dotnetdeployer` command. It exposes subcommands to
+publish NuGet packages and to create GitHub releases using the same
+conventions as the library.
+
+For the `create-release` command you can specify which platforms to package using the
+`--platforms` option. Example:
+
+```powershell
+dotnetdeployer create-release --solution MyApp.sln --version 1.0.0 \
+    --package-name MyApp --app-id com.sample.myapp --app-name MyApp \
+    --owner MyOrg --repository MyRepo --release-name "v1.0" --tag v1.0 \
+    --body "First release" --platforms "Windows, Linux"
+```
+
 # Acknowledgements
 - Huge thanks [Alexey Sonkin](https://github.com/teplofizik) for his wonderful SquashFS support in his [NyaFS](https://github.com/teplofizik/nyafs) library.
