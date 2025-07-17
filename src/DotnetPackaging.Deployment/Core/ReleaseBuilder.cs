@@ -1,5 +1,7 @@
 using DotnetPackaging.Deployment.Platforms.Android;
 using DotnetPackaging.Deployment.Platforms.Windows;
+using System.IO;
+using System.Text.RegularExpressions;
 using Zafiro.Mixins;
 
 namespace DotnetPackaging.Deployment.Core;
@@ -140,118 +142,102 @@ public class ReleaseBuilder(Context context)
         return builder;
     }
     
-    // Method for automatic project discovery based on solution name and Avalonia conventions
+    // Method for automatic project discovery using the .sln contents rather than file system heuristics
     public ReleaseBuilder ForAvaloniaProjectsFromSolution(string solutionPath, string version, AndroidDeployment.DeploymentOptions? androidOptions = null)
     {
         context.Logger.Information("Starting Avalonia project discovery from solution: {SolutionPath}", solutionPath);
-        
+
         var solutionDirectory = global::System.IO.Path.GetDirectoryName(solutionPath) ?? throw new ArgumentException("Invalid solution path", nameof(solutionPath));
-        var solutionName = global::System.IO.Path.GetFileNameWithoutExtension(solutionPath);
-        
-        context.Logger.Information("Solution directory: {SolutionDirectory}, Solution name: {SolutionName}", solutionDirectory, solutionName);
-        
+        var projects = ParseSolutionProjects(solutionPath).ToList();
+
+        context.Logger.Information("Parsed {Count} projects from solution", projects.Count);
+
         var builder = WithVersion(version);
-        
-        // Try to find Desktop project (Windows + Linux)
-        context.Logger.Information("Searching for Desktop project...");
-        var desktopProject = FindProject(solutionDirectory, solutionName, "Desktop");
-        if (desktopProject.HasValue)
+
+        // Desktop (Windows + Linux)
+        var desktop = projects.FirstOrDefault(p => p.Name.EndsWith(".Desktop", StringComparison.OrdinalIgnoreCase));
+        if (desktop != default)
         {
-            context.Logger.Information("Found Desktop project: {ProjectPath}", desktopProject.Value);
-            builder = builder.ForWindows(desktopProject.Value)
-                           .ForLinux(desktopProject.Value);
+            context.Logger.Information("Found Desktop project: {ProjectPath}", desktop.Path);
+            builder = builder.ForWindows(desktop.Path)
+                               .ForLinux(desktop.Path);
         }
         else
         {
-            context.Logger.Warn("Desktop project not found");
+            context.Logger.Warn("Desktop project not found in solution");
         }
-        
-        // Try to find Browser project (WebAssembly)
-        context.Logger.Information("Searching for Browser project...");
-        var browserProject = FindProject(solutionDirectory, solutionName, "Browser");
-        if (browserProject.HasValue)
+
+        // Browser (WebAssembly)
+        var browser = projects.FirstOrDefault(p => p.Name.EndsWith(".Browser", StringComparison.OrdinalIgnoreCase));
+        if (browser != default)
         {
-            context.Logger.Information("Found Browser project: {ProjectPath}", browserProject.Value);
-            builder = builder.ForWebAssembly(browserProject.Value);
+            context.Logger.Information("Found Browser project: {ProjectPath}", browser.Path);
+            builder = builder.ForWebAssembly(browser.Path);
         }
         else
         {
-            context.Logger.Warn("Browser project not found");
+            context.Logger.Warn("Browser project not found in solution");
         }
-        
-        // Try to find Android project
-        context.Logger.Information("Searching for Android project...");
-        var androidProject = FindProject(solutionDirectory, solutionName, "Android");
-        if (androidProject.HasValue && androidOptions != null)
+
+        // Android
+        var android = projects.FirstOrDefault(p => p.Name.EndsWith(".Android", StringComparison.OrdinalIgnoreCase));
+        if (android != default && androidOptions != null)
         {
-            context.Logger.Information("Found Android project: {ProjectPath}", androidProject.Value);
-            builder = builder.ForAndroid(androidProject.Value, androidOptions);
+            context.Logger.Information("Found Android project: {ProjectPath}", android.Path);
+            builder = builder.ForAndroid(android.Path, androidOptions);
         }
-        else if (androidProject.HasValue)
+        else if (android != default)
         {
-            context.Logger.Warn("Found Android project but no Android options provided: {ProjectPath}", androidProject.Value);
+            context.Logger.Warn("Android project found but no Android options provided: {ProjectPath}", android.Path);
         }
         else
         {
-            context.Logger.Warn("Android project not found");
+            context.Logger.Warn("Android project not found in solution");
         }
-        
+
         context.Logger.Information("Project discovery completed");
         return builder;
     }
-    
-    private Maybe<string> FindProject(string solutionDirectory, string solutionName, string platformSuffix)
+
+    private IEnumerable<(string Name, string Path)> ParseSolutionProjects(string solutionPath)
     {
-        context.Logger.Debug("Looking for {Platform} project with base name {SolutionName} in directory {Directory}", 
-            platformSuffix, solutionName, solutionDirectory);
-        
-        // Common patterns for Avalonia projects
-        var patterns = new[]
+        var solutionDir = global::System.IO.Path.GetDirectoryName(solutionPath)!;
+        foreach (var line in File.ReadLines(solutionPath))
         {
-            $"{solutionName}.{platformSuffix}",
-            $"{solutionName}.{platformSuffix}.csproj",
-            $"src/{solutionName}.{platformSuffix}",
-            $"src/{solutionName}.{platformSuffix}/{solutionName}.{platformSuffix}.csproj"
-        };
-        
-        foreach (var pattern in patterns)
-        {
-            context.Logger.Debug("Checking pattern: {Pattern}", pattern);
-            var projectPath = global::System.IO.Path.Combine(solutionDirectory, pattern);
-            
-            // If pattern doesn't end with .csproj, try adding it
-            if (!pattern.EndsWith(".csproj"))
+            var trimmed = line.Trim();
+            if (!trimmed.StartsWith("Project("))
             {
-                var csprojPath = global::System.IO.Path.Combine(projectPath, $"{solutionName}.{platformSuffix}.csproj");
-                context.Logger.Debug("Checking .csproj file: {CsprojPath}", csprojPath);
-                if (File.Exists(csprojPath))
-                {
-                    context.Logger.Debug("Found project file: {ProjectPath}", csprojPath);
-                    return Maybe<string>.From(csprojPath);
-                }
-                else
-                {
-                    context.Logger.Debug("File not found: {CsprojPath}", csprojPath);
-                }
+                continue;
             }
-            else 
+
+            var parts = trimmed.Split(',');
+            if (parts.Length < 2)
             {
-                context.Logger.Debug("Checking direct path: {ProjectPath}", projectPath);
-                if (File.Exists(projectPath))
-                {
-                    context.Logger.Debug("Found project file: {ProjectPath}", projectPath);
-                    return Maybe<string>.From(projectPath);
-                }
-                else
-                {
-                    context.Logger.Debug("File not found: {ProjectPath}", projectPath);
-                }
+                continue;
             }
+
+            var nameSection = parts[0];
+            var pathSection = parts[1];
+
+            var nameStart = nameSection.IndexOf('"', nameSection.IndexOf('='));
+            if (nameStart < 0)
+            {
+                continue;
+            }
+
+            var nameEnd = nameSection.IndexOf('"', nameStart + 1);
+            if (nameEnd < 0)
+            {
+                continue;
+            }
+
+            var name = nameSection.Substring(nameStart + 1, nameEnd - nameStart - 1);
+            var relative = pathSection.Trim().Trim('"').Replace('\u005c', global::System.IO.Path.DirectorySeparatorChar);
+            var fullPath = global::System.IO.Path.GetFullPath(global::System.IO.Path.Combine(solutionDir, relative));
+            yield return (name, fullPath);
         }
-        
-        context.Logger.Debug("No {Platform} project found with any of the tested patterns", platformSuffix);
-        return Maybe<string>.None;
     }
+    
     
     public ReleaseConfiguration Build()
     {
