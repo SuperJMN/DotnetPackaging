@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 
 /.idea/.idea.DotnetPackaging/.idea
+dotnet-install.sh
