@@ -1,4 +1,4 @@
-﻿using CSharpFunctionalExtensions;
+using CSharpFunctionalExtensions;
 using Serilog;
 
 namespace DotnetPackaging.DeployerTool;

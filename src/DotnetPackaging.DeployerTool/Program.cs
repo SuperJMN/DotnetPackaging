@@ -6,6 +6,8 @@ using DotnetPackaging.Deployment.Core;
 using DotnetPackaging.Deployment.Platforms.Android;
 using Serilog;
 using Zafiro.DivineBytes;
+using System.Xml.Linq;
+using System.CommandLine.Invocation;
 
 namespace DotnetPackaging.DeployerTool;
 
@@ -27,9 +29,12 @@ static class Program
         var cmd = new CliCommand("nuget", "Publish NuGet packages");
         var projectsOption = new Option<IEnumerable<FileInfo>>("--project")
         {
-            IsRequired = true,
             AllowMultipleArgumentsPerToken = true,
             Description = "Paths to the csproj files to publish"
+        };
+        var solutionOption = new Option<FileInfo>("--solution", () => new FileInfo("DotnetPackaging.sln"))
+        {
+            Description = "Solution file for automatic project discovery"
         };
         var versionOption = new Option<string>("--version") { IsRequired = true };
         var apiKeyOption = new Option<string>("--api-key", () => Environment.GetEnvironmentVariable("NUGET_API_KEY") ?? string.Empty)
@@ -38,20 +43,30 @@ static class Program
         };
 
         cmd.AddOption(projectsOption);
+        cmd.AddOption(solutionOption);
         cmd.AddOption(versionOption);
         cmd.AddOption(apiKeyOption);
 
-        cmd.SetHandler(async (IEnumerable<FileInfo> projects, string version, string apiKey) =>
+        cmd.SetHandler(async (InvocationContext ctx) =>
         {
+            var projects = ctx.ParseResult.GetValueForOption(projectsOption) ?? Enumerable.Empty<FileInfo>();
+            var solution = ctx.ParseResult.GetValueForOption(solutionOption)!;
+            var version = ctx.ParseResult.GetValueForOption(versionOption)!;
+            var apiKey = ctx.ParseResult.GetValueForOption(apiKeyOption)!;
+
             if (string.IsNullOrWhiteSpace(apiKey))
             {
                 Log.Error("A NuGet API key must be provided with --api-key or NUGET_API_KEY");
                 return;
             }
 
-            await Deployer.Instance.PublishNugetPackages(projects.Select(p => p.FullName).ToList(), version, apiKey)
+            var projectList = projects.Any()
+                ? projects.Select(p => p.FullName)
+                : DiscoverPackableProjects(solution).Select(f => f.FullName);
+
+            await Deployer.Instance.PublishNugetPackages(projectList.ToList(), version, apiKey)
                 .WriteResult();
-        }, projectsOption, versionOption, apiKeyOption);
+        });
 
         return cmd;
     }
@@ -221,6 +236,37 @@ static class Program
             var relative = pathSection.Trim().Trim('"').Replace('\\', System.IO.Path.DirectorySeparatorChar);
             var fullPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(solutionDir, relative));
             yield return (name, fullPath);
+        }
+    }
+
+    private static IEnumerable<FileInfo> DiscoverPackableProjects(FileInfo solution)
+    {
+        foreach (var (name, path) in ParseSolutionProjects(solution.FullName))
+        {
+            var lower = name.ToLowerInvariant();
+            if (lower.Contains("test") || lower.Contains("demo") || lower.Contains("sample") || lower.Contains("desktop"))
+                continue;
+
+            if (!File.Exists(path))
+                continue;
+
+            bool isPackable = true;
+            try
+            {
+                var doc = XDocument.Load(path);
+                var packableElement = doc.Descendants().FirstOrDefault(e => e.Name.LocalName.Equals("IsPackable", StringComparison.OrdinalIgnoreCase));
+                if (packableElement != null && bool.TryParse(packableElement.Value, out var value))
+                {
+                    isPackable = value;
+                }
+            }
+            catch
+            {
+                // Ignore invalid project files
+            }
+
+            if (isPackable)
+                yield return new FileInfo(path);
         }
     }
 }
