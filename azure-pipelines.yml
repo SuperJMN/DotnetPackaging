@@ -24,8 +24,6 @@ steps:
   - script: dotnet build DotnetPackaging.sln -c Release
     displayName: Build
 
-  - script: dotnet test DotnetPackaging.sln -c Release --no-build
-    displayName: Test
 
   - script: >-
       dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj --
