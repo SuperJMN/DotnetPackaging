@@ -7,6 +7,28 @@ steps:
   - checkout: self
     submodules: true
 
-  - powershell: .\build.ps1
-    env:
-      NuGetApiKey: $(NuGetApiKey)
+  - script: |
+      dotnet tool install --global GitVersion.Tool
+      export PATH="$PATH:$HOME/.dotnet/tools"
+      gitversion /output buildserver
+    displayName: GitVersion
+
+  - script: echo "##vso[build.updatebuildnumber]$(GitVersion.FullSemVer)"
+    displayName: Set Build Number
+
+  - task: UseDotNet@2
+    inputs:
+      packageType: sdk
+      version: '9.0.x'
+
+  - script: dotnet build DotnetPackaging.sln -c Release
+    displayName: Build
+
+  - script: dotnet test DotnetPackaging.sln -c Release --no-build
+    displayName: Test
+
+  - script: >-
+      dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj --
+      nuget --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj
+      --version $(Build.BuildNumber) --api-key $(NuGetApiKey)
+    displayName: Publish DeployerTool
