@@ -32,9 +32,9 @@ static class Program
             AllowMultipleArgumentsPerToken = true,
             Description = "Paths to the csproj files to publish"
         };
-        var solutionOption = new Option<FileInfo>("--solution", () => new FileInfo("DotnetPackaging.sln"))
+        var solutionOption = new Option<FileInfo?>("--solution")
         {
-            Description = "Solution file for automatic project discovery"
+            Description = "Solution file for automatic project discovery. If not specified, the tool searches parent directories"
         };
         var versionOption = new Option<string>("--version") { IsRequired = true };
         var apiKeyOption = new Option<string>("--api-key", () => Environment.GetEnvironmentVariable("NUGET_API_KEY") ?? string.Empty)
@@ -50,7 +50,7 @@ static class Program
         cmd.SetHandler(async (InvocationContext ctx) =>
         {
             var projects = ctx.ParseResult.GetValueForOption(projectsOption) ?? Enumerable.Empty<FileInfo>();
-            var solution = ctx.ParseResult.GetValueForOption(solutionOption)!;
+            var solution = ResolveSolution(ctx.ParseResult.GetValueForOption(solutionOption));
             var version = ctx.ParseResult.GetValueForOption(versionOption)!;
             var apiKey = ctx.ParseResult.GetValueForOption(apiKeyOption)!;
 
@@ -130,7 +130,7 @@ static class Program
 
         cmd.SetHandler(async context =>
         {
-            var solution = context.ParseResult.GetValueForOption(solutionOption)!;
+            var solution = ResolveSolution(context.ParseResult.GetValueForOption(solutionOption));
             var version = context.ParseResult.GetValueForOption(versionOption)!;
             var packageName = context.ParseResult.GetValueForOption(packageNameOption)!;
             var appId = context.ParseResult.GetValueForOption(appIdOption)!;
@@ -206,6 +206,28 @@ static class Program
         });
 
         return cmd;
+    }
+
+    private static FileInfo ResolveSolution(FileInfo? provided)
+    {
+        if (provided != null && provided.Exists)
+            return provided;
+
+        var current = new DirectoryInfo(Environment.CurrentDirectory);
+        while (current != null)
+        {
+            var candidate = Path.Combine(current.FullName, "DotnetPackaging.sln");
+            if (File.Exists(candidate))
+                return new FileInfo(candidate);
+
+            var slnFiles = current.GetFiles("*.sln");
+            if (slnFiles.Length == 1)
+                return slnFiles[0];
+
+            current = current.Parent;
+        }
+
+        throw new FileNotFoundException("Solution file not found. Specify one with --solution");
     }
 
     private static IEnumerable<(string Name, string Path)> ParseSolutionProjects(string solutionPath)

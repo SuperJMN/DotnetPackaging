@@ -40,7 +40,7 @@ dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTo
     --version 1.0.0 --api-key <YOUR_NUGET_API_KEY>
 ```
 
-If no `--project` is supplied, `dotnetdeployer` automatically discovers all packable projects from the specified solution (default `DotnetPackaging.sln`) and publishes them, ignoring test, sample or desktop projects.
+If no `--project` is supplied, `dotnetdeployer` automatically discovers all packable projects from the solution. The tool searches for `DotnetPackaging.sln` or any solution file by walking up the directory tree, so you rarely need to specify `--solution`.
 
 ## Samples
 
