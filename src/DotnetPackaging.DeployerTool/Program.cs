@@ -216,7 +216,7 @@ static class Program
         var current = new DirectoryInfo(Environment.CurrentDirectory);
         while (current != null)
         {
-            var candidate = Path.Combine(current.FullName, "DotnetPackaging.sln");
+            var candidate = System.IO.Path.Combine(current.FullName, "DotnetPackaging.sln");
             if (File.Exists(candidate))
                 return new FileInfo(candidate);
 
