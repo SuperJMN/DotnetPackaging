@@ -8,6 +8,7 @@ using Serilog;
 using Zafiro.DivineBytes;
 using System.Xml.Linq;
 using System.CommandLine.Invocation;
+using Path = global::System.IO.Path;
 
 namespace DotnetPackaging.DeployerTool;
 
