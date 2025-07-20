@@ -30,7 +30,8 @@ publishing of NuGet packages and GitHub releases so it can be easily invoked
 from CI pipelines like Azure DevOps.
 
 The Azure Pipeline determines the version using [GitVersion](https://gitversion.net),
-so releases automatically follow the Git history.
+so releases automatically follow the Git history. GitVersion is installed as a
+dotnet global tool and invoked with `dotnet-gitversion /output buildserver`.
 
 You can publish the tool itself using a single command:
 
