@@ -41,11 +41,17 @@ static class Program
         {
             Description = "NuGet API key. Can be provided via NUGET_API_KEY env var"
         };
+        var patternOption = new Option<string?>("--name-pattern")
+        {
+            Description = "Wildcard pattern to select projects when discovering automatically. Defaults to '<solution>*'",
+            Arity = ArgumentArity.ZeroOrOne
+        };
 
         cmd.AddOption(projectsOption);
         cmd.AddOption(solutionOption);
         cmd.AddOption(versionOption);
         cmd.AddOption(apiKeyOption);
+        cmd.AddOption(patternOption);
 
         cmd.SetHandler(async (InvocationContext ctx) =>
         {
@@ -53,6 +59,7 @@ static class Program
             var solution = ResolveSolution(ctx.ParseResult.GetValueForOption(solutionOption));
             var version = ctx.ParseResult.GetValueForOption(versionOption)!;
             var apiKey = ctx.ParseResult.GetValueForOption(apiKeyOption)!;
+            var pattern = ctx.ParseResult.GetValueForOption(patternOption);
 
             if (string.IsNullOrWhiteSpace(apiKey))
             {
@@ -62,7 +69,7 @@ static class Program
 
             var projectList = projects.Any()
                 ? projects.Select(p => p.FullName)
-                : DiscoverPackableProjects(solution).Select(f => f.FullName);
+                : DiscoverPackableProjects(solution, pattern).Select(f => f.FullName);
 
             await Deployer.Instance.PublishNugetPackages(projectList.ToList(), version, apiKey)
                 .WriteResult();
@@ -261,12 +268,51 @@ static class Program
         }
     }
 
-    private static IEnumerable<FileInfo> DiscoverPackableProjects(FileInfo solution)
+    private static IEnumerable<string> GetSubmodulePaths(FileInfo solution)
     {
+        var current = solution.Directory!;
+        while (current != null && !Directory.Exists(System.IO.Path.Combine(current.FullName, ".git")))
+        {
+            current = current.Parent;
+        }
+
+        if (current == null)
+            yield break;
+
+        var gitmodules = System.IO.Path.Combine(current.FullName, ".gitmodules");
+        if (!File.Exists(gitmodules))
+            yield break;
+
+        foreach (var line in File.ReadAllLines(gitmodules))
+        {
+            var trimmed = line.Trim();
+            if (trimmed.StartsWith("path = ", StringComparison.OrdinalIgnoreCase))
+            {
+                var rel = trimmed.Substring("path = ".Length).Trim();
+                var full = System.IO.Path.GetFullPath(System.IO.Path.Combine(current.FullName, rel));
+                yield return full;
+            }
+        }
+    }
+
+    private static IEnumerable<FileInfo> DiscoverPackableProjects(FileInfo solution, string? pattern)
+    {
+        var namePattern = string.IsNullOrWhiteSpace(pattern)
+            ? System.IO.Path.GetFileNameWithoutExtension(solution.Name) + "*"
+            : pattern;
+        var submodules = GetSubmodulePaths(solution).Select(p => p + System.IO.Path.DirectorySeparatorChar).ToList();
+
         foreach (var (name, path) in ParseSolutionProjects(solution.FullName))
         {
             var lower = name.ToLowerInvariant();
             if (lower.Contains("test") || lower.Contains("demo") || lower.Contains("sample") || lower.Contains("desktop"))
+                continue;
+
+            if (!System.IO.Enumeration.FileSystemName.MatchesSimpleExpression(namePattern, name, true))
+                continue;
+
+            var fullPath = System.IO.Path.GetFullPath(path) + System.IO.Path.DirectorySeparatorChar;
+            if (submodules.Any(s => fullPath.StartsWith(s, StringComparison.OrdinalIgnoreCase)))
                 continue;
 
             if (!File.Exists(path))
