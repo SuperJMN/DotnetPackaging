@@ -21,8 +21,8 @@ steps:
       packageType: sdk
       version: '8.0.x'
 
-  - script: dotnet build DotnetPackaging.sln -c Release
-    displayName: Build
+  - script: dotnet build src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -c Release
+    displayName: Build DeployerTool
 
 
   - script: >-
