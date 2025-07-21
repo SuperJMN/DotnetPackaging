@@ -41,16 +41,16 @@ static class Program
         {
             Description = "NuGet API key. Can be provided via NUGET_API_KEY env var"
         };
-        var prefixOption = new Option<string?>("--name-prefix")
+        var patternOption = new Option<string?>("--name-pattern")
         {
-            Description = "Prefix used to filter projects when discovering automatically. Defaults to the solution name"
+            Description = "Wildcard pattern to select projects when discovering automatically. Defaults to '<solution>*'"
         };
 
         cmd.AddOption(projectsOption);
         cmd.AddOption(solutionOption);
         cmd.AddOption(versionOption);
         cmd.AddOption(apiKeyOption);
-        cmd.AddOption(prefixOption);
+        cmd.AddOption(patternOption);
 
         cmd.SetHandler(async (InvocationContext ctx) =>
         {
@@ -58,7 +58,7 @@ static class Program
             var solution = ResolveSolution(ctx.ParseResult.GetValueForOption(solutionOption));
             var version = ctx.ParseResult.GetValueForOption(versionOption)!;
             var apiKey = ctx.ParseResult.GetValueForOption(apiKeyOption)!;
-            var prefix = ctx.ParseResult.GetValueForOption(prefixOption);
+            var pattern = ctx.ParseResult.GetValueForOption(patternOption);
 
             if (string.IsNullOrWhiteSpace(apiKey))
             {
@@ -68,7 +68,7 @@ static class Program
 
             var projectList = projects.Any()
                 ? projects.Select(p => p.FullName)
-                : DiscoverPackableProjects(solution, prefix).Select(f => f.FullName);
+                : DiscoverPackableProjects(solution, pattern).Select(f => f.FullName);
 
             await Deployer.Instance.PublishNugetPackages(projectList.ToList(), version, apiKey)
                 .WriteResult();
@@ -294,9 +294,11 @@ static class Program
         }
     }
 
-    private static IEnumerable<FileInfo> DiscoverPackableProjects(FileInfo solution, string? prefix)
+    private static IEnumerable<FileInfo> DiscoverPackableProjects(FileInfo solution, string? pattern)
     {
-        var namePrefix = string.IsNullOrWhiteSpace(prefix) ? System.IO.Path.GetFileNameWithoutExtension(solution.Name) : prefix;
+        var namePattern = string.IsNullOrWhiteSpace(pattern)
+            ? System.IO.Path.GetFileNameWithoutExtension(solution.Name) + "*"
+            : pattern;
         var submodules = GetSubmodulePaths(solution).Select(p => p + System.IO.Path.DirectorySeparatorChar).ToList();
 
         foreach (var (name, path) in ParseSolutionProjects(solution.FullName))
@@ -305,7 +307,7 @@ static class Program
             if (lower.Contains("test") || lower.Contains("demo") || lower.Contains("sample") || lower.Contains("desktop"))
                 continue;
 
-            if (!name.StartsWith(namePrefix, StringComparison.OrdinalIgnoreCase))
+            if (!System.IO.Enumeration.FileSystemName.MatchesSimpleExpression(namePattern, name, true))
                 continue;
 
             var fullPath = System.IO.Path.GetFullPath(path) + System.IO.Path.DirectorySeparatorChar;
