@@ -47,6 +47,41 @@ already exists on NuGet.
 
 If no `--project` is supplied, `dotnetdeployer` automatically discovers all packable projects from the solution. The tool searches for `DotnetPackaging.sln` or any solution file by walking up the directory tree, so you rarely need to specify `--solution`.
 
+### Create a GitHub release with the CLI
+
+```powershell
+dotnetdeployer release --solution MyApp.sln --version 1.0.0 --package-name MyPackage \
+    --app-id com.example.myapp --app-name "My App" \
+    --owner myuser --repository myrepo --token <GITHUB_TOKEN> \
+    --release-name "MyPackage 1.0.0" --tag v1.0.0
+```
+
+## Using the Deployer class
+
+The library can also be used directly from C# code. `Deployer.Instance` configures all dependencies for you.
+
+### Publish NuGet packages
+
+```csharp
+var projects = new[] { "src/MyProject/MyProject.csproj" };
+await Deployer.Instance.PublishNugetPackages(projects.ToList(), "1.0.0", "<API_KEY>")
+    .TapError(Console.Error.WriteLine);
+```
+
+### Create a GitHub release programmatically
+
+```csharp
+var releaseConfig = Deployer.Instance.CreateRelease()
+    .WithApplicationInfo("MyPackage", "com.example.myapp", "My App")
+    .ForAvaloniaProjectsFromSolution("MyApp.sln", "1.0.0")
+    .Build();
+
+var repo = new GitHubRepositoryConfig("owner", "repo", "<TOKEN>");
+var releaseData = new ReleaseData("MyPackage 1.0.0", "v1.0.0", "Release notes", false, false);
+
+await Deployer.Instance.CreateGitHubRelease(releaseConfig, repo, releaseData);
+```
+
 ## Samples
 
 ### AppImage
