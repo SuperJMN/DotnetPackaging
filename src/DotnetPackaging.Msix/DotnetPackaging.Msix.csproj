@@ -15,8 +15,5 @@
         <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-        <PackageReference Include="DeflateBlockCompressor" />
-    </ItemGroup>
     
 </Project>

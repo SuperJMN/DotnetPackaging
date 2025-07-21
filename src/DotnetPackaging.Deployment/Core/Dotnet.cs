@@ -34,13 +34,16 @@ public class Dotnet : IDotnet
 
     public Task<Result> Push(string packagePath, string apiKey)
     {
-        IEnumerable<string[]> options =
-            [
-                ["source", "https://api.nuget.org/v3/index.json"],
-                ["api-key", apiKey],
-            ];
-        
-        return Command.Execute("dotnet", string.Join(" ", "nuget push", packagePath, ArgumentsParser.Parse(options, [])));
+        var args = string.Join(
+            " ",
+            "nuget push",
+            packagePath,
+            "--source https://api.nuget.org/v3/index.json",
+            "--api-key",
+            apiKey,
+            "--skip-duplicate");
+
+        return Command.Execute("dotnet", args);
     }
 
     public Task<Result<INamedByteSource>> Pack(string projectPath, string version)
