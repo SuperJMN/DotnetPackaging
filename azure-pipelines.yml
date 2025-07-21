@@ -26,7 +26,11 @@ steps:
   - script: dotnet build src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -c Release
     displayName: Build DeployerTool
 
-  - script: >-
-      dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj --
-      nuget --solution DotnetPackaging.sln --version $(Build.BuildNumber) --api-key $(NuGetApiKey) --name-pattern $(ProjectNamePattern)
+  - bash: |
+      args=""
+      if [ -n "$(ProjectNamePattern)" ]; then
+        args="--name-pattern $(ProjectNamePattern)"
+      fi
+      dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- \
+        nuget --solution DotnetPackaging.sln --version $(Build.BuildNumber) --api-key $(NuGetApiKey) $args
     displayName: Publish Packages

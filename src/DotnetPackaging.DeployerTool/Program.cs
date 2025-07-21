@@ -43,7 +43,8 @@ static class Program
         };
         var patternOption = new Option<string?>("--name-pattern")
         {
-            Description = "Wildcard pattern to select projects when discovering automatically. Defaults to '<solution>*'"
+            Description = "Wildcard pattern to select projects when discovering automatically. Defaults to '<solution>*'",
+            Arity = ArgumentArity.ZeroOrOne
         };
 
         cmd.AddOption(projectsOption);
