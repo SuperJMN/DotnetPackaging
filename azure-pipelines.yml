@@ -19,7 +19,7 @@ steps:
   - task: UseDotNet@2
     inputs:
       packageType: sdk
-      version: '9.0.x'
+      version: '8.0.x'
 
   - script: dotnet build DotnetPackaging.sln -c Release
     displayName: Build
