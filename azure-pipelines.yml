@@ -2,6 +2,8 @@ variables:
   - group: api-keys
   - name: Agent.Source.Git.ShallowFetchDepth
     value: 0
+  - name: ProjectNamePrefix
+    value: ''
 
 steps:
   - checkout: self
@@ -24,9 +26,7 @@ steps:
   - script: dotnet build src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -c Release
     displayName: Build DeployerTool
 
-
   - script: >-
       dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj --
-      nuget --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj
-      --version $(Build.BuildNumber) --api-key $(NuGetApiKey)
-    displayName: Publish DeployerTool
+      nuget --solution DotnetPackaging.sln --version $(Build.BuildNumber) --api-key $(NuGetApiKey) --name-prefix $(ProjectNamePrefix)
+    displayName: Publish Packages
