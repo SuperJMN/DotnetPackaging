@@ -24,5 +24,5 @@ steps:
         args="--name-pattern $(ProjectNamePattern)"
       fi
       dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- \
-        nuget --solution DotnetPackaging.sln --version $(Build.BuildNumber) --api-key $(NuGetApiKey) $args
+        nuget --solution DotnetPackaging.sln --api-key $(NuGetApiKey) $args
     displayName: Publish Packages

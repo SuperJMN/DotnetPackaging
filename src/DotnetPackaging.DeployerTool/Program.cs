@@ -8,6 +8,7 @@ using Serilog;
 using Zafiro.DivineBytes;
 using System.Xml.Linq;
 using System.CommandLine.Invocation;
+using NuGet.Versioning;
 
 namespace DotnetPackaging.DeployerTool;
 
@@ -36,7 +37,10 @@ static class Program
         {
             Description = "Solution file for automatic project discovery. If not specified, the tool searches parent directories"
         };
-        var versionOption = new Option<string>("--version") { IsRequired = true };
+        var versionOption = new Option<string?>("--version")
+        {
+            Description = "Package version. If omitted, GitVersion will be used"
+        };
         var apiKeyOption = new Option<string>("--api-key", () => Environment.GetEnvironmentVariable("NUGET_API_KEY") ?? string.Empty)
         {
             Description = "NuGet API key. Can be provided via NUGET_API_KEY env var"
@@ -57,7 +61,24 @@ static class Program
         {
             var projects = ctx.ParseResult.GetValueForOption(projectsOption) ?? Enumerable.Empty<FileInfo>();
             var solution = ResolveSolution(ctx.ParseResult.GetValueForOption(solutionOption));
-            var version = ctx.ParseResult.GetValueForOption(versionOption)!;
+            var version = ctx.ParseResult.GetValueForOption(versionOption);
+            if (string.IsNullOrWhiteSpace(version))
+            {
+                var versionResult = await GitVersionRunner.Run();
+                if (versionResult.IsFailure)
+                {
+                    Log.Error("Failed to obtain version using GitVersion: {Error}", versionResult.Error);
+                    return;
+                }
+
+                version = versionResult.Value;
+            }
+
+            if (!NuGet.Versioning.NuGetVersion.TryParse(version, out _))
+            {
+                Log.Error("Invalid version string '{Version}'", version);
+                return;
+            }
             var apiKey = ctx.ParseResult.GetValueForOption(apiKeyOption)!;
             var pattern = ctx.ParseResult.GetValueForOption(patternOption);
 
