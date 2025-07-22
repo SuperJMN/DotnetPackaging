@@ -1,0 +1,46 @@
+using System.Diagnostics;
+using Serilog;
+
+namespace DotnetPackaging;
+
+public static class GitVersionRunner
+{
+    public static async Task<Result<string>> Run()
+    {
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "dotnet-gitversion",
+                    ArgumentList = { "/showvariable", "NuGetVersionV2" },
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                }
+            };
+
+            process.Start();
+            var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0)
+            {
+                Log.Warning("GitVersion failed: {Error}", error);
+                return Result.Failure<string>(error);
+            }
+
+            var version = output.Trim();
+            return string.IsNullOrWhiteSpace(version)
+                ? Result.Failure<string>("GitVersion produced no output")
+                : Result.Success(version);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("GitVersion invocation failed: {Message}", ex.Message);
+            return Result.Failure<string>(ex.Message);
+        }
+    }
+}
