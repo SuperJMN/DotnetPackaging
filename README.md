@@ -116,17 +116,6 @@ This is a sample file. Customize it to your needs.
   }
 ```
 
-# Integrate it with Nuke Build system
-
-AS I mentioned above, DotnetPackaging isn't just a tool, but a library, too. You can integrate it with [Nuke](https://nuke.build) very easily!
-
-Take a looks to this example:
-
-1. https://github.com/SuperJMN/AvaloniaSyncer/blob/26260a6d2cc7c611d60e5c1e5b821f8512877ba5/build/Build.cs#L46
-2. https://github.com/SuperJMN/AvaloniaSyncer/blob/26260a6d2cc7c611d60e5c1e5b821f8512877ba5/build/DebPackages.cs#L16
-
-Feel free to ask in the Discussions section of this repo.
-If this has been useful for you, please consider sponsoring this project. Thanks!
 
 # Acknowledgements
 - Huge thanks [Alexey Sonkin](https://github.com/teplofizik) for his wonderful SquashFS support in his [NyaFS](https://github.com/teplofizik/nyafs) library.
