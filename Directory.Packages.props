@@ -34,6 +34,7 @@
     </PackageVersion>
     <PackageVersion Include="System.IO.Hashing" Version="9.0.5" />
     <PackageVersion Include="DeflateBlockCompressor" Version="0.0.13" />
+    <PackageVersion Include="NuGet.Versioning" Version="6.8.0" />
     <PackageVersion Include="Zafiro" Version="$(ZafiroVersion)" />
     <PackageVersion Include="Zafiro.FileSystem" Version="$(ZafiroVersion)" />
     <PackageVersion Include="Zafiro.FileSystem.Unix" Version="$(ZafiroVersion)" />
