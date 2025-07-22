@@ -52,7 +52,9 @@ public static class GitVersionRunner
 
             return process.ExitCode == 0
                 ? Result.Success()
-                : Result.Failure(error);
+                : Result.Failure(string.IsNullOrWhiteSpace(error)
+                    ? $"GitVersion installation failed with exit code {process.ExitCode}"
+                    : error);
         }
         catch (Exception ex)
         {
@@ -85,8 +87,11 @@ public static class GitVersionRunner
 
             if (process.ExitCode != 0)
             {
-                Log.Warning("GitVersion failed: {Error}", error);
-                return Result.Failure<string>(error);
+                var message = string.IsNullOrWhiteSpace(error)
+                    ? $"GitVersion exited with code {process.ExitCode}"
+                    : error;
+                Log.Warning("GitVersion failed: {Error}", message);
+                return Result.Failure<string>(message);
             }
 
             try
