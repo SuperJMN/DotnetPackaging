@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Serilog;
 
 namespace DotnetPackaging;
@@ -59,6 +60,8 @@ public static class GitVersionRunner
         }
     }
 
+    private static readonly string[] PreferredFields = ["NuGetVersionV2", "NuGetVersion", "SemVer", "FullSemVer"];
+
     private static async Task<Result<string>> Execute()
     {
         try
@@ -68,7 +71,7 @@ public static class GitVersionRunner
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "dotnet-gitversion",
-                    ArgumentList = { "/showvariable", "NuGetVersionV2" },
+                    ArgumentList = { "-output", "json" },
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -86,10 +89,29 @@ public static class GitVersionRunner
                 return Result.Failure<string>(error);
             }
 
-            var version = output.Trim();
-            return string.IsNullOrWhiteSpace(version)
-                ? Result.Failure<string>("GitVersion produced no output")
-                : Result.Success(version);
+            try
+            {
+                using var document = JsonDocument.Parse(output);
+                var root = document.RootElement;
+                foreach (var field in PreferredFields)
+                {
+                    if (root.TryGetProperty(field, out var property))
+                    {
+                        var value = property.GetString();
+                        if (!string.IsNullOrWhiteSpace(value))
+                        {
+                            return Result.Success(value);
+                        }
+                    }
+                }
+
+                return Result.Failure<string>("No version fields found in GitVersion output");
+            }
+            catch (Exception parseEx)
+            {
+                Log.Warning("GitVersion JSON parsing failed: {Message}", parseEx.Message);
+                return Result.Failure<string>(parseEx.Message);
+            }
         }
         catch (Exception ex)
         {
