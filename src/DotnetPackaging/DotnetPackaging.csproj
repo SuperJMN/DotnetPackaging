@@ -4,9 +4,13 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
-    <Import Project="..\Common.props"/>
+    <Import Project="..\Common.props" />
     <ItemGroup>
-        <PackageReference Include="SixLabors.ImageSharp"/>
+        <PackageReference Include="GitVersion.MsBuild">
+          <IncludeAssets>runtime; native; contentfiles; analyzers</IncludeAssets>
+          <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="SixLabors.ImageSharp" />
     </ItemGroup>
     
     <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'true'">
