@@ -1,8 +1,5 @@
 using System.Diagnostics;
 using System.Text.Json;
-using GitVersion;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Serilog;
 
 namespace DotnetPackaging;
@@ -23,8 +20,8 @@ public static class GitVersionRunner
         var result = await Execute();
         if (result.IsFailure)
         {
-            Log.Warning("GitVersion tool failed: {Error}. Attempting library execution.", result.Error);
-            result = RunLibrary();
+            Log.Warning("GitVersion failed: {Error}. Attempting git describe.", result.Error);
+            result = await GitDescribe();
         }
 
         return result;
@@ -135,34 +132,45 @@ public static class GitVersionRunner
         }
     }
 
-    private static Result<string> RunLibrary()
+    private static async Task<Result<string>> GitDescribe()
     {
         try
         {
-            var services = new ServiceCollection();
-            services.AddModule(new GitVersionCoreModule());
-            services.AddModule(new GitVersionLibGit2SharpModule());
-            services.AddModule(new GitVersionConfigurationModule());
-            services.AddSingleton(Options.Create(new GitVersionOptions { WorkingDirectory = Environment.CurrentDirectory }));
-
-            using var provider = services.BuildServiceProvider();
-            var tool = provider.GetRequiredService<IGitVersionCalculateTool>();
-            var variables = tool.CalculateVersionVariables();
-
-            foreach (var field in PreferredFields)
+            var process = new Process
             {
-                if (variables.TryGetValue(field, out var value) && !string.IsNullOrWhiteSpace(value))
+                StartInfo = new ProcessStartInfo
                 {
-                    return Result.Success(value);
+                    FileName = "git",
+                    ArgumentList = { "describe", "--tags", "--abbrev=0" },
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
                 }
+            };
+
+            process.Start();
+            var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0)
+            {
+                var message = string.IsNullOrWhiteSpace(error)
+                    ? $"git describe exited with code {process.ExitCode}"
+                    : error;
+                Log.Warning("git describe failed: {Error}", message);
+                return Result.Failure<string>(message);
             }
 
-            return Result.Failure<string>("No version fields found in GitVersion variables");
+            var version = output.Trim();
+            return string.IsNullOrWhiteSpace(version)
+                ? Result.Failure<string>("git describe produced no output")
+                : Result.Success(version);
         }
         catch (Exception ex)
         {
+            Log.Warning("git describe invocation failed: {Message}", ex.Message);
             return Result.Failure<string>(ex.Message);
         }
     }
-
 }

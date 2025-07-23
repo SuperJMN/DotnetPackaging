@@ -7,8 +7,6 @@
     <Import Project="..\Common.props"/>
     <ItemGroup>
         <PackageReference Include="SixLabors.ImageSharp"/>
-        <PackageReference Include="GitVersion.Core" Version="6.3.0" />
-        <PackageReference Include="GitVersion.LibGit2Sharp" Version="6.3.0" />
     </ItemGroup>
     
     <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'true'">
