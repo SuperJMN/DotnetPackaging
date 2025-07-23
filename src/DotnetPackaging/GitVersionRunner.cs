@@ -1,132 +1,13 @@
 using System.Diagnostics;
-using System.Text.Json;
 using Serilog;
 
 namespace DotnetPackaging;
 
 public static class GitVersionRunner
 {
-    public static async Task<Result<string>> Run()
-    {
-        if (!GitVersionExists())
-        {
-            var installResult = await Install();
-            if (installResult.IsFailure)
-            {
-                return Result.Failure<string>(installResult.Error);
-            }
-        }
+    public static Task<Result<string>> Run() => GitVersionFromDescribe();
 
-        var result = await Execute();
-        return result.IsFailure ? await GitDescribe() : result;
-    }
-
-    private static bool GitVersionExists()
-    {
-        var pathEnv = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-        var extension = OperatingSystem.IsWindows() ? ".exe" : string.Empty;
-        return pathEnv.Split(Path.PathSeparator)
-            .Select(dir => Path.Combine(dir, $"dotnet-gitversion{extension}"))
-            .Any(File.Exists);
-    }
-
-    private static async Task<Result> Install()
-    {
-        try
-        {
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "dotnet",
-                    ArgumentList = { "tool", "install", "--global", "GitVersion.Tool" },
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                }
-            };
-
-            process.Start();
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            return process.ExitCode == 0
-                ? Result.Success()
-                : Result.Failure(string.IsNullOrWhiteSpace(error)
-                    ? $"GitVersion installation failed with exit code {process.ExitCode}"
-                    : error);
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure(ex.Message);
-        }
-    }
-
-    private static readonly string[] PreferredFields = ["NuGetVersionV2", "NuGetVersion", "SemVer", "FullSemVer"];
-
-    private static async Task<Result<string>> Execute()
-    {
-        try
-        {
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "dotnet-gitversion",
-                    ArgumentList = { "-output", "json" },
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                }
-            };
-
-            process.Start();
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            if (process.ExitCode != 0)
-            {
-                var message = string.IsNullOrWhiteSpace(error)
-                    ? $"GitVersion exited with code {process.ExitCode}"
-                    : error;
-                Log.Warning("GitVersion failed: {Error}", message);
-                return Result.Failure<string>(message);
-            }
-
-            try
-            {
-                using var document = JsonDocument.Parse(output);
-                var root = document.RootElement;
-                foreach (var field in PreferredFields)
-                {
-                    if (root.TryGetProperty(field, out var property))
-                    {
-                        var value = property.GetString();
-                        if (!string.IsNullOrWhiteSpace(value))
-                        {
-                            return Result.Success(value);
-                        }
-                    }
-                }
-
-                return Result.Failure<string>("No version fields found in GitVersion output");
-            }
-            catch (Exception parseEx)
-            {
-                Log.Warning("GitVersion JSON parsing failed: {Message}", parseEx.Message);
-                return Result.Failure<string>(parseEx.Message);
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Warning("GitVersion invocation failed: {Message}", ex.Message);
-            return Result.Failure<string>(ex.Message);
-        }
-    }
-
-    private static async Task<Result<string>> GitDescribe()
+    private static async Task<Result<string>> GitVersionFromDescribe()
     {
         try
         {
@@ -135,7 +16,14 @@ public static class GitVersionRunner
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "git",
-                    ArgumentList = { "describe", "--tags", "--abbrev=0" },
+                    ArgumentList =
+                    {
+                        "describe",
+                        "--tags",
+                        "--long",
+                        "--match",
+                        "*.*.*"
+                    },
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -156,10 +44,41 @@ public static class GitVersionRunner
                 return Result.Failure<string>(message);
             }
 
-            var version = output.Trim();
-            return string.IsNullOrWhiteSpace(version)
-                ? Result.Failure<string>("git describe produced no output")
-                : Result.Success(version);
+            var description = output.Trim();
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                return Result.Failure<string>("git describe produced no output");
+            }
+
+            var parts = description.Split('-');
+            if (parts.Length < 3)
+            {
+                return Result.Failure<string>($"Unexpected git describe output: {description}");
+            }
+
+            var tag = parts[0].TrimStart('v');
+            if (!int.TryParse(parts[1], out var commits))
+            {
+                return Result.Failure<string>($"Invalid commit count in git describe output: {description}");
+            }
+
+            if (commits == 0)
+            {
+                return Result.Success(tag);
+            }
+
+            var versionParts = tag.Split('.');
+            if (versionParts.Length != 3
+                || !int.TryParse(versionParts[0], out var major)
+                || !int.TryParse(versionParts[1], out var minor)
+                || !int.TryParse(versionParts[2], out var patch))
+            {
+                return Result.Failure<string>($"Invalid tag format: {tag}");
+            }
+
+            patch++;
+            var version = $"{major}.{minor}.{patch}-alpha.{commits}";
+            return Result.Success(version);
         }
         catch (Exception ex)
         {

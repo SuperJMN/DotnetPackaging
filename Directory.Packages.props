@@ -11,10 +11,6 @@
     </PackageVersion>
     <PackageVersion Include="CSharpFunctionalExtensions.FluentAssertions" Version="3.0.0" />
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />
-    <PackageVersion Include="GitVersion.MsBuild" Version="6.3.0">
-      <IncludeAssets>runtime; compile; native; contentfiles; analyzers</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageVersion>
     <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.5" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
     <PackageVersion Include="NyaFs" Version="1.0.8" />

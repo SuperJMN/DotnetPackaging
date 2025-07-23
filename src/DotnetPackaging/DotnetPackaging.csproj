@@ -6,10 +6,6 @@
     </PropertyGroup>
     <Import Project="..\Common.props" />
     <ItemGroup>
-        <PackageReference Include="GitVersion.MsBuild">
-          <IncludeAssets>runtime; compile; native; contentfiles; analyzers</IncludeAssets>
-          <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
         <PackageReference Include="SixLabors.ImageSharp" />
     </ItemGroup>
     
