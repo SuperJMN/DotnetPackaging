@@ -41,7 +41,7 @@ public static class GitVersionRunner
                     ? $"git describe exited with code {process.ExitCode}"
                     : error;
                 Log.Warning("git describe failed: {Error}", message);
-                return Result.Failure<string>(message);
+                return Result.Failure<string>(string.IsNullOrWhiteSpace(message) ? "Unknown error" : message);
             }
 
             var description = output.Trim();
@@ -83,7 +83,8 @@ public static class GitVersionRunner
         catch (Exception ex)
         {
             Log.Warning("git describe invocation failed: {Message}", ex.Message);
-            return Result.Failure<string>(ex.Message);
+            var message = string.IsNullOrWhiteSpace(ex.Message) ? "Unknown error" : ex.Message;
+            return Result.Failure<string>(message);
         }
     }
 }
