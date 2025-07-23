@@ -17,7 +17,14 @@ public static class GitVersionRunner
             }
         }
 
-        return await Execute();
+        var result = await Execute();
+        if (result.IsFailure && result.Error?.Contains("LibGit2Sharp.Core.NativeMethods") == true)
+        {
+            Log.Warning("GitVersion failed due to native library issue. Falling back to 'git describe'.");
+            result = await GitDescribe();
+        }
+
+        return result;
     }
 
     private static bool GitVersionExists()
@@ -121,6 +128,47 @@ public static class GitVersionRunner
         catch (Exception ex)
         {
             Log.Warning("GitVersion invocation failed: {Message}", ex.Message);
+            return Result.Failure<string>(ex.Message);
+        }
+    }
+
+    private static async Task<Result<string>> GitDescribe()
+    {
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "git",
+                    ArgumentList = { "describe", "--tags", "--long", "--dirty" },
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                }
+            };
+
+            process.Start();
+            var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0)
+            {
+                var message = string.IsNullOrWhiteSpace(error)
+                    ? $"git describe exited with code {process.ExitCode}"
+                    : error;
+                Log.Warning("git describe failed: {Error}", message);
+                return Result.Failure<string>(message);
+            }
+
+            var version = output.Trim();
+            return string.IsNullOrWhiteSpace(version)
+                ? Result.Failure<string>("git describe produced no output")
+                : Result.Success(version);
+        }
+        catch (Exception ex)
+        {
             return Result.Failure<string>(ex.Message);
         }
     }
