@@ -1,11 +1,5 @@
 using System.Diagnostics;
 using System.Text.Json;
-using GitVersion;
-using GitVersion.Agents;
-using GitVersion.Configuration;
-using GitVersion.Extensions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Serilog;
 
 namespace DotnetPackaging;
@@ -24,18 +18,7 @@ public static class GitVersionRunner
         }
 
         var result = await Execute();
-        if (result.IsFailure)
-        {
-            Log.Warning("GitVersion CLI failed: {Error}. Attempting library.", result.Error);
-            result = ExecuteLibrary();
-            if (result.IsFailure)
-            {
-                Log.Warning("GitVersion library failed: {Error}. Attempting git describe.", result.Error);
-                result = await GitDescribe();
-            }
-        }
-
-        return result;
+        return result.IsFailure ? await GitDescribe() : result;
     }
 
     private static bool GitVersionExists()
@@ -139,38 +122,6 @@ public static class GitVersionRunner
         catch (Exception ex)
         {
             Log.Warning("GitVersion invocation failed: {Message}", ex.Message);
-            return Result.Failure<string>(ex.Message);
-        }
-    }
-
-    private static Result<string> ExecuteLibrary()
-    {
-        try
-        {
-            var services = new ServiceCollection();
-            services.AddModule(new GitVersionCoreModule());
-            services.AddModule(new GitVersionLibGit2SharpModule());
-            services.AddModule(new GitVersionBuildAgentsModule());
-            services.AddModule(new GitVersionConfigurationModule());
-            services.AddSingleton(Options.Create(new GitVersionOptions { WorkingDirectory = Environment.CurrentDirectory }));
-
-            using var provider = services.BuildServiceProvider();
-            var tool = provider.GetRequiredService<IGitVersionCalculateTool>();
-            var variables = tool.CalculateVersionVariables();
-
-            foreach (var field in PreferredFields)
-            {
-                if (variables.TryGetValue(field, out var value) && !string.IsNullOrWhiteSpace(value))
-                {
-                    return Result.Success(value);
-                }
-            }
-
-            return Result.Failure<string>("No version fields found in GitVersion variables");
-        }
-        catch (Exception ex)
-        {
-            Log.Warning("GitVersion library invocation failed: {Message}", ex.Message);
             return Result.Failure<string>(ex.Message);
         }
     }
