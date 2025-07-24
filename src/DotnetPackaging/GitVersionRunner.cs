@@ -102,11 +102,30 @@ public static class GitVersionRunner
 
     private static bool GitVersionExists()
     {
-        var pathEnv = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-        var extension = OperatingSystem.IsWindows() ? ".exe" : string.Empty;
-        return pathEnv.Split(Path.PathSeparator)
-            .Select(dir => Path.Combine(dir, $"dotnet-gitversion{extension}"))
-            .Any(File.Exists);
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "dotnet",
+                    ArgumentList = { "tool", "list", "--global" },
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                }
+            };
+
+            process.Start();
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+
+            return output.Split('\n')
+                .Any(line => line.TrimStart().StartsWith("gitversion.tool", StringComparison.OrdinalIgnoreCase));
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static async Task<Result> InstallTool()
@@ -118,7 +137,7 @@ public static class GitVersionRunner
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "dotnet",
-                    ArgumentList = { "tool", "install", "--global", "GitVersion.Tool" },
+                    ArgumentList = { "tool", "update", "--global", "GitVersion.Tool" },
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -133,7 +152,7 @@ public static class GitVersionRunner
             if (process.ExitCode != 0)
             {
                 var message = string.IsNullOrWhiteSpace(error)
-                    ? $"dotnet tool install exited with code {process.ExitCode}"
+                    ? $"dotnet tool update exited with code {process.ExitCode}"
                     : error;
                 return Result.Failure(string.IsNullOrWhiteSpace(message) ? "Unknown error" : message);
             }
@@ -155,8 +174,8 @@ public static class GitVersionRunner
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    FileName = "dotnet-gitversion",
-                    ArgumentList = { "-output", "json" },
+                    FileName = "dotnet",
+                    ArgumentList = { "gitversion", "-output", "json" },
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -171,7 +190,7 @@ public static class GitVersionRunner
             if (process.ExitCode != 0)
             {
                 var message = string.IsNullOrWhiteSpace(error)
-                    ? $"dotnet-gitversion exited with code {process.ExitCode}"
+                    ? $"gitversion exited with code {process.ExitCode}"
                     : error;
                 Log.Warning("GitVersion failed: {Error}", message);
                 return Result.Failure<string>(string.IsNullOrWhiteSpace(message) ? "Unknown error" : message);
