@@ -39,7 +39,7 @@ static class Program
         };
         var versionOption = new Option<string?>("--version")
         {
-            Description = "Package version. If omitted, the version is computed from git tags"
+            Description = "Package version. If omitted, GitVersion will be used"
         };
         var apiKeyOption = new Option<string>("--api-key", () => Environment.GetEnvironmentVariable("NUGET_API_KEY") ?? string.Empty)
         {
@@ -67,7 +67,7 @@ static class Program
                 var versionResult = await GitVersionRunner.Run();
                 if (versionResult.IsFailure)
                 {
-                    Log.Error("Failed to obtain version from git: {Error}", versionResult.Error);
+                    Log.Error("Failed to obtain version using GitVersion: {Error}", versionResult.Error);
                     return;
                 }
 
