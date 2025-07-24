@@ -39,7 +39,7 @@ static class Program
         };
         var versionOption = new Option<string?>("--version")
         {
-            Description = "Package version. If omitted, GitVersion will be used"
+            Description = "Package version. If omitted, GitVersion is used and falls back to git describe"
         };
         var apiKeyOption = new Option<string>("--api-key", () => Environment.GetEnvironmentVariable("NUGET_API_KEY") ?? string.Empty)
         {
