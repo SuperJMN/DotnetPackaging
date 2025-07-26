@@ -13,6 +13,10 @@
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.5" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
+    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.6.139">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageVersion>
     <PackageVersion Include="NyaFs" Version="1.0.8" />
     <PackageVersion Include="Octokit" Version="14.0.0" />
     <PackageVersion Include="ReactiveUI.Fody" Version="19.5.41" />
