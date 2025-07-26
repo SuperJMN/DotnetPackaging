@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using Nerdbank.GitVersioning;
 using NuGet.Versioning;
 using Serilog;
 
@@ -11,154 +12,32 @@ public static class GitVersionRunner
 
     public static async Task<Result<string>> Run()
     {
-        var toolResult = await RunNerdbank();
-        if (toolResult.IsSuccess)
+        var libraryResult = RunNerdbank();
+        if (libraryResult.IsSuccess)
         {
-            return toolResult;
+            return libraryResult;
         }
 
-        Log.Warning("Nerdbank.GitVersioning failed: {Error}. Falling back to git describe", toolResult.Error);
+        Log.Warning("Nerdbank.GitVersioning failed: {Error}. Falling back to git describe", libraryResult.Error);
         return await DescribeVersion();
     }
 
-    private static async Task<Result<string>> RunNerdbank()
-    {
-        if (!NerdbankExists())
-        {
-            var installResult = await InstallTool();
-            if (installResult.IsFailure)
-            {
-                return Result.Failure<string>(installResult.Error);
-            }
-        }
-
-        return await Execute();
-    }
-
-    private static bool NerdbankExists()
+    private static Result<string> RunNerdbank()
     {
         try
         {
-            var process = new Process
+            using var context = GitContext.Create(Environment.CurrentDirectory);
+            var oracle = new VersionOracle(context);
+            var version = oracle.NuGetPackageVersion;
+            if (string.IsNullOrWhiteSpace(version))
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "dotnet",
-                    ArgumentList = { "tool", "list", "--global" },
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                }
-            };
-
-            process.Start();
-            var output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-
-            return output.Split('\n')
-                .Any(line => line.TrimStart().StartsWith("nbgv", StringComparison.OrdinalIgnoreCase));
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static async Task<Result> InstallTool()
-    {
-        try
-        {
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "dotnet",
-                    ArgumentList = { "tool", "update", "--global", "nbgv" },
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                }
-            };
-
-            process.Start();
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            if (process.ExitCode != 0)
-            {
-                var message = string.IsNullOrWhiteSpace(error)
-                    ? $"dotnet tool update exited with code {process.ExitCode}"
-                    : error;
-                return Result.Failure(string.IsNullOrWhiteSpace(message) ? "Unknown error" : message);
+                return Result.Failure<string>("No version produced by Nerdbank.GitVersioning");
             }
 
-            return Result.Success();
+            return Result.Success(version);
         }
         catch (Exception ex)
         {
-            var message = string.IsNullOrWhiteSpace(ex.Message) ? "Unknown error" : ex.Message;
-            return Result.Failure(message);
-        }
-    }
-
-    private static async Task<Result<string>> Execute()
-    {
-        try
-        {
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "nbgv",
-                    ArgumentList = { "get-version", "--format", "json" },
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                }
-            };
-
-            process.Start();
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            if (process.ExitCode != 0)
-            {
-                var message = string.IsNullOrWhiteSpace(error)
-                    ? $"nbgv exited with code {process.ExitCode}"
-                    : error;
-                Log.Warning("nbgv failed: {Error}", message);
-                return Result.Failure<string>(string.IsNullOrWhiteSpace(message) ? "Unknown error" : message);
-            }
-
-            try
-            {
-                using var document = JsonDocument.Parse(output);
-                var root = document.RootElement;
-                foreach (var field in PreferredFields)
-                {
-                    if (root.TryGetProperty(field, out var property))
-                    {
-                        var value = property.GetString();
-                        if (!string.IsNullOrWhiteSpace(value))
-                        {
-                            return Result.Success(value);
-                        }
-                    }
-                }
-
-                return Result.Failure<string>("No version fields found in nbgv output");
-            }
-            catch (Exception parseEx)
-            {
-                Log.Warning("nbgv JSON parsing failed: {Message}", parseEx.Message);
-                var message = string.IsNullOrWhiteSpace(parseEx.Message) ? "Unknown error" : parseEx.Message;
-                return Result.Failure<string>(message);
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Warning("nbgv invocation failed: {Message}", ex.Message);
             var message = string.IsNullOrWhiteSpace(ex.Message) ? "Unknown error" : ex.Message;
             return Result.Failure<string>(message);
         }

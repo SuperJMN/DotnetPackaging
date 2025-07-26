@@ -30,7 +30,7 @@ publishing of NuGet packages and GitHub releases so it can be easily invoked
 from CI pipelines like Azure DevOps.
 
 The Azure Pipeline determines the version using [Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning),
-so releases automatically follow the Git history. The tool is invoked with `nbgv get-version --format json`.
+so releases automatically follow the Git history. The version is computed with the library.
 If Nerdbank.GitVersioning fails, the pipeline falls back to `git describe --tags --long` and converts the result into a NuGet-compatible version.
 
 You can publish the tool itself using a single command:

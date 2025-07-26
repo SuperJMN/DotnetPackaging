@@ -39,7 +39,7 @@ static class Program
         };
         var versionOption = new Option<string?>("--version")
         {
-            Description = "Package version. If omitted, Nerdbank.GitVersioning is used and falls back to git describe"
+            Description = "Package version. If omitted, the version is computed using Nerdbank.GitVersioning and falls back to git describe"
         };
         var apiKeyOption = new Option<string>("--api-key", () => Environment.GetEnvironmentVariable("NUGET_API_KEY") ?? string.Empty)
         {
