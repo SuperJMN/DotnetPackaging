@@ -4,9 +4,14 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
-    <Import Project="..\Common.props"/>
+    <Import Project="..\Common.props" />
     <ItemGroup>
-        <PackageReference Include="SixLabors.ImageSharp"/>
+        <PackageReference Include="Nerdbank.GitVersioning" />
+        <Reference Include="Nerdbank.GitVersioning">
+          <HintPath>$(NuGetPackageRoot)nerdbank.gitversioning/3.6.139/build/MSBuildCore/Nerdbank.GitVersioning.dll</HintPath>
+        </Reference>
+        <PackageReference Include="SixLabors.ImageSharp" />
+        <PackageReference Include="NuGet.Versioning" />
     </ItemGroup>
     
     <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'true'">
