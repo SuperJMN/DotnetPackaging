@@ -26,7 +26,7 @@ public class Deployer(Context context, Packager packager, Publisher publisher)
         }
     }
 
-    public async Task<Result> PublishNugetPackages(IList<string> projectToPublish, string version, string nuGetApiKey)
+    public async Task<Result> PublishNugetPackages(IList<string> projectToPublish, string version, string nuGetApiKey, bool push = true)
     {
         if (projectToPublish.Any(s => string.IsNullOrWhiteSpace(s)))
         {
@@ -35,14 +35,22 @@ public class Deployer(Context context, Packager packager, Publisher publisher)
 
         Context.Logger.Information("Publishing projects: {@Projects}", projectToPublish);
 
-        return await projectToPublish
+        var packagesResult = await projectToPublish
             .Select(project =>
             {
                 Context.Logger.Information("Packing {Project}", project);
                 return packager.CreateNugetPackage(project, version);
             })
             .CombineSequentially()
-            .MapEach(resource =>
+            ;
+
+        if (packagesResult.IsFailure || !push)
+        {
+            return packagesResult.Map(_ => Result.Success()).GetValueOrDefault(Result.Success());
+        }
+
+        return await packagesResult.Value
+            .Select(resource =>
             {
                 Context.Logger.Information("Publishing package {Resource} in NuGet.org", resource.Name);
                 return publisher.PushNugetPackage(resource, nuGetApiKey);

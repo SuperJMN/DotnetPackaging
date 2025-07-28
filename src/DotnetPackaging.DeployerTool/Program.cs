@@ -56,12 +56,17 @@ static class Program
             Description = "Wildcard pattern to select projects when discovering automatically. Defaults to '<solution>*'",
             Arity = ArgumentArity.ZeroOrOne
         };
+        var noPushOption = new Option<bool>("--no-push")
+        {
+            Description = "Only build packages without pushing to NuGet"
+        };
 
         cmd.AddOption(projectsOption);
         cmd.AddOption(solutionOption);
         cmd.AddOption(versionOption);
         cmd.AddOption(apiKeyOption);
         cmd.AddOption(patternOption);
+        cmd.AddOption(noPushOption);
 
         cmd.SetHandler(async (InvocationContext ctx) =>
         {
@@ -87,8 +92,9 @@ static class Program
             }
             var apiKey = ctx.ParseResult.GetValueForOption(apiKeyOption)!;
             var pattern = ctx.ParseResult.GetValueForOption(patternOption);
+            var noPush = ctx.ParseResult.GetValueForOption(noPushOption);
 
-            if (string.IsNullOrWhiteSpace(apiKey))
+            if (!noPush && string.IsNullOrWhiteSpace(apiKey))
             {
                 Log.Error("A NuGet API key must be provided with --api-key or NUGET_API_KEY");
                 return;
@@ -98,7 +104,7 @@ static class Program
                 ? projects.Select(p => p.FullName)
                 : DiscoverPackableProjects(solution, pattern).Select(f => f.FullName);
 
-            await Deployer.Instance.PublishNugetPackages(projectList.ToList(), version, apiKey)
+            await Deployer.Instance.PublishNugetPackages(projectList.ToList(), version, apiKey, push: !noPush)
                 .WriteResult();
         });
 
