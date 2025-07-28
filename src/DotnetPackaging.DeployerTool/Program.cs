@@ -146,7 +146,7 @@ static class Program
         var draftOption = new Option<bool>("--draft");
         var prereleaseOption = new Option<bool>("--prerelease");
 
-        var platformsOption = new Option<IEnumerable<string>>("--platforms", () => new[] { "windows", "linux", "android", "wasm" })
+        var platformsOption = new Option<IEnumerable<string>>("--platform", () => new[] { "windows", "linux", "android", "wasm" })
         {
             AllowMultipleArgumentsPerToken = true,
             Description = "Platforms to publish: windows, linux, android, wasm"
