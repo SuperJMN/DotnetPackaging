@@ -17,14 +17,26 @@ steps:
   - script: dotnet build src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -c Release
     displayName: Build DeployerTool
 
-  - bash: |
-      args=""
-      if [ -n "$(ProjectNamePattern)" ]; then
-        args="--name-pattern $(ProjectNamePattern)"
-      fi
-      if [[ "$(Build.SourceBranch)" != refs/tags/* ]]; then
-        args="--no-push $args"
-      fi
+  - pwsh: |
+      $args = ""
+      if ("$(ProjectNamePattern)" -ne "") {
+        $args = "--name-pattern $(ProjectNamePattern)"
+      }
       dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- \
-        nuget --solution DotnetPackaging.sln --api-key $(NuGetApiKey) $args
-    displayName: Publish Packages
+        nuget --solution DotnetPackaging.sln --api-key $env:NUGET_API_KEY $args
+    displayName: Publish NuGet packages
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+    env:
+      NUGET_API_KEY: $(NuGetApiKey)
+
+  - pwsh: |
+      $args = "--no-push"
+      if ("$(ProjectNamePattern)" -ne "") {
+        $args = "$args --name-pattern $(ProjectNamePattern)"
+      }
+      dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- \
+        nuget --solution DotnetPackaging.sln --api-key $env:NUGET_API_KEY $args
+    displayName: Publish NuGet packages (dry run)
+    condition: ne(variables['Build.SourceBranch'], 'refs/heads/master')
+    env:
+      NUGET_API_KEY: $(NuGetApiKey)
