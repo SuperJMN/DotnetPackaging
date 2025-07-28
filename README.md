@@ -29,9 +29,9 @@ The repository also includes a CLI called `dotnetdeployer`. It automates the
 publishing of NuGet packages and GitHub releases so it can be easily invoked
 from CI pipelines like Azure DevOps.
 
-The Azure Pipeline determines the version using [Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning),
-so releases automatically follow the Git history. The library locates the git repository by walking up from the solution directory,
-ensuring the correct repository is used. If Nerdbank.GitVersioning fails, the pipeline falls back to `git describe --tags --long`
+The Azure Pipeline determines the version using [GitVersion](https://gitversion.net),
+so releases automatically follow the Git history. The tool locates the git repository by walking up from the solution directory
+so the correct repository is used. If GitVersion fails, the pipeline falls back to `git describe --tags --long`
 and converts the result into a NuGet-compatible version.
 
 You can publish the tool itself using a single command:

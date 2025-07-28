@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using Nerdbank.GitVersioning;
+using System.Text.Json;
 using NuGet.Versioning;
 using Serilog;
 
@@ -12,29 +12,117 @@ public static class GitVersionRunner
         var repositoryResult = FindGitRoot(startPath ?? Environment.CurrentDirectory);
         var repositoryPath = repositoryResult.GetValueOrDefault(startPath ?? Environment.CurrentDirectory);
 
-        var libraryResult = RunNerdbank(repositoryPath);
-        if (libraryResult.IsSuccess)
+        var toolResult = GitVersionExists() ? Result.Success() : await Install();
+        if (toolResult.IsFailure)
         {
-            return libraryResult;
+            Log.Warning("GitVersion installation failed: {Error}. Falling back to git describe", toolResult.Error);
+            return await DescribeVersion(repositoryPath);
         }
 
-        Log.Warning("Nerdbank.GitVersioning failed: {Error}. Falling back to git describe", libraryResult.Error);
+        var versionResult = await Execute(repositoryPath);
+        if (versionResult.IsSuccess)
+        {
+            return versionResult;
+        }
+
+        Log.Warning("GitVersion failed: {Error}. Falling back to git describe", versionResult.Error);
         return await DescribeVersion(repositoryPath);
     }
 
-    private static Result<string> RunNerdbank(string repoPath)
+    private static bool GitVersionExists()
+    {
+        var pathEnv = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var extension = OperatingSystem.IsWindows() ? ".exe" : string.Empty;
+        return pathEnv.Split(Path.PathSeparator)
+            .Select(dir => Path.Combine(dir, $"dotnet-gitversion{extension}"))
+            .Any(File.Exists);
+    }
+
+    private static async Task<Result> Install()
     {
         try
         {
-            using var context = GitContext.Create(repoPath);
-            var oracle = new VersionOracle(context);
-            var version = oracle.NuGetPackageVersion;
-            if (string.IsNullOrWhiteSpace(version))
+            var process = new Process
             {
-                return Result.Failure<string>("No version produced by Nerdbank.GitVersioning");
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "dotnet",
+                    ArgumentList = { "tool", "install", "--global", "GitVersion.Tool" },
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                }
+            };
+
+            process.Start();
+            var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            return process.ExitCode == 0
+                ? Result.Success()
+                : Result.Failure(string.IsNullOrWhiteSpace(error) ? $"dotnet tool install exited with code {process.ExitCode}" : error);
+        }
+        catch (Exception ex)
+        {
+            var message = string.IsNullOrWhiteSpace(ex.Message) ? "Unknown error" : ex.Message;
+            return Result.Failure(message);
+        }
+    }
+
+    private static readonly string[] PreferredFields = ["NuGetVersionV2", "NuGetVersion", "SemVer", "FullSemVer"];
+
+    private static async Task<Result<string>> Execute(string repoPath)
+    {
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "dotnet-gitversion",
+                    ArgumentList = { "-output", "json" },
+                    WorkingDirectory = repoPath,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                }
+            };
+
+            process.Start();
+            var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0)
+            {
+                var message = string.IsNullOrWhiteSpace(error) ? $"dotnet-gitversion exited with code {process.ExitCode}" : error;
+                return Result.Failure<string>(message);
             }
 
-            return Result.Success(version);
+            try
+            {
+                using var document = JsonDocument.Parse(output);
+                var root = document.RootElement;
+                foreach (var field in PreferredFields)
+                {
+                    if (root.TryGetProperty(field, out var property))
+                    {
+                        var value = property.GetString();
+                        if (!string.IsNullOrWhiteSpace(value))
+                        {
+                            return Result.Success(value);
+                        }
+                    }
+                }
+
+                return Result.Failure<string>("No version fields found in GitVersion output");
+            }
+            catch (Exception parseEx)
+            {
+                var message = string.IsNullOrWhiteSpace(parseEx.Message) ? "Unknown error" : parseEx.Message;
+                return Result.Failure<string>(message);
+            }
         }
         catch (Exception ex)
         {
@@ -67,10 +155,8 @@ public static class GitVersionRunner
 
             if (process.ExitCode != 0)
             {
-                var message = string.IsNullOrWhiteSpace(error)
-                    ? $"git describe exited with code {process.ExitCode}"
-                    : error;
-                return Result.Failure<string>(string.IsNullOrWhiteSpace(message) ? "Unknown error" : message);
+                var message = string.IsNullOrWhiteSpace(error) ? $"git describe exited with code {process.ExitCode}" : error;
+                return Result.Failure<string>(message);
             }
 
             var description = output.Trim();
@@ -96,9 +182,7 @@ public static class GitVersionRunner
                 return Result.Failure<string>($"Invalid commit count in git describe output '{description}'");
             }
 
-            var version = commits == 0
-                ? baseVersion.ToNormalizedString()
-                : $"{baseVersion.ToNormalizedString()}-ci{commits}";
+            var version = commits == 0 ? baseVersion.ToNormalizedString() : $"{baseVersion.ToNormalizedString()}-ci{commits}";
 
             return Result.Success(version);
         }
