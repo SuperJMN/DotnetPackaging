@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using NuGet.Versioning;
 using Serilog;
+using DotnetPackaging.Deployment.Core;
 
 namespace DotnetPackaging;
 
@@ -38,36 +39,11 @@ public static class GitVersionRunner
             .Any(File.Exists);
     }
 
-    private static async Task<Result> Install()
+    private static Task<Result> Install()
     {
-        try
-        {
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "dotnet",
-                    ArgumentList = { "tool", "install", "--global", "GitVersion.Tool" },
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                }
-            };
-
-            process.Start();
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            return process.ExitCode == 0
-                ? Result.Success()
-                : Result.Failure(string.IsNullOrWhiteSpace(error) ? $"dotnet tool install exited with code {process.ExitCode}" : error);
-        }
-        catch (Exception ex)
-        {
-            var message = string.IsNullOrWhiteSpace(ex.Message) ? "Unknown error" : ex.Message;
-            return Result.Failure(message);
-        }
+        var logger = Maybe<ILogger>.From(Log.Logger);
+        var command = new Command(logger);
+        return command.Execute("dotnet", "tool install --global GitVersion.Tool");
     }
 
     private static readonly string[] PreferredFields = ["NuGetVersionV2", "NuGetVersion", "SemVer", "FullSemVer"];
