@@ -36,9 +36,17 @@ public class Deployer(Context context, Packager packager, Publisher publisher)
         Context.Logger.Information("Publishing projects: {@Projects}", projectToPublish);
 
         return await projectToPublish
-            .Select(project => packager.CreateNugetPackage(project, version).LogInfo($"Packing {project}"))
+            .Select(project =>
+            {
+                Context.Logger.Information("Packing {Project}", project);
+                return packager.CreateNugetPackage(project, version);
+            })
             .CombineSequentially()
-            .MapEach(resource => publisher.ToNuGet(resource, nuGetApiKey).LogInfo($"Pushing package {resource}"))
+            .MapEach(resource =>
+            {
+                Context.Logger.Information("Publishing package {Resource} in NuGet.org", resource.Name);
+                return publisher.PushNugetPackage(resource, nuGetApiKey);
+            })
             .CombineSequentially();
     }
 

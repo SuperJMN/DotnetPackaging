@@ -28,11 +28,12 @@ public class Dotnet : IDotnet
 
                 var finalArguments = string.Join(" ", "publish", projectPath, arguments, implicitArguments);
 
-                return Command.Execute("dotnet", finalArguments).Map(IContainer () =>new DirectoryContainer(outputDir) );
+                return Command.Execute("dotnet", finalArguments)
+                    .Map(_ => (IContainer)new DirectoryContainer(outputDir));
             });
     }
 
-    public Task<Result> Push(string packagePath, string apiKey)
+    public async Task<Result> Push(string packagePath, string apiKey)
     {
         var args = string.Join(
             " ",
@@ -43,7 +44,8 @@ public class Dotnet : IDotnet
             apiKey,
             "--skip-duplicate");
 
-        return Command.Execute("dotnet", args);
+        var result = await Command.Execute("dotnet", args);
+        return result.IsSuccess ? Result.Success() : Result.Failure(result.Error);
     }
 
     public Task<Result<INamedByteSource>> Pack(string projectPath, string version)
@@ -59,7 +61,11 @@ public class Dotnet : IDotnet
                 var arguments = ArgumentsParser.Parse([
                     ["output", outputDir.FullName],
                 ], [["version", version]]);
-                await Command.Execute("dotnet", string.Join(" ", "pack", projectPath, arguments));
+                var result = await Command.Execute("dotnet", string.Join(" ", "pack", projectPath, arguments));
+                if (result.IsFailure)
+                {
+                    throw new InvalidOperationException(result.Error);
+                }
                 return new DirectoryContainer(outputDir);
             })
             .Map(directory => directory.ResourcesRecursive())

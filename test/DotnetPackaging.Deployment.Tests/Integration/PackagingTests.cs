@@ -1,13 +1,9 @@
-using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Metadata;
-using DotnetPackaging.Deployment.Core;
 using DotnetPackaging.Deployment.Platforms.Android;
 using DotnetPackaging.Deployment.Platforms.Windows;
 using FluentAssertions;
-using Serilog;
 using Xunit.Abstractions;
 using Zafiro.CSharpFunctionalExtensions;
-using Zafiro.DivineBytes;
 using Zafiro.Misc;
 
 namespace DotnetPackaging.Deployment.Tests.Integration;
@@ -68,13 +64,17 @@ public class PackagingTests(ITestOutputHelper outputHelper)
         result.Should().Succeed();
     }
     
-    [Fact]
-    public async Task Test_linux()
+  public Packager CreatePackager()
     {
         var logger = new LoggerConfiguration().WriteTo.TestOutput(outputHelper).CreateLogger();
         var dotnet = new Dotnet(new Command(logger), logger);
-        
-        var result = await new Packager(dotnet, logger)
+        return new Packager(dotnet, logger);
+    }
+    
+    [Fact]
+    public async Task Test_linux()
+    {
+        var result = await CreatePackager()
             .CreateLinuxPackages(DesktopProject, new AppImageMetadata("TestApp", "Test App", "TestApp"))
             .MapEach(resource => resource.WriteTo(OutputFolder + "/" + resource.Name))
             .CombineSequentially();
@@ -88,7 +88,7 @@ public class PackagingTests(ITestOutputHelper outputHelper)
         var logger = new LoggerConfiguration().WriteTo.TestOutput(outputHelper).CreateLogger();
         var dotnet = new Dotnet(new Command(logger), logger);
         
-        var result = await new Packager(dotnet, logger)
+        var result = await CreatePackager()
             .CreateNugetPackage(DesktopProject, "1.0.0")
             .Bind(resource => resource.WriteTo(OutputFolder + "/" + resource.Name));
 

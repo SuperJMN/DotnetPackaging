@@ -15,7 +15,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Msix.Tests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Msix", "src\DotnetPackaging.Msix\DotnetPackaging.Msix.csproj", "{EDCAB7CC-741C-4DB0-95B8-F9CB1D89B475}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Misc", "Misc", "{62D724AD-1161-4EE3-AC71-9FFA01690F75}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Props", "Props", "{62D724AD-1161-4EE3-AC71-9FFA01690F75}"
 	ProjectSection(SolutionItems) = preProject
 		src\Directory.Build.props = src\Directory.Build.props
 		src\Common.props = src\Common.props
@@ -39,8 +39,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zafiro.FileSystem", "libs\Zafiro\src\Zafiro.FileSystem\Zafiro.FileSystem.csproj", "{30AB08D3-0C98-48A5-A08D-AF386E9D5E11}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zafiro.FileSystem.Unix", "libs\Zafiro\src\Zafiro.FileSystem.Unix\Zafiro.FileSystem.Unix.csproj", "{02A8013F-A8B5-45D3-A32E-7A0456CFAE31}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.DeployerTool", "src\DotnetPackaging.DeployerTool\DotnetPackaging.DeployerTool.csproj", "{5BC237A1-96D9-4279-BEA9-D8685EE2F1BC}"
 EndProject
@@ -222,7 +220,7 @@ Global
 		{7E065679-6F0F-4E28-9407-38864E1981EE} = {11CA6C64-B615-4D72-9D46-2439E7B86B87}
 		{30AB08D3-0C98-48A5-A08D-AF386E9D5E11} = {11CA6C64-B615-4D72-9D46-2439E7B86B87}
 		{02A8013F-A8B5-45D3-A32E-7A0456CFAE31} = {11CA6C64-B615-4D72-9D46-2439E7B86B87}
-		{5BC237A1-96D9-4279-BEA9-D8685EE2F1BC} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{5BC237A1-96D9-4279-BEA9-D8685EE2F1BC} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1D869DF1-9147-472D-A3D9-D519518A6951}

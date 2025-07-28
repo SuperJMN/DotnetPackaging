@@ -1,5 +1,7 @@
-mode: Mainline
-branches: {}
+workflow: GitHubFlow/v1
+strategies:
+  - ConfiguredNextVersion
+  - Mainline
 ignore:
   sha: []
 merge-message-formats: {}

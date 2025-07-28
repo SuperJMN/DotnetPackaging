@@ -3,13 +3,13 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Zafiro.Mixins;
 
-namespace DotnetPackaging.Deployment.Core;
+namespace DotnetPackaging;
 
 public class Command(Maybe<ILogger> logger) : ICommand
 {
     public Maybe<ILogger> Logger { get; } = logger;
 
-    public async Task<Result> Execute(string command,
+    public async Task<Result<string>> Execute(string command,
         string arguments,
         string workingDirectory = "",
         Dictionary<string, string>? environmentVariables = null)
@@ -50,13 +50,13 @@ public class Command(Maybe<ILogger> logger) : ICommand
         if (process.ExitCode == 0)
         {
             Logger.Information("Command succeeded:\n{CombinedOutput}", combinedOutput);
-            return Result.Success();
+            return Result.Success(output);
         }
 
         Logger.Error("Command failed with exit code {ExitCode}:\n{CombinedOutput}",
             process.ExitCode,
             combinedOutput);
-        return Result.Failure($"Process failed with exit code {process.ExitCode}");
+        return Result.Failure<string>($"Process failed with exit code {process.ExitCode}");
     }
 
     private void LogCommandExecution(string command,

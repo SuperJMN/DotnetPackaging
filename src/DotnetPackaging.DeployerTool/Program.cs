@@ -14,7 +14,7 @@ namespace DotnetPackaging.DeployerTool;
 
 static class Program
 {
-    public static Task<int> Main(string[] args)
+    public static async Task<int> Main(string[] args)
     {
         Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
 
@@ -22,7 +22,11 @@ static class Program
         root.AddCommand(CreateNugetCommand());
         root.AddCommand(CreateReleaseCommand());
 
-        return root.InvokeAsync(args);
+        var invokeAsync = await root.InvokeAsync(args);
+        
+        Log.Logger.Information("DeployerTool Execution completed with exit code {ExitCode}", invokeAsync);
+        
+        return invokeAsync;
     }
 
     private static CliCommand CreateNugetCommand()
@@ -39,7 +43,7 @@ static class Program
         };
         var versionOption = new Option<string?>("--version")
         {
-            Description = "Package version. If omitted, GitVersion will be used"
+            Description = "Package version. If omitted, GitVersion is used and falls back to git describe"
         };
         var apiKeyOption = new Option<string>("--api-key", () => Environment.GetEnvironmentVariable("NUGET_API_KEY") ?? string.Empty)
         {
@@ -64,7 +68,7 @@ static class Program
             var version = ctx.ParseResult.GetValueForOption(versionOption);
             if (string.IsNullOrWhiteSpace(version))
             {
-                var versionResult = await GitVersionRunner.Run();
+                var versionResult = await GitVersionRunner.Run(solution.DirectoryName);
                 if (versionResult.IsFailure)
                 {
                     Log.Error("Failed to obtain version using GitVersion: {Error}", versionResult.Error);

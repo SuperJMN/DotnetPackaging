@@ -4,9 +4,10 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
-    <Import Project="..\Common.props"/>
+    <Import Project="..\Common.props" />
     <ItemGroup>
-        <PackageReference Include="SixLabors.ImageSharp"/>
+        <PackageReference Include="SixLabors.ImageSharp" />
+        <PackageReference Include="NuGet.Versioning" />
     </ItemGroup>
     
     <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'true'">
@@ -14,10 +15,10 @@
       <ProjectReference Include="..\..\libs\Zafiro\src\Zafiro.FileSystem\Zafiro.FileSystem.csproj" />
       <ProjectReference Include="..\..\libs\Zafiro\src\Zafiro\Zafiro.csproj" />
     </ItemGroup>
-    <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'false'">
-        <PackageReference Include="Zafiro.DivineBytes" />
-        <PackageReference Include="Zafiro.FileSystem" />
-        <PackageReference Include="Zafiro" />
-    </ItemGroup>
-    
+  <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'false'">
+      <PackageReference Include="Zafiro.DivineBytes" />
+      <PackageReference Include="Zafiro.FileSystem" />
+      <PackageReference Include="Zafiro" />
+  </ItemGroup>
+
 </Project>

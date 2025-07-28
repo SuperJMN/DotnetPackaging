@@ -1,23 +1,33 @@
-using System.Diagnostics;
 using System.Text.Json;
-using Serilog;
+using NuGet.Versioning;
 
 namespace DotnetPackaging;
 
 public static class GitVersionRunner
 {
-    public static async Task<Result<string>> Run()
+    public static async Task<Result<string>> Run(string? startPath = null)
     {
-        if (!GitVersionExists())
+        var repositoryResult = FindGitRoot(startPath ?? Environment.CurrentDirectory);
+        var repositoryPath = repositoryResult.GetValueOrDefault(startPath ?? Environment.CurrentDirectory);
+
+        var logger = Maybe<ILogger>.From(Log.Logger);
+        var command = new Command(logger);
+
+        var toolResult = GitVersionExists() ? Result.Success() : await Install(command);
+        if (toolResult.IsFailure)
         {
-            var installResult = await Install();
-            if (installResult.IsFailure)
-            {
-                return Result.Failure<string>(installResult.Error);
-            }
+            Log.Warning("GitVersion installation failed: {Error}. Falling back to git describe", toolResult.Error);
+            return await DescribeVersion(command, repositoryPath);
         }
 
-        return await Execute();
+        var versionResult = await Execute(command, repositoryPath);
+        if (versionResult.IsSuccess)
+        {
+            return versionResult;
+        }
+
+        Log.Warning("GitVersion failed: {Error}. Falling back to git describe", versionResult.Error);
+        return await DescribeVersion(command, repositoryPath);
     }
 
     private static bool GitVersionExists()
@@ -29,69 +39,27 @@ public static class GitVersionRunner
             .Any(File.Exists);
     }
 
-    private static async Task<Result> Install()
+    private static async Task<Result> Install(Command command)
     {
-        try
-        {
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "dotnet",
-                    ArgumentList = { "tool", "install", "--global", "GitVersion.Tool" },
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                }
-            };
-
-            process.Start();
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            return process.ExitCode == 0
-                ? Result.Success()
-                : Result.Failure(error);
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure(ex.Message);
-        }
+        var result = await command.Execute("dotnet", "tool install --global GitVersion.Tool");
+        return result.IsSuccess ? Result.Success() : Result.Failure(result.Error);
     }
 
     private static readonly string[] PreferredFields = ["NuGetVersionV2", "NuGetVersion", "SemVer", "FullSemVer"];
 
-    private static async Task<Result<string>> Execute()
+    private static async Task<Result<string>> Execute(Command command, string repoPath)
     {
         try
         {
-            var process = new Process
+            var result = await command.Execute("dotnet-gitversion", "-output json", repoPath);
+            if (result.IsFailure)
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "dotnet-gitversion",
-                    ArgumentList = { "-output", "json" },
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                }
-            };
-
-            process.Start();
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            if (process.ExitCode != 0)
-            {
-                Log.Warning("GitVersion failed: {Error}", error);
-                return Result.Failure<string>(error);
+                return Result.Failure<string>(result.Error);
             }
 
             try
             {
-                using var document = JsonDocument.Parse(output);
+                using var document = JsonDocument.Parse(result.Value);
                 var root = document.RootElement;
                 foreach (var field in PreferredFields)
                 {
@@ -109,14 +77,74 @@ public static class GitVersionRunner
             }
             catch (Exception parseEx)
             {
-                Log.Warning("GitVersion JSON parsing failed: {Message}", parseEx.Message);
-                return Result.Failure<string>(parseEx.Message);
+                var message = string.IsNullOrWhiteSpace(parseEx.Message) ? "Unknown error" : parseEx.Message;
+                return Result.Failure<string>(message);
             }
         }
         catch (Exception ex)
         {
-            Log.Warning("GitVersion invocation failed: {Message}", ex.Message);
-            return Result.Failure<string>(ex.Message);
+            var message = string.IsNullOrWhiteSpace(ex.Message) ? "Unknown error" : ex.Message;
+            return Result.Failure<string>(message);
         }
+    }
+
+    private static async Task<Result<string>> DescribeVersion(Command command, string repoPath)
+    {
+        try
+        {
+            var result = await command.Execute("git", "describe --tags --long --match *.*.*", repoPath);
+            if (result.IsFailure)
+            {
+                return Result.Failure<string>(result.Error);
+            }
+
+            var description = result.Value.Trim();
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                return Result.Failure<string>("git describe produced no output");
+            }
+
+            var parts = description.TrimStart('v').Split('-');
+            if (parts.Length < 3)
+            {
+                return Result.Failure<string>($"Unexpected git describe output '{description}'");
+            }
+
+            var tag = parts[0];
+            if (!NuGetVersion.TryParse(tag, out var baseVersion))
+            {
+                return Result.Failure<string>($"Invalid tag '{tag}' in git describe output");
+            }
+
+            if (!int.TryParse(parts[1], out var commits))
+            {
+                return Result.Failure<string>($"Invalid commit count in git describe output '{description}'");
+            }
+
+            var version = commits == 0 ? baseVersion.ToNormalizedString() : $"{baseVersion.ToNormalizedString()}-ci{commits}";
+
+            return Result.Success(version);
+        }
+        catch (Exception ex)
+        {
+            var message = string.IsNullOrWhiteSpace(ex.Message) ? "Unknown error" : ex.Message;
+            return Result.Failure<string>(message);
+        }
+    }
+
+    private static Result<string> FindGitRoot(string startingDirectory)
+    {
+        var current = new DirectoryInfo(startingDirectory);
+        while (current != null)
+        {
+            if (Directory.Exists(Path.Combine(current.FullName, ".git")))
+            {
+                return Result.Success(current.FullName);
+            }
+
+            current = current.Parent;
+        }
+
+        return Result.Failure<string>($"No git repository found starting from '{startingDirectory}'");
     }
 }

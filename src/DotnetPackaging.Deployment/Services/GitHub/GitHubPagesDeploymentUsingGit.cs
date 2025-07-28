@@ -29,7 +29,7 @@ public class GitHubPagesDeploymentUsingGit(WasmApp wasmApp, Context context, str
             {
                 var remoteUrl = $"https://github.com/{RepositoryOwner}/{RepositoryName}.git";
                 return Context.Command.Execute("git", $"clone --branch {BranchName} --single-branch --depth 1 {remoteUrl} .", repoDir.FullName)
-                    .Map(() => repoDir);
+                    .Map(_ => repoDir);
             });
     }
 
@@ -48,7 +48,9 @@ public class GitHubPagesDeploymentUsingGit(WasmApp wasmApp, Context context, str
 
         // Añade los cambios al índice
         var execute = await Context.Command.Execute("git", "add .", repoDir.FullName);
-        return execute.Map(() => repoDir);
+        return execute.IsSuccess
+            ? Result.Success<IDirectoryInfo>(repoDir)
+            : Result.Failure<IDirectoryInfo>(execute.Error);
     }
 
     private async Task<Result> CommitAndPushChanges(IDirectoryInfo repoDir)
@@ -69,7 +71,7 @@ public class GitHubPagesDeploymentUsingGit(WasmApp wasmApp, Context context, str
         var commitResult = await Context.Command.Execute(
             "git",
             commitCommand,
-            repoDir.FullName, 
+            repoDir.FullName,
             environmentVariables);
 
         // Si no hay cambios, ignora el push
@@ -79,9 +81,12 @@ public class GitHubPagesDeploymentUsingGit(WasmApp wasmApp, Context context, str
         }
 
         // Realiza el push
-        return await Context.Command.Execute(
-            "git", 
-            $"push https://{ApiKey}@github.com/{RepositoryOwner}/{RepositoryName}.git", repoDir.FullName);
+        var pushResult = await Context.Command.Execute(
+            "git",
+            $"push https://{ApiKey}@github.com/{RepositoryOwner}/{RepositoryName}.git",
+            repoDir.FullName);
+
+        return pushResult.IsSuccess ? Result.Success() : Result.Failure(pushResult.Error);
     }
 
 }
