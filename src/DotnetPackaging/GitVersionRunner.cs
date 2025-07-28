@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 using NuGet.Versioning;
 using Serilog;
@@ -13,21 +12,24 @@ public static class GitVersionRunner
         var repositoryResult = FindGitRoot(startPath ?? Environment.CurrentDirectory);
         var repositoryPath = repositoryResult.GetValueOrDefault(startPath ?? Environment.CurrentDirectory);
 
-        var toolResult = GitVersionExists() ? Result.Success() : await Install();
+        var logger = Maybe<ILogger>.From(Log.Logger);
+        var command = new Command(logger);
+
+        var toolResult = GitVersionExists() ? Result.Success() : await Install(command);
         if (toolResult.IsFailure)
         {
             Log.Warning("GitVersion installation failed: {Error}. Falling back to git describe", toolResult.Error);
-            return await DescribeVersion(repositoryPath);
+            return await DescribeVersion(command, repositoryPath);
         }
 
-        var versionResult = await Execute(repositoryPath);
+        var versionResult = await Execute(command, repositoryPath);
         if (versionResult.IsSuccess)
         {
             return versionResult;
         }
 
         Log.Warning("GitVersion failed: {Error}. Falling back to git describe", versionResult.Error);
-        return await DescribeVersion(repositoryPath);
+        return await DescribeVersion(command, repositoryPath);
     }
 
     private static bool GitVersionExists()
@@ -39,46 +41,24 @@ public static class GitVersionRunner
             .Any(File.Exists);
     }
 
-    private static Task<Result> Install()
-    {
-        var logger = Maybe<ILogger>.From(Log.Logger);
-        var command = new Command(logger);
-        return command.Execute("dotnet", "tool install --global GitVersion.Tool");
-    }
+    private static Task<Result> Install(Command command) =>
+        command.Execute("dotnet", "tool install --global GitVersion.Tool");
 
     private static readonly string[] PreferredFields = ["NuGetVersionV2", "NuGetVersion", "SemVer", "FullSemVer"];
 
-    private static async Task<Result<string>> Execute(string repoPath)
+    private static async Task<Result<string>> Execute(Command command, string repoPath)
     {
         try
         {
-            var process = new Process
+            var result = await command.Capture("dotnet-gitversion", "-output json", repoPath);
+            if (result.IsFailure)
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "dotnet-gitversion",
-                    ArgumentList = { "-output", "json" },
-                    WorkingDirectory = repoPath,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                }
-            };
-
-            process.Start();
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            if (process.ExitCode != 0)
-            {
-                var message = string.IsNullOrWhiteSpace(error) ? $"dotnet-gitversion exited with code {process.ExitCode}" : error;
-                return Result.Failure<string>(message);
+                return Result.Failure<string>(result.Error);
             }
 
             try
             {
-                using var document = JsonDocument.Parse(output);
+                using var document = JsonDocument.Parse(result.Value);
                 var root = document.RootElement;
                 foreach (var field in PreferredFields)
                 {
@@ -107,35 +87,17 @@ public static class GitVersionRunner
         }
     }
 
-    private static async Task<Result<string>> DescribeVersion(string repoPath)
+    private static async Task<Result<string>> DescribeVersion(Command command, string repoPath)
     {
         try
         {
-            var process = new Process
+            var result = await command.Capture("git", "describe --tags --long --match *.*.*", repoPath);
+            if (result.IsFailure)
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "git",
-                    ArgumentList = { "describe", "--tags", "--long", "--match", "*.*.*" },
-                    WorkingDirectory = repoPath,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                }
-            };
-
-            process.Start();
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            if (process.ExitCode != 0)
-            {
-                var message = string.IsNullOrWhiteSpace(error) ? $"git describe exited with code {process.ExitCode}" : error;
-                return Result.Failure<string>(message);
+                return Result.Failure<string>(result.Error);
             }
 
-            var description = output.Trim();
+            var description = result.Value.Trim();
             if (string.IsNullOrWhiteSpace(description))
             {
                 return Result.Failure<string>("git describe produced no output");

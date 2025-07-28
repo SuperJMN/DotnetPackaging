@@ -59,6 +59,57 @@ public class Command(Maybe<ILogger> logger) : ICommand
         return Result.Failure($"Process failed with exit code {process.ExitCode}");
     }
 
+    public async Task<Result<string>> Capture(string command,
+        string arguments,
+        string workingDirectory = "",
+        Dictionary<string, string>? environmentVariables = null)
+    {
+        LogCommandExecution(command, arguments, workingDirectory, environmentVariables);
+
+        var processStartInfo = new ProcessStartInfo
+        {
+            FileName = command,
+            Arguments = arguments,
+            WorkingDirectory = workingDirectory,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+
+        if (environmentVariables is not null)
+        {
+            foreach (var (key, value) in environmentVariables)
+            {
+                processStartInfo.Environment[key] = value;
+            }
+        }
+
+        using var process = new Process { StartInfo = processStartInfo };
+        process.Start();
+
+        var outputTask = ReadStreamAsync(process.StandardOutput);
+        var errorTask  = ReadStreamAsync(process.StandardError);
+
+        await Task.WhenAll(outputTask, errorTask);
+        await process.WaitForExitAsync();
+
+        var output         = outputTask.Result;
+        var error          = errorTask.Result;
+        var combinedOutput = BuildCombinedLogMessage(output, error);
+        combinedOutput     = SanitizeSensitiveInfo(combinedOutput);
+
+        if (process.ExitCode == 0)
+        {
+            Logger.Information("Command succeeded:\n{CombinedOutput}", combinedOutput);
+            return Result.Success(output);
+        }
+
+        Logger.Error("Command failed with exit code {ExitCode}:\n{CombinedOutput}",
+            process.ExitCode,
+            combinedOutput);
+        return Result.Failure<string>($"Process failed with exit code {process.ExitCode}");
+    }
+
     private void LogCommandExecution(string command,
         string arguments,
         string workingDirectory,
