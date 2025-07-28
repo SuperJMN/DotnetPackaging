@@ -107,21 +107,41 @@ static class Program
     {
         var cmd = new CliCommand("release", "Create a GitHub release for an Avalonia solution");
 
-        var solutionOption = new Option<FileInfo>("--solution") { IsRequired = true };
-        var versionOption = new Option<string>("--version") { IsRequired = true };
-        var packageNameOption = new Option<string>("--package-name") { IsRequired = true };
-        var appIdOption = new Option<string>("--app-id") { IsRequired = true };
-        var appNameOption = new Option<string>("--app-name") { IsRequired = true };
+        var solutionOption = new Option<FileInfo?>("--solution")
+        {
+            Description = "Solution file. If omitted the tool searches parent directories"
+        };
+        var prefixOption = new Option<string?>("--prefix")
+        {
+            Description = "Prefix used to locate projects inside the solution"
+        };
+        var versionOption = new Option<string?>("--version")
+        {
+            Description = "Release version. If omitted GitVersion is used"
+        };
+        var packageNameOption = new Option<string?>("--package-name")
+        {
+            Description = "Package name. Defaults to the solution name"
+        };
+        var appIdOption = new Option<string?>("--app-id")
+        {
+            Description = "Application identifier. Defaults to the solution name"
+        };
+        var appNameOption = new Option<string?>("--app-name")
+        {
+            Description = "Application name. Defaults to the solution name"
+        };
 
         var ownerOption = new Option<string>("--owner") { IsRequired = true };
         var repoOption = new Option<string>("--repository") { IsRequired = true };
         var tokenOption = new Option<string>("--token", () => Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? string.Empty)
         {
-            Description = "GitHub token. Can be provided via GITHUB_TOKEN env var"
+            Description = "GitHub token. Can be provided via GITHUB_TOKEN env var",
+            IsRequired = true
         };
 
-        var releaseNameOption = new Option<string>("--release-name") { IsRequired = true };
-        var tagOption = new Option<string>("--tag") { IsRequired = true };
+        var releaseNameOption = new Option<string?>("--release-name");
+        var tagOption = new Option<string?>("--tag");
         var bodyOption = new Option<string>("--body", () => string.Empty);
         var draftOption = new Option<bool>("--draft");
         var prereleaseOption = new Option<bool>("--prerelease");
@@ -140,6 +160,7 @@ static class Program
         var androidDisplayVersionOption = new Option<string>("--android-app-display-version");
 
         cmd.AddOption(solutionOption);
+        cmd.AddOption(prefixOption);
         cmd.AddOption(versionOption);
         cmd.AddOption(packageNameOption);
         cmd.AddOption(appIdOption);
@@ -163,15 +184,36 @@ static class Program
         cmd.SetHandler(async context =>
         {
             var solution = ResolveSolution(context.ParseResult.GetValueForOption(solutionOption));
-            var version = context.ParseResult.GetValueForOption(versionOption)!;
-            var packageName = context.ParseResult.GetValueForOption(packageNameOption)!;
-            var appId = context.ParseResult.GetValueForOption(appIdOption)!;
-            var appName = context.ParseResult.GetValueForOption(appNameOption)!;
+            var prefix = context.ParseResult.GetValueForOption(prefixOption);
+            var version = context.ParseResult.GetValueForOption(versionOption);
+            if (string.IsNullOrWhiteSpace(version))
+            {
+                var versionResult = await GitVersionRunner.Run(solution.DirectoryName);
+                if (versionResult.IsFailure)
+                {
+                    Log.Error("Failed to obtain version using GitVersion: {Error}", versionResult.Error);
+                    return;
+                }
+
+                version = versionResult.Value;
+            }
+
+            var packageName = context.ParseResult.GetValueForOption(packageNameOption);
+            var appId = context.ParseResult.GetValueForOption(appIdOption);
+            var appName = context.ParseResult.GetValueForOption(appNameOption);
+            if (string.IsNullOrWhiteSpace(packageName) || string.IsNullOrWhiteSpace(appId) || string.IsNullOrWhiteSpace(appName))
+            {
+                var info = GuessApplicationInfo(solution);
+                packageName ??= info.PackageName;
+                appId ??= info.AppId;
+                appName ??= info.AppName;
+            }
+
             var owner = context.ParseResult.GetValueForOption(ownerOption)!;
             var repository = context.ParseResult.GetValueForOption(repoOption)!;
             var token = context.ParseResult.GetValueForOption(tokenOption)!;
-            var releaseName = context.ParseResult.GetValueForOption(releaseNameOption)!;
-            var tag = context.ParseResult.GetValueForOption(tagOption)!;
+            var releaseName = context.ParseResult.GetValueForOption(releaseNameOption);
+            var tag = context.ParseResult.GetValueForOption(tagOption);
             var body = context.ParseResult.GetValueForOption(bodyOption)!;
             var draft = context.ParseResult.GetValueForOption(draftOption);
             var prerelease = context.ParseResult.GetValueForOption(prereleaseOption);
@@ -189,16 +231,22 @@ static class Program
                 return;
             }
 
+            tag = string.IsNullOrWhiteSpace(tag) ? $"v{version}" : tag;
+            releaseName = string.IsNullOrWhiteSpace(releaseName) ? tag : releaseName;
+
             var platformSet = new HashSet<string>(platforms.Select(p => p.ToLowerInvariant()));
 
             var builder = Deployer.Instance.CreateRelease()
-                .WithApplicationInfo(packageName, appId, appName)
-                .WithVersion(version);
+                .WithApplicationInfo(packageName!, appId!, appName!)
+                .WithVersion(version!);
 
             var projects = ParseSolutionProjects(solution.FullName).ToList();
-            var desktop = projects.FirstOrDefault(p => p.Name.EndsWith(".Desktop", StringComparison.OrdinalIgnoreCase));
-            var browser = projects.FirstOrDefault(p => p.Name.EndsWith(".Browser", StringComparison.OrdinalIgnoreCase));
-            var android = projects.FirstOrDefault(p => p.Name.EndsWith(".Android", StringComparison.OrdinalIgnoreCase));
+
+            prefix = string.IsNullOrWhiteSpace(prefix) ? Path.GetFileNameWithoutExtension(solution.Name) : prefix;
+
+            var desktop = projects.FirstOrDefault(p => p.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && p.Name.EndsWith(".Desktop", StringComparison.OrdinalIgnoreCase));
+            var browser = projects.FirstOrDefault(p => p.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && p.Name.EndsWith(".Browser", StringComparison.OrdinalIgnoreCase));
+            var android = projects.FirstOrDefault(p => p.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && p.Name.EndsWith(".Android", StringComparison.OrdinalIgnoreCase));
 
             if (desktop != default)
             {
@@ -361,5 +409,13 @@ static class Program
             if (isPackable)
                 yield return new FileInfo(path);
         }
+    }
+
+    private static (string PackageName, string AppId, string AppName) GuessApplicationInfo(FileInfo solution)
+    {
+        var baseName = Path.GetFileNameWithoutExtension(solution.Name);
+        var packageName = baseName.ToLowerInvariant();
+        var appId = baseName.Replace(" ", string.Empty).Replace("-", string.Empty).ToLowerInvariant();
+        return (packageName, appId, baseName);
     }
 }
