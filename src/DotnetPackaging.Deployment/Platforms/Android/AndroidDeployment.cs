@@ -48,8 +48,15 @@ public class AndroidDeployment(IDotnet dotnet, Path projectPath, AndroidDeployme
     private IEnumerable<INamedByteSource> ApkFiles(IContainer directory)
     {
         return directory.ResourcesWithPathsRecursive()
-            .Where(file => file.Name.EndsWith(".apk"))
-            .Select(resource => new Resource(options.PackageName + "-" + options.ApplicationDisplayVersion + "-android" + ".apk", resource));
+            .Where(file => file.Name.EndsWith(".apk", StringComparison.OrdinalIgnoreCase))
+            .Select(resource =>
+            {
+                var originalName = global::System.IO.Path.GetFileNameWithoutExtension(resource.Name);
+                var dashIndex = originalName.LastIndexOf('-');
+                var suffix = dashIndex >= 0 ? originalName[dashIndex..] : string.Empty;
+                var finalName = $"{options.PackageName}-{options.ApplicationDisplayVersion}-android{suffix}.apk";
+                return (INamedByteSource)new Resource(finalName, resource);
+            });
     }
 
     private static string CreateArgs(DeploymentOptions deploymentOptions, string keyStorePath, string androidSdkPath)
