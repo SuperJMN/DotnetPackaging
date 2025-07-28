@@ -31,7 +31,8 @@ from CI pipelines like Azure DevOps.
 
 The Azure Pipeline determines the version using [GitVersion](https://gitversion.net),
 so releases automatically follow the Git history. The tool locates the git repository by walking up from the solution directory
-so the correct repository is used. If GitVersion fails, the pipeline falls back to `git describe --tags --long`
+so the correct repository is used. It first tries `NuGetVersion` or `MajorMinorPatch`
+from GitVersion to ensure the value is NuGet compatible. If GitVersion fails, the pipeline falls back to `git describe --tags --long`
 and converts the result into a NuGet-compatible version.
 
 You can publish the tool itself using a single command:
