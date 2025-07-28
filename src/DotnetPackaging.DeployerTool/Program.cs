@@ -242,7 +242,7 @@ static class Program
 
             var projects = ParseSolutionProjects(solution.FullName).ToList();
 
-            prefix = string.IsNullOrWhiteSpace(prefix) ? Path.GetFileNameWithoutExtension(solution.Name) : prefix;
+            prefix = string.IsNullOrWhiteSpace(prefix) ? System.IO.Path.GetFileNameWithoutExtension(solution.Name) : prefix;
 
             var desktop = projects.FirstOrDefault(p => p.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && p.Name.EndsWith(".Desktop", StringComparison.OrdinalIgnoreCase));
             var browser = projects.FirstOrDefault(p => p.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && p.Name.EndsWith(".Browser", StringComparison.OrdinalIgnoreCase));
@@ -413,7 +413,7 @@ static class Program
 
     private static (string PackageName, string AppId, string AppName) GuessApplicationInfo(FileInfo solution)
     {
-        var baseName = Path.GetFileNameWithoutExtension(solution.Name);
+        var baseName = System.IO.Path.GetFileNameWithoutExtension(solution.Name);
         var packageName = baseName.ToLowerInvariant();
         var appId = baseName.Replace(" ", string.Empty).Replace("-", string.Empty).ToLowerInvariant();
         return (packageName, appId, baseName);
