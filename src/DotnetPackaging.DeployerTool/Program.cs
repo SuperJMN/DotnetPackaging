@@ -64,7 +64,7 @@ static class Program
             var version = ctx.ParseResult.GetValueForOption(versionOption);
             if (string.IsNullOrWhiteSpace(version))
             {
-                var versionResult = await GitVersionRunner.Run();
+                var versionResult = await GitVersionRunner.Run(solution.DirectoryName);
                 if (versionResult.IsFailure)
                 {
                     Log.Error("Failed to obtain version using Nerdbank.GitVersioning: {Error}", versionResult.Error);

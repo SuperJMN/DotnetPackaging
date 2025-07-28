@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text.Json;
 using Nerdbank.GitVersioning;
 using NuGet.Versioning;
 using Serilog;
@@ -8,25 +7,26 @@ namespace DotnetPackaging;
 
 public static class GitVersionRunner
 {
-    private static readonly string[] PreferredFields = ["NuGetPackageVersion", "NuGetPackageVersionSimple", "Version"];
-
-    public static async Task<Result<string>> Run()
+    public static async Task<Result<string>> Run(string? startPath = null)
     {
-        var libraryResult = RunNerdbank();
+        var repositoryResult = FindGitRoot(startPath ?? Environment.CurrentDirectory);
+        var repositoryPath = repositoryResult.GetValueOrDefault(startPath ?? Environment.CurrentDirectory);
+
+        var libraryResult = RunNerdbank(repositoryPath);
         if (libraryResult.IsSuccess)
         {
             return libraryResult;
         }
 
         Log.Warning("Nerdbank.GitVersioning failed: {Error}. Falling back to git describe", libraryResult.Error);
-        return await DescribeVersion();
+        return await DescribeVersion(repositoryPath);
     }
 
-    private static Result<string> RunNerdbank()
+    private static Result<string> RunNerdbank(string repoPath)
     {
         try
         {
-            using var context = GitContext.Create(Environment.CurrentDirectory);
+            using var context = GitContext.Create(repoPath);
             var oracle = new VersionOracle(context);
             var version = oracle.NuGetPackageVersion;
             if (string.IsNullOrWhiteSpace(version))
@@ -43,7 +43,7 @@ public static class GitVersionRunner
         }
     }
 
-    private static async Task<Result<string>> DescribeVersion()
+    private static async Task<Result<string>> DescribeVersion(string repoPath)
     {
         try
         {
@@ -53,6 +53,7 @@ public static class GitVersionRunner
                 {
                     FileName = "git",
                     ArgumentList = { "describe", "--tags", "--long", "--match", "*.*.*" },
+                    WorkingDirectory = repoPath,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -106,5 +107,21 @@ public static class GitVersionRunner
             var message = string.IsNullOrWhiteSpace(ex.Message) ? "Unknown error" : ex.Message;
             return Result.Failure<string>(message);
         }
+    }
+
+    private static Result<string> FindGitRoot(string startingDirectory)
+    {
+        var current = new DirectoryInfo(startingDirectory);
+        while (current != null)
+        {
+            if (Directory.Exists(Path.Combine(current.FullName, ".git")))
+            {
+                return Result.Success(current.FullName);
+            }
+
+            current = current.Parent;
+        }
+
+        return Result.Failure<string>($"No git repository found starting from '{startingDirectory}'");
     }
 }
