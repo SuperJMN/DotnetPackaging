@@ -1,4 +1,4 @@
-namespace DotnetPackaging.Deployment.Core;
+namespace DotnetPackaging;
 
 public interface ICommand
 {

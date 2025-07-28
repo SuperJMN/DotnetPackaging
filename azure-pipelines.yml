@@ -9,7 +9,6 @@ steps:
   - checkout: self
     submodules: true
 
-
   - task: UseDotNet@2
     inputs:
       packageType: sdk

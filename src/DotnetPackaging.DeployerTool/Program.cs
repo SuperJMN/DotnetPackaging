@@ -14,7 +14,7 @@ namespace DotnetPackaging.DeployerTool;
 
 static class Program
 {
-    public static Task<int> Main(string[] args)
+    public static async Task<int> Main(string[] args)
     {
         Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
 
@@ -22,7 +22,11 @@ static class Program
         root.AddCommand(CreateNugetCommand());
         root.AddCommand(CreateReleaseCommand());
 
-        return root.InvokeAsync(args);
+        var invokeAsync = await root.InvokeAsync(args);
+        
+        Log.Logger.Information("DeployerTool Execution completed with exit code {ExitCode}", invokeAsync);
+        
+        return invokeAsync;
     }
 
     private static CliCommand CreateNugetCommand()

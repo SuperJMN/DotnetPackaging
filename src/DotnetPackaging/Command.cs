@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Zafiro.Mixins;
 
-namespace DotnetPackaging.Deployment.Core;
+namespace DotnetPackaging;
 
 public class Command(Maybe<ILogger> logger) : ICommand
 {

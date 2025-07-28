@@ -9,7 +9,7 @@ public class Publisher(Context context)
 {
     private Context Context { get; } = context;
 
-    public Task<Result> ToNuGet(INamedByteSource file, string authToken)
+    public Task<Result> PushNugetPackage(INamedByteSource file, string authToken)
     {
         var fs = new System.IO.Abstractions.FileSystem();
         return Result.Try(() => fs.Path.GetRandomFileName() + "_" + file.Name)

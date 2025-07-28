@@ -21,9 +21,4 @@
       <PackageReference Include="Zafiro" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Include="..\DotnetPackaging.Deployment\Core\ICommand.cs" Link="Core\ICommand.cs" />
-    <Compile Include="..\DotnetPackaging.Deployment\Core\Command.cs" Link="Core\Command.cs" />
-  </ItemGroup>
-
 </Project>

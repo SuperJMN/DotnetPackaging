@@ -1,7 +1,5 @@
 using System.Text.Json;
 using NuGet.Versioning;
-using Serilog;
-using DotnetPackaging.Deployment.Core;
 
 namespace DotnetPackaging;
 
