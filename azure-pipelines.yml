@@ -18,22 +18,22 @@ steps:
     displayName: Build DeployerTool
 
   - pwsh: |
-      $args = ""
+      $extraArgs = @()
       if ("$(ProjectNamePattern)" -ne "") {
-        $args = "--name-pattern $(ProjectNamePattern)"
+        $extraArgs += @('--name-pattern', '$(ProjectNamePattern)')
       }
-      dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- nuget --solution DotnetPackaging.sln --api-key $env:NUGET_API_KEY $args
+      dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- nuget --solution DotnetPackaging.sln --api-key $env:NUGET_API_KEY @extraArgs
     displayName: Publish NuGet packages
     condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
     env:
       NUGET_API_KEY: $(NuGetApiKey)
 
   - pwsh: |
-      $args = "--no-push"
+      $extraArgs = @('--no-push')
       if ("$(ProjectNamePattern)" -ne "") {
-        $args = "$args --name-pattern $(ProjectNamePattern)"
+        $extraArgs += @('--name-pattern', '$(ProjectNamePattern)')
       }
-      dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- nuget --solution DotnetPackaging.sln --api-key $env:NUGET_API_KEY $args
+      dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- nuget --solution DotnetPackaging.sln --api-key $env:NUGET_API_KEY @extraArgs
     displayName: Publish NuGet packages (dry run)
     condition: ne(variables['Build.SourceBranch'], 'refs/heads/master')
     env:
