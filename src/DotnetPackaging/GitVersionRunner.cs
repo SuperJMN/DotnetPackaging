@@ -41,8 +41,11 @@ public static class GitVersionRunner
             .Any(File.Exists);
     }
 
-    private static Task<Result> Install(Command command) =>
-        command.Execute("dotnet", "tool install --global GitVersion.Tool");
+    private static async Task<Result> Install(Command command)
+    {
+        var result = await command.Execute("dotnet", "tool install --global GitVersion.Tool");
+        return result.IsSuccess ? Result.Success() : Result.Failure(result.Error);
+    }
 
     private static readonly string[] PreferredFields = ["NuGetVersionV2", "NuGetVersion", "SemVer", "FullSemVer"];
 
@@ -50,7 +53,7 @@ public static class GitVersionRunner
     {
         try
         {
-            var result = await command.Capture("dotnet-gitversion", "-output json", repoPath);
+            var result = await command.Execute("dotnet-gitversion", "-output json", repoPath);
             if (result.IsFailure)
             {
                 return Result.Failure<string>(result.Error);
@@ -91,7 +94,7 @@ public static class GitVersionRunner
     {
         try
         {
-            var result = await command.Capture("git", "describe --tags --long --match *.*.*", repoPath);
+            var result = await command.Execute("git", "describe --tags --long --match *.*.*", repoPath);
             if (result.IsFailure)
             {
                 return Result.Failure<string>(result.Error);
