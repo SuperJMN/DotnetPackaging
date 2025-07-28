@@ -22,8 +22,7 @@ steps:
       if ("$(ProjectNamePattern)" -ne "") {
         $args = "--name-pattern $(ProjectNamePattern)"
       }
-      dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- \
-        nuget --solution DotnetPackaging.sln --api-key $env:NUGET_API_KEY $args
+      dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- nuget --solution DotnetPackaging.sln --api-key $env:NUGET_API_KEY $args
     displayName: Publish NuGet packages
     condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
     env:
@@ -34,8 +33,7 @@ steps:
       if ("$(ProjectNamePattern)" -ne "") {
         $args = "$args --name-pattern $(ProjectNamePattern)"
       }
-      dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- \
-        nuget --solution DotnetPackaging.sln --api-key $env:NUGET_API_KEY $args
+      dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- nuget --solution DotnetPackaging.sln --api-key $env:NUGET_API_KEY $args
     displayName: Publish NuGet packages (dry run)
     condition: ne(variables['Build.SourceBranch'], 'refs/heads/master')
     env:
