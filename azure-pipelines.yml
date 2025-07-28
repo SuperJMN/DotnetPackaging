@@ -22,6 +22,9 @@ steps:
       if [ -n "$(ProjectNamePattern)" ]; then
         args="--name-pattern $(ProjectNamePattern)"
       fi
+      if [[ "$(Build.SourceBranch)" != refs/tags/* ]]; then
+        args="--no-push $args"
+      fi
       dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- \
         nuget --solution DotnetPackaging.sln --api-key $(NuGetApiKey) $args
     displayName: Publish Packages
