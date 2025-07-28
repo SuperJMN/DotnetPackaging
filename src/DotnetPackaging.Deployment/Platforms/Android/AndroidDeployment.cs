@@ -56,7 +56,9 @@ public class AndroidDeployment(IDotnet dotnet, Path projectPath, AndroidDeployme
                 var suffix = dashIndex >= 0 ? originalName[dashIndex..] : string.Empty;
                 var finalName = $"{options.PackageName}-{options.ApplicationDisplayVersion}-android{suffix}.apk";
                 return (INamedByteSource)new Resource(finalName, resource);
-            });
+            })
+            .GroupBy(res => res.Name)
+            .Select(group => group.First());
     }
 
     private static string CreateArgs(DeploymentOptions deploymentOptions, string keyStorePath, string androidSdkPath)
