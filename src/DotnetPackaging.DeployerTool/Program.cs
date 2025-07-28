@@ -16,7 +16,9 @@ static class Program
 {
     public static async Task<int> Main(string[] args)
     {
-        Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
+        Log.Logger = new LoggerConfiguration()
+            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3} {Platform}] {Message:lj}{NewLine}{Exception}")
+            .CreateLogger();
 
         var root = new RootCommand("Deployment tool for DotnetPackaging");
         root.AddCommand(CreateNugetCommand());

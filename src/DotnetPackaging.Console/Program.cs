@@ -16,7 +16,7 @@ static class Program
     public static Task<int> Main(string[] args)
     {
         Log.Logger = new LoggerConfiguration()
-            .WriteTo.Console()
+            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3} {Platform}] {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
         
         var rootCommand = new RootCommand();
