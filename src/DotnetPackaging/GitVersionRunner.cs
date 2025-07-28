@@ -45,7 +45,7 @@ public static class GitVersionRunner
         return result.IsSuccess ? Result.Success() : Result.Failure(result.Error);
     }
 
-    private static readonly string[] PreferredFields = ["NuGetVersionV2", "NuGetVersion", "SemVer", "FullSemVer"];
+    private static readonly string[] PreferredFields = ["NuGetVersionV2", "NuGetVersion", "MajorMinorPatch", "SemVer", "FullSemVer"];
 
     private static async Task<Result<string>> Execute(Command command, string repoPath)
     {
