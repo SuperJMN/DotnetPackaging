@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackAsTool>true</PackAsTool>
+    <RollForward>LatestMajor</RollForward>
     <ToolCommandName>dotnetdeployer</ToolCommandName>
   </PropertyGroup>
   <Import Project="..\Common.props" />
