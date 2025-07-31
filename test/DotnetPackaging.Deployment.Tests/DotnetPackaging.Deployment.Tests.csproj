@@ -30,8 +30,4 @@
       </None>
     </ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\..\src\DotnetPackaging.Deployment\DotnetPackaging.Deployment.csproj" />
-    </ItemGroup>
-
 </Project>
