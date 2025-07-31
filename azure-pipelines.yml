@@ -2,39 +2,17 @@ variables:
   - group: api-keys
   - name: Agent.Source.Git.ShallowFetchDepth
     value: 0
-  - name: ProjectNamePattern
-    value: ''
 
 steps:
   - checkout: self
-    submodules: true
 
-  - task: UseDotNet@2
-    inputs:
-      packageType: sdk
-      version: '8.0.x'
+  - pwsh: dotnet tool install --global DotnetDeployer.Tool
+    displayName: Install DotnetDeployer.Tool
 
-  - script: dotnet build src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -c Release
-    displayName: Build DeployerTool
-
-  - pwsh: |
-      $extraArgs = @()
-      if ("$(ProjectNamePattern)" -ne "") {
-        $extraArgs += @('--name-pattern', '$(ProjectNamePattern)')
-      }
-      dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- nuget --solution DotnetPackaging.sln --api-key $env:NUGET_API_KEY @extraArgs
+  - pwsh: dotnetdeployer nuget --api-key $(NuGetApiKey)
     displayName: Publish NuGet packages
     condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
-    env:
-      NUGET_API_KEY: $(NuGetApiKey)
-
-  - pwsh: |
-      $extraArgs = @('--no-push')
-      if ("$(ProjectNamePattern)" -ne "") {
-        $extraArgs += @('--name-pattern', '$(ProjectNamePattern)')
-      }
-      dotnet run --project src/DotnetPackaging.DeployerTool/DotnetPackaging.DeployerTool.csproj -- nuget --solution DotnetPackaging.sln --api-key $env:NUGET_API_KEY @extraArgs
+  
+  - pwsh: dotnetdeployer nuget --api-key $(NuGetApiKey) --no-push
     displayName: Publish NuGet packages (dry run)
     condition: ne(variables['Build.SourceBranch'], 'refs/heads/master')
-    env:
-      NUGET_API_KEY: $(NuGetApiKey)
