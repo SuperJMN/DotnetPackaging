@@ -14,9 +14,7 @@ public static class BuildUtils
     {
         var icon = await GetIcon(setup, directory).TapError(Log.Warning);
         var package = setup.Package.Or(setup.Name).GetValueOrDefault(exec.Name.Replace(".Desktop", ""));
-        var versionResult = await setup.Version
-            .Match(v => Task.FromResult(Result.Success(v)), () => GitVersionRunner.Run());
-        var version = versionResult.GetValueOrDefault("1.0.0");
+        var version = setup.Version.GetValueOrDefault("1.0.0");
         var name = setup.Name.GetValueOrDefault(directory.Name);
         
         var packageMetadata = new PackageMetadata(name, architecture, isTerminal, package, version)
