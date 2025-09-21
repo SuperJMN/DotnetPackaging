@@ -1,10 +1,15 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Parsing;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.AppImage;
 using DotnetPackaging.AppImage.Core;
+using DotnetPackaging.AppImage.Metadata;
 using DotnetPackaging.Deb;
 using Serilog;
+using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.DataModel;
+using Zafiro.DivineBytes;
+using Zafiro.DivineBytes.System.IO;
 using Zafiro.FileSystem.Core;
 
 namespace DotnetPackaging.Console;
@@ -93,20 +98,44 @@ static class Program
 
     private static Task CreateAppImage(DirectoryInfo inputDir, FileInfo outputFile, Options options)
     {
-        return new Zafiro.FileSystem.Local.Directory(FileSystem.DirectoryInfo.New(inputDir.FullName))
-            .ToDirectory()
-            .Bind(directory =>
-            {
-                return AppImage.AppImage.From()
-                    .Directory(directory)
-                    .Configure(configuration => configuration.From(options))
-                    .Build()
-                    .Bind(x => x.ToData().Bind(async data =>
-                    {
-                        await using var fileSystemStream = outputFile.Open(FileMode.Create);
-                        return await data.DumpTo(fileSystemStream);
-                    }));
-            }).WriteResult();
+        // Wrap the input directory as a DivineBytes container (no temp copies)
+        var dirInfo = FileSystem.DirectoryInfo.New(inputDir.FullName);
+        var container = new DirectoryContainer(dirInfo);
+        var root = container.AsRoot();
+
+        // Build AppImage metadata from provided options (fallbacks when not provided)
+        var appName = options.Name.GetValueOrDefault(inputDir.Name);
+        var packageName = appName.ToLowerInvariant().Replace(" ", "").Replace("-", "");
+        var appId = options.Id.GetValueOrDefault($"com.{packageName}");
+
+        var metadata = new AppImageMetadata(appId, appName, packageName)
+        {
+            Summary = options.Summary,
+            Comment = options.Comment,
+            Description = options.Comment, // use comment if no separate description is provided
+            Version = options.Version,
+            Homepage = options.HomePage.Map(u => u.ToString()),
+            ProjectLicense = options.License,
+            Keywords = options.Keywords,
+            StartupWmClass = options.StartupWmClass,
+            IsTerminal = options.IsTerminal.GetValueOrDefault(false),
+            Categories = BuildCategories(options)
+        };
+
+        var factory = new AppImageFactory();
+
+        return factory.Create(root, metadata)
+            .Bind(x => x.ToByteSource())
+            .Bind(source => source.WriteTo(outputFile.FullName))
+            .WriteResult();
+    }
+
+    private static Maybe<IEnumerable<string>> BuildCategories(Options options)
+    {
+        var list = new List<string>();
+        if (options.MainCategory.HasValue) list.Add(options.MainCategory.Value.ToString());
+        if (options.AdditionalCategories.HasValue) list.AddRange(options.AdditionalCategories.Value.Select(x => x.ToString()));
+        return list.Any() ? list : Maybe<IEnumerable<string>>.None;
     }
 
     private static Task CreateDeb(DirectoryInfo inputDir, FileInfo outputFile, Options options)
@@ -128,13 +157,19 @@ static class Program
 
     private static IIcon? GetIcon(ArgumentResult result)
     {
-        var iconPath = result.Tokens[0].Value;
-        var icon = Data.FromFileInfo(FileSystem.FileInfo.New(iconPath)); icon.Map(Icon.FromData);
-        if (icon.IsFailure)
+        if (result.Tokens.Count == 0)
         {
-            result.ErrorMessage = $"Invalid icon '{iconPath}': {icon.Error}";
+            return null;
         }
-                
+
+        var iconPath = result.Tokens[0].Value;
+        var dataResult = Data.FromFileInfo(FileSystem.FileInfo.New(iconPath));
+        if (dataResult.IsFailure)
+        {
+            result.ErrorMessage = $"Invalid icon '{iconPath}': {dataResult.Error}";
+        }
+
+        // For now, do not eagerly parse the icon (async). We rely on auto-detection or later stages.
         return null;
     }
 }
