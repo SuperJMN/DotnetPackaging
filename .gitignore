@@ -364,3 +364,6 @@ FodyWeavers.xsd
 
 /.idea/.idea.DotnetPackaging/.idea
 dotnet-install.sh
+
+# Test/runtime artifacts
+squashfs-root/

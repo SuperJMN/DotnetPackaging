@@ -11,12 +11,20 @@
   <ItemGroup>
     <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="System.CommandLine" />
-    <PackageReference Include="Zafiro.FileSystem.Local" />
-    <PackageReference Include="Zafiro.FileSystem.Unix" />
   </ItemGroup>
+  <!-- Always reference local projects within this repo -->
   <ItemGroup>
     <ProjectReference Include="..\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj" />
     <ProjectReference Include="..\DotnetPackaging.Deb\DotnetPackaging.Deb.csproj" />
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
+  </ItemGroup>
+  <!-- Toggle Zafiro: local projects in Debug, NuGet packages in Release (central versions in Directory.Packages.props) -->
+  <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'true'">
+    <ProjectReference Include="..\..\libs\Zafiro\src\Zafiro.FileSystem.Local\Zafiro.FileSystem.Local.csproj" />
+    <ProjectReference Include="..\..\libs\Zafiro\src\Zafiro.FileSystem.Unix\Zafiro.FileSystem.Unix.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'false'">
+    <PackageReference Include="Zafiro.FileSystem.Local" />
+    <PackageReference Include="Zafiro.FileSystem.Unix" />
   </ItemGroup>
 </Project>
