@@ -21,7 +21,7 @@ public static class Compressor
             }
         }
     }
-    
+
     public static IObservable<byte[]> Compressed(this IObservable<byte[]> source, CompressionLevel compressionLevel = CompressionLevel.Optimal)
     {
         return Observable.Create<byte[]>(observer =>
@@ -76,7 +76,7 @@ public static class Compressor
                 {
                     try
                     {
-                        deflateStream.Close(); 
+                        deflateStream.Close();
                         pipe.Writer.Complete();
                     }
                     catch (Exception ex)

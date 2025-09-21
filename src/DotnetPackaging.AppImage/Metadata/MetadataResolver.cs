@@ -22,7 +22,7 @@ internal class MetadataResolver : IMetadataResolver
             Permission.GroupRead | Permission.GroupExec |
             Permission.OtherRead | Permission.OtherExec
         );
-        
+
         return new Zafiro.DivineBytes.Unix.Metadata(directoryPermissions, 1000);
     }
 
@@ -32,9 +32,9 @@ internal class MetadataResolver : IMetadataResolver
         var isExecutable = executableFile.Resource.Name.Equals(file.Name, StringComparison.OrdinalIgnoreCase);
         // Check if this is the AppRun file, which is also executable
         var isAppRun = file.Name.Equals("AppRun", StringComparison.OrdinalIgnoreCase);
-        
+
         UnixPermissions filePermissions;
-        
+
         if (isExecutable || isAppRun)
         {
             // Executable file permissions: 755 (rwxr-xr-x)
@@ -57,7 +57,7 @@ internal class MetadataResolver : IMetadataResolver
                 Permission.OtherRead
             );
         }
-        
+
         return new Zafiro.DivineBytes.Unix.Metadata(filePermissions, 1000);
     }
 }

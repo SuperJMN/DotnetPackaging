@@ -22,11 +22,11 @@ public static class AppStreamXmlGenerator
 
         return component;
     }
-    
+
     private static XElement GenerateScreenshots(PackageMetadata options)
     {
         var screenshotsElement = new XElement("screenshots");
-        
+
         options.ScreenshotUrls.Execute(urls =>
         {
             foreach (var url in urls)
@@ -34,7 +34,7 @@ public static class AppStreamXmlGenerator
                 screenshotsElement.Add(new XElement("screenshot", new XAttribute("type", "default"), new XElement("image", url)));
             }
         });
-       
+
         return screenshotsElement;
     }
 }

@@ -6,7 +6,7 @@ namespace DotnetPackaging.AppImage.Core;
 public static class AppImageExtensions
 {
     private static int ordinal;
-    
+
     public static Task<Result<IByteSource>> ToByteSource(this AppImageContainer appImageContainer)
     {
         return SquashFS.Create(appImageContainer.Container).Map(async sqfs =>

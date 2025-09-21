@@ -5,7 +5,7 @@ namespace DotnetPackaging.Msix.Core.Compression;
 public static class Extensions
 {
     public static IObservable<byte[]> ReadMyBytes(this Stream stream, long offset, int tamaño)
-    { 
+    {
         // Posicionamos el stream en el offset indicado.
         stream.Seek(offset, SeekOrigin.Begin);
 

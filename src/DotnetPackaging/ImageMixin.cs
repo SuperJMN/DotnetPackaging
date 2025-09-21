@@ -16,7 +16,7 @@ public static class ImageMixin
     {
         return image.Height == image.Width && MathMixin.IsPowerOf2(image.Width);
     }
-    
+
     public static Image Iconize(this Image originalImage)
     {
         // Determina la mayor dimensión de la imagen

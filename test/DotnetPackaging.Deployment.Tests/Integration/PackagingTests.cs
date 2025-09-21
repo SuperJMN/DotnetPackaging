@@ -16,35 +16,35 @@ public class PackagingTests(ITestOutputHelper outputHelper)
     public static string DesktopProject = "/mnt/fast/Repos/SuperJMN-Zafiro/Zafiro.Avalonia/samples/TestApp/TestApp.Desktop/TestApp.Desktop.csproj";
     public static string AndroidProject = "/mnt/fast/Repos/SuperJMN-Zafiro/Zafiro.Avalonia/samples/TestApp/TestApp.Android/TestApp.Android.csproj";
     public static string WasmProject = "/mnt/fast/Repos/SuperJMN-Zafiro/Zafiro.Avalonia/samples/TestApp/TestApp.Browser/TestApp.Browser.csproj";
-    
+
     [Fact]
     public async Task Test_windows()
     {
         var dotnet = new Dotnet(new Command(Maybe<ILogger>.None), Maybe<ILogger>.None);
-        
+
         var options = new WindowsDeployment.DeploymentOptions
         {
             Version = "1.0.0",
             PackageName = "TestApp"
         };
-        
+
         var result = await new Packager(dotnet, Maybe<ILogger>.None)
             .CreateWindowsPackages(DesktopProject, options)
             .MapEach(source => source.WriteTo(OutputFolder + "/" + source.Name))
             .CombineSequentially();
-        
+
         result.Should().Succeed();
     }
-    
+
     [Fact]
     public async Task Test_android()
     {
         var logger = new LoggerConfiguration().WriteTo.TestOutput(outputHelper).CreateLogger();
-        
+
         var dotnet = new Dotnet(new Command(logger), logger);
-        
+
         var store = ByteSource.FromBytes(await File.ReadAllBytesAsync("Integration/test.keystore"));
-        
+
         var options = new AndroidDeployment.DeploymentOptions
         {
             PackageName = "TestApp",
@@ -55,7 +55,7 @@ public class PackagingTests(ITestOutputHelper outputHelper)
             SigningKeyPass = "test1234",
             SigningStorePass = "test1234",
         };
-        
+
         var result = await new Packager(dotnet, logger)
             .CreateAndroidPackages(AndroidProject, options)
             .MapEach(resource => resource.WriteTo(OutputFolder + "/" + resource.Name))
@@ -63,14 +63,14 @@ public class PackagingTests(ITestOutputHelper outputHelper)
 
         result.Should().Succeed();
     }
-    
-  public Packager CreatePackager()
+
+    public Packager CreatePackager()
     {
         var logger = new LoggerConfiguration().WriteTo.TestOutput(outputHelper).CreateLogger();
         var dotnet = new Dotnet(new Command(logger), logger);
         return new Packager(dotnet, logger);
     }
-    
+
     [Fact]
     public async Task Test_linux()
     {
@@ -81,20 +81,20 @@ public class PackagingTests(ITestOutputHelper outputHelper)
 
         result.Should().Succeed();
     }
-    
+
     [Fact]
     public async Task Test_nuget_pack()
     {
         var logger = new LoggerConfiguration().WriteTo.TestOutput(outputHelper).CreateLogger();
         var dotnet = new Dotnet(new Command(logger), logger);
-        
+
         var result = await CreatePackager()
             .CreateNugetPackage(DesktopProject, "1.0.0")
             .Bind(resource => resource.WriteTo(OutputFolder + "/" + resource.Name));
 
         result.Should().Succeed();
     }
-    
+
     [Fact]
     public async Task Test_nuget_push()
     {
@@ -108,7 +108,7 @@ public class PackagingTests(ITestOutputHelper outputHelper)
         var result = await deployer.PublishNugetPackages(["PATH_TO_PROJECT"], "VERSION", GitHubApiKey);
         result.Should().Succeed();
     }
-    
+
     [Fact]
     public async Task Create_GitHub_release()
     {
@@ -121,7 +121,7 @@ public class PackagingTests(ITestOutputHelper outputHelper)
 
         var releaseData = new ReleaseData("Test Release", "Tag", "BODY", isDraft: true);
         var gitHubRepositoryConfig = new GitHubRepositoryConfig("SuperJMN", "DotnetPackaging", GitHubApiKey);
-        
+
         // Using the new builder API that supports different projects per platform
         var androidOptions = new AndroidDeployment.DeploymentOptions()
         {
@@ -141,12 +141,12 @@ public class PackagingTests(ITestOutputHelper outputHelper)
             .ForLinux(DesktopProject)
             .ForAndroid(AndroidProject, androidOptions)
             .ForWebAssembly(WasmProject);
-        
+
         var result = await deployer.CreateGitHubRelease(releaseBuilder.Build(), gitHubRepositoryConfig, releaseData);
-        
+
         result.Should().Succeed();
     }
-    
+
     [Fact]
     public async Task Test_wasm_site()
     {
@@ -159,7 +159,7 @@ public class PackagingTests(ITestOutputHelper outputHelper)
 
         result.Should().Succeed();
     }
-    
+
     [Fact]
     public async Task Create_GitHub_release_from_solution_discovery()
     {
@@ -172,7 +172,7 @@ public class PackagingTests(ITestOutputHelper outputHelper)
 
         var releaseData = new ReleaseData("Test Release from Solution", "Tag", "BODY", isDraft: true);
         var gitHubRepositoryConfig = new GitHubRepositoryConfig("SuperJMN", "DotnetPackaging", GitHubApiKey);
-        
+
         var androidOptions = new AndroidDeployment.DeploymentOptions()
         {
             PackageName = "TestApp",
@@ -194,7 +194,7 @@ public class PackagingTests(ITestOutputHelper outputHelper)
             gitHubRepositoryConfig,
             releaseData,
             androidOptions);
-        
+
         result.Should().Succeed();
     }
 }

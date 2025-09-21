@@ -22,7 +22,7 @@ public static class TarEntryBuilder
         var tarEntries = directoryEntries.Concat(allFiles);
         return tarEntries;
     }
-    
+
     private static IEnumerable<FileTarEntry> ImplicitFileEntries(PackageMetadata metadata, string executablePath)
     {
         return new FileTarEntry[]
@@ -31,7 +31,7 @@ public static class TarEntryBuilder
             new($"./usr/local/bin/{metadata.Package.ToLower()}", Data.FromString(TextTemplates.RunScript(executablePath), Encoding.ASCII), Misc.ExecutableFileProperties())
         }.Concat(GetIconEntry(metadata));
     }
-    
+
     private static IEnumerable<FileTarEntry> GetIconEntry(PackageMetadata metadata)
     {
         if (metadata.Icon.HasNoValue)
@@ -42,7 +42,7 @@ public static class TarEntryBuilder
         var size = metadata.Icon.Value.Size;
         return [new FileTarEntry($"./usr/share/icons/hicolor/{size}x{size}/apps/{metadata.Package.ToLower()}.png", metadata.Icon.Value, Misc.RegularFileProperties())];
     }
-    
+
     private static IEnumerable<TarEntry> TarEntriesFromFiles(IEnumerable<IRootedFile> files, PackageMetadata metadata, IFile executable)
     {
         return files.Select(x => new FileTarEntry($"./opt/{metadata.Package}/" + x.FullPath(), x.Value, GetFileProperties(x, executable.Name)));

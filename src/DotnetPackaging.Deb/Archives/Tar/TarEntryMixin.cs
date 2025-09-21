@@ -36,7 +36,7 @@ public static class TarEntryMixin
     /// </summary>
     public static IData Owner(this TarEntry entry) => Data.FromString(entry.Properties.OwnerId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8), Encoding.ASCII);
 
-        /// <summary>
+    /// <summary>
     ///     From 116 to 124
     /// </summary>
     public static IData Group(this TarEntry entry) => Data.FromString(entry.Properties.GroupId.GetValueOrDefault(1).ToOctal().NullTerminatedPaddedField(8), Encoding.ASCII);

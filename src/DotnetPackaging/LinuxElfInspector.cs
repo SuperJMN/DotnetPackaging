@@ -15,12 +15,12 @@ public static class LinuxElfInspector
     {
         return GetArchitecture(file.Bytes);
     }
-    
+
     public static async Task<Result<Architecture>> GetArchitecture(this IByteSource file)
     {
         return await GetArchitecture(file.Bytes);
     }
-    
+
     public static IObservable<Result<Architecture>> GetArchitecture(IObservable<byte[]> byteChunks)
     {
         var observable = byteChunks
@@ -75,7 +75,7 @@ public static class LinuxElfInspector
     {
         return IsElf(file.Bytes);
     }
-    
+
     public static IObservable<Result<bool>> IsElf(this IByteSource file)
     {
         return IsElf(file.Bytes);

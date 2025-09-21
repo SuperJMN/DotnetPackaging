@@ -14,7 +14,7 @@ public class Msix
     {
         return new MsixPackager(logger).Pack(container);
     }
-    
+
     public static Result<IByteSource> FromDirectoryAndMetadata(IContainer container, AppManifestMetadata metadata, Maybe<ILogger> logger)
     {
         var generateAppManifest = AppManifestGenerator.GenerateAppManifest(metadata);
