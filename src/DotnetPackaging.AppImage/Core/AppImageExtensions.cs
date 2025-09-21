@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using System.Reactive.Linq;
 using Zafiro.DivineBytes;
 
@@ -14,8 +16,14 @@ public static class AppImageExtensions
             var appImageBytes = appImageContainer.Runtime.Concat(sqfs);
 
             var i = ordinal++;
-            await appImageContainer.Runtime.WriteTo($"/home/jmn/Escritorio/Runtime{i}-{appImageContainer.Runtime}.runtime").ConfigureAwait(false);
-            await sqfs.WriteTo($"/home/jmn/Escritorio/Image{i}-Container.sqfs").ConfigureAwait(false);
+            var debug = Environment.GetEnvironmentVariable("DOTNETPACKAGING_DEBUG");
+            if (!string.IsNullOrEmpty(debug) && (debug == "1" || debug.Equals("true", StringComparison.OrdinalIgnoreCase)))
+            {
+                var tempDir = System.IO.Path.GetTempPath();
+                await appImageContainer.Runtime.WriteTo(System.IO.Path.Combine(tempDir, $"Runtime{i}.runtime")).ConfigureAwait(false);
+                await sqfs.WriteTo(System.IO.Path.Combine(tempDir, $"Image{i}-Container.sqfs")).ConfigureAwait(false);
+            }
+
             var fromByteChunks = ByteSource.FromByteChunks(appImageBytes);
             var totalBytes = fromByteChunks.Array();
             return fromByteChunks;
