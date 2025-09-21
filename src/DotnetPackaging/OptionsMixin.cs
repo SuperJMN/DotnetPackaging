@@ -64,7 +64,7 @@ public static class OptionsMixin
         }
         if (options.IsTerminal.HasValue)
         {
-            setup.WithIsTerminal(options.IsTerminal.Value);   
+            setup.WithIsTerminal(options.IsTerminal.Value);
         }
         if (options.MainCategory.HasValue)
         {

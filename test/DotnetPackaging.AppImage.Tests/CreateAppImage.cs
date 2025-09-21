@@ -26,7 +26,7 @@ public class CreateAppImage
             ["Sample.md"] = ByteSource.FromString("**This is a sample file**"),
         }.ToRootContainer(); // Use root container without artificial name
 
-        var appImage = 
+        var appImage =
             from rt in Result.Success(new Runtime(ByteSource.FromString("THIS IS A RUNTIME"), Architecture.All))
             from rootContainer in containerResult
             from unixDir in Result.Try(() => rootContainer.AsContainer().ToUnixDirectory())
@@ -45,7 +45,7 @@ public class CreateAppImage
         var fileSystem = new FileSystem();
         var files = new DirectoryContainer(fileSystem.DirectoryInfo.New("TestFiles/Minimal"));
         var root = files.AsRoot();
-        
+
         var builder = new AppImageFactory();
         var appImage = builder.Create(root, new AppImageMetadata("com.superjmn.sampleapp", "Sample App", "sampleapp"));
 

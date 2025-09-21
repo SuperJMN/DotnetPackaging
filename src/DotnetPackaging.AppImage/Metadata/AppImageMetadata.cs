@@ -5,7 +5,7 @@ public class AppImageMetadata
     public string AppId { get; init; }           // "com.mycompany.fileexplorer"
     public string AppName { get; init; }         // "My File Explorer"
     public string PackageName { get; init; }    // "fileexplorer"
-    
+
     // Metadata fields
     public Maybe<string> Summary { get; init; } = Maybe<string>.None;
     public Maybe<string> Comment { get; init; } = Maybe<string>.None;
@@ -27,7 +27,7 @@ public class AppImageMetadata
     }
 
     // Convenience constructor
-    public AppImageMetadata(string appName, string? packageName = null) 
+    public AppImageMetadata(string appName, string? packageName = null)
         : this(
             appId: (packageName ?? appName).ToLowerInvariant().Replace(" ", "").Replace("-", ""),
             appName: appName,
@@ -67,7 +67,7 @@ public class AppImageMetadata
             DesktopId = Maybe<string>.From($"{PackageName}.desktop")
         };
     }
-    
+
     public string DesktopFileName => $"{PackageName}.desktop";
     public string AppDataFileName => $"{PackageName}.appdata.xml";
     public string AppImageFileName => $"{PackageName}.AppImage";

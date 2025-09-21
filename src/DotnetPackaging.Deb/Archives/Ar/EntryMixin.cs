@@ -4,13 +4,13 @@ using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.Deb.Archives.Ar;
 
-public static class EntryMixin 
+public static class EntryMixin
 {
     public static IData ToData(this Entry entry)
     {
         return new CompositeData
         (
-            entry.FileIdentifier(), 
+            entry.FileIdentifier(),
             entry.FileModificationTimestamp(),
             entry.OwnerId(),
             entry.GroupId(),

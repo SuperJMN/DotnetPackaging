@@ -8,7 +8,7 @@ namespace MsixPackaging.Tests;
 public class CompressionTests
 {
     [Fact]
-    public async Task Store_compression_gives_different_bytes() 
+    public async Task Store_compression_gives_different_bytes()
     {
         var bytes = "hola que tal va la jodida cosa"u8.ToArray();
 

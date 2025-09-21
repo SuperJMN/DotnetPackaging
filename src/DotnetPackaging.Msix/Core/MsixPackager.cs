@@ -26,13 +26,13 @@ public class MsixPackager(Maybe<ILogger> logger)
     private async Task<Stream> GetStream(IList<INamedByteSourceWithPath> files)
     {
         var zipStream = new MemoryStream();
-        
+
         await using (var zipper = new MsixBuilder(zipStream, logger))
         {
             await WritePayload(files, zipper);
             await WriteContentTypes(files, zipper);
         }
-        
+
         var finalStream = new MemoryStream();
         zipStream.Position = 0;
         await zipStream.CopyToAsync(finalStream);
@@ -58,7 +58,7 @@ public class MsixPackager(Maybe<ILogger> logger)
             logger.Debug("Processing {File}", file.FullPath());
             MsixEntry entry;
             IList<DeflateBlock> blocks;
-            
+
             if (file.Name.EndsWith(".png"))
             {
                 entry = new MsixEntry()
@@ -88,15 +88,15 @@ public class MsixPackager(Maybe<ILogger> logger)
 
                 blocks = await compressionBlocks.ToList();
             }
-            
+
             await msix.PutNextEntry(entry);
-            
+
             logger.Debug("Added entry for {File}", file.FullPath());
-            
+
             var fileBlockInfo = new FileBlockInfo(entry, blocks);
             blockInfos.Add(fileBlockInfo);
         }
-        
+
         await AddBlockMap(msix, blockInfos);
     }
 
@@ -107,7 +107,7 @@ public class MsixPackager(Maybe<ILogger> logger)
         logger.Debug("Serializing block map");
         var blockMapXml = await new BlockMapSerializer(logger).GenerateBlockMapXml(blockMapModel);
         logger.Debug("Block map serialized");
-        
+
         logger.Debug("Adding Block Map entry to package");
         await msix.PutNextEntry(MsixEntryFactory.Compress("AppxBlockMap.xml", ByteSource.FromString(blockMapXml, Encoding.UTF8)));
         logger.Debug("Block map added");

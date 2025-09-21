@@ -16,7 +16,7 @@ public static class BuildUtils
         var package = setup.Package.Or(setup.Name).GetValueOrDefault(exec.Name.Replace(".Desktop", ""));
         var version = setup.Version.GetValueOrDefault("1.0.0");
         var name = setup.Name.GetValueOrDefault(directory.Name);
-        
+
         var packageMetadata = new PackageMetadata(name, architecture, isTerminal, package, version)
         {
             Architecture = architecture,

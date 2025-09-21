@@ -16,7 +16,7 @@ public class MsixBuilder : IAsyncDisposable
     private readonly List<MsixEntry> entries = new List<MsixEntry>();
     private readonly List<long> localHeaderOffsets = new List<long>();
     private bool finished = false;
-    
+
     // Constant indicating we always use Zip64
     private const bool AlwaysUseZip64 = true;
 
@@ -74,10 +74,10 @@ public class MsixBuilder : IAsyncDisposable
             // Name
             byte[] nameBytes = Encoding.UTF8.GetBytes(entry.FullPath);
             writer.Write((short)nameBytes.Length);
-            
+
             // Extra field for Zip64
             writer.Write((short)0); // No extra field, but still using Zip64 features elsewhere
-            
+
             // File name
             writer.Write(nameBytes);
         }

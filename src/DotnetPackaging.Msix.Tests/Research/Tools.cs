@@ -62,7 +62,7 @@ public class Tools
                         {
                             Console.WriteLine(
                                 $"Leyendo {headerCompressedSize} bytes comprimidos desde la posición {dataPosition}");
-                            return reader.ReadBytes((int) headerCompressedSize);
+                            return reader.ReadBytes((int)headerCompressedSize);
                         }
                         else
                         {
@@ -111,7 +111,7 @@ public class Tools
                                             // El tamaño comprimido es la distancia desde el fin del header hasta el inicio del descriptor
                                             if (actualCompressedSize == 0)
                                             {
-                                                actualCompressedSize = (uint) (descriptorPos - dataPosition);
+                                                actualCompressedSize = (uint)(descriptorPos - dataPosition);
                                                 Console.WriteLine(
                                                     $"Recalculando tamaño comprimido: {actualCompressedSize}");
                                             }
@@ -124,7 +124,7 @@ public class Tools
                                         {
                                             // Si encontramos el siguiente local header, el tamaño comprimido es la distancia
                                             // desde el inicio de los datos hasta este nuevo header
-                                            actualCompressedSize = (uint) (descriptorPos - dataPosition);
+                                            actualCompressedSize = (uint)(descriptorPos - dataPosition);
                                             Console.WriteLine(
                                                 $"Siguiente local header encontrado. Tamaño comprimido calculado: {actualCompressedSize}");
                                             foundDescriptor = true;
@@ -155,7 +155,7 @@ public class Tools
                             fs.Position = dataPosition;
                             Console.WriteLine(
                                 $"Leyendo {actualCompressedSize} bytes comprimidos desde la posición {dataPosition}");
-                            return reader.ReadBytes((int) actualCompressedSize);
+                            return reader.ReadBytes((int)actualCompressedSize);
                         }
                     }
 

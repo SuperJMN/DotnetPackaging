@@ -55,12 +55,12 @@ public static class DebMixin
             LastModification = debFile.Metadata.ModificationTime,
             OwnerId = 0,
         };
-        
+
         var controlTarFile = ControlTarFile(debFile);
         return new Entry(new File("control.tar", controlTarFile.ToData()), properties);
     }
-    
-     private static TarFile ControlTarFile(DebFile deb)
+
+    private static TarFile ControlTarFile(DebFile deb)
     {
         var fileProperties = new TarFileProperties()
         {
@@ -71,7 +71,7 @@ public static class DebMixin
             OwnerUsername = "root",
             LastModification = deb.Metadata.ModificationTime,
         };
-        
+
         var dirProperties = new TarDirectoryProperties()
         {
             FileMode = "755".ToFileMode(),
@@ -96,13 +96,13 @@ public static class DebMixin
         var content = items.Compose() + "\n";
 
         var file = new File("control", Data.FromString(content));
-        
+
         var entries = new TarEntry[]
         {
             new DirectoryTarEntry("./", dirProperties),
             new FileTarEntry("./control", file, fileProperties)
         };
-        
+
         // TODO: Add other properties, too
         //Homepage: {deb.ControlMetadata.Homepage}
         //Vcs-Git: {deb.ControlMetadata.VcsGit}
@@ -110,7 +110,7 @@ public static class DebMixin
         //License: {deb.ControlMetadata.License}
         //Installed-Size: {deb.ControlMetadata.InstalledSize}
         //Recommends: {deb.ControlMetadata.Recommends}
-        
+
         var controlTarFile = new TarFile(entries.ToArray());
         return controlTarFile;
     }

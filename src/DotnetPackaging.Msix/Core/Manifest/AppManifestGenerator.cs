@@ -125,7 +125,7 @@ public class AppManifestGenerator
             OmitXmlDeclaration = false,
             Encoding = System.Text.Encoding.UTF8
         };
-            
+
         using (var xmlWriter = XmlWriter.Create(stream, settings))
         {
             doc.Save(xmlWriter);

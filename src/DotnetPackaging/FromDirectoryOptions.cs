@@ -7,7 +7,7 @@ public class FromDirectoryOptions
     public Maybe<string> ExecutableName { get; private set; }
     public Maybe<Architecture> Architecture { get; private set; } = Maybe<Architecture>.None;
     public Maybe<IIcon> Icon { get; private set; } = Maybe<IIcon>.None;
-    
+
     /// <summary>
     /// Application name (AppName)
     /// </summary>
@@ -27,7 +27,7 @@ public class FromDirectoryOptions
     public Maybe<string> Section { get; private set; } = Maybe<string>.None;
     public Maybe<string> Version { get; private set; } = Maybe<string>.None;
     public Maybe<string> VcsBrowser { get; private set; } = Maybe<string>.None;
-    public Maybe<string> VcsGit { get; private set; } = Maybe<string>.None; 
+    public Maybe<string> VcsGit { get; private set; } = Maybe<string>.None;
     public Maybe<long> InstalledSize { get; private set; } = Maybe<long>.None;
     public Maybe<DateTimeOffset> ModificationTime { get; private set; } = Maybe<DateTimeOffset>.None;
     public bool IsTerminal { get; private set; }
@@ -38,7 +38,7 @@ public class FromDirectoryOptions
         {
             throw new ArgumentException("Can't be null or empty", package);
         }
-        
+
         Package = package;
         return this;
     }
@@ -49,7 +49,7 @@ public class FromDirectoryOptions
         {
             throw new ArgumentException("Can't be null or empty", packageId);
         }
-        
+
         Id = packageId;
         return this;
     }
@@ -60,7 +60,7 @@ public class FromDirectoryOptions
         {
             throw new ArgumentException("Can't be null or empty", executableName);
         }
-        
+
         ExecutableName = executableName;
         return this;
     }
@@ -88,7 +88,7 @@ public class FromDirectoryOptions
         {
             throw new ArgumentException("Can't be null or empty", appName);
         }
-        
+
         Name = Maybe<string>.From(appName);
         return this;
     }
@@ -111,7 +111,7 @@ public class FromDirectoryOptions
             throw new ArgumentException("Can't be null or empty", startupWmClass);
         }
 
-        
+
         StartupWmClass = Maybe<string>.From(startupWmClass);
         return this;
     }
@@ -173,7 +173,7 @@ public class FromDirectoryOptions
         {
             throw new ArgumentException("Can't be null or empty", maintainer);
         }
-        
+
         Maintainer = Maybe<string>.From(maintainer);
         return this;
     }
