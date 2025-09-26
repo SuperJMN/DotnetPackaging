@@ -3,7 +3,7 @@ using System.CommandLine.Binding;
 using CSharpFunctionalExtensions;
 using Zafiro.CSharpFunctionalExtensions;
 
-namespace DotnetPackaging.Console;
+namespace DotnetPackaging.Tool;
 
 public class OptionsBinder(
     Option<string> appNameOption,

@@ -1,7 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using Serilog;
 
-namespace DotnetPackaging.Console;
+namespace DotnetPackaging.Tool;
 
 public static class ConsoleMixin
 {

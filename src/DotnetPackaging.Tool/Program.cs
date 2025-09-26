@@ -6,13 +6,12 @@ using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.AppImage.Metadata;
 using DotnetPackaging.Deb;
 using Serilog;
-using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.DataModel;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
 using Zafiro.FileSystem.Core;
 
-namespace DotnetPackaging.Console;
+namespace DotnetPackaging.Tool;
 
 static class Program
 {

@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>dotnetpackaging</ToolCommandName>
+    <ToolCommandName>dotnetpackager</ToolCommandName>
   </PropertyGroup>
   <Import Project="..\Common.props" />
   <ItemGroup>
