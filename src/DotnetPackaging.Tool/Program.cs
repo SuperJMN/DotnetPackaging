@@ -23,12 +23,32 @@ static class Program
             .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3} {Platform}] {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
         
-        var rootCommand = new RootCommand();
+        var rootCommand = new RootCommand
+        {
+            Description = "Package published .NET applications into Linux-friendly formats.\n\n" +
+                          "Available verbs:\n" +
+                          "- deb: Build a Debian/Ubuntu .deb installer.\n" +
+                          "- appimage: Build a portable AppImage (.AppImage) bundle or work with AppDir workflows.\n\n" +
+                          "Tip: run `dotnetpackaging <verb> --help` to see format-specific options."
+        };
 
-        var debCommand = CreateCommand("deb", ".deb", ".deb", CreateDeb);
+        var debCommand = CreateCommand(
+            "deb",
+            "Debian package",
+            ".deb",
+            CreateDeb,
+            "Create a Debian (.deb) installer for Debian and Ubuntu based distributions.",
+            "pack-deb",
+            "debian");
         rootCommand.AddCommand(debCommand);
 
-        var appImageCommand = CreateCommand("appimage", "AppImage", ".AppImage", CreateAppImage);
+        var appImageCommand = CreateCommand(
+            "appimage",
+            "AppImage package",
+            ".AppImage",
+            CreateAppImage,
+            "Create a portable AppImage (.AppImage) from a published directory. Use subcommands for AppDir workflows.",
+            "pack-appimage");
         // Add subcommands for AppImage
         AddAppImageSubcommands(appImageCommand);
         rootCommand.AddCommand(appImageCommand);
@@ -36,10 +56,16 @@ static class Program
         return rootCommand.InvokeAsync(args);
     }
 
-    private static Command CreateCommand(string commandName, string friendlyName, string extension, Func<DirectoryInfo, FileInfo, Options, Task> handler)
+    private static Command CreateCommand(
+        string commandName,
+        string friendlyName,
+        string extension,
+        Func<DirectoryInfo, FileInfo, Options, Task> handler,
+        string? description = null,
+        params string[] aliases)
     {
-        var buildDir = new Option<DirectoryInfo>("--directory", "The input directory to create the package from") { IsRequired = true };
-        var appImageFile = new Option<FileInfo>("--output", $"Output file ({extension})") { IsRequired = true };
+        var buildDir = new Option<DirectoryInfo>("--directory", "Published application directory (for example: bin/Release/<tfm>/publish)") { IsRequired = true };
+        var outputFileOption = new Option<FileInfo>("--output", $"Destination path for the generated {extension} file") { IsRequired = true };
         var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
         var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
         var mainCategory = new Option<MainCategory?>("--main-category", "Main category") { IsRequired = false, Arity = ArgumentArity.ZeroOrOne, };
@@ -60,10 +86,20 @@ static class Program
             Description = "Path to the application icon"
         };
 
-        var fromBuildDir = new Command(commandName, $"Creates {friendlyName} from a directory with the contents. Everything is inferred. For .NET applications, this is usually the \"publish\" directory.");
+        var defaultDescription = description ??
+                                 $"Create a {friendlyName} from a directory with the published application contents. Everything is inferred. For .NET apps this is usually the 'publish' directory.";
+        var fromBuildDir = new Command(commandName, defaultDescription);
+
+        foreach (var alias in aliases)
+        {
+            if (!string.IsNullOrWhiteSpace(alias))
+            {
+                fromBuildDir.AddAlias(alias);
+            }
+        }
 
         fromBuildDir.AddOption(buildDir);
-        fromBuildDir.AddOption(appImageFile);
+        fromBuildDir.AddOption(outputFileOption);
         fromBuildDir.AddOption(appName);
         fromBuildDir.AddOption(startupWmClass);
         fromBuildDir.AddOption(mainCategory);
@@ -97,7 +133,7 @@ static class Program
             executableName, 
             isTerminal);
         
-        fromBuildDir.SetHandler(handler, buildDir, appImageFile, options);
+        fromBuildDir.SetHandler(handler, buildDir, outputFileOption, options);
         return fromBuildDir;
     }
 
