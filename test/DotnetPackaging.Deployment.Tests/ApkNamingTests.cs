@@ -14,8 +14,8 @@ public class ApkNamingTests
             ["io.Angor.AngorApp-Signed.apk"] = ByteSource.FromString("b")
         };
 
-        var container = files.ToRootContainer().Map(rc => rc.AsContainer()).Value;
-        var dotnet = new FakeDotnet(Result.Success((IContainer)container));
+        var container = files.ToRootContainer().Map(rc => (IContainer)rc).Value;
+        var dotnet = new FakeDotnet(Result.Success(container));
 
         var options = new AndroidDeployment.DeploymentOptions
         {
@@ -48,8 +48,8 @@ public class ApkNamingTests
             ["sub/io.Angor.AngorApp-Signed.apk"] = ByteSource.FromString("d")
         };
 
-        var container = files.ToRootContainer().Map(rc => rc.AsContainer()).Value;
-        var dotnet = new FakeDotnet(Result.Success((IContainer)container));
+        var container = files.ToRootContainer().Map(rc => (IContainer)rc).Value;
+        var dotnet = new FakeDotnet(Result.Success(container));
 
         var options = new AndroidDeployment.DeploymentOptions
         {
