@@ -1,4 +1,7 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Reactive.Linq;
+using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.AppImage.Metadata;
 using Zafiro.DivineBytes;
@@ -8,107 +11,90 @@ namespace DotnetPackaging.AppImage;
 
 public class AppImageFactory
 {
-    public Task<Result<AppImageContainer>> Create(
-        IContainer applicationRoot,
-        AppImageMetadata appImageMetadata,
-        AppImageOptions? options = null)
-    {
-        var executableFile =
-            from exec in GetExecutable(applicationRoot)
-            from arch in exec.GetArchitecture()
-            select new Executable
-            {
-                Resource = exec,
-                Architecture = arch,
-            };
+    private readonly IRuntimeProvider runtimeProvider;
 
-        return executableFile.Bind(execFile => Create(applicationRoot, appImageMetadata, execFile, options ?? new AppImageOptions()));
+    public AppImageFactory(IRuntimeProvider? runtimeProvider = null)
+    {
+        this.runtimeProvider = runtimeProvider ?? new DefaultRuntimeProvider();
     }
 
-    // Build an AppDir (as a RootContainer) from a raw application directory
-    public Task<Result<RootContainer>> BuildAppDir(
+    public async Task<Result<AppImageContainer>> Create(
         IContainer applicationRoot,
         AppImageMetadata appImageMetadata,
         AppImageOptions? options = null)
     {
         var effectiveOptions = options ?? new AppImageOptions();
-        var appDirResult = from exec in GetExecutable(applicationRoot)
-                           from root in BuildAppDirInternal(applicationRoot, appImageMetadata, exec, effectiveOptions)
-                           select root;
-        return appDirResult;
-    }
 
-    private static Task<Result<RootContainer>> BuildAppDirInternal(
-        IContainer applicationRoot,
-        AppImageMetadata appImageMetadata,
-        INamedByteSource executable,
-        AppImageOptions options)
-    {
-        var executableName = executable.Name;
-
-        var desktopFile = appImageMetadata.ToDesktopFile($"/usr/bin/{executableName}");
-
-        var appRunContent = ByteSource.FromString($"#!/bin/bash\nexec \"$APPDIR/usr/bin/{executableName}\" \"$@\"");
-        var desktopContent = ByteSource.FromString(MetadataGenerator.DesktopFileContents(desktopFile));
-        var appdataContent = ByteSource.FromString(MetadataGenerator.AppStreamXml(appImageMetadata.ToAppStream()));
-
-        // Get all application files with their relative paths
-        var namedByteSourceWithPaths = applicationRoot.ResourcesWithPathsRecursive();
-
-        var applicationFiles = namedByteSourceWithPaths
-            .ToDictionary(
-                file => $"usr/bin/{file.FullPath()}", IByteSource (file) => file);
-
-        var files = new Dictionary<string, IByteSource>
+        var executableResource = await GetExecutable(applicationRoot);
+        if (executableResource.IsFailure)
         {
-            ["AppRun"] = appRunContent,
-            [appImageMetadata.DesktopFileName] = desktopContent,
-            [$"usr/share/metainfo/{appImageMetadata.AppDataFileName}"] = appdataContent,
+            return Result.Failure<AppImageContainer>(executableResource.Error);
+        }
+
+        var architecture = await executableResource.Value.GetArchitecture();
+        if (architecture.IsFailure)
+        {
+            return Result.Failure<AppImageContainer>(architecture.Error);
+        }
+
+        var executable = new Executable
+        {
+            Resource = executableResource.Value,
+            Architecture = architecture.Value,
         };
 
-        // Add all application files to the files dictionary
-        foreach (var appFile in applicationFiles)
+        var planResult = await BuildPlanInternal(applicationRoot, appImageMetadata, executable.Resource, effectiveOptions);
+        if (planResult.IsFailure)
         {
-            files[appFile.Key] = appFile.Value;
+            return Result.Failure<AppImageContainer>(planResult.Error);
         }
 
-        // Icon discovery and installation
-        var iconName = options.IconNameOverride.GetValueOrDefault(appImageMetadata.IconName);
-        var iconFiles = Icons.IconInstaller.Discover(applicationRoot, appImageMetadata, iconName, options.EnableDirIcon);
-        foreach (var icon in iconFiles)
+        var rootContainer = planResult.Value.ToRootContainer();
+
+        var runtimeResult = await runtimeProvider.Create(executable.Architecture);
+        if (runtimeResult.IsFailure)
         {
-            files[icon.Key] = icon.Value;
+            return Result.Failure<AppImageContainer>(runtimeResult.Error);
         }
 
-        // Fallback: if no icons discovered, try root-only quick check (icon.svg, icon-256.png, icon.png)
-        if (!iconFiles.Any())
+        var unixDirectory = Result.Try(() => rootContainer.ToUnixDirectory(new MetadataResolver(executable)));
+        if (unixDirectory.IsFailure)
         {
-            var all = namedByteSourceWithPaths.ToList();
-            bool IsRoot(INamedByteSource f)
-            {
-                var fp = ((INamedWithPath)f).FullPath().ToString();
-                return !fp.Contains('/') && !fp.Contains('\\');
-            }
-            var roots = all.Where(IsRoot).ToList();
-            INamedByteSource? svg = roots.FirstOrDefault(f => f.Name.Equals("icon.svg", StringComparison.OrdinalIgnoreCase) || f.Name.EndsWith("-icon.svg", StringComparison.OrdinalIgnoreCase));
-            INamedByteSource? png256 = roots.FirstOrDefault(f => f.Name.Equals("icon-256.png", StringComparison.OrdinalIgnoreCase));
-            INamedByteSource? pngAny = png256 ?? roots.FirstOrDefault(f => f.Name.Equals("icon.png", StringComparison.OrdinalIgnoreCase));
-
-            if (svg != null)
-            {
-                files[$"usr/share/icons/hicolor/scalable/apps/{appImageMetadata.IconName}.svg"] = svg;
-            }
-            if (pngAny != null)
-            {
-                files[$"usr/share/icons/hicolor/256x256/apps/{appImageMetadata.IconName}.png"] = pngAny;
-                if (options.EnableDirIcon)
-                {
-                    files[".DirIcon"] = pngAny;
-                }
-            }
+            return Result.Failure<AppImageContainer>(unixDirectory.Error);
         }
 
-        return Task.FromResult(files.ToRootContainer());
+        return Result.Success(new AppImageContainer(runtimeResult.Value, unixDirectory.Value));
+    }
+
+    // Build an AppDir container from a raw application directory
+    public async Task<Result<IContainer>> BuildAppDir(
+        IContainer applicationRoot,
+        AppImageMetadata appImageMetadata,
+        AppImageOptions? options = null)
+    {
+        var effectiveOptions = options ?? new AppImageOptions();
+        var planResult = await BuildPlan(applicationRoot, appImageMetadata, effectiveOptions);
+        if (planResult.IsFailure)
+        {
+            return Result.Failure<IContainer>(planResult.Error);
+        }
+
+        return Result.Success((IContainer)planResult.Value.ToRootContainer());
+    }
+
+    public async Task<Result<AppImageBuildPlan>> BuildPlan(
+        IContainer applicationRoot,
+        AppImageMetadata appImageMetadata,
+        AppImageOptions? options = null)
+    {
+        var effectiveOptions = options ?? new AppImageOptions();
+        var executableResult = await GetExecutable(applicationRoot);
+        if (executableResult.IsFailure)
+        {
+            return Result.Failure<AppImageBuildPlan>(executableResult.Error);
+        }
+
+        return await BuildPlanInternal(applicationRoot, appImageMetadata, executableResult.Value, effectiveOptions);
     }
 
     // New: create directly from an AppDir-shaped container (no file synthesis, no icon heuristics)
@@ -131,11 +117,100 @@ public class AppImageFactory
         return execResult.Bind(executable =>
         {
             // Use the appDir container as-is; assume it already contains AppRun, .desktop, icons, etc.
-            var appImage = from rt in RuntimeFactory.Create(executable.Architecture)
-                           from unixDir in Result.Try(() => new Container("", appDir.Resources, appDir.Subcontainers).ToUnixDirectory(new MetadataResolver(executable)))
-                           select new AppImageContainer(rt, unixDir);
+            var appImage = from rt in runtimeProvider.Create(executable.Architecture)
+                             from unixDir in Result.Try(() => appDir.ToUnixDirectory(new MetadataResolver(executable)))
+                             select new AppImageContainer(rt, unixDir);
             return appImage;
         });
+    }
+
+    private static Task<Result<AppImageBuildPlan>> BuildPlanInternal(
+        IContainer applicationRoot,
+        AppImageMetadata appImageMetadata,
+        INamedByteSource executable,
+        AppImageOptions options)
+    {
+        var executableName = executable.Name;
+        var execTargetPath = $"/usr/bin/{executableName}";
+
+        var desktopFile = appImageMetadata.ToDesktopFile(execTargetPath);
+
+        var appRunContent = ByteSource.FromString($"#!/bin/bash\nexec \"$APPDIR/usr/bin/{executableName}\" \"$@\"");
+        var desktopContent = ByteSource.FromString(MetadataGenerator.DesktopFileContents(desktopFile));
+        var appdataContent = ByteSource.FromString(MetadataGenerator.AppStreamXml(appImageMetadata.ToAppStream()));
+
+        var namedByteSourceWithPaths = applicationRoot.ResourcesWithPathsRecursive().ToList();
+
+        var applicationFiles = namedByteSourceWithPaths
+            .ToDictionary(
+                file => $"usr/bin/{file.FullPath()}", IByteSource (file) => file,
+                StringComparer.Ordinal);
+
+        var files = new Dictionary<string, IByteSource>(StringComparer.Ordinal)
+        {
+            ["AppRun"] = appRunContent,
+            [appImageMetadata.DesktopFileName] = desktopContent,
+            [$"usr/share/metainfo/{appImageMetadata.AppDataFileName}"] = appdataContent,
+        };
+
+        foreach (var appFile in applicationFiles)
+        {
+            files[appFile.Key] = appFile.Value;
+        }
+
+        var iconName = options.IconNameOverride.GetValueOrDefault(appImageMetadata.IconName);
+        var iconFiles = Icons.IconInstaller.Discover(applicationRoot, appImageMetadata, iconName);
+        foreach (var icon in iconFiles)
+        {
+            files[icon.Key] = icon.Value;
+        }
+
+        if (!iconFiles.Any())
+        {
+            bool IsRoot(INamedByteSource f)
+            {
+                var fp = ((INamedWithPath)f).FullPath().ToString();
+                return !fp.Contains('/') && !fp.Contains('\\');
+            }
+
+            var roots = namedByteSourceWithPaths.Where(IsRoot).ToList();
+            INamedByteSource? svg = roots.FirstOrDefault(f => f.Name.Equals("icon.svg", StringComparison.OrdinalIgnoreCase) || f.Name.EndsWith("-icon.svg", StringComparison.OrdinalIgnoreCase));
+            INamedByteSource? png256 = roots.FirstOrDefault(f => f.Name.Equals("icon-256.png", StringComparison.OrdinalIgnoreCase));
+            INamedByteSource? pngAny = png256 ?? roots.FirstOrDefault(f => f.Name.Equals("icon.png", StringComparison.OrdinalIgnoreCase));
+
+            if (svg != null)
+            {
+                files[$"usr/share/icons/hicolor/scalable/apps/{iconName}.svg"] = svg;
+            }
+            if (pngAny != null)
+            {
+                files[$"usr/share/icons/hicolor/256x256/apps/{iconName}.png"] = pngAny;
+                files[".DirIcon"] = pngAny;
+            }
+        }
+
+        if (!files.ContainsKey(".DirIcon"))
+        {
+            var pngIcon = files
+                .FirstOrDefault(pair => pair.Key.StartsWith("usr/share/icons/", StringComparison.OrdinalIgnoreCase)
+                                        && pair.Key.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                .Value;
+
+            if (pngIcon is not null)
+            {
+                files[".DirIcon"] = pngIcon;
+            }
+        }
+
+        var planResult = files.ToRootContainer()
+            .Map(root => new AppImageBuildPlan(
+                executableName,
+                execTargetPath,
+                iconName,
+                appImageMetadata,
+                root));
+
+        return Task.FromResult(planResult);
     }
 
     private static async Task<Result<INamedByteSourceWithPath>> GetExecutableFromAppDir(IContainer appDir, string? executableRelativePath)
@@ -165,82 +240,6 @@ public class AppImageFactory
         }
 
         return Result.Failure<INamedByteSourceWithPath>("No ELF executable found in the AppDir (looked under usr/bin and then anywhere)");
-    }
-
-    private static Task<Result<AppImageContainer>> Create(IContainer applicationRoot, AppImageMetadata appImageMetadata, Executable executableFile, AppImageOptions options)
-    {
-        var executableName = executableFile.Resource.Name;
-
-        var desktopFile = appImageMetadata.ToDesktopFile($"/usr/bin/{executableName}");
-
-        var appRunContent = ByteSource.FromString($"#!/bin/bash\nexec \"$APPDIR/usr/bin/{executableName}\" \"$@\"");
-        var desktopContent = ByteSource.FromString(MetadataGenerator.DesktopFileContents(desktopFile));
-        var appdataContent = ByteSource.FromString(MetadataGenerator.AppStreamXml(appImageMetadata.ToAppStream()));
-
-        // Get all application files with their relative paths
-        var namedByteSourceWithPaths = applicationRoot.ResourcesWithPathsRecursive();
-
-        var applicationFiles = namedByteSourceWithPaths
-            .ToDictionary(
-                file => $"usr/bin/{file.FullPath()}", IByteSource (file) => file);
-
-        var files = new Dictionary<string, IByteSource>
-        {
-            ["AppRun"] = appRunContent,
-            [appImageMetadata.DesktopFileName] = desktopContent,
-            [$"usr/share/metainfo/{appImageMetadata.AppDataFileName}"] = appdataContent,
-        };
-
-        // Add all application files to the files dictionary
-        foreach (var appFile in applicationFiles)
-        {
-            files[appFile.Key] = appFile.Value;
-        }
-
-        // Icon discovery and installation
-        var iconName = options.IconNameOverride.GetValueOrDefault(appImageMetadata.IconName);
-        var iconFiles = Icons.IconInstaller.Discover(applicationRoot, appImageMetadata, iconName, options.EnableDirIcon);
-        foreach (var icon in iconFiles)
-        {
-            files[icon.Key] = icon.Value;
-        }
-
-        // Fallback: if no icons discovered, try root-only quick check (icon.svg, icon-256.png, icon.png)
-        if (!iconFiles.Any())
-        {
-            var all = namedByteSourceWithPaths.ToList();
-            bool IsRoot(INamedByteSource f)
-            {
-                var fp = ((INamedWithPath)f).FullPath().ToString();
-                return !fp.Contains('/') && !fp.Contains('\\');
-            }
-            var roots = all.Where(IsRoot).ToList();
-            INamedByteSource? svg = roots.FirstOrDefault(f => f.Name.Equals("icon.svg", StringComparison.OrdinalIgnoreCase) || f.Name.EndsWith("-icon.svg", StringComparison.OrdinalIgnoreCase));
-            INamedByteSource? png256 = roots.FirstOrDefault(f => f.Name.Equals("icon-256.png", StringComparison.OrdinalIgnoreCase));
-            INamedByteSource? pngAny = png256 ?? roots.FirstOrDefault(f => f.Name.Equals("icon.png", StringComparison.OrdinalIgnoreCase));
-
-            if (svg != null)
-            {
-                files[$"usr/share/icons/hicolor/scalable/apps/{iconName}.svg"] = svg;
-            }
-            if (pngAny != null)
-            {
-                files[$"usr/share/icons/hicolor/256x256/apps/{iconName}.png"] = pngAny;
-                if (options.EnableDirIcon)
-                {
-                    files[".DirIcon"] = pngAny;
-                }
-            }
-        }
-
-        var rootContainer = files.ToRootContainer();
-
-        var appImage = from rt in RuntimeFactory.Create(executableFile.Architecture)
-                       from rootCont in rootContainer
-                       from unixDir in Result.Try(() => rootCont.AsContainer().ToUnixDirectory(new MetadataResolver(executableFile)))
-                       select new AppImageContainer(rt, unixDir);
-
-        return appImage;
     }
 
     private static Task<Result<INamedByteSource>> GetExecutable(IContainer applicationRoot)

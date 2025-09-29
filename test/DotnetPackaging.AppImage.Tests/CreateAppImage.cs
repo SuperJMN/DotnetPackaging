@@ -29,7 +29,7 @@ public class CreateAppImage
         var appImage =
             from rt in Result.Success(new Runtime(ByteSource.FromString("THIS IS A RUNTIME"), Architecture.All))
             from rootContainer in containerResult
-            from unixDir in Result.Try(() => rootContainer.AsContainer().ToUnixDirectory())
+            from unixDir in Result.Try(() => rootContainer.ToUnixDirectory())
             select new AppImageContainer(rt, unixDir);
 
         Result save = await appImage
@@ -47,7 +47,8 @@ public class CreateAppImage
         var root = files.AsRoot();
 
         var builder = new AppImageFactory();
-        var appImage = builder.Create(root, new AppImageMetadata("com.superjmn.sampleapp", "Sample App", "sampleapp"));
+        var appImage = builder
+            .Create(root, new AppImageMetadata("com.superjmn.sampleapp", "Sample App", "sampleapp"));
 
         var save = await appImage
             .Bind(x => x.ToByteSource())
