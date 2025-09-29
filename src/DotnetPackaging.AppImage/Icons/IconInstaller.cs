@@ -8,8 +8,7 @@ public static class IconInstaller
     public static IReadOnlyDictionary<string, IByteSource> Discover(
         IContainer applicationRoot,
         Metadata.AppImageMetadata metadata,
-        string iconName,
-        bool enableDirIcon)
+        string iconName)
     {
         return new Dictionary<string, IByteSource>();
     }

@@ -284,7 +284,7 @@ static class Program
         var factory = new AppImageFactory();
 
         return factory.BuildAppDir(root, metadata)
-            .Bind(rootDir => rootDir.AsContainer().WriteTo(outputDir.FullName))
+            .Bind(rootDir => rootDir.WriteTo(outputDir.FullName))
             .WriteResult();
     }
 
