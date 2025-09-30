@@ -41,11 +41,27 @@ public class MsixBuilder : IAsyncDisposable
         // Record the current offset where the local header will be written
         long localHeaderOffset = baseStream.Position;
         localHeaderOffsets.Add(localHeaderOffset);
+        entry.LocalHeaderOffset = localHeaderOffset;
 
         WriteLocalFileHeader(entry);
         logger.Debug("Dumping data for {Entry}", entry);
-        await entry.Compressed.WriteTo(baseStream);
-        await WriteDataDescriptor(entry);
+        var initialPosition = baseStream.Position;
+        var writeResult = await entry.Compressed.WriteTo(baseStream);
+        if (writeResult.IsFailure)
+        {
+            throw new InvalidOperationException($"Error while writing entry {entry.FullPath}: {writeResult.Error}");
+        }
+
+        entry.CompressedSize = baseStream.Position - initialPosition;
+
+        if (!entry.MetadataCalculated)
+        {
+            entry.UncompressedSize = await entry.Original.GetSize();
+            entry.Crc32 = await entry.Original.Crc32();
+            entry.MetadataCalculated = true;
+        }
+
+        WriteDataDescriptor(entry);
 
         //// Add the entry for the central directory
         entries.Add(entry);
@@ -83,25 +99,22 @@ public class MsixBuilder : IAsyncDisposable
         }
     }
 
-    private async Task WriteDataDescriptor(MsixEntry entry)
+    private void WriteDataDescriptor(MsixEntry entry)
     {
         using (var writer = new BinaryWriter(baseStream, Encoding.UTF8, leaveOpen: true))
         {
             // Data Descriptor signature
             writer.Write(0x08074b50);
             // CRC-32
-            writer.Write(await entry.Original.Crc32());
+            writer.Write(entry.Crc32);
 
             // IMPORTANT: Write 8 bytes for each size (Zip64 format)
-            writer.Write((uint)await entry.Compressed.GetSize());
-            writer.Write((uint)0); // 4 more bytes to complete 8
-
-            writer.Write((uint)await entry.Original.GetSize());
-            writer.Write((uint)0); // 4 more bytes to complete 8
+            writer.Write(entry.CompressedSize);
+            writer.Write(entry.UncompressedSize);
         }
     }
 
-    private async Task WriteCentralDirectory()
+    private void WriteCentralDirectory()
     {
         long centralDirStart = baseStream.Position;
         using (var writer = new BinaryWriter(baseStream, Encoding.UTF8, leaveOpen: true))
@@ -121,7 +134,7 @@ public class MsixBuilder : IAsyncDisposable
                 writer.Write(compressionMethod);
                 int dosTime = GetDosTime(entry.ModificationTime);
                 writer.Write((int)dosTime);
-                writer.Write(await entry.Original.Crc32());
+                writer.Write(entry.Crc32);
 
                 if (AlwaysUseZip64)
                 {
@@ -130,8 +143,8 @@ public class MsixBuilder : IAsyncDisposable
                 }
                 else
                 {
-                    writer.Write((uint)await entry.Compressed.GetSize());
-                    writer.Write((uint)await entry.Original.GetSize());
+                    writer.Write((uint)entry.CompressedSize);
+                    writer.Write((uint)entry.UncompressedSize);
                 }
 
                 writer.Write((short)nameBytes.Length);
@@ -147,7 +160,7 @@ public class MsixBuilder : IAsyncDisposable
 
                 if (AlwaysUseZip64)
                 {
-                    await WriteCentralDirectoryExtraField(entry, writer, localHeaderOffset);
+                    WriteCentralDirectoryExtraField(entry, writer, localHeaderOffset);
                 }
             }
 
@@ -163,7 +176,7 @@ public class MsixBuilder : IAsyncDisposable
         }
     }
 
-    private async Task WriteCentralDirectoryExtraField(MsixEntry entry, BinaryWriter writer, long localHeaderOffset)
+    private void WriteCentralDirectoryExtraField(MsixEntry entry, BinaryWriter writer, long localHeaderOffset)
     {
         // For files requiring Zip64
         ushort headerId = 0x0001; // Extra field ID for Zip64
@@ -172,14 +185,9 @@ public class MsixBuilder : IAsyncDisposable
         writer.Write(headerId);
         writer.Write(dataSize);
 
-        writer.Write((uint)await entry.Original.GetSize());
-        writer.Write((uint)(await entry.Original.GetSize() >> 32));
-
-        writer.Write((uint)await entry.Compressed.GetSize());
-        writer.Write((uint)(await entry.Compressed.GetSize() >> 32));
-
-        writer.Write((uint)localHeaderOffset);
-        writer.Write((uint)(localHeaderOffset >> 32));
+        writer.Write(entry.UncompressedSize);
+        writer.Write(entry.CompressedSize);
+        writer.Write(localHeaderOffset);
     }
 
     private void WriteZip64EndOfCentralDirectoryRecord(long centralDirStart, long centralDirSize, int entryCount)
@@ -242,13 +250,15 @@ public class MsixBuilder : IAsyncDisposable
     /// <summary>
     /// Finalizes the ZIP by writing the central directory.
     /// </summary>
-    public async Task Finish()
+    public Task Finish()
     {
         if (!finished)
         {
-            await WriteCentralDirectory();
+            WriteCentralDirectory();
             finished = true;
         }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
