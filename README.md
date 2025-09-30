@@ -62,22 +62,23 @@ Key capabilities:
 - Emit `IData` streams so you can persist packages to disk, upload them elsewhere, or plug them into other pipelines.
 
 ```csharp
+using System.IO.Abstractions;
 using DotnetPackaging.Deb;
 using DotnetPackaging;
-using Zafiro.FileSystem.Local;
+using Zafiro.DivineBytes;
+using Zafiro.DivineBytes.System.IO;
 
-var publishDir = new Directory(new FileSystem().DirectoryInfo.New("./bin/Release/net8.0/linux-x64/publish"));
-var debResult = await publishDir.ToDirectory()
-    .Bind(root => DebFile.From()
-        .Directory(root)
-        .Configure(options =>
-        {
-            options.WithName("My App")
-                   .WithPackage("my-app")
-                   .WithVersion("1.0.0")
-                   .WithSummary("Cross-platform sample app");
-        })
-        .Build());
+var publishDir = new DirectoryContainer(new FileSystem().DirectoryInfo.New("./bin/Release/net8.0/linux-x64/publish"));
+var debResult = await DebFile.From()
+    .Container(publishDir.AsRoot(), publishDir.Name)
+    .Configure(options =>
+    {
+        options.WithName("My App")
+               .WithPackage("my-app")
+               .WithVersion("1.0.0")
+               .WithSummary("Cross-platform sample app");
+    })
+    .Build();
 
 if (debResult.IsSuccess)
 {

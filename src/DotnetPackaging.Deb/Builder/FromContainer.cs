@@ -1,31 +1,43 @@
 ﻿using CSharpFunctionalExtensions;
 using Serilog;
-using Zafiro.FileSystem.Readonly;
+using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Deb.Builder;
 
 public class FromContainer
 {
-    private readonly IDirectory root;
+    private readonly IContainer root;
     private readonly FromDirectoryOptions setup;
+    private readonly Maybe<string> containerName;
 
-    public FromContainer(IDirectory root, FromDirectoryOptions setup)
+    public FromContainer(IContainer root, FromDirectoryOptions setup, Maybe<string> containerName)
     {
         this.root = root;
         this.setup = setup;
+        this.containerName = containerName;
     }
 
-    public Task<Result<Archives.Deb.DebFile>> Build()
+    public async Task<Result<Archives.Deb.DebFile>> Build()
     {
-        var build = BuildUtils.GetExecutable(root, setup)
-            .Bind(exec => BuildUtils.GetArch(setup, exec).Tap(arch => Log.Information("Architecture set to {Arch}", arch))
-                .Map(async architecture => new
-                {
-                    PackageMetadata = await BuildUtils.CreateMetadata(setup, root, architecture, exec, setup.IsTerminal),
-                    Executable = exec
-                }))
-            .Map(conf => new Archives.Deb.DebFile(conf.PackageMetadata, TarEntryBuilder.From(root, conf.PackageMetadata, conf.Executable).ToArray()));
+        var executableResult = await BuildUtils.GetExecutable(root, setup);
+        if (executableResult.IsFailure)
+        {
+            return Result.Failure<Archives.Deb.DebFile>(executableResult.Error);
+        }
 
-        return build;
+        var executable = executableResult.Value;
+
+        var architectureResult = await BuildUtils.GetArch(setup, executable);
+        if (architectureResult.IsFailure)
+        {
+            return Result.Failure<Archives.Deb.DebFile>(architectureResult.Error);
+        }
+
+        var architecture = architectureResult.Value;
+        Log.Information("Architecture set to {Arch}", architecture);
+        var metadata = await BuildUtils.CreateMetadata(setup, root, architecture, executable, setup.IsTerminal, containerName);
+        var entries = TarEntryBuilder.From(root, metadata, executable).ToArray();
+
+        return Result.Success(new Archives.Deb.DebFile(metadata, entries));
     }
 }

@@ -1,22 +1,23 @@
 ﻿using System.Text;
 using DotnetPackaging.Deb.Archives.Tar;
 using Zafiro.DataModel;
-using Zafiro.FileSystem.Core;
-using Zafiro.FileSystem.Readonly;
+using Zafiro.DivineBytes;
 using Zafiro.FileSystem.Unix;
 using Zafiro.Mixins;
+using DivinePath = Zafiro.DivineBytes.Path;
 
 namespace DotnetPackaging.Deb.Builder;
 
 public static class TarEntryBuilder
 {
-    public static IEnumerable<TarEntry> From(IDirectory directory, PackageMetadata metadata, IFile executable)
+    public static IEnumerable<TarEntry> From(IContainer container, PackageMetadata metadata, INamedByteSourceWithPath executable)
     {
-        var files = directory.RootedFiles();
         var appDir = $"/opt/{metadata.Package}";
-        var executablePath = $"{appDir}/{executable.Name}";
-        var tarEntriesFromImplicitFiles = ImplicitFileEntries(metadata, executablePath);
-        var tarEntriesFromFiles = TarEntriesFromFiles(files, metadata, executable);
+        var executableRelativePath = executable.Path == DivinePath.Empty ? executable.Name : executable.FullPath().ToString();
+        var execAbsolutePath = $"{appDir}/{executableRelativePath}".Replace("\\", "/", StringComparison.Ordinal);
+        var executablePath = NormalizeTarPath(execAbsolutePath);
+        var tarEntriesFromImplicitFiles = ImplicitFileEntries(metadata, execAbsolutePath);
+        var tarEntriesFromFiles = TarEntriesFromFiles(container, metadata, executable);
         var allFiles = tarEntriesFromFiles.Concat(tarEntriesFromImplicitFiles).ToList();
         var directoryEntries = CreateDirectoryEntries(allFiles);
         var tarEntries = directoryEntries.Concat(allFiles);
@@ -27,30 +28,61 @@ public static class TarEntryBuilder
     {
         return new FileTarEntry[]
         {
-            new($"./usr/local/share/applications/{metadata.Package.ToLower()}.desktop", Data.FromString(TextTemplates.DesktopFileContents(executablePath, metadata), Encoding.ASCII), Misc.RegularFileProperties()),
-            new($"./usr/local/bin/{metadata.Package.ToLower()}", Data.FromString(TextTemplates.RunScript(executablePath), Encoding.ASCII), Misc.ExecutableFileProperties())
-        }.Concat(GetIconEntry(metadata));
+            new($"./usr/share/applications/{metadata.Package.ToLowerInvariant()}.desktop", Data.FromString(TextTemplates.DesktopFileContents(executablePath, metadata), Encoding.ASCII), Misc.RegularFileProperties()),
+            new($"./usr/bin/{metadata.Package.ToLowerInvariant()}", Data.FromString(TextTemplates.RunScript(executablePath), Encoding.ASCII), Misc.ExecutableFileProperties())
+        }.Concat(GetIconEntries(metadata));
     }
 
-    private static IEnumerable<FileTarEntry> GetIconEntry(PackageMetadata metadata)
+    private static IEnumerable<FileTarEntry> GetIconEntries(PackageMetadata metadata)
     {
-        if (metadata.Icon.HasNoValue)
+        return metadata.IconFiles.Select(icon => new FileTarEntry(
+            NormalizeTarPath($"./{icon.Key}"),
+            Data.FromByteArray(icon.Value.Array()),
+            Misc.RegularFileProperties()));
+    }
+
+    private static IEnumerable<TarEntry> TarEntriesFromFiles(IContainer container, PackageMetadata metadata, INamedByteSourceWithPath executable)
+    {
+        var prefix = $"./opt/{metadata.Package}";
+        return container.ResourcesWithPathsRecursive()
+            .Select(resource => new FileTarEntry(
+                NormalizeTarPath($"{prefix}/{RelativePath(resource)}"),
+                ToData(resource),
+                GetFileProperties(resource, executable)));
+    }
+
+    private static IData ToData(INamedByteSource source)
+    {
+        return Data.FromByteArray(source.Array());
+    }
+
+    private static string RelativePath(INamedByteSourceWithPath resource)
+    {
+        return resource.Path == DivinePath.Empty ? resource.Name : resource.FullPath().ToString();
+    }
+
+    private static string NormalizeTarPath(string path)
+    {
+        var normalized = path.Replace("\\", "/");
+        while (normalized.Contains("//", StringComparison.Ordinal))
         {
-            return Enumerable.Empty<FileTarEntry>();
+            normalized = normalized.Replace("//", "/", StringComparison.Ordinal);
         }
 
-        var size = metadata.Icon.Value.Size;
-        return [new FileTarEntry($"./usr/share/icons/hicolor/{size}x{size}/apps/{metadata.Package.ToLower()}.png", metadata.Icon.Value, Misc.RegularFileProperties())];
+        if (!normalized.StartsWith("./", StringComparison.Ordinal))
+        {
+            normalized = normalized.StartsWith('/') ? $".{normalized}" : $"./{normalized}";
+        }
+
+        return normalized;
     }
 
-    private static IEnumerable<TarEntry> TarEntriesFromFiles(IEnumerable<IRootedFile> files, PackageMetadata metadata, IFile executable)
+    private static TarFileProperties GetFileProperties(INamedByteSourceWithPath file, INamedByteSourceWithPath executable)
     {
-        return files.Select(x => new FileTarEntry($"./opt/{metadata.Package}/" + x.FullPath(), x.Value, GetFileProperties(x, executable.Name)));
-    }
+        var isExecutable = string.Equals(file.Name, executable.Name, StringComparison.Ordinal)
+                           && file.Path.Value == executable.Path.Value;
 
-    private static TarFileProperties GetFileProperties(IRootedFile file, string executableName)
-    {
-        if (string.Equals(file.Name, executableName, StringComparison.Ordinal))
+        if (isExecutable)
         {
             return Misc.ExecutableFileProperties();
         }
@@ -69,7 +101,36 @@ public static class TarEntryBuilder
             OwnerUsername = "root",
             LastModification = DateTimeOffset.Now
         };
-        var directoryEntries = allFiles.Select(x => ((ZafiroPath)x.Path[2..]).Parents()).Flatten().Distinct().OrderBy(x => x.RouteFragments.Count());
-        return directoryEntries.Select(path => new DirectoryTarEntry($"./{path}", directoryProperties));
+
+        var directories = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var entry in allFiles)
+        {
+            var route = entry.Path.TrimStart('.');
+            route = route.TrimStart('/');
+
+            if (string.IsNullOrWhiteSpace(route))
+            {
+                continue;
+            }
+
+            var segments = route.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length == 0)
+            {
+                continue;
+            }
+
+            var current = string.Empty;
+            for (var i = 0; i < segments.Length - 1; i++)
+            {
+                current = string.IsNullOrEmpty(current) ? $"./{segments[i]}" : $"{current}/{segments[i]}";
+                directories.Add(current);
+            }
+        }
+
+        return directories
+            .OrderBy(path => path.Count(c => c == '/'))
+            .ThenBy(path => path, StringComparer.Ordinal)
+            .Select(path => new DirectoryTarEntry(path, directoryProperties));
     }
 }

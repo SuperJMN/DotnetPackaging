@@ -1,4 +1,7 @@
-﻿namespace DotnetPackaging;
+﻿using System.Collections.Generic;
+using Zafiro.DivineBytes;
+
+namespace DotnetPackaging;
 
 public record PackageMetadata
 {
@@ -41,6 +44,9 @@ public record PackageMetadata
     public Maybe<string> Comment { get; init; } = Maybe<string>.None;
     public Maybe<Categories> Categories { get; init; } = Maybe<Categories>.None;
     public Maybe<IIcon> Icon { get; init; } = Maybe<IIcon>.None;
+    public Maybe<IByteSource> SvgIcon { get; init; } = Maybe<IByteSource>.None;
+    public IReadOnlyDictionary<string, IByteSource> IconFiles { get; init; } = new Dictionary<string, IByteSource>();
+    public Maybe<IByteSource> DirIcon { get; init; } = Maybe<IByteSource>.None;
     public Maybe<IEnumerable<Uri>> ScreenshotUrls { get; init; } = Maybe<IEnumerable<Uri>>.None;
     public Maybe<string> Summary { get; init; } = Maybe<string>.None;
     public Maybe<string> License { get; init; } = Maybe<string>.None;

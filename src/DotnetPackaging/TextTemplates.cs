@@ -1,4 +1,5 @@
-﻿using Zafiro.Mixins;
+﻿using System.Linq;
+using Zafiro.Mixins;
 
 namespace DotnetPackaging;
 
@@ -13,7 +14,9 @@ public static class TextTemplates
             Maybe.From($"Name={metadata.Name}"),
             metadata.StartupWmClass.Map(n => $"StartupWMClass={n}"),
             metadata.Comment.Map(n => $"Comment={n}"),
-            metadata.Icon.Map(_ => $"Icon={metadata.Package.ToLower()}"),
+            metadata.IconFiles.Any()
+                ? Maybe.From($"Icon={metadata.Package.ToLowerInvariant()}")
+                : Maybe<string>.None,
             Maybe.From($"Terminal={metadata.IsTerminal.ToString().ToLower()}"),
             Maybe.From($"Exec=\"{executablePath}\""),
             metadata.Categories.Map(x => $"Categories={x}"),
