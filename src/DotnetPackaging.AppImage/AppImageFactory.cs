@@ -4,6 +4,7 @@ using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.AppImage.Metadata;
+using DotnetPackaging;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.Unix;
 
@@ -159,34 +160,19 @@ public class AppImageFactory
         }
 
         var iconName = options.IconNameOverride.GetValueOrDefault(appImageMetadata.IconName);
-        var iconFiles = Icons.IconInstaller.Discover(applicationRoot, appImageMetadata, iconName);
-        foreach (var icon in iconFiles)
+        var iconPlan = IconDiscovery.Discover(applicationRoot, iconName);
+
+        foreach (var icon in iconPlan.IconFiles)
         {
-            files[icon.Key] = icon.Value;
+            if (!files.ContainsKey(icon.Key))
+            {
+                files[icon.Key] = icon.Value;
+            }
         }
 
-        if (!iconFiles.Any())
+        if (iconPlan.DirIcon.HasValue && !files.ContainsKey(".DirIcon"))
         {
-            bool IsRoot(INamedByteSource f)
-            {
-                var fp = ((INamedWithPath)f).FullPath().ToString();
-                return !fp.Contains('/') && !fp.Contains('\\');
-            }
-
-            var roots = namedByteSourceWithPaths.Where(IsRoot).ToList();
-            INamedByteSource? svg = roots.FirstOrDefault(f => f.Name.Equals("icon.svg", StringComparison.OrdinalIgnoreCase) || f.Name.EndsWith("-icon.svg", StringComparison.OrdinalIgnoreCase));
-            INamedByteSource? png256 = roots.FirstOrDefault(f => f.Name.Equals("icon-256.png", StringComparison.OrdinalIgnoreCase));
-            INamedByteSource? pngAny = png256 ?? roots.FirstOrDefault(f => f.Name.Equals("icon.png", StringComparison.OrdinalIgnoreCase));
-
-            if (svg != null)
-            {
-                files[$"usr/share/icons/hicolor/scalable/apps/{iconName}.svg"] = svg;
-            }
-            if (pngAny != null)
-            {
-                files[$"usr/share/icons/hicolor/256x256/apps/{iconName}.png"] = pngAny;
-                files[".DirIcon"] = pngAny;
-            }
+            files[".DirIcon"] = iconPlan.DirIcon.Value;
         }
 
         if (!files.ContainsKey(".DirIcon"))

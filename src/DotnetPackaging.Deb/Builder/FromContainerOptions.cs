@@ -1,20 +1,23 @@
-﻿using Zafiro.FileSystem.Readonly;
+﻿using CSharpFunctionalExtensions;
+using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Deb.Builder;
 
 public class FromContainerOptions
 {
-    private readonly IDirectory container;
+    private readonly IContainer container;
+    private readonly Maybe<string> containerName;
 
-    public FromContainerOptions(IDirectory container)
+    public FromContainerOptions(IContainer container, Maybe<string> containerName)
     {
-        this.container = container;
+        this.container = container ?? throw new ArgumentNullException(nameof(container));
+        this.containerName = containerName;
     }
 
     public FromContainer Configure(Action<FromDirectoryOptions> setup)
     {
         var options = new FromDirectoryOptions();
         setup(options);
-        return new FromContainer(container, options);
+        return new FromContainer(container, options, containerName);
     }
 }
