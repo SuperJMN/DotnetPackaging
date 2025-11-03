@@ -8,7 +8,7 @@ namespace MsixPackaging.Tests.Research;
 
 public class MsixResearchTests
 {
-    [Fact]
+    [Fact(Skip = "Requires local reference files available only in research environment")]
     public void Block_hashes()
     {
         var compressedBytes = Tools.ExtractRawCompressedBytes(
@@ -20,7 +20,7 @@ public class MsixResearchTests
         Assert.Equal("j/tch6hTj5ey+gF7s81GyCj0/KLi3TQu8FwnCmJrRS4=", hash);
     }
 
-    [Fact]
+    [Fact(Skip = "Requires local reference files available only in research environment")]
     public void Calculate_correct_hash()
     {
         var compressedBytes = Tools.ExtractRawCompressedBytes(
@@ -44,7 +44,7 @@ public class MsixResearchTests
         Assert.Equal("j/tch6hTj5ey+gF7s81GyCj0/KLi3TQu8FwnCmJrRS4=", hash);
     }
 
-    [Fact]
+    [Fact(Skip = "Requires local reference files available only in research environment")]
     public void Try_appx_specific_hash_calculation()
     {
         var compressedBytes = Tools.ExtractRawCompressedBytes(
@@ -63,7 +63,7 @@ public class MsixResearchTests
         Assert.Equal("j/tch6hTj5ey+gF7s81GyCj0/KLi3TQu8FwnCmJrRS4=", hash);
     }
 
-    [Fact]
+    [Fact(Skip = "Requires local reference files available only in research environment")]
     public void Patcher()
     {
         var compressedBytes = Tools.ExtractRawCompressedBytes(
