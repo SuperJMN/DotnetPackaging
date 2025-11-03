@@ -5,8 +5,9 @@ namespace DotnetPackaging;
 
 public static class TextTemplates
 {
-    public static string DesktopFileContents(string executablePath, PackageMetadata metadata)
+    public static string DesktopFileContents(string executablePath, PackageMetadata metadata, string? iconNameOverride = null)
     {
+        var iconName = iconNameOverride ?? (metadata.IconFiles.Any() ? metadata.Package.ToLowerInvariant() : null);
         var items = new[]
         {
             Maybe.From("[Desktop Entry]"),
@@ -14,9 +15,7 @@ public static class TextTemplates
             Maybe.From($"Name={metadata.Name}"),
             metadata.StartupWmClass.Map(n => $"StartupWMClass={n}"),
             metadata.Comment.Map(n => $"Comment={n}"),
-            metadata.IconFiles.Any()
-                ? Maybe.From($"Icon={metadata.Package.ToLowerInvariant()}")
-                : Maybe<string>.None,
+            iconName is not null ? Maybe.From($"Icon={iconName}") : Maybe<string>.None,
             Maybe.From($"Terminal={metadata.IsTerminal.ToString().ToLower()}"),
             Maybe.From($"Exec=\"{executablePath}\""),
             metadata.Categories.Map(x => $"Categories={x}"),

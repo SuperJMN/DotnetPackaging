@@ -51,8 +51,8 @@ public class FlatpakFactory
         // Generate the metadata file
         var metadataContent = GenerateMetadata(metadata, options, appId, commandName);
 
-        // Generate the .desktop file (Exec should be the appId)
-        var desktopFile = TextTemplates.DesktopFileContents(appId, metadata);
+        // Generate the .desktop file (Exec should be the appId) and force Icon to appId
+        var desktopFile = TextTemplates.DesktopFileContents(appId, metadata, appId);
 
         // Generate the appdata.xml file  
         var appDataXml = TextTemplates.AppStream(metadata);
@@ -85,11 +85,16 @@ public class FlatpakFactory
         // Add icons under files/share
         foreach (var iconFile in metadata.IconFiles)
         {
-            var key = iconFile.Key;
+            var key = iconFile.Key.Replace("\\", "/");
             var iconTargetPath = key.StartsWith("usr/share/")
                 ? key.Replace("usr/share/", "files/share/")
                 : $"files/share/{key}";
-            applicationFiles[iconTargetPath] = iconFile.Value;
+            // Ensure icon filename matches appId so build-export picks it up
+            var lastSlash = iconTargetPath.LastIndexOf('/') + 1;
+            var dir = iconTargetPath.Substring(0, lastSlash);
+            var ext = System.IO.Path.GetExtension(iconTargetPath);
+            var renamed = $"{dir}{appId}{ext}";
+            applicationFiles[renamed] = iconFile.Value;
         }
 
         // Add metadata file at root
