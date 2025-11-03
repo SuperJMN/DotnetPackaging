@@ -17,6 +17,7 @@
     <ProjectReference Include="..\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj" />
     <ProjectReference Include="..\DotnetPackaging.Deb\DotnetPackaging.Deb.csproj" />
     <ProjectReference Include="..\DotnetPackaging.Flatpak\DotnetPackaging.Flatpak.csproj" />
+    <ProjectReference Include="..\DotnetPackaging.Dmg\DotnetPackaging.Dmg.csproj" />
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
   </ItemGroup>
   <!-- Toggle Zafiro: local projects in Debug, NuGet packages in Release (central versions in Directory.Packages.props) -->
