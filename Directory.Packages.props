@@ -41,5 +41,6 @@
     <PackageVersion Include="Zafiro.FileSystem.Unix" Version="$(ZafiroVersion)" />
     <PackageVersion Include="Zafiro.FileSystem.Local" Version="$(ZafiroVersion)" />
     <PackageVersion Include="Zafiro.DivineBytes" Version="$(ZafiroVersion)" />
+    <PackageVersion Include="DiscUtils" Version="0.16.13" />
   </ItemGroup>
 </Project>

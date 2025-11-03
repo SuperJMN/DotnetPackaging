@@ -55,6 +55,36 @@ static class Program
         AddAppImageSubcommands(appImageCommand);
         rootCommand.AddCommand(appImageCommand);
 
+        // DMG command (experimental, cross-platform)
+        var dmgCommand = CreateCommand(
+            "dmg",
+            "macOS disk image",
+            ".dmg",
+            CreateDmg,
+            "Create a simple macOS disk image (.dmg). Currently uses an ISO/UDF (UDTO) payload for broad compatibility.",
+            "pack-dmg");
+        rootCommand.AddCommand(dmgCommand);
+
+        // dmg verify subcommand
+        var verifyCmd = new Command("verify", "Verify that a .dmg file has a macOS-friendly structure (ISO/UDTO or UDIF).")
+        {
+            new Option<FileInfo>("--file", "Path to the .dmg file") { IsRequired = true }
+        };
+        verifyCmd.SetHandler(async (FileInfo file) =>
+        {
+            var result = await DotnetPackaging.Dmg.DmgVerifier.Verify(file.FullName);
+            if (result.IsFailure)
+            {
+                Console.Error.WriteLine(result.Error);
+                Environment.ExitCode = 1;
+            }
+            else
+            {
+                Console.WriteLine(result.Value);
+            }
+        }, verifyCmd.Options.OfType<Option<FileInfo>>().First());
+        dmgCommand.AddCommand(verifyCmd);
+
         // Flatpak command
         var flatpakCommand = new Command("flatpak", "Flatpak packaging: generate layout, OSTree repo, or bundle (.flatpak). Can use system flatpak or internal bundler.");
         AddFlatpakSubcommands(flatpakCommand);
@@ -702,6 +732,12 @@ static class Program
                     return await data.DumpTo(fileSystemStream);
                 }))
             .WriteResult();
+    }
+
+    private static Task CreateDmg(DirectoryInfo inputDir, FileInfo outputFile, Options options)
+    {
+        var name = options.Name.GetValueOrDefault(inputDir.Name);
+        return DotnetPackaging.Dmg.DmgIsoBuilder.Create(inputDir.FullName, outputFile.FullName, name);
     }
 
     private static IIcon? GetIcon(ArgumentResult result)

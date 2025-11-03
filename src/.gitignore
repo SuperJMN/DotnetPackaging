@@ -385,6 +385,18 @@ test-results/
 # Mac bundle stuff
 *.dmg
 *.app
+# Allow the library project folder named 'DotnetPackaging.Dmg' (sources only)
+!DotnetPackaging.Dmg/
+!DotnetPackaging.Dmg/*.csproj
+!DotnetPackaging.Dmg/*.cs
+!DotnetPackaging.Dmg/**/*.cs
+!DotnetPackaging.Dmg/*.props
+!DotnetPackaging.Dmg/*.targets
+# Keep build artifacts ignored inside the project
+DotnetPackaging.Dmg/bin/
+DotnetPackaging.Dmg/obj/
+DotnetPackaging.Dmg/**/bin/
+DotnetPackaging.Dmg/**/obj/
 
 # content below from: https://github.com/github/gitignore/blob/master/Global/macOS.gitignore
 # General
