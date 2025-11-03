@@ -46,13 +46,20 @@ Packaging formats: status and details
 - MSIX (Windows)
   - Status: experimental/preview. Library: src/DotnetPackaging.Msix with tests in src/DotnetPackaging.Msix.Tests.
   - Validation: tests unpack resulting MSIX using makeappx tooling in CI-like conditions; end-to-end CLI exposure pending (see TODOs below).
+- Flatpak (Linux)
+  - Status: supported (bundle via system `flatpak`) with internal OSTree bundler fallback.
+  - Libraries: src/DotnetPackaging.Flatpak (Factory, Packer, OSTree scaffolding).
+  - How it works: builds a Flatpak layout (metadata at root, files/ subtree) from a publish directory; icons auto-detected and installed under files/share/icons/.../apps/<appId>.(svg/png). Desktop Icon is forced to <appId>.
+  - Bundling: prefers system `flatpak build-export/build-bundle`; if not available or fails, uses internal bundler to emit a single-file `.flatpak` (unsigned, for testing).
+  - Defaults: freedesktop runtime 24.08 (runtime/sdk), branch=stable, common permissions (network/ipc, wayland/x11/pulseaudio, dri, filesystem=home). Command defaults to AppId.
 
 CLI tool (dotnet tool)
 - Project: src/DotnetPackaging.Console (PackAsTool=true, ToolCommandName=dotnetpackaging).
 - Commands available:
   - appimage: create an AppImage from a directory (typically dotnet publish output). Autodetects executable + architecture; generates metadata and icons.
   - deb: create a .deb from a directory (dotnet publish output). Detects executable; generates metadata, .desktop and wrapper.
-- Common options (both commands):
+  - flatpak: layout, bundle (system or internal), repo, and pack (minimal UX).
+- Common options (all commands share a metadata set):
   - --directory <dir> (required): input directory to package from.
   - --output <file> (required): output file (.AppImage or .deb).
   - --application-name, --wm-class, --main-category, --additional-categories, --keywords, --comment, --version,
@@ -60,7 +67,8 @@ CLI tool (dotnet tool)
 - Examples (from a published folder):
   - AppImage: dotnetpackaging appimage --directory /path/to/publish --output /path/out/MyApp.AppImage --application-name "MyApp"
   - Deb:      dotnetpackaging deb      --directory /path/to/publish --output /path/out/myapp_1.0.0_amd64.deb --application-name "MyApp"
-- CLI scope (current): appimage and deb. MSIX is not yet exposed as a CLI command.
+  - Flatpak (minimal): dotnetpackager flatpak pack --directory /path/to/publish --output-dir /path/out
+  - Flatpak (bundle):  dotnetpackager flatpak bundle --directory /path/to/publish --output /path/out/MyApp.flatpak --system
 
 Tests
 - AppImage tests (test/DotnetPackaging.AppImage.Tests):

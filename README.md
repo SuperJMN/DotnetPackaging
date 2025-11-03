@@ -88,6 +88,33 @@ if (debResult.IsSuccess)
 
 `FromDirectoryOptions` exposes many more helpers (`WithExecutableName`, `WithIcon`, `WithHomepage`, `WithCategories`, `WithMaintainer`, etc.) so you can describe the package metadata you need.
 
+### Flatpak packages
+Key capabilities:
+- Generate a Flatpak layout (metadata + files/) without external tools.
+- Bundle to a single `.flatpak` using the system `flatpak` if available (fallback to an internal OSTree-based bundler).
+- Defaults-first: autodetect executable, architecture and icons; sane permissions and org.freedesktop runtime (24.08) by default.
+
+Library (defaults-first):
+```csharp
+using DotnetPackaging.Flatpak;
+using Zafiro.DivineBytes;
+using Zafiro.FileSystem.Local;
+
+var fs = new System.IO.Abstractions.FileSystem();
+var container = new DirectoryContainer(fs.DirectoryInfo.New("./bin/Release/net8.0/linux-x64/publish"));
+var packer = new FlatpakPacker();
+
+// Plan with sensible defaults (derives AppId, Name, icons, etc.)
+var plan = await packer.Plan(container.AsRoot());
+
+// Bundle: prefers system flatpak (build-export/build-bundle), falls back to internal bundler
+var bytes = await packer.Bundle(container.AsRoot());
+if (bytes.IsSuccess)
+{
+    await bytes.Value.WriteTo("./artifacts/MyApp.flatpak");
+}
+```
+
 ## `dotnetpackager` CLI
 
 The CLI is published as `DotnetPackaging.Tool` and installs a `dotnetpackager` command that mirrors the library APIs.
@@ -102,10 +129,32 @@ dotnet tool install --global DotnetPackaging.Tool
 - `dotnetpackager appimage` – build an `.AppImage` file directly from a publish directory.
 - `dotnetpackager appimage appdir` – generate an AppDir folder structure for inspection/customisation.
 - `dotnetpackager appimage from-appdir` – package an existing AppDir into an AppImage.
+- `dotnetpackager flatpak layout` – create a Flatpak layout (metadata + files/) from a publish directory.
+- `dotnetpackager flatpak bundle` – create a `.flatpak` (uses system `flatpak` by default; `--system` to force system; internal fallback).
+- `dotnetpackager flatpak repo` – generate an OSTree repo directory (debug/validation).
+- `dotnetpackager flatpak pack` – minimal UX: only `--directory` and `--output-dir`; auto-named output and sensible defaults.
 
 Run `dotnetpackager <command> --help` to see the full list of shared options (`--application-name`, `--comment`, `--homepage`, `--keywords`, `--icon`, `--is-terminal`, etc.).
 
 ### Examples
+Flatpak (minimal):
+```bash
+dotnetpackager flatpak pack \
+  --directory ./bin/Release/net8.0/linux-x64/publish \
+  --output-dir ./artifacts
+# Produces ./artifacts/<appId>_<version>_<arch>.flatpak
+```
+
+Flatpak (full control):
+```bash
+dotnetpackager flatpak bundle \
+  --directory ./bin/Release/net8.0/linux-x64/publish \
+  --output ./artifacts/MyApp.flatpak \
+  --system \
+  --application-name "My App" \
+  --summary "Cross-platform sample"
+```
+
 Build an AppImage in one go:
 ```bash
 dotnetpackager appimage \
