@@ -268,6 +268,72 @@ public class MsixPackagerTests
         return entries;
     }
 
+    [Fact]
+    public async Task LocalHeadersMatchMakeAppxStructure()
+    {
+        var packagePath = await BuildPackage("ValidExe");
+        var referencePath = System.IO.Path.Combine("TestFiles", "ValidExe", "Expected.msix");
+
+        var actualEntries = ReadCentralDirectoryEntries(packagePath).ToList();
+        var expectedEntries = ReadCentralDirectoryEntries(referencePath).ToDictionary(e => e.Name);
+
+        using var actualStream = new FileStream(packagePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var expectedStream = new FileStream(referencePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+        foreach (var actual in actualEntries)
+        {
+            Assert.True(expectedEntries.TryGetValue(actual.Name, out var expected), $"Missing reference entry {actual.Name}");
+
+            var actualLfh = ReadLocalFileHeader(actualStream, actual.LocalHeaderOffset64);
+            var expectedLfh = ReadLocalFileHeader(expectedStream, expected.LocalHeaderOffset64);
+
+            Assert.Equal(45, actualLfh.VersionNeeded);
+            Assert.Equal(45, expectedLfh.VersionNeeded);
+
+            // Bit 3 (0x0008) set: data descriptor present
+            Assert.True((actualLfh.GeneralPurposeFlag & 0x0008) != 0, $"GFlag not using data descriptor for {actual.Name}");
+            Assert.True((expectedLfh.GeneralPurposeFlag & 0x0008) != 0, $"Reference GFlag not using data descriptor for {actual.Name}");
+
+            Assert.Equal(expectedLfh.CompressionMethod, actualLfh.CompressionMethod);
+
+            // Sizes in LFH should be zero when data descriptor is used
+            Assert.Equal(0u, actualLfh.Crc32);
+            Assert.Equal(0u, actualLfh.CompressedSize32);
+            Assert.Equal(0u, actualLfh.UncompressedSize32);
+
+            // Paridad estructural: makeappx no incluye Zip64 extra en el LFH
+            Assert.Equal(0, actualLfh.ExtraFieldLength);
+            Assert.Equal(0, expectedLfh.ExtraFieldLength);
+        }
+    }
+
+    private static LocalFileHeader ReadLocalFileHeader(FileStream stream, long offset)
+    {
+        using var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true);
+        stream.Position = offset;
+        if (reader.ReadUInt32() != 0x04034b50)
+        {
+            throw new InvalidDataException("Local file header signature not found");
+        }
+
+        var lfh = new LocalFileHeader
+        {
+            VersionNeeded = reader.ReadInt16(),
+            GeneralPurposeFlag = reader.ReadInt16(),
+            CompressionMethod = reader.ReadInt16(),
+            LastModTimeDate = reader.ReadInt32(),
+            Crc32 = reader.ReadUInt32(),
+            CompressedSize32 = reader.ReadUInt32(),
+            UncompressedSize32 = reader.ReadUInt32(),
+            FileNameLength = reader.ReadInt16(),
+            ExtraFieldLength = reader.ReadInt16(),
+        };
+
+        // Skip name and extra
+        reader.ReadBytes(lfh.FileNameLength + lfh.ExtraFieldLength);
+        return lfh;
+    }
+
     private static void ParseZip64Extra(byte[] extra, ref CentralDirectoryEntry entry)
     {
         int index = 0;
@@ -342,5 +408,18 @@ public class MsixPackagerTests
         public long CompressedSize64 { get; set; }
         public long UncompressedSize64 { get; set; }
         public long LocalHeaderOffset64 { get; set; }
+    }
+
+    private record LocalFileHeader
+    {
+        public short VersionNeeded { get; set; }
+        public short GeneralPurposeFlag { get; set; }
+        public short CompressionMethod { get; set; }
+        public int LastModTimeDate { get; set; }
+        public uint Crc32 { get; set; }
+        public uint CompressedSize32 { get; set; }
+        public uint UncompressedSize32 { get; set; }
+        public short FileNameLength { get; set; }
+        public short ExtraFieldLength { get; set; }
     }
 }
