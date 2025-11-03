@@ -437,6 +437,78 @@ static class Program
         repoCmd.SetHandler(CreateFlatpakRepo, repoInputDir, repoOutDir, binder, fpBinder);
 
         flatpakCommand.AddCommand(repoCmd);
+
+        // flatpak pack (minimal UX): only directory and output-dir, prefer system bundler with fallback
+        var packInputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
+        var packOutputDir = new Option<DirectoryInfo>("--output-dir", "Destination directory for the resulting .flatpak") { IsRequired = true };
+        var packCmd = new Command("pack", "Pack a .flatpak with minimal parameters. Uses system flatpak if available, otherwise falls back to internal bundler.");
+        packCmd.AddOption(packInputDir);
+        packCmd.AddOption(packOutputDir);
+        packCmd.SetHandler(async (DirectoryInfo inDir, DirectoryInfo outDir) =>
+        {
+            var dirInfo = FileSystem.DirectoryInfo.New(inDir.FullName);
+            var container = new DirectoryContainer(dirInfo);
+            var root = container.AsRoot();
+            var setup = new FromDirectoryOptions();
+
+            var execRes = await BuildUtils.GetExecutable(root, setup);
+            if (execRes.IsFailure) { Console.Error.WriteLine(execRes.Error); return; }
+            var archRes = await BuildUtils.GetArch(setup, execRes.Value);
+            if (archRes.IsFailure) { Console.Error.WriteLine(archRes.Error); return; }
+            var pm = await BuildUtils.CreateMetadata(setup, root, archRes.Value, execRes.Value, setup.IsTerminal, Maybe<string>.From(inDir.Name));
+            var planRes = await new FlatpakFactory().BuildPlan(root, pm, new FlatpakOptions());
+            if (planRes.IsFailure) { Console.Error.WriteLine(planRes.Error); return; }
+            var plan = planRes.Value;
+
+            var fileName = $"{plan.AppId}_{plan.Metadata.Version}_{plan.Metadata.Architecture.PackagePrefix}.flatpak";
+            var outPath = System.IO.Path.Combine(outDir.FullName, fileName);
+
+            // Try system bundler first
+            var tmpAppDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-app-" + Guid.NewGuid());
+            var tmpRepoDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-repo-" + Guid.NewGuid());
+            Directory.CreateDirectory(tmpAppDir);
+            Directory.CreateDirectory(tmpRepoDir);
+            var write = await plan.ToRootContainer().WriteTo(tmpAppDir);
+            if (write.IsSuccess)
+            {
+                MakeExecutable(System.IO.Path.Combine(tmpAppDir, "files", "bin", plan.CommandName));
+                MakeExecutable(System.IO.Path.Combine(tmpAppDir, "files", plan.ExecutableTargetPath.Replace('/', System.IO.Path.DirectorySeparatorChar)));
+                var arch = plan.Metadata.Architecture.PackagePrefix;
+                var finish = Run("flatpak", $"build-finish \"{tmpAppDir}\" --command={plan.CommandName} --socket=wayland --socket=x11 --socket=pulseaudio --share=network --share=ipc --device=dri --filesystem=home");
+                if (finish.IsSuccess)
+                {
+                    var export = Run("flatpak", $"build-export --arch={arch} \"{tmpRepoDir}\" \"{tmpAppDir}\" stable");
+                    if (export.IsSuccess)
+                    {
+                        var bundle = Run("flatpak", $"build-bundle \"{tmpRepoDir}\" \"{outPath}\" {plan.AppId} stable --arch={arch}");
+                        if (bundle.IsSuccess)
+                        {
+                            Console.WriteLine(outPath);
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Fallback: internal bundler
+            var internalBytes = FlatpakBundle.CreateOstree(plan);
+            if (internalBytes.IsFailure)
+            {
+                Console.Error.WriteLine(internalBytes.Error);
+                return;
+            }
+            var writeRes = await internalBytes.Value.WriteTo(outPath);
+            if (writeRes.IsFailure)
+            {
+                Console.Error.WriteLine(writeRes.Error);
+            }
+            else
+            {
+                Console.WriteLine(outPath);
+            }
+        }, packInputDir, packOutputDir);
+        
+        flatpakCommand.AddCommand(packCmd);
     }
 
     private static Task CreateAppDir(DirectoryInfo inputDir, DirectoryInfo outputDir, Options options)

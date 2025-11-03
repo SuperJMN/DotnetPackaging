@@ -10,7 +10,7 @@ public class FlatpakOptions
     public string Runtime { get; init; } = "org.freedesktop.Platform";
     public string Sdk { get; init; } = "org.freedesktop.Sdk";
     public string Branch { get; init; } = "stable";
-    public string RuntimeVersion { get; init; } = "23.08";
+    public string RuntimeVersion { get; init; } = "24.08";
 
     // Permissions (Context)
     public IEnumerable<string> Shared { get; init; } = new[] { "network", "ipc" };
