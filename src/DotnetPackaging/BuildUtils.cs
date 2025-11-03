@@ -71,7 +71,8 @@ public static class BuildUtils
         var svgIcon = iconPlan.Svg.Map(svg => (IByteSource)svg);
         var icon = discoveredIcon;
         var version = setup.Version.GetValueOrDefault("1.0.0");
-        var defaultName = containerName.GetValueOrDefault(exec.Name);
+        var suggestedName = containerName.GetValueOrDefault(exec.Name);
+        var defaultName = HumanizeAppName(StripCommonSuffixes(suggestedName));
         var name = setup.Name.GetValueOrDefault(defaultName);
 
         var packageMetadata = new PackageMetadata(name, architecture, isTerminal, package, version)
@@ -221,5 +222,33 @@ public static class BuildUtils
         }
 
         return Maybe.From("No description provided");
+    }
+
+    private static string StripCommonSuffixes(string name)
+    {
+        var s = name;
+        // Remove common build/publish suffixes
+        var patterns = new[] { "-publish", "_publish", " publish", "-appdir", "_appdir", " appdir" };
+        foreach (var p in patterns)
+        {
+            if (s.EndsWith(p, StringComparison.OrdinalIgnoreCase))
+            {
+                s = s.Substring(0, s.Length - p.Length);
+                break;
+            }
+        }
+        return s;
+    }
+
+    private static string HumanizeAppName(string value)
+    {
+        // Replace separators with spaces
+        var cleaned = Regex.Replace(value, "[._-]+", " ");
+        cleaned = Regex.Replace(cleaned, "\\s+", " ").Trim();
+        // Title case
+        var lower = cleaned.ToLowerInvariant();
+        var ti = System.Globalization.CultureInfo.CurrentCulture.TextInfo;
+        var titled = ti.ToTitleCase(lower);
+        return titled;
     }
 }
