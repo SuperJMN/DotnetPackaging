@@ -5,11 +5,13 @@ using DotnetPackaging.AppImage;
 using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.AppImage.Metadata;
 using DotnetPackaging.Deb;
+using DotnetPackaging.Flatpak;
 using Serilog;
 using Zafiro.DataModel;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
 using Zafiro.FileSystem.Core;
+using System.Diagnostics;
 
 namespace DotnetPackaging.Tool;
 
@@ -52,6 +54,11 @@ static class Program
         // Add subcommands for AppImage
         AddAppImageSubcommands(appImageCommand);
         rootCommand.AddCommand(appImageCommand);
+
+        // Flatpak command
+        var flatpakCommand = new Command("flatpak", "Flatpak packaging: generate layout, OSTree repo, or bundle (.flatpak). Can use system flatpak or internal bundler.");
+        AddFlatpakSubcommands(flatpakCommand);
+        rootCommand.AddCommand(flatpakCommand);
         
         return rootCommand.InvokeAsync(args);
     }
@@ -274,6 +281,164 @@ static class Program
         appImageCommand.AddCommand(fromAppDirCmd);
     }
 
+    private static void AddFlatpakSubcommands(Command flatpakCommand)
+    {
+        // Options reused for metadata
+        var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
+        var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
+        var mainCategory = new Option<MainCategory?>("--main-category", "Main category") { IsRequired = false, Arity = ArgumentArity.ZeroOrOne };
+        var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories", "Additional categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var keywords = new Option<IEnumerable<string>>("--keywords", "Keywords") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
+        var version = new Option<string>("--version", "Version") { IsRequired = false };
+        var homePage = new Option<Uri>("--homepage", "Home page of the application") { IsRequired = false };
+        var license = new Option<string>("--license", "License of the application") { IsRequired = false };
+        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls", "Screenshot URLs") { IsRequired = false };
+        var summary = new Option<string>("--summary", "Summary. Short description that should not end in a dot.") { IsRequired = false };
+        var appId = new Option<string>("--appId", "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication") { IsRequired = false };
+        var executableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
+        var isTerminal = new Option<bool>("--is-terminal", "Indicates whether your application is a terminal application") { IsRequired = false };
+        var iconOption = new Option<IIcon?>("--icon", GetIcon )
+        {
+            IsRequired = false,
+            Description = "Path to the application icon"
+        };
+
+        var binder = new OptionsBinder(
+            appName,
+            startupWmClass,
+            keywords,
+            comment,
+            mainCategory,
+            additionalCategories,
+            iconOption,
+            version,
+            homePage,
+            license,
+            screenshotUrls,
+            summary,
+            appId,
+            executableName,
+            isTerminal);
+
+        // Flatpak-specific options
+        var fpRuntime = new Option<string>("--runtime", () => "org.freedesktop.Platform", "Flatpak runtime (e.g. org.freedesktop.Platform)");
+        var fpSdk = new Option<string>("--sdk", () => "org.freedesktop.Sdk", "Flatpak SDK (e.g. org.freedesktop.Sdk)");
+        var fpBranch = new Option<string>("--branch", () => "stable", "Flatpak branch (e.g. stable)");
+        var fpRuntimeVersion = new Option<string>("--runtime-version", () => "23.08", "Flatpak runtime version");
+        var fpShared = new Option<IEnumerable<string>>("--shared", () => new[] { "network", "ipc" }, "Flatpak [Context] shared permissions") { AllowMultipleArgumentsPerToken = true };
+        var fpSockets = new Option<IEnumerable<string>>("--sockets", () => new[] { "wayland", "x11", "pulseaudio" }, "Flatpak [Context] sockets") { AllowMultipleArgumentsPerToken = true };
+        var fpDevices = new Option<IEnumerable<string>>("--devices", () => new[] { "dri" }, "Flatpak [Context] devices") { AllowMultipleArgumentsPerToken = true };
+        var fpFilesystems = new Option<IEnumerable<string>>("--filesystems", () => new[] { "home" }, "Flatpak [Context] filesystems") { AllowMultipleArgumentsPerToken = true };
+        var fpArch = new Option<string?>("--arch", "Override architecture (x86_64, aarch64, i386, armhf)");
+        var fpCommandOverride = new Option<string?>("--command", "Override command name inside Flatpak (defaults to AppId)");
+
+        var inputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
+        var outputDir = new Option<DirectoryInfo>("--output-dir", "Destination directory for the Flatpak layout") { IsRequired = true };
+        var layoutCmd = new Command("layout", "Creates a Flatpak layout (metadata, files/) from a published directory.");
+        layoutCmd.AddOption(inputDir);
+        layoutCmd.AddOption(outputDir);
+        layoutCmd.AddOption(appName);
+        layoutCmd.AddOption(startupWmClass);
+        layoutCmd.AddOption(mainCategory);
+        layoutCmd.AddOption(additionalCategories);
+        layoutCmd.AddOption(keywords);
+        layoutCmd.AddOption(comment);
+        layoutCmd.AddOption(version);
+        layoutCmd.AddOption(homePage);
+        layoutCmd.AddOption(license);
+        layoutCmd.AddOption(screenshotUrls);
+        layoutCmd.AddOption(summary);
+        layoutCmd.AddOption(appId);
+        layoutCmd.AddOption(executableName);
+        layoutCmd.AddOption(isTerminal);
+        layoutCmd.AddOption(iconOption);
+        layoutCmd.AddOption(fpRuntime);
+        layoutCmd.AddOption(fpSdk);
+        layoutCmd.AddOption(fpBranch);
+        layoutCmd.AddOption(fpRuntimeVersion);
+        layoutCmd.AddOption(fpShared);
+        layoutCmd.AddOption(fpSockets);
+        layoutCmd.AddOption(fpDevices);
+        layoutCmd.AddOption(fpFilesystems);
+        layoutCmd.AddOption(fpArch);
+        layoutCmd.AddOption(fpCommandOverride);
+        var fpBinder = new FlatpakOptionsBinder(fpRuntime, fpSdk, fpBranch, fpRuntimeVersion, fpShared, fpSockets, fpDevices, fpFilesystems, fpArch, fpCommandOverride);
+        layoutCmd.SetHandler(CreateFlatpakLayout, inputDir, outputDir, binder, fpBinder);
+
+        flatpakCommand.AddCommand(layoutCmd);
+
+        var bundleInputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
+        var bundleOutput = new Option<FileInfo>("--output", "Output .flatpak file") { IsRequired = true };
+        var bundleCmd = new Command("bundle", "Creates a single-file .flatpak bundle from a published directory. By default uses internal bundler; pass --system to use installed flatpak.");
+        bundleCmd.AddOption(bundleInputDir);
+        bundleCmd.AddOption(bundleOutput);
+        var useSystem = new Option<bool>("--system", "Use system 'flatpak' (build-export/build-bundle) if available");
+        bundleCmd.AddOption(useSystem);
+        bundleCmd.AddOption(appName);
+        bundleCmd.AddOption(startupWmClass);
+        bundleCmd.AddOption(mainCategory);
+        bundleCmd.AddOption(additionalCategories);
+        bundleCmd.AddOption(keywords);
+        bundleCmd.AddOption(comment);
+        bundleCmd.AddOption(version);
+        bundleCmd.AddOption(homePage);
+        bundleCmd.AddOption(license);
+        bundleCmd.AddOption(screenshotUrls);
+        bundleCmd.AddOption(summary);
+        bundleCmd.AddOption(appId);
+        bundleCmd.AddOption(executableName);
+        bundleCmd.AddOption(isTerminal);
+        bundleCmd.AddOption(iconOption);
+        bundleCmd.AddOption(fpRuntime);
+        bundleCmd.AddOption(fpSdk);
+        bundleCmd.AddOption(fpBranch);
+        bundleCmd.AddOption(fpRuntimeVersion);
+        bundleCmd.AddOption(fpShared);
+        bundleCmd.AddOption(fpSockets);
+        bundleCmd.AddOption(fpDevices);
+        bundleCmd.AddOption(fpFilesystems);
+        bundleCmd.AddOption(fpArch);
+        bundleCmd.AddOption(fpCommandOverride);
+        bundleCmd.SetHandler(CreateFlatpakBundle, bundleInputDir, bundleOutput, useSystem, binder, fpBinder);
+
+        flatpakCommand.AddCommand(bundleCmd);
+
+        var repoInputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
+        var repoOutDir = new Option<DirectoryInfo>("--output-dir", "Destination directory for the OSTree repo") { IsRequired = true };
+        var repoCmd = new Command("repo", "Creates an OSTree repo directory from a published directory (debug/validation).");
+        repoCmd.AddOption(repoInputDir);
+        repoCmd.AddOption(repoOutDir);
+        repoCmd.AddOption(appName);
+        repoCmd.AddOption(startupWmClass);
+        repoCmd.AddOption(mainCategory);
+        repoCmd.AddOption(additionalCategories);
+        repoCmd.AddOption(keywords);
+        repoCmd.AddOption(comment);
+        repoCmd.AddOption(version);
+        repoCmd.AddOption(homePage);
+        repoCmd.AddOption(license);
+        repoCmd.AddOption(screenshotUrls);
+        repoCmd.AddOption(summary);
+        repoCmd.AddOption(appId);
+        repoCmd.AddOption(executableName);
+        repoCmd.AddOption(isTerminal);
+        repoCmd.AddOption(iconOption);
+        repoCmd.AddOption(fpRuntime);
+        repoCmd.AddOption(fpSdk);
+        repoCmd.AddOption(fpBranch);
+        repoCmd.AddOption(fpRuntimeVersion);
+        repoCmd.AddOption(fpShared);
+        repoCmd.AddOption(fpSockets);
+        repoCmd.AddOption(fpDevices);
+        repoCmd.AddOption(fpFilesystems);
+        repoCmd.AddOption(fpArch);
+        repoCmd.AddOption(fpCommandOverride);
+        repoCmd.SetHandler(CreateFlatpakRepo, repoInputDir, repoOutDir, binder, fpBinder);
+
+        flatpakCommand.AddCommand(repoCmd);
+    }
+
     private static Task CreateAppDir(DirectoryInfo inputDir, DirectoryInfo outputDir, Options options)
     {
         var dirInfo = FileSystem.DirectoryInfo.New(inputDir.FullName);
@@ -285,6 +450,85 @@ static class Program
 
         return factory.BuildAppDir(root, metadata)
             .Bind(rootDir => rootDir.WriteTo(outputDir.FullName))
+            .WriteResult();
+    }
+
+    private static Task CreateFlatpakLayout(DirectoryInfo inputDir, DirectoryInfo outputDir, Options options, FlatpakOptions flatpakOptions)
+    {
+        var dirInfo = FileSystem.DirectoryInfo.New(inputDir.FullName);
+        var container = new DirectoryContainer(dirInfo);
+        var root = container.AsRoot();
+
+        // Build generic metadata from directory
+        var setup = new FromDirectoryOptions();
+        setup.From(options);
+
+        return BuildUtils.GetExecutable(root, setup)
+            .Bind(exec => BuildUtils.GetArch(setup, exec).Map(a => (exec, a)))
+            .Bind(async tuple =>
+            {
+                var pm = await BuildUtils.CreateMetadata(setup, root, tuple.a, tuple.exec, options.IsTerminal.GetValueOrDefault(false), Maybe<string>.From(inputDir.Name));
+                return Result.Success(pm);
+            })
+            .Bind(packageMetadata => new FlatpakFactory().BuildPlan(root, packageMetadata, flatpakOptions))
+            .Bind(plan => plan.ToRootContainer().WriteTo(outputDir.FullName))
+            .WriteResult();
+    }
+
+    private static Task CreateFlatpakBundle(DirectoryInfo inputDir, FileInfo outputFile, bool useSystem, Options options, FlatpakOptions flatpakOptions)
+    {
+        var dirInfo = FileSystem.DirectoryInfo.New(inputDir.FullName);
+        var container = new DirectoryContainer(dirInfo);
+        var root = container.AsRoot();
+
+        var setup = new FromDirectoryOptions();
+        setup.From(options);
+
+        return BuildUtils.GetExecutable(root, setup)
+            .Bind(exec => BuildUtils.GetArch(setup, exec).Map(a => (exec, a)))
+            .Bind(async tuple =>
+            {
+                var pm = await BuildUtils.CreateMetadata(setup, root, tuple.a, tuple.exec, options.IsTerminal.GetValueOrDefault(false), Maybe<string>.From(inputDir.Name));
+                return Result.Success(pm);
+            })
+            .Bind(packageMetadata => new FlatpakFactory().BuildPlan(root, packageMetadata, flatpakOptions))
+            .Bind(plan =>
+            {
+                if (!useSystem)
+                {
+                    return FlatpakBundle.CreateOstree(plan)
+                        .Bind(bytes => bytes.WriteTo(outputFile.FullName));
+                }
+
+                return Result.Success(plan).Bind(async p =>
+                {
+                    var tmpAppDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-app-" + Guid.NewGuid());
+                    var tmpRepoDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-repo-" + Guid.NewGuid());
+                    Directory.CreateDirectory(tmpAppDir);
+                    Directory.CreateDirectory(tmpRepoDir);
+
+                    var write = await p.ToRootContainer().WriteTo(tmpAppDir);
+                    if (write.IsFailure) return Result.Failure(write.Error);
+
+                    // Ensure wrapper and executable are marked executable in the AppDir
+                    var wrapperPath = System.IO.Path.Combine(tmpAppDir, "files", "bin", p.CommandName);
+                    var exePath = System.IO.Path.Combine(tmpAppDir, "files", p.ExecutableTargetPath.Replace('/', System.IO.Path.DirectorySeparatorChar));
+                    MakeExecutable(wrapperPath);
+                    MakeExecutable(exePath);
+
+                    var effArch = flatpakOptions.ArchitectureOverride.GetValueOrDefault(p.Metadata.Architecture).PackagePrefix;
+                    var appId = p.AppId;
+                    var cmd = flatpakOptions.CommandOverride.GetValueOrDefault(p.CommandName);
+                    var finishArgs = $"build-finish \"{tmpAppDir}\" --command={cmd} {string.Join(" ", flatpakOptions.Shared.Select(s => $"--share={s}"))} {string.Join(" ", flatpakOptions.Sockets.Select(s => $"--socket={s}"))} {string.Join(" ", flatpakOptions.Devices.Select(d => $"--device={d}"))} {string.Join(" ", flatpakOptions.Filesystems.Select(f => $"--filesystem={f}"))}";
+                    var finish = Run("flatpak", finishArgs);
+                    if (finish.IsFailure) return Result.Failure(finish.Error);
+                    var export = Run("flatpak", $"build-export --arch={effArch} \"{tmpRepoDir}\" \"{tmpAppDir}\" {flatpakOptions.Branch}");
+                    if (export.IsFailure) return Result.Failure(export.Error);
+                    var bundle = Run("flatpak", $"build-bundle \"{tmpRepoDir}\" \"{outputFile.FullName}\" {appId} {flatpakOptions.Branch} --arch={effArch}");
+                    if (bundle.IsFailure) return Result.Failure(bundle.Error);
+                    return Result.Success();
+                });
+            })
             .WriteResult();
     }
 
@@ -300,6 +544,75 @@ static class Program
             .Bind(x => x.ToByteSource())
             .Bind(source => source.WriteTo(outputFile.FullName))
             .WriteResult();
+    }
+
+    private static Task CreateFlatpakRepo(DirectoryInfo inputDir, DirectoryInfo outputDir, Options options, FlatpakOptions flatpakOptions)
+    {
+        var dirInfo = FileSystem.DirectoryInfo.New(inputDir.FullName);
+        var container = new DirectoryContainer(dirInfo);
+        var root = container.AsRoot();
+
+        var setup = new FromDirectoryOptions();
+        setup.From(options);
+
+        return BuildUtils.GetExecutable(root, setup)
+            .Bind(exec => BuildUtils.GetArch(setup, exec).Map(a => (exec, a)))
+            .Bind(async tuple =>
+            {
+                var pm = await BuildUtils.CreateMetadata(setup, root, tuple.a, tuple.exec, options.IsTerminal.GetValueOrDefault(false), Maybe<string>.From(inputDir.Name));
+                return Result.Success(pm);
+            })
+            .Bind(packageMetadata => new FlatpakFactory().BuildPlan(root, packageMetadata, flatpakOptions))
+            .Bind(plan => DotnetPackaging.Flatpak.Ostree.OstreeRepoBuilder.Build(plan))
+            .Bind(repo => repo.WriteTo(outputDir.FullName))
+            .WriteResult();
+    }
+
+    private static void MakeExecutable(string path)
+    {
+        try
+        {
+            var mode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                       UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                       UnixFileMode.OtherRead | UnixFileMode.OtherExecute;
+            if (System.IO.File.Exists(path))
+            {
+                System.IO.File.SetUnixFileMode(path, mode);
+            }
+        }
+        catch
+        {
+            // ignore; best-effort
+        }
+    }
+
+    private static Result Run(string fileName, string arguments)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            using var proc = Process.Start(psi)!;
+            proc.WaitForExit();
+            if (proc.ExitCode != 0)
+            {
+                var err = proc.StandardError.ReadToEnd();
+                var stdout = proc.StandardOutput.ReadToEnd();
+                return Result.Failure($"{fileName} {arguments}\nExitCode: {proc.ExitCode}\n{stdout}\n{err}");
+            }
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure(ex.Message);
+        }
     }
 
     private static Task CreateDeb(DirectoryInfo inputDir, FileInfo outputFile, Options options)
@@ -335,5 +648,75 @@ static class Program
 
         // For now, do not eagerly parse the icon (async). We rely on auto-detection or later stages.
         return null;
+    }
+    private sealed class FlatpakOptionsBinder : System.CommandLine.Binding.BinderBase<FlatpakOptions>
+    {
+        private readonly Option<string> runtime;
+        private readonly Option<string> sdk;
+        private readonly Option<string> branch;
+        private readonly Option<string> runtimeVersion;
+        private readonly Option<IEnumerable<string>> shared;
+        private readonly Option<IEnumerable<string>> sockets;
+        private readonly Option<IEnumerable<string>> devices;
+        private readonly Option<IEnumerable<string>> filesystems;
+        private readonly Option<string?> arch;
+        private readonly Option<string?> command;
+
+        public FlatpakOptionsBinder(
+            Option<string> runtime,
+            Option<string> sdk,
+            Option<string> branch,
+            Option<string> runtimeVersion,
+            Option<IEnumerable<string>> shared,
+            Option<IEnumerable<string>> sockets,
+            Option<IEnumerable<string>> devices,
+            Option<IEnumerable<string>> filesystems,
+            Option<string?> arch,
+            Option<string?> command)
+        {
+            this.runtime = runtime;
+            this.sdk = sdk;
+            this.branch = branch;
+            this.runtimeVersion = runtimeVersion;
+            this.shared = shared;
+            this.sockets = sockets;
+            this.devices = devices;
+            this.filesystems = filesystems;
+            this.arch = arch;
+            this.command = command;
+        }
+
+        protected override FlatpakOptions GetBoundValue(System.CommandLine.Binding.BindingContext bindingContext)
+        {
+            var pr = bindingContext.ParseResult;
+            var archStr = pr.GetValueForOption(arch);
+            var parsedArch = string.IsNullOrWhiteSpace(archStr) ? null : ParseArchitecture(archStr!);
+            return new FlatpakOptions
+            {
+                Runtime = pr.GetValueForOption(runtime)!,
+                Sdk = pr.GetValueForOption(sdk)!,
+                Branch = pr.GetValueForOption(branch)!,
+                RuntimeVersion = pr.GetValueForOption(runtimeVersion)!,
+                Shared = pr.GetValueForOption(shared)!,
+                Sockets = pr.GetValueForOption(sockets)!,
+                Devices = pr.GetValueForOption(devices)!,
+                Filesystems = pr.GetValueForOption(filesystems)!,
+                ArchitectureOverride = parsedArch == null ? Maybe<Architecture>.None : Maybe<Architecture>.From(parsedArch),
+                CommandOverride = pr.GetValueForOption(command) is { } s && !string.IsNullOrWhiteSpace(s) ? Maybe<string>.From(s) : Maybe<string>.None
+            };
+        }
+    }
+
+    private static Architecture? ParseArchitecture(string value)
+    {
+        var v = value.Trim().ToLowerInvariant();
+        return v switch
+        {
+            "x86_64" or "amd64" or "x64" => Architecture.X64,
+            "aarch64" or "arm64" => Architecture.Arm64,
+            "i386" or "x86" => Architecture.X86,
+            "armhf" or "arm32" => Architecture.Arm32,
+            _ => null
+        };
     }
 }
