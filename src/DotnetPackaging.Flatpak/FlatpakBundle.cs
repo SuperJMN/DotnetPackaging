@@ -41,7 +41,8 @@ public static class FlatpakBundle
         foreach (var res in plan.ToRootContainer().ResourcesWithPathsRecursive())
         {
             var path = NormalizeTarPath($"./{((INamedWithPath)res).FullPath()}");
-            var props = IsExecutable(plan, res) ? Misc.ExecutableFileProperties() : Misc.RegularFileProperties();
+            var baseProps = IsExecutable(plan, res) ? Misc.ExecutableFileProperties() : Misc.RegularFileProperties();
+            var props = baseProps with { OwnerId = 0, GroupId = 0, OwnerUsername = "root", GroupName = "root" };
             files.Add(new FileTarEntry(path, Data.FromByteArray(res.Array()), props));
         }
 
@@ -61,8 +62,8 @@ public static class FlatpakBundle
         var directoryProperties = new TarDirectoryProperties
         {
             FileMode = "755".ToFileMode(),
-            GroupId = 1000,
-            OwnerId = 1000,
+            GroupId = 0,
+            OwnerId = 0,
             GroupName = "root",
             OwnerUsername = "root",
             LastModification = DateTimeOffset.Now
