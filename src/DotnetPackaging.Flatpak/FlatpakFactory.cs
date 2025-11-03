@@ -22,7 +22,7 @@ public class FlatpakFactory
         var executable = executableResult.Value;
         var appId = metadata.Id.GetValueOrDefault($"com.example.{metadata.Package}");
         var commandName = effectiveOptions.CommandOverride.GetValueOrDefault(appId);
-        var executableTargetPath = $"bin/{executable.Name}";
+        var executableTargetPath = ((INamedWithPath)executable).FullPath().ToString().Replace("\\", "/");
 
         // Compute metadata and app ID (Flatpak requires at least two dots)
         // appId computed above
@@ -57,20 +57,15 @@ public class FlatpakFactory
         // Generate the appdata.xml file  
         var appDataXml = TextTemplates.AppStream(metadata);
 
-        // Collect all application files under files/
+        // Collect all application files under files/ preserving original layout
         var applicationFiles = new Dictionary<string, IByteSource>();
         foreach (var res in applicationRoot.ResourcesWithPathsRecursive())
         {
-            var targetPath = $"files/{executableTargetPath}";
-            if (res != executable)
-            {
-                // Preserve original relative layout under files/
-                var full = ((INamedWithPath)res).FullPath().ToString().Replace("\\", "/");
-                targetPath = $"files/{full}";
-            }
+            var full = ((INamedWithPath)res).FullPath().ToString().Replace("\\", "/");
+            var targetPath = $"files/{full}";
             applicationFiles[targetPath] = res;
         }
-        // Add wrapper with commandName -> actual executable
+        // Add wrapper with commandName -> actual executable (kept at original location)
         applicationFiles[$"files/bin/{commandName}"] = ByteSource.FromString(TextTemplates.RunScript($"/app/{executableTargetPath}"));
 
         // Add desktop file under files/share so build-export can pick it
@@ -78,8 +73,8 @@ public class FlatpakFactory
         var desktopTargetPath = $"files/share/applications/{desktopFileName}";
         applicationFiles[desktopTargetPath] = ByteSource.FromString(desktopFile);
 
-        // Add appdata.xml under files/share
-        var appDataFileName = $"{appId}.appdata.xml";  
+        // Add AppStream metadata under files/share (use .metainfo.xml as per spec)
+        var appDataFileName = $"{appId}.metainfo.xml";  
         var appDataTargetPath = $"files/share/metainfo/{appDataFileName}";
         applicationFiles[appDataTargetPath] = ByteSource.FromString(appDataXml);
 
