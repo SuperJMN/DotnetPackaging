@@ -52,7 +52,7 @@ public static class FlatpakBundle
     private static bool IsExecutable(FlatpakBuildPlan plan, INamedByteSourceWithPath res)
     {
         var fullPath = ((INamedWithPath)res).FullPath().ToString().Replace("\\", "/");
-        return string.Equals(fullPath, $"{plan.ExecutableTargetPath}", StringComparison.Ordinal)
+        return string.Equals(fullPath, $"files/{plan.ExecutableTargetPath}", StringComparison.Ordinal)
                || fullPath.EndsWith($"/bin/{plan.CommandName}", StringComparison.Ordinal);
     }
 

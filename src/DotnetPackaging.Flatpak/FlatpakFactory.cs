@@ -59,15 +59,16 @@ public class FlatpakFactory
 
         // Collect all application files under files/
         var applicationFiles = new Dictionary<string, IByteSource>();
-        foreach (var file in applicationRoot.ResourcesWithPathsRecursive())
+        foreach (var res in applicationRoot.ResourcesWithPathsRecursive())
         {
             var targetPath = $"files/{executableTargetPath}";
-            if (file != executable)
+            if (res != executable)
             {
-                // Put other files in the same bin directory
-                targetPath = $"files/bin/{file.Name}";
+                // Preserve original relative layout under files/
+                var full = ((INamedWithPath)res).FullPath().ToString().Replace("\\", "/");
+                targetPath = $"files/{full}";
             }
-            applicationFiles[targetPath] = file;
+            applicationFiles[targetPath] = res;
         }
         // Add wrapper with commandName -> actual executable
         applicationFiles[$"files/bin/{commandName}"] = ByteSource.FromString(TextTemplates.RunScript($"/app/{executableTargetPath}"));
