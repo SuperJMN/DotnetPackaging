@@ -753,27 +753,19 @@ static class Program
                 .Directory(directory)
                 .Configure(configuration => configuration.From(options))
                 .Build()
-                .Bind(rpmFile => CopyRpmToOutput(rpmFile, outputFile)))
+                .Map(rpmPackage => rpmPackage.ToData())
+                .Bind(async data =>
+                {
+                    var directory = outputFile.Directory;
+                    if (directory != null && !directory.Exists)
+                    {
+                        directory.Create();
+                    }
+
+                    await using var stream = outputFile.Open(FileMode.Create);
+                    return await data.DumpTo(stream);
+                }))
             .WriteResult();
-    }
-
-    private static Result CopyRpmToOutput(FileInfo rpmFile, FileInfo outputFile)
-    {
-        try
-        {
-            var directory = outputFile.Directory;
-            if (directory != null && !directory.Exists)
-            {
-                directory.Create();
-            }
-
-            File.Copy(rpmFile.FullName, outputFile.FullName, true);
-            return Result.Success();
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure(ex.Message);
-        }
     }
 
     private static Task CreateDmg(DirectoryInfo inputDir, FileInfo outputFile, Options options)

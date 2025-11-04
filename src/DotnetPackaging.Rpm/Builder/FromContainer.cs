@@ -17,12 +17,12 @@ public class FromContainer
         this.containerName = containerName;
     }
 
-    public async Task<Result<FileInfo>> Build()
+    public async Task<Result<RpmPackage>> Build()
     {
         var executableResult = await BuildUtils.GetExecutable(root, setup);
         if (executableResult.IsFailure)
         {
-            return Result.Failure<FileInfo>(executableResult.Error);
+            return Result.Failure<RpmPackage>(executableResult.Error);
         }
 
         var executable = executableResult.Value;
@@ -30,15 +30,15 @@ public class FromContainer
         var architectureResult = await BuildUtils.GetArch(setup, executable);
         if (architectureResult.IsFailure)
         {
-            return Result.Failure<FileInfo>(architectureResult.Error);
+            return Result.Failure<RpmPackage>(architectureResult.Error);
         }
 
         var architecture = architectureResult.Value;
         Log.Information("Architecture set to {Arch}", architecture);
 
         var metadata = await BuildUtils.CreateMetadata(setup, root, architecture, executable, setup.IsTerminal, containerName);
-        var plan = RpmLayoutBuilder.Build(root, metadata, executable);
+        var entries = RpmLayoutBuilder.Build(root, metadata, executable);
 
-        return await RpmPackager.CreatePackage(metadata, plan);
+        return await RpmPackager.CreatePackage(metadata, entries);
     }
 }

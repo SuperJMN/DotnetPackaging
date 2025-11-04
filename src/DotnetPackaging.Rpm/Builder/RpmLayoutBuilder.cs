@@ -8,7 +8,7 @@ namespace DotnetPackaging.Rpm.Builder;
 
 internal static class RpmLayoutBuilder
 {
-    public static RpmLayout Build(IContainer container, PackageMetadata metadata, INamedByteSourceWithPath executable)
+    public static IReadOnlyList<RpmEntry> Build(IContainer container, PackageMetadata metadata, INamedByteSourceWithPath executable)
     {
         var entries = new List<RpmEntry>();
         var appDir = $"/opt/{metadata.Package}";
@@ -19,7 +19,7 @@ internal static class RpmLayoutBuilder
         entries.AddRange(ImplicitFiles(metadata, execAbsolutePath));
 
         var directoryEntries = BuildDirectoryEntries(entries);
-        return new RpmLayout(directoryEntries.Concat(entries).ToList());
+        return directoryEntries.Concat(entries).ToList();
     }
 
     private static IEnumerable<RpmEntry> FilesFromContainer(IContainer container, PackageMetadata metadata, INamedByteSourceWithPath executable, string appDir)
@@ -123,14 +123,4 @@ internal static class RpmLayoutBuilder
 
         return normalized;
     }
-}
-
-internal record RpmLayout(IReadOnlyList<RpmEntry> Entries);
-
-internal record RpmEntry(string Path, UnixFileProperties Properties, IData? Content, RpmEntryType Type);
-
-internal enum RpmEntryType
-{
-    File,
-    Directory
 }
