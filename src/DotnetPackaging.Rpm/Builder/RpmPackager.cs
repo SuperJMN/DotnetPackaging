@@ -61,7 +61,10 @@ internal static class RpmPackager
             return Result.Failure<FileInfo>("rpmbuild finished successfully but no RPM file was produced.");
         }
 
-        return Result.Success(new FileInfo(rpmFile));
+        var stableLocation = Path.Combine(Path.GetTempPath(), $"dotnetpackaging-{Guid.NewGuid():N}-{Path.GetFileName(rpmFile)}");
+        File.Copy(rpmFile, stableLocation, true);
+
+        return Result.Success(new FileInfo(stableLocation));
     }
 
     private static async Task<Result> StageLayout(RpmLayout layout, string rootFsDir)
