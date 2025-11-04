@@ -6,6 +6,7 @@ using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.AppImage.Metadata;
 using DotnetPackaging.Deb;
 using DotnetPackaging.Flatpak;
+using DotnetPackaging.Rpm;
 using Serilog;
 using Zafiro.DataModel;
 using Zafiro.DivineBytes;
@@ -30,6 +31,7 @@ static class Program
             Description = "Package published .NET applications into Linux-friendly formats.\n\n" +
                           "Available verbs:\n" +
                           "- deb: Build a Debian/Ubuntu .deb installer.\n" +
+                          "- rpm: Build an RPM (.rpm) package for Fedora, openSUSE and similar distributions.\n" +
                           "- appimage: Build a portable AppImage (.AppImage) bundle or work with AppDir workflows.\n\n" +
                           "Tip: run `dotnetpackaging <verb> --help` to see format-specific options."
         };
@@ -43,6 +45,15 @@ static class Program
             "pack-deb",
             "debian");
         rootCommand.AddCommand(debCommand);
+
+        var rpmCommand = CreateCommand(
+            "rpm",
+            "RPM package",
+            ".rpm",
+            CreateRpm,
+            "Create an RPM (.rpm) package suitable for Fedora, openSUSE, and other RPM-based distributions.",
+            "pack-rpm");
+        rootCommand.AddCommand(rpmCommand);
 
         var appImageCommand = CreateCommand(
             "appimage",
@@ -732,6 +743,37 @@ static class Program
                     return await data.DumpTo(fileSystemStream);
                 }))
             .WriteResult();
+    }
+
+    private static Task CreateRpm(DirectoryInfo inputDir, FileInfo outputFile, Options options)
+    {
+        return new Zafiro.FileSystem.Local.Directory(FileSystem.DirectoryInfo.New(inputDir.FullName))
+            .ToDirectory()
+            .Bind(directory => RpmFile.From()
+                .Directory(directory)
+                .Configure(configuration => configuration.From(options))
+                .Build()
+                .Bind(rpmFile => CopyRpmToOutput(rpmFile, outputFile)))
+            .WriteResult();
+    }
+
+    private static Result CopyRpmToOutput(FileInfo rpmFile, FileInfo outputFile)
+    {
+        try
+        {
+            var directory = outputFile.Directory;
+            if (directory != null && !directory.Exists)
+            {
+                directory.Create();
+            }
+
+            File.Copy(rpmFile.FullName, outputFile.FullName, true);
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure(ex.Message);
+        }
     }
 
     private static Task CreateDmg(DirectoryInfo inputDir, FileInfo outputFile, Options options)

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <Import Project="..\Common.props" />
+  <ItemGroup>
+    <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'true'">
+    <ProjectReference Include="..\..\libs\Zafiro\src\Zafiro.FileSystem.Unix\Zafiro.FileSystem.Unix.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'false'">
+    <PackageReference Include="Zafiro.FileSystem.Unix" />
+  </ItemGroup>
+</Project>
