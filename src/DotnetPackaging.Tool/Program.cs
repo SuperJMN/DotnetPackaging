@@ -763,7 +763,7 @@ static class Program
     {
         var project = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
         var rid = new Option<string?>("--rid", "Runtime identifier (e.g. linux-x64, linux-arm64)");
-        var selfContained = new Option<bool>("--self-contained", () => true, "Publish self-contained");
+        var selfContained = new Option<bool>("--self-contained", () => false, "Publish self-contained");
         var configuration = new Option<string>("--configuration", () => "Release", "Build configuration");
         var singleFile = new Option<bool>("--single-file", "Publish single-file");
         var trimmed = new Option<bool>("--trimmed", "Enable trimming");
@@ -814,6 +814,13 @@ static class Program
 
         fromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, FileInfo outFile, Options opt) =>
         {
+            if (sc && string.IsNullOrWhiteSpace(ridVal))
+            {
+                Console.Error.WriteLine("When --self-contained is true, you must specify --rid (e.g., linux-x64). Defaulting self-contained to false otherwise.");
+                Environment.ExitCode = 2;
+                return;
+            }
+
             var publisher = new DotnetPackaging.Publish.DotnetPublisher();
             var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
             {
