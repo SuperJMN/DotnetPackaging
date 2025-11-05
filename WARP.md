@@ -117,6 +117,7 @@ Developer workflow tips
 - RID/self-contained
   - from-project defaults:
     - rpm/deb/appimage/msix: self-contained=true by default. If --rid is omitted, the publisher infers the host RID (linux-x64, win-x64, osx-*, arm64 variants). For cross-RID, pass --rid explicitly.
+    - dmg: requires --rid (osx-x64 or osx-arm64). Host RID inference is intentionally not used to avoid producing non-mac binaries when running on Linux/Windows.
     - flatpak: framework-dependent by default; uses its own runtime. You can still publish self-contained by passing --self-contained and --rid if needed.
 - RPM prerequisites
   - Install rpmbuild tooling: dnf install -y rpm-build (or the equivalent on your distro).

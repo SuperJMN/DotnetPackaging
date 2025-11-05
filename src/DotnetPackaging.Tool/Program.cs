@@ -1234,7 +1234,7 @@ static class Program
     private static void AddDmgFromProjectSubcommand(Command dmgCommand)
     {
         var project = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
-        var rid = new Option<string?>("--rid", "Runtime identifier (e.g. osx-x64, osx-arm64)");
+        var rid = new Option<string?>("--rid", "Runtime identifier (e.g. osx-x64, osx-arm64)") { IsRequired = true };
         var selfContained = new Option<bool>("--self-contained", () => true, "Publish self-contained");
         var configuration = new Option<string>("--configuration", () => "Release", "Build configuration");
         var singleFile = new Option<bool>("--single-file", "Publish single-file");
