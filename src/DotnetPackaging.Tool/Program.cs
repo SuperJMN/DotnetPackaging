@@ -44,6 +44,7 @@ static class Program
             "Create a Debian (.deb) installer for Debian and Ubuntu based distributions.",
             "pack-deb",
             "debian");
+        AddDebFromProjectSubcommand(debCommand);
         rootCommand.AddCommand(debCommand);
 
         var rpmCommand = CreateCommand(
@@ -66,6 +67,7 @@ static class Program
             "pack-appimage");
         // Add subcommands for AppImage
         AddAppImageSubcommands(appImageCommand);
+        AddAppImageFromProjectSubcommand(appImageCommand);
         rootCommand.AddCommand(appImageCommand);
 
         // DMG command (experimental, cross-platform)
@@ -859,6 +861,205 @@ static class Program
         }, project, rid, selfContained, configuration, singleFile, trimmed, output, optionsBinder);
 
         rpmCommand.AddCommand(fromProject);
+    }
+
+    private static void AddDebFromProjectSubcommand(Command debCommand)
+    {
+        var project = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
+        var rid = new Option<string?>("--rid", "Runtime identifier (e.g. linux-x64, linux-arm64)");
+        var selfContained = new Option<bool>("--self-contained", () => false, "Publish self-contained");
+        var configuration = new Option<string>("--configuration", () => "Release", "Build configuration");
+        var singleFile = new Option<bool>("--single-file", "Publish single-file");
+        var trimmed = new Option<bool>("--trimmed", "Enable trimming");
+        var output = new Option<FileInfo>("--output", "Destination path for the generated .deb") { IsRequired = true };
+
+        var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
+        var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
+        var mainCategory = new Option<MainCategory?>("--main-category", "Main category") { IsRequired = false, Arity = ArgumentArity.ZeroOrOne, };
+        var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories", "Additional categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var keywords = new Option<IEnumerable<string>>("--keywords", "Keywords") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
+        var version = new Option<string>("--version", "Version") { IsRequired = false };
+        var homePage = new Option<Uri>("--homepage", "Home page of the application") { IsRequired = false };
+        var license = new Option<string>("--license", "License of the application") { IsRequired = false };
+        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls", "Screenshot URLs") { IsRequired = false };
+        var summary = new Option<string>("--summary", "Summary. Short description that should not end in a dot.") { IsRequired = false };
+        var appId = new Option<string>("--appId", "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication") { IsRequired = false };
+        var executableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
+        var isTerminal = new Option<bool>("--is-terminal", "Indicates whether your application is a terminal application") { IsRequired = false };
+        var iconOption = new Option<IIcon?>("--icon", GetIcon ) { IsRequired = false, Description = "Path to the application icon" };
+
+        var optionsBinder = new OptionsBinder(appName, startupWmClass, keywords, comment, mainCategory, additionalCategories, iconOption, version, homePage, license, screenshotUrls, summary, appId, executableName, isTerminal);
+
+        var fromProject = new Command("from-project", "Publish a .NET project and build a Debian .deb from the published output.");
+        fromProject.AddOption(project);
+        fromProject.AddOption(rid);
+        fromProject.AddOption(selfContained);
+        fromProject.AddOption(configuration);
+        fromProject.AddOption(singleFile);
+        fromProject.AddOption(trimmed);
+        fromProject.AddOption(output);
+        fromProject.AddOption(appName);
+        fromProject.AddOption(startupWmClass);
+        fromProject.AddOption(mainCategory);
+        fromProject.AddOption(additionalCategories);
+        fromProject.AddOption(keywords);
+        fromProject.AddOption(comment);
+        fromProject.AddOption(version);
+        fromProject.AddOption(homePage);
+        fromProject.AddOption(license);
+        fromProject.AddOption(screenshotUrls);
+        fromProject.AddOption(summary);
+        fromProject.AddOption(appId);
+        fromProject.AddOption(executableName);
+        fromProject.AddOption(isTerminal);
+        fromProject.AddOption(iconOption);
+
+        fromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, FileInfo outFile, Options opt) =>
+        {
+            if (sc && string.IsNullOrWhiteSpace(ridVal))
+            {
+                Console.Error.WriteLine("When --self-contained is true, you must specify --rid (e.g., linux-x64). Defaulting self-contained to false otherwise.");
+                Environment.ExitCode = 2;
+                return;
+            }
+
+            var publisher = new DotnetPackaging.Publish.DotnetPublisher();
+            var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
+            {
+                Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
+                SelfContained = sc,
+                Configuration = cfg,
+                SingleFile = sf,
+                Trimmed = tr
+            };
+
+            var pub = await publisher.Publish(req);
+            if (pub.IsFailure)
+            {
+                Console.Error.WriteLine(pub.Error);
+                Environment.ExitCode = 1;
+                return;
+            }
+
+            var container = pub.Value.Container;
+            var name = pub.Value.Name.GetValueOrDefault(null);
+            var built = await Deb.DebFile.From().Container(container, name).Configure(o => o.From(opt)).Build();
+            if (built.IsFailure)
+            {
+                Console.Error.WriteLine(built.Error);
+                Environment.ExitCode = 1;
+                return;
+            }
+
+            var data = DotnetPackaging.Deb.Archives.Deb.DebMixin.ToData(built.Value);
+            await using var fs = outFile.Open(FileMode.Create);
+            var dumpRes = await data.DumpTo(fs);
+            if (dumpRes.IsFailure)
+            {
+                Console.Error.WriteLine(dumpRes.Error);
+                Environment.ExitCode = 1;
+            }
+        }, project, rid, selfContained, configuration, singleFile, trimmed, output, optionsBinder);
+
+        debCommand.AddCommand(fromProject);
+    }
+
+    private static void AddAppImageFromProjectSubcommand(Command appImageCommand)
+    {
+        var project = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
+        var rid = new Option<string?>("--rid", "Runtime identifier (e.g. linux-x64, linux-arm64)");
+        var selfContained = new Option<bool>("--self-contained", () => false, "Publish self-contained");
+        var configuration = new Option<string>("--configuration", () => "Release", "Build configuration");
+        var singleFile = new Option<bool>("--single-file", "Publish single-file");
+        var trimmed = new Option<bool>("--trimmed", "Enable trimming");
+        var output = new Option<FileInfo>("--output", "Output .AppImage file") { IsRequired = true };
+
+        // Reuse metadata options via OptionsBinder
+        var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
+        var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
+        var mainCategory = new Option<MainCategory?>("--main-category", "Main category") { IsRequired = false, Arity = ArgumentArity.ZeroOrOne };
+        var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories", "Additional categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var keywords = new Option<IEnumerable<string>>("--keywords", "Keywords") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
+        var version = new Option<string>("--version", "Version") { IsRequired = false };
+        var homePage = new Option<Uri>("--homepage", "Home page of the application") { IsRequired = false };
+        var license = new Option<string>("--license", "License of the application") { IsRequired = false };
+        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls", "Screenshot URLs") { IsRequired = false };
+        var summary = new Option<string>("--summary", "Summary. Short description that should not end in a dot.") { IsRequired = false };
+        var appId = new Option<string>("--appId", "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication") { IsRequired = false };
+        var executableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
+        var isTerminal = new Option<bool>("--is-terminal", "Indicates whether your application is a terminal application") { IsRequired = false };
+        var iconOption = new Option<IIcon?>("--icon", GetIcon ) { IsRequired = false, Description = "Path to the application icon" };
+
+        var optionsBinder = new OptionsBinder(appName, startupWmClass, keywords, comment, mainCategory, additionalCategories, iconOption, version, homePage, license, screenshotUrls, summary, appId, executableName, isTerminal);
+
+        var fromProject = new Command("from-project", "Publish a .NET project and build an AppImage from the published output.");
+        fromProject.AddOption(project);
+        fromProject.AddOption(rid);
+        fromProject.AddOption(selfContained);
+        fromProject.AddOption(configuration);
+        fromProject.AddOption(singleFile);
+        fromProject.AddOption(trimmed);
+        fromProject.AddOption(output);
+        fromProject.AddOption(appName);
+        fromProject.AddOption(startupWmClass);
+        fromProject.AddOption(mainCategory);
+        fromProject.AddOption(additionalCategories);
+        fromProject.AddOption(keywords);
+        fromProject.AddOption(comment);
+        fromProject.AddOption(version);
+        fromProject.AddOption(homePage);
+        fromProject.AddOption(license);
+        fromProject.AddOption(screenshotUrls);
+        fromProject.AddOption(summary);
+        fromProject.AddOption(appId);
+        fromProject.AddOption(executableName);
+        fromProject.AddOption(isTerminal);
+        fromProject.AddOption(iconOption);
+
+        fromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, FileInfo outFile, Options opt) =>
+        {
+            if (sc && string.IsNullOrWhiteSpace(ridVal))
+            {
+                Console.Error.WriteLine("When --self-contained is true, you must specify --rid (e.g., linux-x64). Defaulting self-contained to false otherwise.");
+                Environment.ExitCode = 2;
+                return;
+            }
+
+            var publisher = new DotnetPackaging.Publish.DotnetPublisher();
+            var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
+            {
+                Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
+                SelfContained = sc,
+                Configuration = cfg,
+                SingleFile = sf,
+                Trimmed = tr
+            };
+
+            var pub = await publisher.Publish(req);
+            if (pub.IsFailure)
+            {
+                Console.Error.WriteLine(pub.Error);
+                Environment.ExitCode = 1;
+                return;
+            }
+
+            var root = pub.Value.Container;
+            var ctxDir = new DirectoryInfo(pub.Value.OutputDirectory);
+            var metadata = BuildAppImageMetadata(opt, ctxDir);
+            var factory = new AppImageFactory();
+            var res = await factory.Create(root, metadata)
+                .Bind(x => x.ToByteSource())
+                .Bind(bytes => bytes.WriteTo(outFile.FullName));
+            if (res.IsFailure)
+            {
+                Console.Error.WriteLine(res.Error);
+                Environment.ExitCode = 1;
+            }
+        }, project, rid, selfContained, configuration, singleFile, trimmed, output, optionsBinder);
+
+        appImageCommand.AddCommand(fromProject);
     }
 
     private static Result CopyRpmToOutput(FileInfo rpmFile, FileInfo outputFile)
