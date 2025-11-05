@@ -18,7 +18,7 @@ internal static class RpmLayoutBuilder
         entries.AddRange(FilesFromContainer(container, metadata, executable, appDir));
         entries.AddRange(ImplicitFiles(metadata, execAbsolutePath));
 
-        var directoryEntries = BuildDirectoryEntries(entries);
+        var directoryEntries = BuildDirectoryEntries(entries, appDir);
         return new RpmLayout(directoryEntries.Concat(entries).ToList());
     }
 
@@ -56,7 +56,7 @@ internal static class RpmLayoutBuilder
         return result;
     }
 
-    private static IEnumerable<RpmEntry> BuildDirectoryEntries(IEnumerable<RpmEntry> entries)
+    private static IEnumerable<RpmEntry> BuildDirectoryEntries(IEnumerable<RpmEntry> entries, string appDir)
     {
         var directoryProperties = UnixFileProperties.RegularDirectoryProperties();
 
@@ -71,6 +71,9 @@ internal static class RpmLayoutBuilder
 
             AddParentDirectories(entry.Path, directories);
         }
+
+        // Only keep directories under the appDir (e.g. /opt/<package>...), to avoid owning system dirs like /usr or /usr/bin
+        directories.RemoveWhere(d => !NormalizePath(d).StartsWith(NormalizePath(appDir) + "/", StringComparison.Ordinal));
 
         return directories
             .OrderBy(path => path.Count(c => c == '/'))
