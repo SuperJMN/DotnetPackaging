@@ -59,6 +59,10 @@ Packaging formats: status and details
   - How it works: builds a Flatpak layout (metadata at root, files/ subtree) from a publish directory; icons auto-detected and installed under files/share/icons/.../apps/<appId>.(svg/png). Desktop Icon is forced to <appId>.
   - Bundling: prefers system `flatpak build-export/build-bundle`; if not available or fails, uses internal bundler to emit a single-file `.flatpak` (unsigned, for testing).
   - Defaults: freedesktop runtime 24.08 (runtime/sdk), branch=stable, common permissions (network/ipc, wayland/x11/pulseaudio, dri, filesystem=home). Command defaults to AppId.
+- DMG .dmg (macOS)
+  - Status: experimental cross-platform builder. Library: src/DotnetPackaging.Dmg.
+  - How it works: emits an ISO9660/Joliet image (UDTO) with optional .app scaffolding if none exists. Special adornments like .VolumeIcon.icns and .background are hoisted to the image root when present.
+  - Notes: intended for simple drag-and-drop installs. Not a full UDIF/UDZO implementation; signing and advanced Finder layouts are out of scope for now.
 
 CLI tool (dotnet tool)
 - Project: src/DotnetPackaging.Tool (PackAsTool=true, ToolCommandName=dotnetpackaging).
@@ -72,9 +76,10 @@ CLI tool (dotnet tool)
   - flatpak: layout, bundle (system or internal), repo, and pack (minimal UX).
   - flatpak from-project: publish a .NET project and build a .flatpak bundle.
   - msix (experimental): msix pack (from directory) and msix from-project.
+  - dmg (experimental): dmg (from directory) and dmg from-project (publishes then builds a .dmg).
 - Common options (all commands share a metadata set):
   - --directory <dir> (required): input directory to package from.
-  - --output <file> (required): output file (.AppImage, .deb, .rpm, .msix, .flatpak).
+  - --output <file> (required): output file (.AppImage, .deb, .rpm, .msix, .flatpak, .dmg).
   - --application-name, --wm-class, --main-category, --additional-categories, --keywords, --comment, --version,
     --homepage, --license, --screenshot-urls, --summary, --appId, --executable-name, --is-terminal, --icon <path>.
 - Examples (from a published folder):
@@ -89,6 +94,8 @@ CLI tool (dotnet tool)
   - Flatpak (project): dotnetpackaging flatpak from-project --project /path/to/MyApp.csproj --output /path/out/MyApp.flatpak --system
   - MSIX (dir, experimental): dotnetpackaging msix pack --directory /path/to/publish --output /path/out/MyApp.msix
   - MSIX (project, experimental): dotnetpackaging msix from-project --project /path/to/MyApp.csproj --output /path/out/MyApp.msix
+  - DMG (dir, experimental): dotnetpackaging dmg --directory /path/to/publish --output /path/out/MyApp.dmg --application-name "MyApp"
+  - DMG (project, experimental): dotnetpackaging dmg from-project --project /path/to/MyApp.csproj --output /path/out/MyApp.dmg --application-name "MyApp"
 
 Tests
 - AppImage tests (test/DotnetPackaging.AppImage.Tests):

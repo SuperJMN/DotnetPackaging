@@ -23,6 +23,7 @@ public static class DmgIsoBuilder
         var hasApp = Directory.EnumerateDirectories(sourceFolder, "*.app", SearchOption.TopDirectoryOnly).Any();
         if (hasApp)
         {
+            // If a pre-built .app exists, copy the directory tree as-is to the image root
             AddDirectoryRecursive(builder, sourceFolder, ".", prefix: null);
         }
         else
@@ -32,13 +33,36 @@ public static class DmgIsoBuilder
             builder.AddDirectory($"{bundle}/Contents");
             builder.AddDirectory($"{bundle}/Contents/MacOS");
 
-            // Copy everything under Contents/MacOS
+            // Copy application payload under Contents/MacOS
             AddDirectoryRecursive(builder, sourceFolder, ".", prefix: $"{bundle}/Contents/MacOS");
+
+            // Hoist DMG adornments (if present) at image root for macOS Finder niceties
+            var volIcon = Path.Combine(sourceFolder, ".VolumeIcon.icns");
+            if (File.Exists(volIcon))
+            {
+                var bytes = File.ReadAllBytes(volIcon);
+                builder.AddFile(".VolumeIcon.icns", new MemoryStream(bytes, writable: false));
+            }
+            var backgroundDir = Path.Combine(sourceFolder, ".background");
+            if (Directory.Exists(backgroundDir))
+            {
+                AddDirectoryRecursive(builder, sourceFolder, ".background", prefix: null);
+            }
 
             // Add a minimal Info.plist
             var exeName = GuessExecutableName(sourceFolder, volumeName);
             var plist = GenerateMinimalPlist(volumeName, exeName);
             builder.AddFile($"{bundle}/Contents/Info.plist", new MemoryStream(Encoding.UTF8.GetBytes(plist), writable: false));
+
+            // Also place top-level files at the image root (convenience), excluding already-hoisted adornments
+            foreach (var file in Directory.EnumerateFiles(sourceFolder))
+            {
+                var name = Path.GetFileName(file);
+                if (name is null) continue;
+                if (name.Equals(".VolumeIcon.icns", StringComparison.OrdinalIgnoreCase)) continue;
+                var bytes = File.ReadAllBytes(file);
+                builder.AddFile(name, new MemoryStream(bytes, writable: false));
+            }
         }
 
         builder.Build(fs);
