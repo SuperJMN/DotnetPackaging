@@ -51,7 +51,8 @@ Packaging formats: status and details
   - Ownership: the package only owns directories under /opt/<package>; system directories (/usr, /usr/bin, etc.) are not owned to avoid conflicts with filesystem packages.
 - MSIX (Windows)
   - Status: experimental/preview. Library: src/DotnetPackaging.Msix with tests in src/DotnetPackaging.Msix.Tests.
-  - Validation: tests unpack resulting MSIX using makeappx tooling in CI-like conditions; end-to-end CLI exposure pending (see TODOs below).
+  - CLI: exposed via msix pack (from directory) and msix from-project (publishes then packs). Assumes a valid AppxManifest.xml and assets are present; metadata generation can be added.
+  - Validation: tests unpack resulting MSIX using makeappx tooling in CI-like conditions.
 - Flatpak (Linux)
   - Status: supported (bundle via system `flatpak`) with internal OSTree bundler fallback.
   - Libraries: src/DotnetPackaging.Flatpak (Factory, Packer, OSTree scaffolding).
@@ -63,20 +64,31 @@ CLI tool (dotnet tool)
 - Project: src/DotnetPackaging.Tool (PackAsTool=true, ToolCommandName=dotnetpackaging).
 - Commands available:
   - appimage: create an AppImage from a directory (typically dotnet publish output). Autodetects executable + architecture; generates metadata and icons.
+  - appimage from-project: publish a .NET project and build an AppImage.
   - deb: create a .deb from a directory (dotnet publish output). Detects executable; generates metadata, .desktop and wrapper.
+  - deb from-project: publish a .NET project and build a .deb.
   - rpm: create an .rpm from a directory (dotnet publish output). Uses rpmbuild; excludes auto-deps under /opt/<package> and avoids owning system dirs.
+  - rpm from-project: publish a .NET project and build an .rpm.
   - flatpak: layout, bundle (system or internal), repo, and pack (minimal UX).
+  - flatpak from-project: publish a .NET project and build a .flatpak bundle.
+  - msix (experimental): msix pack (from directory) and msix from-project.
 - Common options (all commands share a metadata set):
   - --directory <dir> (required): input directory to package from.
-  - --output <file> (required): output file (.AppImage, .deb or .rpm).
+  - --output <file> (required): output file (.AppImage, .deb, .rpm, .msix, .flatpak).
   - --application-name, --wm-class, --main-category, --additional-categories, --keywords, --comment, --version,
     --homepage, --license, --screenshot-urls, --summary, --appId, --executable-name, --is-terminal, --icon <path>.
 - Examples (from a published folder):
-  - AppImage: dotnetpackaging appimage --directory /path/to/publish --output /path/out/MyApp.AppImage --application-name "MyApp"
-  - Deb:      dotnetpackaging deb      --directory /path/to/publish --output /path/out/myapp_1.0.0_amd64.deb --application-name "MyApp"
-  - RPM:      dotnetpackaging rpm      --directory /path/to/publish --output /path/out/myapp-1.0.0-1.x86_64.rpm --application-name "MyApp"
+  - AppImage (dir): dotnetpackaging appimage --directory /path/to/publish --output /path/out/MyApp.AppImage --application-name "MyApp"
+  - AppImage (project): dotnetpackaging appimage from-project --project /path/to/MyApp.csproj --output /path/out/MyApp.AppImage --application-name "MyApp"
+  - Deb (dir):      dotnetpackaging deb      --directory /path/to/publish --output /path/out/myapp_1.0.0_amd64.deb --application-name "MyApp"
+  - Deb (project):  dotnetpackaging deb from-project --project /path/to/MyApp.csproj --output /path/out/myapp_1.0.0_amd64.deb --application-name "MyApp"
+  - RPM (dir):      dotnetpackaging rpm      --directory /path/to/publish --output /path/out/myapp-1.0.0-1.x86_64.rpm --application-name "MyApp"
+  - RPM (project):  dotnetpackaging rpm from-project --project /path/to/MyApp.csproj --output /path/out/myapp-1.0.0-1.x86_64.rpm --application-name "MyApp"
   - Flatpak (minimal): dotnetpackaging flatpak pack --directory /path/to/publish --output-dir /path/out
   - Flatpak (bundle):  dotnetpackaging flatpak bundle --directory /path/to/publish --output /path/out/MyApp.flatpak --system
+  - Flatpak (project): dotnetpackaging flatpak from-project --project /path/to/MyApp.csproj --output /path/out/MyApp.flatpak --system
+  - MSIX (dir, experimental): dotnetpackaging msix pack --directory /path/to/publish --output /path/out/MyApp.msix
+  - MSIX (project, experimental): dotnetpackaging msix from-project --project /path/to/MyApp.csproj --output /path/out/MyApp.msix
 
 Tests
 - AppImage tests (test/DotnetPackaging.AppImage.Tests):
@@ -93,8 +105,12 @@ Tests
 
 Developer workflow tips
 - Publish input
-  - AppImage/Deb/RPM consume a folder produced by dotnet publish. Both framework-dependent and self-contained outputs are supported; for RPM we recommend self-contained to avoid runtime drift.
+  - AppImage/Deb/RPM/Flatpak/MSIX consume a folder produced by dotnet publish. from-project subcommands invoke a minimal publisher and reuse the same pipelines.
   - For AppImage, ensure an ELF executable is present (self-contained single-file publish is acceptable). If not specified, the first eligible ELF is chosen.
+- RID/self-contained
+  - from-project defaults:
+    - rpm/deb/appimage/msix: self-contained=true by default. If --rid is omitted, the publisher infers the host RID (linux-x64, win-x64, osx-*, arm64 variants). For cross-RID, pass --rid explicitly.
+    - flatpak: framework-dependent by default; uses its own runtime. You can still publish self-contained by passing --self-contained and --rid if needed.
 - RPM prerequisites
   - Install rpmbuild tooling: dnf install -y rpm-build (or the equivalent on your distro).
   - The RPM builder excludes auto-deps/provides under /opt/<package> to keep self-contained .NET apps portable and avoid liblttng-ust.so.N issues across distros.
