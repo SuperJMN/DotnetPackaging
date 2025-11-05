@@ -116,7 +116,8 @@ Developer workflow tips
   - For AppImage, ensure an ELF executable is present (self-contained single-file publish is acceptable). If not specified, the first eligible ELF is chosen.
 - RID/self-contained
   - from-project defaults:
-    - rpm/deb/appimage/msix: self-contained=true by default. If --rid is omitted, the publisher infers the host RID (linux-x64, win-x64, osx-*, arm64 variants). For cross-RID, pass --rid explicitly.
+    - rpm/deb/appimage: self-contained=true by default. If running on a non-Linux host, --rid is required (e.g., linux-x64/linux-arm64) to avoid host RID inference.
+    - msix: self-contained=false by default. If running on a non-Windows host, --rid is required (e.g., win-x64/win-arm64).
     - dmg: requires --rid (osx-x64 or osx-arm64). Host RID inference is intentionally not used to avoid producing non-mac binaries when running on Linux/Windows.
     - flatpak: framework-dependent by default; uses its own runtime. You can still publish self-contained by passing --self-contained and --rid if needed.
 - RPM prerequisites

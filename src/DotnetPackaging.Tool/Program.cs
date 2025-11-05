@@ -2,6 +2,7 @@
 using System.CommandLine.Parsing;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage;
+using System.Runtime.InteropServices;
 using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.AppImage.Metadata;
 using DotnetPackaging.Deb;
@@ -923,6 +924,12 @@ static class Program
 
         fromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, FileInfo outFile, Options opt) =>
         {
+            if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                Console.Error.WriteLine("--rid is required when building RPM from-project on non-Linux hosts (e.g., linux-x64/linux-arm64).");
+                Environment.ExitCode = 1;
+                return;
+            }
             var publisher = new DotnetPackaging.Publish.DotnetPublisher();
             var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
             {
@@ -1017,6 +1024,12 @@ static class Program
 
         fromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, FileInfo outFile, Options opt) =>
         {
+            if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                Console.Error.WriteLine("--rid is required when building DEB from-project on non-Linux hosts (e.g., linux-x64/linux-arm64).");
+                Environment.ExitCode = 1;
+                return;
+            }
             var publisher = new DotnetPackaging.Publish.DotnetPublisher();
             var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
             {
@@ -1092,6 +1105,12 @@ static class Program
         fromProject.AddOption(outMsix);
         fromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, FileInfo outFile) =>
         {
+            if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Console.Error.WriteLine("--rid is required when building MSIX from-project on non-Windows hosts (e.g., win-x64/win-arm64).");
+                Environment.ExitCode = 1;
+                return;
+            }
             var publisher = new DotnetPackaging.Publish.DotnetPublisher();
             var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
             {
@@ -1171,6 +1190,12 @@ static class Program
 
         fromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, FileInfo outFile, Options opt) =>
         {
+            if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                Console.Error.WriteLine("--rid is required when building AppImage from-project on non-Linux hosts (e.g., linux-x64/linux-arm64).");
+                Environment.ExitCode = 1;
+                return;
+            }
             var publisher = new DotnetPackaging.Publish.DotnetPublisher();
             var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
             {
