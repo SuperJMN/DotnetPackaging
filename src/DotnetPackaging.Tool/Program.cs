@@ -103,7 +103,13 @@ static class Program
         // Flatpak command
         var flatpakCommand = new Command("flatpak", "Flatpak packaging: generate layout, OSTree repo, or bundle (.flatpak). Can use system flatpak or internal bundler.");
         AddFlatpakSubcommands(flatpakCommand);
+        AddFlatpakFromProjectSubcommand(flatpakCommand);
         rootCommand.AddCommand(flatpakCommand);
+
+        // MSIX command (experimental)
+        var msixCommand = new Command("msix", "MSIX packaging (experimental)");
+        AddMsixSubcommands(msixCommand);
+        rootCommand.AddCommand(msixCommand);
         
         return rootCommand.InvokeAsync(args);
     }
@@ -449,6 +455,101 @@ static class Program
 
         flatpakCommand.AddCommand(bundleCmd);
 
+        // flatpak from-project (bundle)
+        var fpPrj = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
+        var fpOut = new Option<FileInfo>("--output", "Output .flatpak file") { IsRequired = true };
+        var fpUseSystem = new Option<bool>("--system", "Use system 'flatpak' (build-export/build-bundle) if available");
+        var fromProjectCmd = new Command("from-project", "Publish a .NET project and build a .flatpak bundle.");
+        fromProjectCmd.AddOption(fpPrj);
+        fromProjectCmd.AddOption(fpOut);
+        fromProjectCmd.AddOption(fpUseSystem);
+        fromProjectCmd.AddOption(appName);
+        fromProjectCmd.AddOption(startupWmClass);
+        fromProjectCmd.AddOption(mainCategory);
+        fromProjectCmd.AddOption(additionalCategories);
+        fromProjectCmd.AddOption(keywords);
+        fromProjectCmd.AddOption(comment);
+        fromProjectCmd.AddOption(version);
+        fromProjectCmd.AddOption(homePage);
+        fromProjectCmd.AddOption(license);
+        fromProjectCmd.AddOption(screenshotUrls);
+        fromProjectCmd.AddOption(summary);
+        fromProjectCmd.AddOption(appId);
+        fromProjectCmd.AddOption(executableName);
+        fromProjectCmd.AddOption(isTerminal);
+        fromProjectCmd.AddOption(iconOption);
+        fromProjectCmd.AddOption(fpRuntime);
+        fromProjectCmd.AddOption(fpSdk);
+        fromProjectCmd.AddOption(fpBranch);
+        fromProjectCmd.AddOption(fpRuntimeVersion);
+        fromProjectCmd.AddOption(fpShared);
+        fromProjectCmd.AddOption(fpSockets);
+        fromProjectCmd.AddOption(fpDevices);
+        fromProjectCmd.AddOption(fpFilesystems);
+        fromProjectCmd.AddOption(fpArch);
+        fromProjectCmd.AddOption(fpCommandOverride);
+        fromProjectCmd.SetHandler(async (FileInfo prj, FileInfo outFile, bool useSystemBundler, Options opt, FlatpakOptions fopt) =>
+        {
+            var publisher = new DotnetPackaging.Publish.DotnetPublisher();
+            var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
+            {
+                SelfContained = false,
+                Configuration = "Release",
+                SingleFile = false,
+                Trimmed = false
+            };
+            var pub = await publisher.Publish(req);
+            if (pub.IsFailure)
+            {
+                Console.Error.WriteLine(pub.Error);
+                Environment.ExitCode = 1;
+                return;
+            }
+
+            var root = pub.Value.Container;
+            var setup = new FromDirectoryOptions();
+            setup.From(opt);
+
+            var execRes = await BuildUtils.GetExecutable(root, setup);
+            if (execRes.IsFailure) { Console.Error.WriteLine(execRes.Error); return; }
+            var archRes = await BuildUtils.GetArch(setup, execRes.Value);
+            if (archRes.IsFailure) { Console.Error.WriteLine(archRes.Error); return; }
+            var pm = await BuildUtils.CreateMetadata(setup, root, archRes.Value, execRes.Value, opt.IsTerminal.GetValueOrDefault(false), pub.Value.Name);
+            var planRes = await new FlatpakFactory().BuildPlan(root, pm, fopt);
+            if (planRes.IsFailure) { Console.Error.WriteLine(planRes.Error); return; }
+            var plan = planRes.Value;
+
+            if (!useSystemBundler)
+            {
+                var internalBytes = FlatpakBundle.CreateOstree(plan);
+                if (internalBytes.IsFailure) { Console.Error.WriteLine(internalBytes.Error); return; }
+                var wr = await internalBytes.Value.WriteTo(outFile.FullName);
+                if (wr.IsFailure) { Console.Error.WriteLine(wr.Error); return; }
+                Console.WriteLine(outFile.FullName);
+                return;
+            }
+
+            var tmpAppDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-app-" + Guid.NewGuid());
+            var tmpRepoDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-repo-" + Guid.NewGuid());
+            Directory.CreateDirectory(tmpAppDir);
+            Directory.CreateDirectory(tmpRepoDir);
+            var write = await plan.ToRootContainer().WriteTo(tmpAppDir);
+            if (write.IsFailure) { Console.Error.WriteLine(write.Error); return; }
+            MakeExecutable(System.IO.Path.Combine(tmpAppDir, "files", "bin", plan.CommandName));
+            MakeExecutable(System.IO.Path.Combine(tmpAppDir, "files", plan.ExecutableTargetPath.Replace('/', System.IO.Path.DirectorySeparatorChar)));
+            var effArch = fopt.ArchitectureOverride.GetValueOrDefault(plan.Metadata.Architecture).PackagePrefix;
+            var cmd = fopt.CommandOverride.GetValueOrDefault(plan.CommandName);
+            var finish = Run("flatpak", $"build-finish \"{tmpAppDir}\" --command={cmd} {string.Join(" ", fopt.Shared.Select(s => $"--share={s}"))} {string.Join(" ", fopt.Sockets.Select(s => $"--socket={s}"))} {string.Join(" ", fopt.Devices.Select(d => $"--device={d}"))} {string.Join(" ", fopt.Filesystems.Select(f => $"--filesystem={f}"))}");
+            if (finish.IsFailure) { Console.Error.WriteLine(finish.Error); return; }
+            var export = Run("flatpak", $"build-export --arch={effArch} \"{tmpRepoDir}\" \"{tmpAppDir}\" {fopt.Branch}");
+            if (export.IsFailure) { Console.Error.WriteLine(export.Error); return; }
+            var bundle = Run("flatpak", $"build-bundle \"{tmpRepoDir}\" \"{outFile.FullName}\" {plan.AppId} {fopt.Branch} --arch={effArch}");
+            if (bundle.IsFailure) { Console.Error.WriteLine(bundle.Error); return; }
+            Console.WriteLine(outFile.FullName);
+        }, fpPrj, fpOut, fpUseSystem, binder, fpBinder);
+
+        flatpakCommand.AddCommand(fromProjectCmd);
+
         var repoInputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
         var repoOutDir = new Option<DirectoryInfo>("--output-dir", "Destination directory for the OSTree repo") { IsRequired = true };
         var repoCmd = new Command("repo", "Creates an OSTree repo directory from a published directory (debug/validation).");
@@ -761,6 +862,11 @@ static class Program
             .WriteResult();
     }
 
+    private static void AddFlatpakFromProjectSubcommand(Command flatpakCommand)
+    {
+        // Implemented inside AddFlatpakSubcommands for access to shared options; placeholder to satisfy compiler
+    }
+
     private static void AddRpmFromProjectSubcommand(Command rpmCommand)
     {
         var project = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
@@ -963,6 +1069,71 @@ static class Program
         }, project, rid, selfContained, configuration, singleFile, trimmed, output, optionsBinder);
 
         debCommand.AddCommand(fromProject);
+    }
+
+    private static void AddMsixSubcommands(Command msixCommand)
+    {
+        var inputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
+        var outputFile = new Option<FileInfo>("--output", "Output .msix file") { IsRequired = true };
+        var packCmd = new Command("pack", "Create an MSIX from a directory (expects AppxManifest.xml in the tree or pre-baked metadata). Experimental.");
+        packCmd.AddOption(inputDir);
+        packCmd.AddOption(outputFile);
+        packCmd.SetHandler(async (DirectoryInfo inDir, FileInfo outFile) =>
+        {
+            var dirInfo = new System.IO.Abstractions.FileSystem().DirectoryInfo.New(inDir.FullName);
+            var container = new Zafiro.DivineBytes.System.IO.DirectoryContainer(dirInfo);
+            await DotnetPackaging.Msix.Msix.FromDirectory(container, Maybe<Serilog.ILogger>.None)
+                .Bind(bytes => bytes.WriteTo(outFile.FullName))
+                .WriteResult();
+        }, inputDir, outputFile);
+        msixCommand.AddCommand(packCmd);
+
+        var project = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
+        var rid = new Option<string?>("--rid", "Runtime identifier (e.g. win-x64)");
+        var selfContained = new Option<bool>("--self-contained", () => false, "Publish self-contained");
+        var configuration = new Option<string>("--configuration", () => "Release", "Build configuration");
+        var singleFile = new Option<bool>("--single-file", "Publish single-file");
+        var trimmed = new Option<bool>("--trimmed", "Enable trimming");
+        var outMsix = new Option<FileInfo>("--output", "Output .msix file") { IsRequired = true };
+        var fromProject = new Command("from-project", "Publish a .NET project and build an MSIX from the published output (expects manifest/assets).");
+        fromProject.AddOption(project);
+        fromProject.AddOption(rid);
+        fromProject.AddOption(selfContained);
+        fromProject.AddOption(configuration);
+        fromProject.AddOption(singleFile);
+        fromProject.AddOption(trimmed);
+        fromProject.AddOption(outMsix);
+        fromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, FileInfo outFile) =>
+        {
+            if (sc && string.IsNullOrWhiteSpace(ridVal))
+            {
+                Console.Error.WriteLine("When --self-contained is true, you must specify --rid (e.g., win-x64). Defaulting self-contained to false otherwise.");
+                Environment.ExitCode = 2;
+                return;
+            }
+
+            var publisher = new DotnetPackaging.Publish.DotnetPublisher();
+            var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
+            {
+                Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
+                SelfContained = sc,
+                Configuration = cfg,
+                SingleFile = sf,
+                Trimmed = tr
+            };
+            var pub = await publisher.Publish(req);
+            if (pub.IsFailure)
+            {
+                Console.Error.WriteLine(pub.Error);
+                Environment.ExitCode = 1;
+                return;
+            }
+
+            await DotnetPackaging.Msix.Msix.FromDirectory(pub.Value.Container, Maybe<Serilog.ILogger>.None)
+                .Bind(bytes => bytes.WriteTo(outFile.FullName))
+                .WriteResult();
+        }, project, rid, selfContained, configuration, singleFile, trimmed, outMsix);
+        msixCommand.AddCommand(fromProject);
     }
 
     private static void AddAppImageFromProjectSubcommand(Command appImageCommand)
