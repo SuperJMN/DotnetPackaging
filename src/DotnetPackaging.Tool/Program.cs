@@ -78,6 +78,7 @@ static class Program
             CreateDmg,
             "Create a simple macOS disk image (.dmg). Currently uses an ISO/UDF (UDTO) payload for broad compatibility.",
             "pack-dmg");
+        AddDmgFromProjectSubcommand(dmgCommand);
         rootCommand.AddCommand(dmgCommand);
 
         // dmg verify subcommand
@@ -1228,6 +1229,72 @@ static class Program
     {
         var name = options.Name.GetValueOrDefault(inputDir.Name);
         return DotnetPackaging.Dmg.DmgIsoBuilder.Create(inputDir.FullName, outputFile.FullName, name);
+    }
+
+    private static void AddDmgFromProjectSubcommand(Command dmgCommand)
+    {
+        var project = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
+        var rid = new Option<string?>("--rid", "Runtime identifier (e.g. osx-x64, osx-arm64)");
+        var selfContained = new Option<bool>("--self-contained", () => true, "Publish self-contained");
+        var configuration = new Option<string>("--configuration", () => "Release", "Build configuration");
+        var singleFile = new Option<bool>("--single-file", "Publish single-file");
+        var trimmed = new Option<bool>("--trimmed", "Enable trimming");
+        var output = new Option<FileInfo>("--output", "Output .dmg file") { IsRequired = true };
+
+        // Reuse metadata options to get volume name from --application-name if present
+        var appName = new Option<string>("--application-name", "Application name / volume name") { IsRequired = false };
+        var optionsBinder = new OptionsBinder(appName,
+            new Option<string>("--wm-class"),
+            new Option<IEnumerable<string>>("--keywords"),
+            new Option<string>("--comment"),
+            new Option<MainCategory?>("--main-category"),
+            new Option<IEnumerable<AdditionalCategory>>("--additional-categories"),
+            new Option<IIcon?>("--icon", GetIcon),
+            new Option<string>("--version"),
+            new Option<Uri>("--homepage"),
+            new Option<string>("--license"),
+            new Option<IEnumerable<Uri>>("--screenshot-urls"),
+            new Option<string>("--summary"),
+            new Option<string>("--appId"),
+            new Option<string>("--executable-name"),
+            new Option<bool>("--is-terminal"));
+
+        var fromProject = new Command("from-project", "Publish a .NET project and build a .dmg from the published output (.app bundle auto-generated if missing). Experimental.");
+        fromProject.AddOption(project);
+        fromProject.AddOption(rid);
+        fromProject.AddOption(selfContained);
+        fromProject.AddOption(configuration);
+        fromProject.AddOption(singleFile);
+        fromProject.AddOption(trimmed);
+        fromProject.AddOption(output);
+        fromProject.AddOption(appName);
+
+        fromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, FileInfo outFile, Options opt) =>
+        {
+            var publisher = new DotnetPackaging.Publish.DotnetPublisher();
+            var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
+            {
+                Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
+                SelfContained = sc,
+                Configuration = cfg,
+                SingleFile = sf,
+                Trimmed = tr
+            };
+
+            var pub = await publisher.Publish(req);
+            if (pub.IsFailure)
+            {
+                Console.Error.WriteLine(pub.Error);
+                Environment.ExitCode = 1;
+                return;
+            }
+
+            var volName = opt.Name.GetValueOrDefault(pub.Value.Name.GetValueOrDefault("App"));
+            await DotnetPackaging.Dmg.DmgIsoBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName);
+            Log.Information("Success");
+        }, project, rid, selfContained, configuration, singleFile, trimmed, output, optionsBinder);
+
+        dmgCommand.AddCommand(fromProject);
     }
 
     private static IIcon? GetIcon(ArgumentResult result)
