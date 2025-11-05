@@ -43,6 +43,12 @@ Packaging formats: status and details
   - Status: supported and used. Library: src/DotnetPackaging.Deb.
   - How it works: lays out files under /opt/<package>, generates .desktop under /usr/local/share/applications and a wrapper under /usr/local/bin/<package>.
   - Packaging: fully managed (no external dpkg-deb required). Icons are optionally embedded under hicolor/<size>/apps/<package>.png.
+- RPM .rpm (Linux)
+  - Status: supported and used. Library: src/DotnetPackaging.Rpm; exposed via CLI.
+  - How it works: stages files under /opt/<package>, writes a .desktop in /usr/share/applications and a wrapper in /usr/bin/<package>.
+  - Packaging: uses system rpmbuild to assemble the package. Requires rpm-build to be installed locally.
+  - Portability: auto-generated dependency/provides under /opt/<package> are excluded (using %global __requires_exclude_from/__provides_exclude_from), preventing hard Requires like liblttng-ust.so.0 and making self-contained .NET apps install across RPM-based distros.
+  - Ownership: the package only owns directories under /opt/<package>; system directories (/usr, /usr/bin, etc.) are not owned to avoid conflicts with filesystem packages.
 - MSIX (Windows)
   - Status: experimental/preview. Library: src/DotnetPackaging.Msix with tests in src/DotnetPackaging.Msix.Tests.
   - Validation: tests unpack resulting MSIX using makeappx tooling in CI-like conditions; end-to-end CLI exposure pending (see TODOs below).
@@ -54,21 +60,23 @@ Packaging formats: status and details
   - Defaults: freedesktop runtime 24.08 (runtime/sdk), branch=stable, common permissions (network/ipc, wayland/x11/pulseaudio, dri, filesystem=home). Command defaults to AppId.
 
 CLI tool (dotnet tool)
-- Project: src/DotnetPackaging.Console (PackAsTool=true, ToolCommandName=dotnetpackaging).
+- Project: src/DotnetPackaging.Tool (PackAsTool=true, ToolCommandName=dotnetpackaging).
 - Commands available:
   - appimage: create an AppImage from a directory (typically dotnet publish output). Autodetects executable + architecture; generates metadata and icons.
   - deb: create a .deb from a directory (dotnet publish output). Detects executable; generates metadata, .desktop and wrapper.
+  - rpm: create an .rpm from a directory (dotnet publish output). Uses rpmbuild; excludes auto-deps under /opt/<package> and avoids owning system dirs.
   - flatpak: layout, bundle (system or internal), repo, and pack (minimal UX).
 - Common options (all commands share a metadata set):
   - --directory <dir> (required): input directory to package from.
-  - --output <file> (required): output file (.AppImage or .deb).
+  - --output <file> (required): output file (.AppImage, .deb or .rpm).
   - --application-name, --wm-class, --main-category, --additional-categories, --keywords, --comment, --version,
     --homepage, --license, --screenshot-urls, --summary, --appId, --executable-name, --is-terminal, --icon <path>.
 - Examples (from a published folder):
   - AppImage: dotnetpackaging appimage --directory /path/to/publish --output /path/out/MyApp.AppImage --application-name "MyApp"
   - Deb:      dotnetpackaging deb      --directory /path/to/publish --output /path/out/myapp_1.0.0_amd64.deb --application-name "MyApp"
-  - Flatpak (minimal): dotnetpackager flatpak pack --directory /path/to/publish --output-dir /path/out
-  - Flatpak (bundle):  dotnetpackager flatpak bundle --directory /path/to/publish --output /path/out/MyApp.flatpak --system
+  - RPM:      dotnetpackaging rpm      --directory /path/to/publish --output /path/out/myapp-1.0.0-1.x86_64.rpm --application-name "MyApp"
+  - Flatpak (minimal): dotnetpackaging flatpak pack --directory /path/to/publish --output-dir /path/out
+  - Flatpak (bundle):  dotnetpackaging flatpak bundle --directory /path/to/publish --output /path/out/MyApp.flatpak --system
 
 Tests
 - AppImage tests (test/DotnetPackaging.AppImage.Tests):
@@ -85,8 +93,12 @@ Tests
 
 Developer workflow tips
 - Publish input
-  - AppImage/Deb consume a folder produced by dotnet publish. Both framework-dependent and self-contained outputs are supported; self-contained tends to be more robust (fewer runtime surprises), but produces larger images.
+  - AppImage/Deb/RPM consume a folder produced by dotnet publish. Both framework-dependent and self-contained outputs are supported; for RPM we recommend self-contained to avoid runtime drift.
   - For AppImage, ensure an ELF executable is present (self-contained single-file publish is acceptable). If not specified, the first eligible ELF is chosen.
+- RPM prerequisites
+  - Install rpmbuild tooling: dnf install -y rpm-build (or the equivalent on your distro).
+  - The RPM builder excludes auto-deps/provides under /opt/<package> to keep self-contained .NET apps portable and avoid liblttng-ust.so.N issues across distros.
+  - The package does not own system directories; only /opt/<package> and files explicitly installed (wrapper under /usr/bin and .desktop in /usr/share/applications).
 - Icon handling
   - The CLI and libraries attempt to discover icons automatically. You can override via --icon or supply common names in the root (icon.svg, icon-256.png, icon.png).
 - Debug
@@ -95,12 +107,12 @@ Developer workflow tips
 Repository map (relevant)
 - src/DotnetPackaging.AppImage: AppImage core (AppImageFactory, RuntimeFactory, SquashFS).
 - src/DotnetPackaging.Deb: Debian packaging (Tar entries, DebFile).
+- src/DotnetPackaging.Rpm: RPM packaging (layout builder and rpmbuild spec generation).
 - src/DotnetPackaging.Msix: MSIX packaging (builder and helpers).
-- src/DotnetPackaging.Console: CLI (dotnet tool) with commands appimage and deb.
+- src/DotnetPackaging.Tool: CLI (dotnet tool) with commands appimage, deb, rpm, flatpak.
 - test/*: AppImage and Deb tests; src/DotnetPackaging.Msix.Tests for MSIX validation.
 
 Backlog / Future work
 - Expose msix as a first-class command in the CLI.
-- Add CLI E2E tests and hook dotnet test in CI.
+- Add CLI E2E tests (including rpm) and hook dotnet test in CI.
 - Optional: enrich icon detection strategies and metadata mapping (e.g., auto-appId from name + reverse DNS).
-- Optional: support additional formats (e.g., rpm) if needed.

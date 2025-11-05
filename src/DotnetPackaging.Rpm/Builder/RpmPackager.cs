@@ -127,6 +127,11 @@ internal static class RpmPackager
         builder.AppendLine($"Vendor: {vendor}");
         builder.AppendLine($"BuildArch: {buildArch}");
         builder.AppendLine();
+        // Exclude bundled .NET runtime files under /opt/<package> from auto dependency/provides
+        // This prevents rpmbuild from adding hard Requires like liblttng-ust.so.0, making the RPM more portable across RPM-based distros
+        builder.AppendLine($"%global __requires_exclude_from ^/opt/{metadata.Package}/.*$");
+        builder.AppendLine($"%global __provides_exclude_from ^/opt/{metadata.Package}/.*$");
+        builder.AppendLine();
         builder.AppendLine("%description");
         builder.AppendLine(description);
         builder.AppendLine();
