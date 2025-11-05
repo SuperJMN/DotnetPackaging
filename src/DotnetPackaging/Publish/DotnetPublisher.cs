@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using System.IO.Abstractions;
 using Zafiro.DivineBytes;
@@ -66,12 +67,63 @@ public sealed class DotnetPublisher : IPublisher
         var sb = new System.Text.StringBuilder();
         sb.Append($"publish \"{r.ProjectPath}\" ");
         sb.Append($"-c {r.Configuration} ");
-        if (r.Rid.HasValue) sb.Append($"-r {r.Rid.Value} ");
+
+        string? ridToUse = r.Rid.HasValue
+            ? r.Rid.Value
+            : (r.SelfContained ? InferHostRid() : null);
+        if (!string.IsNullOrWhiteSpace(ridToUse))
+        {
+            sb.Append($"-r {ridToUse} ");
+        }
+
         sb.Append(r.SelfContained ? "--self-contained true " : "--self-contained false ");
         if (r.SingleFile) sb.Append("/p:PublishSingleFile=true ");
         if (r.Trimmed) sb.Append("/p:PublishTrimmed=true ");
         sb.Append($"-o \"{outputDir}\"");
         return sb.ToString();
+    }
+
+    private static string? InferHostRid()
+    {
+        try
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return RuntimeInformation.OSArchitecture switch
+                {
+                    System.Runtime.InteropServices.Architecture.X64 => "linux-x64",
+                    System.Runtime.InteropServices.Architecture.Arm64 => "linux-arm64",
+                    System.Runtime.InteropServices.Architecture.X86 => "linux-x86",
+                    System.Runtime.InteropServices.Architecture.Arm => "linux-arm",
+                    _ => null
+                };
+            }
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return RuntimeInformation.OSArchitecture switch
+                {
+                    System.Runtime.InteropServices.Architecture.X64 => "win-x64",
+                    System.Runtime.InteropServices.Architecture.Arm64 => "win-arm64",
+                    System.Runtime.InteropServices.Architecture.X86 => "win-x86",
+                    System.Runtime.InteropServices.Architecture.Arm => "win-arm",
+                    _ => null
+                };
+            }
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return RuntimeInformation.OSArchitecture switch
+                {
+                    System.Runtime.InteropServices.Architecture.X64 => "osx-x64",
+                    System.Runtime.InteropServices.Architecture.Arm64 => "osx-arm64",
+                    _ => null
+                };
+            }
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static async Task<Result> Run(string fileName, string arguments)
