@@ -1170,13 +1170,6 @@ static class Program
 
         fromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, FileInfo outFile, Options opt) =>
         {
-            if (sc && string.IsNullOrWhiteSpace(ridVal))
-            {
-                Console.Error.WriteLine("When --self-contained is true, you must specify --rid (e.g., linux-x64). Defaulting self-contained to false otherwise.");
-                Environment.ExitCode = 2;
-                return;
-            }
-
             var publisher = new DotnetPackaging.Publish.DotnetPublisher();
             var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
             {
