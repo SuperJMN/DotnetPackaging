@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<UseWPF>false</UseWPF>
+		<UseWindowsForms>false</UseWindowsForms>
+		<EnableWindowsTargeting>true</EnableWindowsTargeting>
+		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+		<!-- This project is not packable; it is published per-RID and concatenated by the packer -->
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<AvaloniaResource Include="Assets\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Avalonia.Desktop" />
+	  <PackageReference Include="Avalonia.Fonts.Inter" />
+	  <PackageReference Include="Avalonia.Themes.Fluent" />
+	  <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Condition="'$(Configuration)' == 'Debug' AND '$(TargetFramework)' != 'net8.0-browser'"/>
+	  <PackageReference Include="ReactiveUI.Avalonia" />
+	</ItemGroup>
+</Project>

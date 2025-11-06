@@ -63,6 +63,12 @@ Packaging formats: status and details
   - Status: experimental cross-platform builder. Library: src/DotnetPackaging.Dmg.
   - How it works: emits an ISO9660/Joliet image (UDTO) with optional .app scaffolding if none exists. Special adornments like .VolumeIcon.icns and .background are hoisted to the image root when present.
   - Notes: intended for simple drag-and-drop installs. Not a full UDIF/UDZO implementation; signing and advanced Finder layouts are out of scope for now.
+- Windows EXE (.exe) — preview
+  - Status: preview. Dotnet-only SFX builder. Library: src/DotnetPackaging.Exe. Stub Avalonia: src/DotnetPackaging.InstallerStub (esqueleto WIP).
+  - How it works: produces a self-extracting installer by concatenating [stub.exe][payload.zip][Int64 length]["DPACKEXE1"]. The payload contains metadata.json and Content/ (publish output). The stub leerá metadata y realizará la instalación.
+  - CLI: exe (desde carpeta publish) y exe from-project (publica y empaqueta). --stub es opcional: si el repo está presente, el stub se publica automáticamente por RID; si no, puede pasarse manualmente.
+  - Cross-platform build: el empaquetado (concatenación) funciona desde cualquier SO. El stub se publica por RID (win-x64/win-arm64).
+  - Defaults: self-contained=true al generar desde proyecto; RID obligatorio en hosts no Windows (para auto-publicar el stub).
 
 CLI tool (dotnet tool)
 - Project: src/DotnetPackaging.Tool (PackAsTool=true, ToolCommandName=dotnetpackaging).
@@ -77,6 +83,7 @@ CLI tool (dotnet tool)
   - flatpak from-project: publish a .NET project and build a .flatpak bundle.
   - msix (experimental): msix pack (from directory) and msix from-project.
   - dmg (experimental): dmg (from directory) and dmg from-project (publishes then builds a .dmg).
+  - exe (preview): Windows self-extracting installer (.exe) from directory; and exe from-project (publica y empaqueta). Requiere --stub por ahora.
 - Common options (all commands share a metadata set):
   - --directory <dir> (required): input directory to package from.
   - --output <file> (required): output file (.AppImage, .deb, .rpm, .msix, .flatpak, .dmg).
@@ -96,6 +103,8 @@ CLI tool (dotnet tool)
   - MSIX (project, experimental): dotnetpackaging msix from-project --project /path/to/MyApp.csproj --output /path/out/MyApp.msix
   - DMG (dir, experimental): dotnetpackaging dmg --directory /path/to/publish --output /path/out/MyApp.dmg --application-name "MyApp"
   - DMG (project, experimental): dotnetpackaging dmg from-project --project /path/to/MyApp.csproj --output /path/out/MyApp.dmg --application-name "MyApp"
+  - EXE (preview, dir): dotnetpackaging exe --directory /path/to/win-x64/publish --output /path/out/Setup.exe --rid win-x64 --application-name "MyApp" --appId com.example.myapp --version 1.0.0 --vendor "Vendor"
+  - EXE (preview, project): dotnetpackaging exe from-project --project /path/to/MyApp.csproj --rid win-x64 --output /path/out/Setup.exe --application-name "MyApp" --appId com.example.myapp --version 1.0.0 --vendor "Vendor"
 
 Tests
 - AppImage tests (test/DotnetPackaging.AppImage.Tests):
@@ -141,3 +150,16 @@ Backlog / Future work
 - Expose msix as a first-class command in the CLI.
 - Add CLI E2E tests (including rpm) and hook dotnet test in CI.
 - Optional: enrich icon detection strategies and metadata mapping (e.g., auto-appId from name + reverse DNS).
+
+Windows EXE (.exe) – progress log (snapshot)
+- Done:
+  - Librería DotnetPackaging.Exe con SimpleExePacker (concatena stub + zip + footer).
+  - Comandos CLI: exe (desde carpeta) y exe from-project (publica y empaqueta), ambos requieren --stub por ahora.
+  - Stub Avalonia creado (esqueleto) en src/DotnetPackaging.InstallerStub con lector de payload.
+- Next:
+  - UI: Integrar SlimWizard de Zafiro en el stub (ahora hay UI mínima). Navegación con WizardNavigator y páginas.
+  - Lógica: Elevación UAC y carpeta por defecto en Program Files según arquitectura.
+  - Packer: Publicar stub por RID automáticamente desde el packer (evitar --stub manual).
+  - Detección avanzada de ejecutable e icono (paridad con .deb/.appimage).
+  - Modo silencioso.
+  - Pruebas E2E en Windows.

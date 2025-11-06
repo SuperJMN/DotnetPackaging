@@ -15,10 +15,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Msix", "src
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Other files", "Other files", "{62D724AD-1161-4EE3-AC71-9FFA01690F75}"
 	ProjectSection(SolutionItems) = preProject
-		src\Directory.Build.props = src\Directory.Build.props
-		src\Common.props = src\Common.props
-		Directory.Packages.props = Directory.Packages.props
 		azure-pipelines.yml = azure-pipelines.yml
+		src\Common.props = src\Common.props
+		src\Directory.Build.props = src\Directory.Build.props
+		Directory.Packages.props = Directory.Packages.props
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.AppImage.Tests", "test\DotnetPackaging.AppImage.Tests\DotnetPackaging.AppImage.Tests.csproj", "{DF914DC0-903B-4733-8F85-45F733F2DE5F}"
@@ -39,11 +39,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Tool", "src
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Rpm", "src\DotnetPackaging.Rpm\DotnetPackaging.Rpm.csproj", "{62BDA166-63D6-4B38-B146-A868A392C5FC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Flatpak", "src\\DotnetPackaging.Flatpak\\DotnetPackaging.Flatpak.csproj", "{E9B5F8A1-6E4B-4C58-A5F5-8E2C7A17C2B3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Flatpak", "src\DotnetPackaging.Flatpak\DotnetPackaging.Flatpak.csproj", "{E9B5F8A1-6E4B-4C58-A5F5-8E2C7A17C2B3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Dmg", "src\DotnetPackaging.Dmg\DotnetPackaging.Dmg.csproj", "{ECEE61A8-139B-4637-AAB4-B34182980779}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zafiro.FileSystem.Local", "libs\Zafiro\src\Zafiro.FileSystem.Local\Zafiro.FileSystem.Local.csproj", "{0FE8438A-7B84-43AD-A49E-A0E7AE34303A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.InstallerStub", "src\DotnetPackaging.InstallerStub\DotnetPackaging.InstallerStub.csproj", "{538A5A7E-390A-93C3-9605-E6A477235F61}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -235,6 +237,18 @@ Global
 		{0FE8438A-7B84-43AD-A49E-A0E7AE34303A}.Release|x64.Build.0 = Release|Any CPU
 		{0FE8438A-7B84-43AD-A49E-A0E7AE34303A}.Release|x86.ActiveCfg = Release|Any CPU
 		{0FE8438A-7B84-43AD-A49E-A0E7AE34303A}.Release|x86.Build.0 = Release|Any CPU
+		{538A5A7E-390A-93C3-9605-E6A477235F61}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{538A5A7E-390A-93C3-9605-E6A477235F61}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{538A5A7E-390A-93C3-9605-E6A477235F61}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{538A5A7E-390A-93C3-9605-E6A477235F61}.Debug|x64.Build.0 = Debug|Any CPU
+		{538A5A7E-390A-93C3-9605-E6A477235F61}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{538A5A7E-390A-93C3-9605-E6A477235F61}.Debug|x86.Build.0 = Debug|Any CPU
+		{538A5A7E-390A-93C3-9605-E6A477235F61}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{538A5A7E-390A-93C3-9605-E6A477235F61}.Release|Any CPU.Build.0 = Release|Any CPU
+		{538A5A7E-390A-93C3-9605-E6A477235F61}.Release|x64.ActiveCfg = Release|Any CPU
+		{538A5A7E-390A-93C3-9605-E6A477235F61}.Release|x64.Build.0 = Release|Any CPU
+		{538A5A7E-390A-93C3-9605-E6A477235F61}.Release|x86.ActiveCfg = Release|Any CPU
+		{538A5A7E-390A-93C3-9605-E6A477235F61}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

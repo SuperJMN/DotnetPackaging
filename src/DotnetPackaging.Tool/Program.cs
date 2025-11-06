@@ -14,6 +14,7 @@ using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
 using Zafiro.FileSystem.Core;
 using System.Diagnostics;
+using DotnetPackaging.Exe;
 
 namespace DotnetPackaging.Tool;
 
@@ -112,6 +113,164 @@ static class Program
         var msixCommand = new Command("msix", "MSIX packaging (experimental)");
         AddMsixSubcommands(msixCommand);
         rootCommand.AddCommand(msixCommand);
+
+        // EXE SFX command (preview)
+        var exeCommand = new Command("exe", "Windows self-extracting installer (.exe). Preview: requires a prebuilt stub via --stub.");
+        var exeInputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
+        var exeOutput = new Option<FileInfo>("--output", "Output installer .exe") { IsRequired = true };
+        var stubPath = new Option<FileInfo>("--stub", "Path to the prebuilt stub (WinExe) to concatenate (optional if repo layout is present)");
+        var exRidTop = new Option<string?>("--rid", "Runtime identifier for the stub (win-x64, win-arm64)");
+
+        // Reuse metadata options
+        var exAppName = new Option<string>("--application-name", "Application name") { IsRequired = false };
+        var exComment = new Option<string>("--comment", "Comment / long description") { IsRequired = false };
+        var exVersion = new Option<string>("--version", "Version") { IsRequired = false };
+        var exAppId = new Option<string>("--appId", "Application Id (Reverse DNS typical)") { IsRequired = false };
+        var exVendor = new Option<string>("--vendor", "Vendor/Publisher") { IsRequired = false };
+        var exExecutableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
+        var optionsBinder = new OptionsBinder(
+            exAppName,
+            new Option<string>("--wm-class"),
+            new Option<IEnumerable<string>>("--keywords"),
+            exComment,
+            new Option<MainCategory?>("--main-category"),
+            new Option<IEnumerable<AdditionalCategory>>("--additional-categories"),
+            new Option<IIcon?>("--icon", GetIcon),
+            exVersion,
+            new Option<Uri>("--homepage"),
+            new Option<string>("--license"),
+            new Option<IEnumerable<Uri>>("--screenshot-urls"),
+            new Option<string>("--summary"),
+            exAppId,
+            exExecutableName,
+            new Option<bool>("--is-terminal")
+        );
+
+        exeCommand.AddOption(exeInputDir);
+        exeCommand.AddOption(exeOutput);
+        exeCommand.AddOption(stubPath);
+        exeCommand.AddOption(exAppName);
+        exeCommand.AddOption(exComment);
+        exeCommand.AddOption(exVersion);
+        exeCommand.AddOption(exAppId);
+        exeCommand.AddOption(exVendor);
+        exeCommand.AddOption(exExecutableName);
+        exeCommand.AddOption(exRidTop);
+
+        exeCommand.SetHandler(async (DirectoryInfo inDir, FileInfo outFile, FileInfo? stub, Options opt, string? vendorOpt, string? ridOpt) =>
+        {
+            var meta = BuildInstallerMetadata(opt, inDir, vendorOpt);
+            string? stubExe = stub?.FullName;
+            if (stubExe is null)
+            {
+                var effRid = ResolveWindowsRid(ridOpt);
+                if (effRid is null)
+                {
+                    Console.Error.WriteLine("--rid is required to auto-publish the installer stub when running on non-Windows hosts.");
+                    Environment.ExitCode = 1;
+                    return;
+                }
+                var stubRes = await AutoPublishStub(effRid);
+                if (stubRes.IsFailure)
+                {
+                    Console.Error.WriteLine($"Failed to auto-publish stub: {stubRes.Error}. Provide --stub explicitly.");
+                    Environment.ExitCode = 1;
+                    return;
+                }
+                stubExe = stubRes.Value;
+            }
+
+            var res = await SimpleExePacker.Build(stubExe, inDir.FullName, meta, outFile.FullName);
+            res.WriteResult();
+        }, exeInputDir, exeOutput, stubPath, optionsBinder, exVendor, exRidTop);
+
+        // exe from-project
+        var exProject = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
+        var exRid = new Option<string?>("--rid", "Runtime identifier (e.g. win-x64, win-arm64)");
+        var exSelfContained = new Option<bool>("--self-contained", () => true, "Publish self-contained");
+        var exConfiguration = new Option<string>("--configuration", () => "Release", "Build configuration");
+        var exSingleFile = new Option<bool>("--single-file", "Publish single-file");
+        var exTrimmed = new Option<bool>("--trimmed", "Enable trimming");
+        var exOut = new Option<FileInfo>("--output", "Output installer .exe") { IsRequired = true };
+        var exStub = new Option<FileInfo>("--stub", "Path to the prebuilt stub (WinExe) to concatenate (optional if repo layout is present)");
+
+        var exFromProject = new Command("from-project", "Publish a .NET project and build a Windows self-extracting installer (.exe). Preview: requires --stub.");
+        exFromProject.AddOption(exProject);
+        exFromProject.AddOption(exRid);
+        exFromProject.AddOption(exSelfContained);
+        exFromProject.AddOption(exConfiguration);
+        exFromProject.AddOption(exSingleFile);
+        exFromProject.AddOption(exTrimmed);
+        exFromProject.AddOption(exOut);
+        exFromProject.AddOption(exStub);
+        exFromProject.AddOption(exAppName);
+        exFromProject.AddOption(exComment);
+        exFromProject.AddOption(exVersion);
+        exFromProject.AddOption(exAppId);
+        exFromProject.AddOption(exVendor);
+        exFromProject.AddOption(exExecutableName);
+
+        // Use a compact binder to avoid exceeding SetHandler's supported parameter count
+        var exExtrasBinder = new ExeFromProjectExtraBinder(exOut, exStub, exVendor);
+        exFromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, Options opt, ExeFromProjectExtra extras) =>
+        {
+            var outFile = extras.Output;
+            var stub = extras.Stub;
+            var vendorOpt = extras.Vendor;
+            if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Console.Error.WriteLine("--rid is required when building EXE from-project on non-Windows hosts (e.g., win-x64/win-arm64).");
+                Environment.ExitCode = 1;
+                return;
+            }
+
+            var publisher = new DotnetPackaging.Publish.DotnetPublisher();
+            var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
+            {
+                Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
+                SelfContained = sc,
+                Configuration = cfg,
+                SingleFile = sf,
+                Trimmed = tr
+            };
+            var pub = await publisher.Publish(req);
+            if (pub.IsFailure)
+            {
+                Console.Error.WriteLine(pub.Error);
+                Environment.ExitCode = 1;
+                return;
+            }
+
+            var ctxDir = new DirectoryInfo(pub.Value.OutputDirectory);
+            var meta = BuildInstallerMetadata(opt, ctxDir, vendorOpt);
+
+            string? stubExe = stub?.FullName;
+            if (stubExe is null)
+            {
+                var effRid = ResolveWindowsRid(ridVal);
+                if (effRid is null)
+                {
+                    Console.Error.WriteLine("--rid is required to auto-publish the installer stub when running on non-Windows hosts.");
+                    Environment.ExitCode = 1;
+                    return;
+                }
+                var stubRes = await AutoPublishStub(effRid);
+                if (stubRes.IsFailure)
+                {
+                    Console.Error.WriteLine($"Failed to auto-publish stub: {stubRes.Error}. Provide --stub explicitly.");
+                    Environment.ExitCode = 1;
+                    return;
+                }
+                stubExe = stubRes.Value;
+            }
+
+            var res = await SimpleExePacker.Build(stubExe, pub.Value.OutputDirectory, meta, outFile.FullName);
+            res.WriteResult();
+        }, exProject, exRid, exSelfContained, exConfiguration, exSingleFile, exTrimmed, optionsBinder, exExtrasBinder);
+
+        exeCommand.AddCommand(exFromProject);
+
+        rootCommand.AddCommand(exeCommand);
         
         return rootCommand.InvokeAsync(args);
     }
@@ -240,6 +399,80 @@ static class Program
             IsTerminal = options.IsTerminal.GetValueOrDefault(false),
             Categories = BuildCategories(options)
         };
+    }
+
+    private static InstallerMetadata BuildInstallerMetadata(Options options, DirectoryInfo contextDir, string? vendor)
+    {
+        var appName = options.Name.GetValueOrDefault(contextDir.Name);
+        var packageName = appName.ToLowerInvariant().Replace(" ", "").Replace("-", "");
+        var appId = options.Id.GetValueOrDefault($"com.{packageName}");
+        var version = options.Version.GetValueOrDefault("1.0.0");
+        var exeName = options.ExecutableName.GetValueOrDefault(null);
+        var vendorEff = string.IsNullOrWhiteSpace(vendor) ? "Unknown" : vendor!;
+        return new InstallerMetadata(appId, appName, version, vendorEff, options.Comment.GetValueOrDefault(null), exeName);
+    }
+
+    private static string? ResolveWindowsRid(string? rid)
+    {
+        if (!string.IsNullOrWhiteSpace(rid)) return rid;
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return RuntimeInformation.OSArchitecture == System.Runtime.InteropServices.Architecture.Arm64 ? "win-arm64" : "win-x64";
+        }
+        return null;
+    }
+
+    private static async Task<Result<string>> AutoPublishStub(string rid)
+    {
+        try
+        {
+            // Try to locate the stub csproj in a typical repo layout
+            var csproj = FindFileUpwards(Environment.CurrentDirectory, System.IO.Path.Combine("src", "DotnetPackaging.InstallerStub", "DotnetPackaging.InstallerStub.csproj"))
+                         ?? FindFileUpwards(AppContext.BaseDirectory, System.IO.Path.Combine("..", "..", "..", "src", "DotnetPackaging.InstallerStub", "DotnetPackaging.InstallerStub.csproj"));
+            if (csproj is null)
+            {
+                return Result.Failure<string>("Could not find DotnetPackaging.InstallerStub.csproj in repository layout.");
+            }
+
+            var publisher = new DotnetPackaging.Publish.DotnetPublisher();
+            var req = new DotnetPackaging.Publish.ProjectPublishRequest(csproj)
+            {
+                Rid = CSharpFunctionalExtensions.Maybe<string>.From(rid),
+                SelfContained = true,
+                Configuration = "Release",
+                SingleFile = false,
+                Trimmed = false
+            };
+            var pub = await publisher.Publish(req);
+            if (pub.IsFailure)
+                return Result.Failure<string>(pub.Error);
+
+            // pick first .exe from publish root
+            var exe = Directory.EnumerateFiles(pub.Value.OutputDirectory, "*.exe", SearchOption.TopDirectoryOnly).FirstOrDefault()
+                      ?? Directory.EnumerateFiles(pub.Value.OutputDirectory, "*.exe", SearchOption.AllDirectories).FirstOrDefault();
+            if (exe is null) return Result.Failure<string>("No stub .exe found after publishing");
+            return Result.Success(exe);
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure<string>(ex.Message);
+        }
+    }
+
+    private static string? FindFileUpwards(string startDir, string relativePath)
+    {
+        try
+        {
+            var dir = new DirectoryInfo(startDir);
+            while (dir != null)
+            {
+                var candidate = System.IO.Path.Combine(dir.FullName, relativePath);
+                if (File.Exists(candidate)) return System.IO.Path.GetFullPath(candidate);
+                dir = dir.Parent;
+            }
+        }
+        catch { }
+        return null;
     }
 
     private static void AddAppImageSubcommands(Command appImageCommand)
@@ -1393,6 +1626,38 @@ static class Program
                 Filesystems = pr.GetValueForOption(filesystems)!,
                 ArchitectureOverride = parsedArch == null ? Maybe<Architecture>.None : Maybe<Architecture>.From(parsedArch),
                 CommandOverride = pr.GetValueForOption(command) is { } s && !string.IsNullOrWhiteSpace(s) ? Maybe<string>.From(s) : Maybe<string>.None
+            };
+        }
+    }
+
+    private sealed class ExeFromProjectExtra
+    {
+        public required FileInfo Output { get; init; }
+        public FileInfo? Stub { get; init; }
+        public string? Vendor { get; init; }
+    }
+
+    private sealed class ExeFromProjectExtraBinder : System.CommandLine.Binding.BinderBase<ExeFromProjectExtra>
+    {
+        private readonly Option<FileInfo> output;
+        private readonly Option<FileInfo> stub;
+        private readonly Option<string> vendor;
+
+        public ExeFromProjectExtraBinder(Option<FileInfo> output, Option<FileInfo> stub, Option<string> vendor)
+        {
+            this.output = output;
+            this.stub = stub;
+            this.vendor = vendor;
+        }
+
+        protected override ExeFromProjectExtra GetBoundValue(System.CommandLine.Binding.BindingContext bindingContext)
+        {
+            var pr = bindingContext.ParseResult;
+            return new ExeFromProjectExtra
+            {
+                Output = pr.GetValueForOption(output)!,
+                Stub = pr.GetValueForOption(stub),
+                Vendor = pr.GetValueForOption(vendor)
             };
         }
     }

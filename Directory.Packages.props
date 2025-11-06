@@ -5,6 +5,8 @@
     <ZafiroVersion>34.0.2</ZafiroVersion>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="Avalonia.Desktop" Version="11.3.8" />
+    <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.1.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -16,7 +18,15 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
     <PackageVersion Include="NyaFs" Version="1.0.8" />
     <PackageVersion Include="Octokit" Version="14.0.0" />
+    <PackageVersion Include="ReactiveUI.Avalonia" Version="11.3.8" />
     <PackageVersion Include="ReactiveUI.Fody" Version="19.5.41" />
+    <PackageVersion Include="ReactiveUI" Version="19.5.41" />
+    <PackageVersion Include="Avalonia" Version="11.3.6" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.3.8" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.8" />
+    <PackageVersion Include="Avalonia.ReactiveUI" Version="11.3.6" />
+    <PackageVersion Include="Zafiro.Avalonia" Version="$(ZafiroVersion)" />
+    <PackageVersion Include="Zafiro.Avalonia.Dialogs" Version="$(ZafiroVersion)" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.XUnit" Version="3.0.19" />
     <PackageVersion Include="SharpCompress" Version="0.39.0" />
