@@ -1,11 +1,12 @@
+using Avalonia;
 using Avalonia.Controls;
-using Zafiro.UI.Commands;
+using Avalonia.Markup.Xaml;
 
 namespace DotnetPackaging.InstallerStub;
 
-public sealed partial class WizardWindow : Window
+public partial class MainView : UserControl
 {
-    public WizardWindow()
+    public MainView()
     {
         InitializeComponent();
     }

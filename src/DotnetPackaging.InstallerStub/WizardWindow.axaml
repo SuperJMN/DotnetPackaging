@@ -2,35 +2,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:installerStub="clr-namespace:DotnetPackaging.InstallerStub"
+        xmlns:m="clr-namespace:DotnetPackaging.InstallerStub"
         x:Class="DotnetPackaging.InstallerStub.WizardWindow"
         Icon="/Assets/Icon.ico"
-        Width="640" Height="440"
+        Width="800" Height="600"
+        WindowStartupLocation="CenterScreen"
         mc:Ignorable="d"
         Title="{Binding ApplicationName, StringFormat='{}{0} installer'}"
-        x:DataType="installerStub:WizardViewModel">
-  <Window.DataTemplates>
-    <DataTemplate DataType="{x:Type installerStub:OptionsPageVM}">
-      <StackPanel Spacing="8">
-        <TextBlock Text="Choose destination folder" FontWeight="Bold"/>
-        <TextBox Text="{Binding InstallDirectory}"/>
-      </StackPanel>
-    </DataTemplate>
-    <DataTemplate DataType="{x:Type installerStub:InstallPageVM}">
-      <StackPanel Spacing="8">
-        <TextBlock Text="Ready to install" FontWeight="Bold"/>
-        <TextBlock Text="{Binding Status}"/>
-      </StackPanel>
-    </DataTemplate>
-  </Window.DataTemplates>
-  <Grid RowDefinitions="Auto,*,Auto" Margin="12">
-    <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding Wizard.CurrentPage.Title}"/>
-    <Border Grid.Row="1" Margin="0,8,0,8" BorderThickness="1" CornerRadius="6" BorderBrush="#DDD" Padding="12">
-      <ContentControl Content="{Binding Wizard.CurrentPage.Content}"/>
-    </Border>
-    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-      <Button Content="Back" Command="{Binding Wizard.Back}" />
-      <Button Content="Next" Command="{Binding Wizard.Next}" />
-    </StackPanel>
-  </Grid>
+        x:DataType="m:WizardViewModel">
+  
+  <m:MainView />
+  
 </Window>

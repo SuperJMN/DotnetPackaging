@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:installerStub="clr-namespace:DotnetPackaging.InstallerStub"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="DotnetPackaging.InstallerStub.MainView"
+             x:DataType="installerStub:WizardViewModel">
+    
+    <Interaction.Behaviors>
+        <LoadedTrigger>
+            <InvokeCommandAction Command="{Binding LoadWizard}" />
+        </LoadedTrigger>
+    </Interaction.Behaviors>
+    
+    <UserControl.DataTemplates>
+        <DataTemplate DataType="{x:Type installerStub:OptionsPageVM}">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Choose destination folder" FontWeight="Bold"/>
+                <TextBox Text="{Binding InstallDirectory}"/>
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type installerStub:InstallPageVM}">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Ready to install" FontWeight="Bold"/>
+                <TextBlock Text="{Binding Status}"/>
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.DataTemplates>
+    <Frame Navigator="{Binding Navigator}" />
+</UserControl>

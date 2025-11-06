@@ -18,7 +18,11 @@ internal static class Program
                 var log = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-installer-stub-error.txt");
                 System.IO.File.WriteAllText(log, ex.ToString());
             }
-            catch { }
+            catch
+            {
+                // ignored
+            }
+
             throw;
         }
     }

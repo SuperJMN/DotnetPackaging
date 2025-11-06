@@ -145,11 +145,3 @@ internal static class PayloadExtractor
     [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
 }
-
-public sealed record InstallerMetadata(
-    string AppId,
-    string ApplicationName,
-    string Version,
-    string Vendor,
-    string? Description = null,
-    string? ExecutableName = null);
