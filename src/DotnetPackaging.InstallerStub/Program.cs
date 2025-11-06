@@ -29,7 +29,7 @@ internal static class Program
             .UsePlatformDetect()
             .WithInterFont()
 #if DEBUG
-            // .WithDeveloperTools()
+            .WithDeveloperTools()
 #endif
             .UseReactiveUI();
 }

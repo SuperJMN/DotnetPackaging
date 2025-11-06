@@ -9,6 +9,7 @@
 		<EnableWindowsTargeting>true</EnableWindowsTargeting>
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 		<IsPackable>false</IsPackable>
+		<ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -23,10 +24,19 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Avalonia.Desktop" />
-	  <PackageReference Include="Avalonia.Fonts.Inter" />
-	  <PackageReference Include="Avalonia.Themes.Fluent" />
-	  <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Condition="'$(Configuration)' == 'Debug' AND '$(TargetFramework)' != 'net8.0-browser'"/>
-	  <PackageReference Include="ReactiveUI.Avalonia" />
+		<AvaloniaResource Include="Assets\**" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="Assets\Icon.ico" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia.Desktop" />
+		<PackageReference Include="Avalonia.Fonts.Inter" />
+		<PackageReference Include="Avalonia.Themes.Fluent" />
+		<PackageReference Include="AvaloniaUI.DiagnosticsSupport" />
+		<PackageReference Include="ReactiveUI.Avalonia" />
+	</ItemGroup>
+
 </Project>

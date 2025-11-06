@@ -4,9 +4,10 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:installerStub="clr-namespace:DotnetPackaging.InstallerStub"
         x:Class="DotnetPackaging.InstallerStub.WizardWindow"
+        Icon="/Assets/Icon.ico"
         Width="560" Height="360"
         mc:Ignorable="d"
-        Title="Installer"
+        Title="{Binding ApplicationName, StringFormat='{}{0} installer'}"
         x:DataType="installerStub:WizardViewModel">
   <Grid RowDefinitions="Auto,*">
     <StackPanel Orientation="Horizontal" Margin="12" Spacing="8">
