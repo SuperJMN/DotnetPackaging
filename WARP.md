@@ -59,6 +59,10 @@ Packaging formats: status and details
   - How it works: builds a Flatpak layout (metadata at root, files/ subtree) from a publish directory; icons auto-detected and installed under files/share/icons/.../apps/<appId>.(svg/png). Desktop Icon is forced to <appId>.
   - Bundling: prefers system `flatpak build-export/build-bundle`; if not available or fails, uses internal bundler to emit a single-file `.flatpak` (unsigned, for testing).
   - Defaults: freedesktop runtime 24.08 (runtime/sdk), branch=stable, common permissions (network/ipc, wayland/x11/pulseaudio, dri, filesystem=home). Command defaults to AppId.
+- DMG .dmg (macOS)
+  - Status: experimental cross-platform builder. Library: src/DotnetPackaging.Dmg.
+  - How it works: emits an ISO9660/Joliet image (UDTO) with optional .app scaffolding if none exists. Special adornments like .VolumeIcon.icns and .background are hoisted to the image root when present.
+  - Notes: intended for simple drag-and-drop installs. Not a full UDIF/UDZO implementation; signing and advanced Finder layouts are out of scope for now.
 
 CLI tool (dotnet tool)
 - Project: src/DotnetPackaging.Tool (PackAsTool=true, ToolCommandName=dotnetpackaging).
@@ -72,9 +76,10 @@ CLI tool (dotnet tool)
   - flatpak: layout, bundle (system or internal), repo, and pack (minimal UX).
   - flatpak from-project: publish a .NET project and build a .flatpak bundle.
   - msix (experimental): msix pack (from directory) and msix from-project.
+  - dmg (experimental): dmg (from directory) and dmg from-project (publishes then builds a .dmg).
 - Common options (all commands share a metadata set):
   - --directory <dir> (required): input directory to package from.
-  - --output <file> (required): output file (.AppImage, .deb, .rpm, .msix, .flatpak).
+  - --output <file> (required): output file (.AppImage, .deb, .rpm, .msix, .flatpak, .dmg).
   - --application-name, --wm-class, --main-category, --additional-categories, --keywords, --comment, --version,
     --homepage, --license, --screenshot-urls, --summary, --appId, --executable-name, --is-terminal, --icon <path>.
 - Examples (from a published folder):
@@ -89,6 +94,8 @@ CLI tool (dotnet tool)
   - Flatpak (project): dotnetpackaging flatpak from-project --project /path/to/MyApp.csproj --output /path/out/MyApp.flatpak --system
   - MSIX (dir, experimental): dotnetpackaging msix pack --directory /path/to/publish --output /path/out/MyApp.msix
   - MSIX (project, experimental): dotnetpackaging msix from-project --project /path/to/MyApp.csproj --output /path/out/MyApp.msix
+  - DMG (dir, experimental): dotnetpackaging dmg --directory /path/to/publish --output /path/out/MyApp.dmg --application-name "MyApp"
+  - DMG (project, experimental): dotnetpackaging dmg from-project --project /path/to/MyApp.csproj --output /path/out/MyApp.dmg --application-name "MyApp"
 
 Tests
 - AppImage tests (test/DotnetPackaging.AppImage.Tests):
@@ -109,7 +116,9 @@ Developer workflow tips
   - For AppImage, ensure an ELF executable is present (self-contained single-file publish is acceptable). If not specified, the first eligible ELF is chosen.
 - RID/self-contained
   - from-project defaults:
-    - rpm/deb/appimage/msix: self-contained=true by default. If --rid is omitted, the publisher infers the host RID (linux-x64, win-x64, osx-*, arm64 variants). For cross-RID, pass --rid explicitly.
+    - rpm/deb/appimage: self-contained=true by default. If running on a non-Linux host, --rid is required (e.g., linux-x64/linux-arm64) to avoid host RID inference.
+    - msix: self-contained=false by default. If running on a non-Windows host, --rid is required (e.g., win-x64/win-arm64).
+    - dmg: requires --rid (osx-x64 or osx-arm64). Host RID inference is intentionally not used to avoid producing non-mac binaries when running on Linux/Windows.
     - flatpak: framework-dependent by default; uses its own runtime. You can still publish self-contained by passing --self-contained and --rid if needed.
 - RPM prerequisites
   - Install rpmbuild tooling: dnf install -y rpm-build (or the equivalent on your distro).
