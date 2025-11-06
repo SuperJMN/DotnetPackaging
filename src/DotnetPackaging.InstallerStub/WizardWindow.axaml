@@ -4,18 +4,19 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:installerStub="clr-namespace:DotnetPackaging.InstallerStub"
         x:Class="DotnetPackaging.InstallerStub.WizardWindow"
-        Width="640" Height="420"
+        Width="560" Height="360"
         mc:Ignorable="d"
-        Title="Installer" 
+        Title="Installer"
         x:DataType="installerStub:WizardViewModel">
   <Grid RowDefinitions="Auto,*">
-    <TextBlock Margin="12" Text="Installer (preview)"/>
-    <!-- Placeholder: later use z:SlimWizardControl -->
+    <StackPanel Orientation="Horizontal" Margin="12" Spacing="8">
+      <TextBlock Text="Installing:"/>
+      <TextBlock Text="{Binding ApplicationName}" FontWeight="Bold"/>
+    </StackPanel>
     <Border Grid.Row="1" Margin="12" BorderBrush="Gray" BorderThickness="1" CornerRadius="6">
       <ScrollViewer>
         <StackPanel Margin="12" Spacing="12">
-          <TextBlock Text="This is a minimal placeholder wizard. The final version will use Zafiro's SlimWizard."/>
-          <TextBlock Text="Select destination folder:"/>
+          <TextBlock Text="Destination folder:"/>
           <TextBox Text="{Binding InstallDirectory}"/>
           <Button Content="Install" Command="{Binding InstallCommand}"/>
           <TextBlock Text="{Binding Status}"/>

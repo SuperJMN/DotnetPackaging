@@ -79,7 +79,15 @@ public sealed class DotnetPublisher : IPublisher
         sb.Append(r.SelfContained ? "--self-contained true " : "--self-contained false ");
         if (r.SingleFile) sb.Append("/p:PublishSingleFile=true ");
         if (r.Trimmed) sb.Append("/p:PublishTrimmed=true ");
-        sb.Append($"-o \"{outputDir}\"");
+        if (r.MsBuildProperties is not null)
+        {
+            foreach (var kv in r.MsBuildProperties)
+            {
+                var val = kv.Value.Replace("\"", "\\\"");
+                sb.Append($" /p:{kv.Key}=\"{val}\"");
+            }
+        }
+        sb.Append($" -o \"{outputDir}\"");
         return sb.ToString();
     }
 

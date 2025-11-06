@@ -8,12 +8,18 @@
 		<UseWindowsForms>false</UseWindowsForms>
 		<EnableWindowsTargeting>true</EnableWindowsTargeting>
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-		<!-- This project is not packable; it is published per-RID and concatenated by the packer -->
 		<IsPackable>false</IsPackable>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<AvaloniaResource Include="Assets\**" />
+	</ItemGroup>
+
+	<!-- Embed dynamic payload when provided at publish time -->
+	<ItemGroup Condition="'$(InstallerPayload)' != '' and Exists('$(InstallerPayload)')">
+		<EmbeddedResource Include="$(InstallerPayload)">
+			<LogicalName>PAYLOAD</LogicalName>
+		</EmbeddedResource>
 	</ItemGroup>
 
 	<ItemGroup>
