@@ -146,7 +146,7 @@ internal static class PayloadExtractor
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
 }
 
-internal sealed record InstallerMetadata(
+public sealed record InstallerMetadata(
     string AppId,
     string ApplicationName,
     string Version,

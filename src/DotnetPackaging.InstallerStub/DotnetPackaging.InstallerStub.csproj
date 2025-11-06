@@ -32,11 +32,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Avalonia.Desktop" />
-		<PackageReference Include="Avalonia.Fonts.Inter" />
-		<PackageReference Include="Avalonia.Themes.Fluent" />
-		<PackageReference Include="AvaloniaUI.DiagnosticsSupport" />
-		<PackageReference Include="ReactiveUI.Avalonia" />
+	  <PackageReference Include="Avalonia.Desktop" />
+	  <PackageReference Include="Avalonia.Fonts.Inter" />
+	  <PackageReference Include="Avalonia.Themes.Fluent" />
+	  <PackageReference Include="AvaloniaUI.DiagnosticsSupport" />
+	  <PackageReference Include="ReactiveUI.Avalonia" />
+	  <PackageReference Include="Zafiro.Avalonia" />
+	  <PackageReference Include="Zafiro" />
+	  <PackageReference Include="Splat" />
 	</ItemGroup>
 
 </Project>

@@ -27,6 +27,7 @@
     <PackageVersion Include="Avalonia.ReactiveUI" Version="11.3.6" />
     <PackageVersion Include="Zafiro.Avalonia" Version="$(ZafiroVersion)" />
     <PackageVersion Include="Zafiro.Avalonia.Dialogs" Version="$(ZafiroVersion)" />
+    <PackageVersion Include="Splat" Version="17.1.1" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.XUnit" Version="3.0.19" />
     <PackageVersion Include="SharpCompress" Version="0.39.0" />

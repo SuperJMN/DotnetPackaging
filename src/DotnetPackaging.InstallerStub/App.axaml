@@ -3,5 +3,6 @@
              x:Class="DotnetPackaging.InstallerStub.App">
   <Application.Styles>
     <FluentTheme />
+    <StyleInclude Source="avares://Zafiro.Avalonia/Styles.axaml" />
   </Application.Styles>
 </Application>

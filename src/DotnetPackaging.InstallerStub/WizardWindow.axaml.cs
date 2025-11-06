@@ -2,6 +2,9 @@ using Avalonia.Controls;
 using ReactiveUI;
 using System.Reactive;
 using System.Reactive.Linq;
+using CSharpFunctionalExtensions;
+using Zafiro.UI.Wizards.Slim;
+using Zafiro.UI.Wizards.Slim.Builder;
 
 namespace DotnetPackaging.InstallerStub;
 
@@ -36,7 +39,7 @@ public sealed class WizardViewModel : ReactiveObject
         set => this.RaiseAndSetIfChanged(ref status, value);
     }
 
-    public ReactiveCommand<Unit, Unit> InstallCommand { get; }
+    public ISlimWizard<string> Wizard { get; }
 
     public WizardViewModel()
     {
@@ -70,21 +73,30 @@ public sealed class WizardViewModel : ReactiveObject
             status = $"Error reading payload: {ex.Message}";
         }
 
-        InstallCommand = ReactiveCommand.CreateFromTask(Install);
-    }
-
-    private async Task Install()
-    {
-        try
-        {
-            Status = "Installing...";
-            await Task.Run(() => Installer.Install(contentDir, InstallDirectory, metadata));
-            Status = "Installed";
-        }
-        catch (Exception ex)
-        {
-            Status = $"Failed: {ex.Message}";
-        }
+        // Build wizard
+        var options = new OptionsPageVM(installDirectory);
+        Wizard = WizardBuilder
+            .StartWith<OptionsPageVM, string>(() => options, page => Result.Success(page.InstallDirectory), canExecute: null, title: "Destination")
+            .Then<InstallPageVM, string>(
+                dir => new InstallPageVM(metadata, contentDir, dir),
+                (vm, prevDir) =>
+                {
+                    try
+                    {
+                        vm.Status = "Installing...";
+                        Installer.Install(vm.ContentDir, vm.TargetDir, metadata);
+                        vm.Status = "Installed";
+                        return Result.Success("OK");
+                    }
+                    catch (Exception ex)
+                    {
+                        vm.Status = $"Failed: {ex.Message}";
+                        return Result.Failure<string>(ex.Message);
+                    }
+                },
+                canExecute: null,
+                title: "Install")
+            .WithCompletionFinalStep();
     }
 
     private static string SanitizePathPart(string? text)
@@ -93,5 +105,37 @@ public sealed class WizardViewModel : ReactiveObject
         var invalid = System.IO.Path.GetInvalidFileNameChars();
         var sanitized = new string(text.Where(c => !invalid.Contains(c)).ToArray());
         return string.IsNullOrWhiteSpace(sanitized) ? "App" : sanitized;
+    }
+}
+
+public sealed class OptionsPageVM : ReactiveObject
+{
+    private string installDirectory;
+    public OptionsPageVM(string initialDir) { installDirectory = initialDir; }
+    public string InstallDirectory
+    {
+        get => installDirectory;
+        set => this.RaiseAndSetIfChanged(ref installDirectory, value);
+    }
+}
+
+public sealed class InstallPageVM : ReactiveObject
+{
+    public InstallPageVM(InstallerMetadata meta, string contentDir, string targetDir)
+    {
+        Metadata = meta;
+        ContentDir = contentDir;
+        TargetDir = targetDir;
+    }
+
+    public InstallerMetadata Metadata { get; }
+    public string ContentDir { get; }
+    public string TargetDir { get; }
+
+    private string status = "Ready";
+    public string Status
+    {
+        get => status;
+        set => this.RaiseAndSetIfChanged(ref status, value);
     }
 }
