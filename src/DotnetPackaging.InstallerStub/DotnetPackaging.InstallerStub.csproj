@@ -39,7 +39,6 @@
 	  <PackageReference Include="ReactiveUI.Avalonia" />
 	  <PackageReference Include="Zafiro.Avalonia" />
 	  <PackageReference Include="Zafiro" />
-	  <PackageReference Include="Splat" />
 	</ItemGroup>
 
 </Project>

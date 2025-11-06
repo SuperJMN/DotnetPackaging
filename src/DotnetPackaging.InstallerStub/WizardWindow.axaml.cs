@@ -1,8 +1,7 @@
 using Avalonia.Controls;
 using ReactiveUI;
-using System.Reactive;
-using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
+using Zafiro.UI.Commands;
 using Zafiro.UI.Wizards.Slim;
 using Zafiro.UI.Wizards.Slim.Builder;
 
@@ -76,27 +75,29 @@ public sealed class WizardViewModel : ReactiveObject
         // Build wizard
         var options = new OptionsPageVM(installDirectory);
         Wizard = WizardBuilder
-            .StartWith<OptionsPageVM, string>(() => options, page => Result.Success(page.InstallDirectory), canExecute: null, title: "Destination")
-            .Then<InstallPageVM, string>(
-                dir => new InstallPageVM(metadata, contentDir, dir),
-                (vm, prevDir) =>
-                {
-                    try
-                    {
-                        vm.Status = "Installing...";
-                        Installer.Install(vm.ContentDir, vm.TargetDir, metadata);
-                        vm.Status = "Installed";
-                        return Result.Success("OK");
-                    }
-                    catch (Exception ex)
-                    {
-                        vm.Status = $"Failed: {ex.Message}";
-                        return Result.Failure<string>(ex.Message);
-                    }
-                },
-                canExecute: null,
-                title: "Install")
+            .StartWith(() => options, "Destination")
+            .Next(page => page.InstallDirectory)
+            .Always()
+            .Then(dir => new InstallPageVM(metadata, contentDir, dir), "Install")
+            .NextResult((vm, selectedDir) => ExecuteInstall(vm, metadata, selectedDir))
+            .Always()
             .WithCompletionFinalStep();
+    }
+
+    private static Result<string> ExecuteInstall(InstallPageVM vm, InstallerMetadata metadata, string targetDirectory)
+    {
+        try
+        {
+            vm.Status = "Installing...";
+            Installer.Install(vm.ContentDir, targetDirectory, metadata);
+            vm.Status = "Installed";
+            return Result.Success("OK");
+        }
+        catch (Exception ex)
+        {
+            vm.Status = $"Failed: {ex.Message}";
+            return Result.Failure<string>(ex.Message);
+        }
     }
 
     private static string SanitizePathPart(string? text)

@@ -1,8 +1,7 @@
 <Project>
   <PropertyGroup>
     <Nullable>enable</Nullable>
-    <!-- Use local project references in Debug, NuGet packages in Release -->
-    <UseLocalZafiroReferences Condition="'$(UseLocalZafiroReferences)' == ''">true</UseLocalZafiroReferences>
-    <UseLocalZafiroReferences Condition="'$(Configuration)' == 'Release'">false</UseLocalZafiroReferences>
+    <!-- Always use NuGet packages for Zafiro* (no local project references) -->
+    <UseLocalZafiroReferences>false</UseLocalZafiroReferences>
   </PropertyGroup>
 </Project>
