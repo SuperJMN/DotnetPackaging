@@ -29,6 +29,8 @@
                 <TextBlock Text="Selecciona la carpeta de instalación" FontWeight="Bold"/>
                 <TextBlock Text="{Binding Metadata.ApplicationName, StringFormat='Destino para {0}', TargetNullValue='Aplicación no cargada'}" FontStyle="Italic"/>
                 <TextBox Text="{Binding InstallDirectory, Mode=TwoWay}"/>
+                <ProgressBar Minimum="0" Maximum="1" Value="{Binding ProgressFraction}" IsVisible="{Binding IsProgressVisible}" Height="6"/>
+                <TextBlock Text="{Binding ProgressText}" FontStyle="Italic" IsVisible="{Binding IsProgressVisible}"/>
             </StackPanel>
         </DataTemplate>
         <DataTemplate DataType="{x:Type installerStub:CompletionPageVM}">

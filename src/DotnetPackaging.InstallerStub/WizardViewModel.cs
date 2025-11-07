@@ -1,14 +1,17 @@
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using ReactiveUI;
 using Zafiro.Avalonia.Controls.Wizards.Slim;
 using Zafiro.Avalonia.Dialogs;
 using Zafiro.CSharpFunctionalExtensions;
+using Zafiro.UI.Commands;
 using Zafiro.UI.Navigation;
 using Zafiro.UI.Wizards.Slim;
 using Zafiro.UI.Wizards.Slim.Builder;
+using Zafiro.ProgressReporting;
 
 namespace DotnetPackaging.InstallerStub;
 
@@ -92,27 +95,26 @@ public sealed class WizardViewModel : ReactiveObject, IDisposable
                 var installDir = GetDefaultInstallDirectory(payload.Metadata);
                 return new OptionsPageVM(installDir, payload.Metadata);
             }, "Destination")
-            .NextResult((page, payload) => InstallApplication(payload, page.InstallDirectory), "Install")
-            .Always()
+            .NextCommand((page, payload) =>
+            {
+                page.ResetProgress();
+                return EnhancedCommand.Create(() => InstallApplicationAsync(payload, page.InstallDirectory, page.ProgressObserver), text: "Instalar");
+            })
             .Then(result => new CompletionPageVM(result), "Completed")
             .Next(_ => "Done", "Cerrar")
             .Always()
             .WithCompletionFinalStep();
     }
 
-    private Result<InstallationResult> InstallApplication(InstallerPayload payload, string installDir)
+    private static Task<Result<InstallationResult>> InstallApplicationAsync(InstallerPayload payload, string installDir, IObserver<Progress> progressObserver)
     {
-        return PayloadExtractor.ExtractContent(payload)
-            .Bind(contentDir => ExecuteInstall(contentDir, installDir, payload.Metadata));
-    }
-
-    private static Result<InstallationResult> ExecuteInstall(string contentDir, string installDir, InstallerMetadata metadata)
-    {
-        return Result.Try(() =>
-        {
-            var exePath = Installer.Install(contentDir, installDir, metadata);
-            return new InstallationResult(metadata, installDir, exePath);
-        }, ex => ex.Message);
+        return Task.Run(() =>
+            PayloadExtractor.CopyContentTo(payload, installDir, progressObserver)
+                .Bind(() => Result.Try(() =>
+                {
+                    var exePath = Installer.Install(installDir, payload.Metadata);
+                    return new InstallationResult(payload.Metadata, installDir, exePath);
+                }, ex => ex.Message)));
     }
 
     private static string GetDefaultInstallDirectory(InstallerMetadata installerMetadata)

@@ -4,24 +4,15 @@ namespace DotnetPackaging.InstallerStub;
 
 internal static class Installer
 {
-    public static string Install(string contentDir, string targetDir, InstallerMetadata meta)
+    public static string Install(string targetDir, InstallerMetadata meta)
     {
-        // 1) Delete previous install
-        if (Directory.Exists(targetDir))
+        if (!Directory.Exists(targetDir))
         {
-            Directory.Delete(targetDir, true);
+            throw new DirectoryNotFoundException($"Installation directory '{targetDir}' was not found.");
         }
-        Directory.CreateDirectory(targetDir);
 
-        // 2) Copy content
-        CopyRecursive(contentDir, targetDir);
-
-        // 3) Resolve main exe
         var exePath = ResolveMainExe(targetDir, meta);
-
-        // 4) Create Start Menu shortcut (per-user)
         TryCreateShortcut(meta.ApplicationName, exePath);
-
         return exePath;
     }
 
@@ -39,22 +30,6 @@ internal static class Installer
         if (firstExe is null)
             throw new InvalidOperationException("No .exe found in installed content.");
         return firstExe;
-    }
-
-    private static void CopyRecursive(string sourceDir, string destDir)
-    {
-        foreach (var dir in Directory.EnumerateDirectories(sourceDir, "*", SearchOption.AllDirectories))
-        {
-            var rel = Path.GetRelativePath(sourceDir, dir);
-            Directory.CreateDirectory(Path.Combine(destDir, rel));
-        }
-        foreach (var file in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
-        {
-            var rel = Path.GetRelativePath(sourceDir, file);
-            var dest = Path.Combine(destDir, rel);
-            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-            File.Copy(file, dest, overwrite: true);
-        }
     }
 
     private static void TryCreateShortcut(string appName, string targetExe)

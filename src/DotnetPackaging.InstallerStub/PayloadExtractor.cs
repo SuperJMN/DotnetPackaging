@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
+using Zafiro.ProgressReporting;
 
 namespace DotnetPackaging.InstallerStub;
 
@@ -46,24 +47,60 @@ internal static class PayloadExtractor
         return Result.Failure<InstallerPayload>(string.Join(Environment.NewLine, errors.Distinct()));
     }
 
-    public static Result<string> ExtractContent(InstallerPayload payload)
+    public static Result CopyContentTo(InstallerPayload payload, string targetDirectory, IObserver<Progress>? progressObserver)
     {
         return Result.Try(() =>
         {
-            var contentOut = System.IO.Path.Combine(payload.WorkingDirectory, "Content");
-            if (Directory.Exists(contentOut) && Directory.EnumerateFileSystemEntries(contentOut).Any())
+            if (Directory.Exists(targetDirectory))
             {
-                return contentOut;
+                Directory.Delete(targetDirectory, true);
             }
 
-            Directory.CreateDirectory(payload.WorkingDirectory);
+            Directory.CreateDirectory(targetDirectory);
 
             using var stream = payload.Content.ToStreamSeekable();
             using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
-            archive.ExtractToDirectory(payload.WorkingDirectory, true);
 
-            return contentOut;
-        }, ex => $"Error decompressing payload: {ex.Message}");
+            var contentEntries = archive.Entries
+                .Where(IsContentEntry)
+                .ToList();
+
+            var fileEntries = contentEntries.Where(entry => !IsDirectoryEntry(entry));
+            long totalBytes = fileEntries.Sum(entry => entry.Length);
+            long safeTotal = totalBytes == 0 ? 1 : totalBytes;
+            long copiedBytes = 0;
+            var targetRoot = System.IO.Path.GetFullPath(targetDirectory);
+
+            foreach (var entry in contentEntries)
+            {
+                if (!TryGetRelativeContentPath(entry.FullName, out var relativePath))
+                {
+                    continue;
+                }
+
+                var destinationPath = System.IO.Path.Combine(targetDirectory, relativePath);
+                var destinationFullPath = System.IO.Path.GetFullPath(destinationPath);
+                if (!destinationFullPath.StartsWith(targetRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"Payload entry '{entry.FullName}' is outside of the installation directory");
+                }
+
+                if (IsDirectoryEntry(entry))
+                {
+                    Directory.CreateDirectory(destinationFullPath);
+                    continue;
+                }
+
+                Directory.CreateDirectory(System.IO.Path.GetDirectoryName(destinationFullPath)!);
+                using var entryStream = entry.Open();
+                using var fileStream = File.Create(destinationFullPath);
+                entryStream.CopyTo(fileStream);
+
+                copiedBytes += entry.Length;
+                var relativeProgress = new RelativeProgress<long>(safeTotal, copiedBytes);
+                progressObserver?.OnNext(new AbsoluteProgress<RelativeProgress<long>>(relativeProgress));
+            }
+        }, ex => $"Error extracting payload content: {ex.Message}");
     }
 
     private static Func<Result<InstallerPayload>> AttemptLoadPayloadFrom(Func<Maybe<PayloadLocation>> extractor, string missingMessage)
@@ -252,6 +289,42 @@ internal static class PayloadExtractor
             dst.Write(buffer, 0, n);
             remaining -= n;
         }
+    }
+
+    private static bool IsContentEntry(ZipArchiveEntry entry)
+    {
+        return IsContentEntry(entry.FullName);
+    }
+
+    private static bool IsContentEntry(string entryName)
+    {
+        var normalized = entryName.Replace('\\', '/');
+        return normalized.StartsWith("Content/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryGetRelativeContentPath(string entryFullName, out string relativePath)
+    {
+        var normalized = entryFullName.Replace('\\', '/');
+        if (!normalized.StartsWith("Content/", StringComparison.OrdinalIgnoreCase))
+        {
+            relativePath = string.Empty;
+            return false;
+        }
+
+        var slice = normalized.Substring("Content/".Length);
+        if (string.IsNullOrWhiteSpace(slice))
+        {
+            relativePath = string.Empty;
+            return false;
+        }
+
+        relativePath = slice.Replace('/', System.IO.Path.DirectorySeparatorChar);
+        return true;
+    }
+
+    private static bool IsDirectoryEntry(ZipArchiveEntry entry)
+    {
+        return string.IsNullOrEmpty(entry.Name) || entry.FullName.EndsWith("/", StringComparison.Ordinal);
     }
 
     [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
