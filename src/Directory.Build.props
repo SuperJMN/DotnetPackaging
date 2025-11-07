@@ -1,7 +1,5 @@
 <Project>
   <PropertyGroup>
     <Nullable>enable</Nullable>
-    <!-- Always use NuGet packages for Zafiro* (no local project references) -->
-    <UseLocalZafiroReferences>false</UseLocalZafiroReferences>
   </PropertyGroup>
 </Project>
