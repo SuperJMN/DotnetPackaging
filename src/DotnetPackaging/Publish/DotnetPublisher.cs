@@ -1,51 +1,84 @@
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using CSharpFunctionalExtensions;
+using System;
+using System.IO;
 using System.IO.Abstractions;
+using System.Runtime.InteropServices;
+using Zafiro.Commands;
 using Zafiro.DivineBytes;
 using Zafiro.FileSystem.Core;
-using Zafiro.FileSystem.Local;
-using Zafiro.FileSystem.Readonly;
+using Zafiro.Mixins;
+using LocalDirectory = Zafiro.FileSystem.Local.Directory;
 
 namespace DotnetPackaging.Publish;
 
 public sealed class DotnetPublisher : IPublisher
 {
+    private readonly ICommand command;
+    private readonly Maybe<ILogger> logger;
+
+    public DotnetPublisher() : this(Maybe<ILogger>.From(Log.Logger))
+    {
+    }
+
+    public DotnetPublisher(Maybe<ILogger> logger) : this(new Command(logger), logger)
+    {
+    }
+
+    public DotnetPublisher(ICommand command, Maybe<ILogger> logger)
+    {
+        this.command = command;
+        this.logger = logger;
+    }
+
     public async Task<Result<PublishResult>> Publish(ProjectPublishRequest request)
     {
         try
         {
-            var outputDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dp-publish-{Guid.NewGuid():N}");
-            System.IO.Directory.CreateDirectory(outputDir);
+            logger.Information("Preparing to publish project {ProjectPath}", request.ProjectPath);
 
+            var outputDirResult = PrepareOutputDirectory();
+            if (outputDirResult.IsFailure)
+            {
+                return Result.Failure<PublishResult>(outputDirResult.Error);
+            }
+
+            var outputDir = outputDirResult.Value;
             var args = BuildArgs(request, outputDir);
-            var run = await Run("dotnet", args);
+            LogPublishConfiguration(request);
+
+            var run = await command.Execute("dotnet", args);
             if (run.IsFailure)
             {
+                logger.Error("dotnet publish failed for {ProjectPath}: {Error}", request.ProjectPath, run.Error);
                 return Result.Failure<PublishResult>(run.Error);
             }
 
-            // Wrap published directory as Zafiro read-only directory, then convert to a RootContainer
-            var fs = new System.IO.Abstractions.FileSystem();
-            var localDir = new Zafiro.FileSystem.Local.Directory(fs.DirectoryInfo.New(outputDir));
+            logger.Information("dotnet publish completed for {ProjectPath}", request.ProjectPath);
+
+            var fileSystem = new FileSystem();
+            var localDir = new LocalDirectory(fileSystem.DirectoryInfo.New(outputDir));
             var readOnly = await localDir.ToDirectory();
             if (readOnly.IsFailure)
             {
+                logger.Error("Unable to materialize directory {Directory}: {Error}", outputDir, readOnly.Error);
                 return Result.Failure<PublishResult>($"Unable to materialize directory: {readOnly.Error}");
             }
 
             var containerResult = ContainerUtils.BuildContainer(readOnly.Value);
             if (containerResult.IsFailure)
             {
+                logger.Error("Failed to build container for {Directory}: {Error}", outputDir, containerResult.Error);
                 return Result.Failure<PublishResult>(containerResult.Error);
             }
 
             var name = DeriveName(request.ProjectPath);
+            logger.Information("Publish succeeded for {ProjectPath} (Name: {Name})", request.ProjectPath, name.GetValueOrDefault("unknown"));
+
             return Result.Success(new PublishResult(containerResult.Value, name, outputDir));
         }
         catch (Exception ex)
         {
-            return Result.Failure<PublishResult>(ex.Message);
+            logger.Error(ex, "Unexpected failure during publish for {ProjectPath}", request.ProjectPath);
+            return Result.Failure<PublishResult>($"Unexpected error during publish: {ex.Message}");
         }
     }
 
@@ -60,6 +93,37 @@ public sealed class DotnetPublisher : IPublisher
         {
             return Maybe<string>.None;
         }
+    }
+
+    private Result<string> PrepareOutputDirectory()
+    {
+        return Result.Try(() =>
+        {
+            var outputDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dp-publish-{Guid.NewGuid():N}");
+            System.IO.Directory.CreateDirectory(outputDir);
+            logger.Information("Using temporary publish directory {Directory}", outputDir);
+            return outputDir;
+        }, ex =>
+        {
+            logger.Error(ex, "Unable to create temporary publish directory");
+            return $"Unable to create publish directory: {ex.Message}";
+        });
+    }
+
+    private void LogPublishConfiguration(ProjectPublishRequest request)
+    {
+        var rid = request.Rid.Match(
+            value => value,
+            () => request.SelfContained ? InferHostRid() : null);
+        var ridDisplay = rid ?? "(default)";
+        logger.Information(
+            "Executing dotnet publish for {ProjectPath} | Configuration: {Configuration} | Self-contained: {SelfContained} | Single-file: {SingleFile} | Trimmed: {Trimmed} | RID: {Rid}",
+            request.ProjectPath,
+            request.Configuration,
+            request.SelfContained,
+            request.SingleFile,
+            request.Trimmed,
+            ridDisplay);
     }
 
     private static string BuildArgs(ProjectPublishRequest r, string outputDir)
@@ -131,33 +195,6 @@ public sealed class DotnetPublisher : IPublisher
         catch
         {
             return null;
-        }
-    }
-
-    private static async Task<Result> Run(string fileName, string arguments)
-    {
-        try
-        {
-            var psi = new ProcessStartInfo(fileName, arguments)
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-            using var p = Process.Start(psi)!;
-            await p.WaitForExitAsync();
-            if (p.ExitCode != 0)
-            {
-                var err = await p.StandardError.ReadToEndAsync();
-                var outp = await p.StandardOutput.ReadToEndAsync();
-                return Result.Failure($"{fileName} {arguments}\nExitCode: {p.ExitCode}\n{outp}\n{err}");
-            }
-            return Result.Success();
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure(ex.Message);
         }
     }
 }
