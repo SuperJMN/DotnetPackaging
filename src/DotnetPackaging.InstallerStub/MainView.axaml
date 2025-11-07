@@ -13,10 +13,10 @@
                 <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
                 <TextBlock Text="{Binding AdditionalInfo}" TextWrapping="Wrap"/>
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="Cargar metadatos" Command="{Binding LoadMetadata}" />
+                    <Button Content="Load metadata" Command="{Binding LoadMetadata}" />
                 </StackPanel>
                 <StackPanel Spacing="4">
-                    <TextBlock Text="Metadatos" FontWeight="Bold"/>
+                    <TextBlock Text="Metadata" FontWeight="Bold"/>
                     <TextBlock Text="{Binding ApplicationNameDisplay}" />
                     <TextBlock Text="{Binding VersionDisplay}" />
                     <TextBlock Text="{Binding VendorDisplay}" TextWrapping="Wrap"/>
@@ -26,8 +26,8 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type installerStub:OptionsPageVM}">
             <StackPanel Spacing="8">
-                <TextBlock Text="Selecciona la carpeta de instalación" FontWeight="Bold"/>
-                <TextBlock Text="{Binding Metadata.ApplicationName, StringFormat='Destino para {0}', TargetNullValue='Aplicación no cargada'}" FontStyle="Italic"/>
+                <TextBlock Text="Select the installation folder" FontWeight="Bold"/>
+                <TextBlock Text="{Binding Metadata.ApplicationName, StringFormat='Destination for {0}', TargetNullValue='Application not loaded'}" FontStyle="Italic"/>
                 <TextBox Text="{Binding InstallDirectory, Mode=TwoWay}"/>
                 <ProgressBar Minimum="0" Maximum="1" Value="{Binding ProgressFraction}" IsVisible="{Binding IsProgressVisible}" Height="6"/>
                 <TextBlock Text="{Binding ProgressText}" FontStyle="Italic" IsVisible="{Binding IsProgressVisible}"/>
@@ -38,7 +38,7 @@
                 <TextBlock Text="{Binding Metadata.ApplicationName}" FontSize="20" FontWeight="Bold"/>
                 <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>
                 <TextBlock Text="{Binding InstallDirectory}" FontFamily="Consolas" TextWrapping="Wrap"/>
-                <Button Content="Lanzar aplicación" Command="{Binding LaunchCommand}" HorizontalAlignment="Left"/>
+                <Button Content="Launch application" Command="{Binding LaunchCommand}" HorizontalAlignment="Left"/>
             </StackPanel>
         </DataTemplate>
     </UserControl.DataTemplates>

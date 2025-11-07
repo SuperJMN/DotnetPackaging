@@ -64,28 +64,28 @@ public sealed class WelcomePageVM : ReactiveObject, IDisposable
     }
 
     public string Heading => Metadata.Value is { } meta
-        ? $"Bienvenido al asistente de {meta.ApplicationName}"
-        : "Bienvenido al asistente de instalación";
+        ? $"Welcome to the {meta.ApplicationName} wizard"
+        : "Welcome to the installation wizard";
 
     public string Description => Metadata.Value is { } meta
-        ? $"Versión {meta.Version}. Puedes continuar cuando los metadatos estén cargados."
-        : "Carga los metadatos para obtener la información del paquete antes de instalar.";
+        ? $"Version {meta.Version}. You can continue once the metadata is loaded."
+        : "Load the metadata to get package information before installing.";
 
     public string? AdditionalInfo => Metadata.Value?.Vendor is { Length: > 0 } vendor
-        ? $"Proveedor: {vendor}"
+        ? $"Vendor: {vendor}"
         : null;
 
     public string ApplicationNameDisplay => Metadata.Value is { } meta
-        ? $"Aplicación: {meta.ApplicationName}"
-        : "Aplicación: (sin cargar)";
+        ? $"Application: {meta.ApplicationName}"
+        : "Application: (not loaded)";
 
     public string VersionDisplay => Metadata.Value is { } meta
-        ? $"Versión: {meta.Version}"
-        : "Versión: (sin cargar)";
+        ? $"Version: {meta.Version}"
+        : "Version: (not loaded)";
 
     public string VendorDisplay => Metadata.Value?.Vendor is { Length: > 0 } vendor
-        ? $"Proveedor: {vendor}"
-        : "Proveedor: (sin cargar)";
+        ? $"Vendor: {vendor}"
+        : "Vendor: (not loaded)";
 
     public InstallerPayload GetPayloadOrThrow()
     {
