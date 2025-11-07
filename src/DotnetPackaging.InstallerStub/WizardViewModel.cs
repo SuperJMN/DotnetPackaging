@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-using System.Linq;
 using System.Reactive;
 using CSharpFunctionalExtensions;
 using ReactiveUI;
@@ -8,7 +5,6 @@ using Zafiro.Avalonia.Controls.Wizards.Slim;
 using Zafiro.Avalonia.Dialogs;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.UI.Commands;
-using Zafiro.UI.Fields;
 using Zafiro.UI.Navigation;
 using Zafiro.UI.Wizards.Slim;
 using Zafiro.UI.Wizards.Slim.Builder;
@@ -19,30 +15,13 @@ public sealed class WizardViewModel : ReactiveObject
 {
     private InstallerMetadata metadata = new("app", "App", "1.0.0", "Unknown");
 
-    private string installDirectory;
-    private string status = "Ready";
-
     public string ApplicationName => metadata.ApplicationName;
-
-    public string InstallDirectory
-    {
-        get => installDirectory;
-        set => this.RaiseAndSetIfChanged(ref installDirectory, value);
-    }
-
-    public string Status
-    {
-        get => status;
-        set => this.RaiseAndSetIfChanged(ref status, value);
-    }
 
     public INavigator Navigator { get; }
 
     public WizardViewModel(IDialog dialog, INavigator navigator, Action onCancel)
     {
         Navigator = navigator;
-
-        installDirectory = GetDefaultInstallDirectory(metadata);
 
         LoadWizard = ReactiveCommand.CreateFromTask<InstallerPayload, Maybe<string>>(payload =>
         {
@@ -71,20 +50,17 @@ public sealed class WizardViewModel : ReactiveObject
                 var payload = payloadResult.Value;
                 metadata = payload.Metadata;
                 this.RaisePropertyChanged(nameof(ApplicationName));
-                InstallDirectory = GetDefaultInstallDirectory(metadata);
-                Status = "Ready";
             }
             else
             {
                 metadata = new InstallerMetadata("app", "App", "1.0.0", "Unknown");
                 this.RaisePropertyChanged(nameof(ApplicationName));
-                InstallDirectory = GetDefaultInstallDirectory(metadata);
-                Status = $"Error reading payload: {payloadResult.Error}";
             }
 
             return payloadResult;
         });
 
+        LoadPayload.Execute().Subscribe();
         LoadPayload.Successes().InvokeCommand(LoadWizard);
     }
 
@@ -95,15 +71,12 @@ public sealed class WizardViewModel : ReactiveObject
     private SlimWizard<string> CreateWizard(InstallerPayload payload)
     {
         var welcome = new WelcomePageVM(payload.Metadata);
-        var options = new OptionsPageVM(InstallDirectory);
+        var options = new OptionsPageVM("C:\\");
 
         return WizardBuilder
-            .StartWith(() => welcome, "Welcome")
-            .ProceedWith(_ => EnhancedCommand.Create(() => Result.Success(Unit.Default), text: "Next"))
-            .Then(_ => options, "Destination")
-            .ProceedWith(page => EnhancedCommand.Create(() => PrepareInstallation(payload, page.InstallDirectory), text: "Install"))
-            .Then(context => new InstallPageVM(payload.Metadata, context.ContentDirectory, context.InstallDirectory), "Install")
-            .ProceedWith((vm, _) => EnhancedCommand.Create(() => ExecuteInstall(vm, payload.Metadata)))
+            .StartWith(() => welcome, "Welcome").NextUnit().Always()
+            .Then(_ => options, "Destination").NextCommand(page => EnhancedCommand.Create(() => PrepareInstallation(payload, page.InstallDirectory), text: "Install"))
+            .Then(context => new InstallPageVM(payload.Metadata, context.ContentDirectory, context.InstallDirectory), "Install").NextCommand((vm, _) => EnhancedCommand.Create(() => ExecuteInstall(vm, payload.Metadata)))
             .WithCompletionFinalStep();
     }
 
