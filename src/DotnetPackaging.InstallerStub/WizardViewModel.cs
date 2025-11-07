@@ -17,8 +17,8 @@ namespace DotnetPackaging.InstallerStub;
 
 public sealed class WizardViewModel : ReactiveObject
 {
-    private readonly string contentDir;
     private readonly InstallerMetadata metadata;
+    private readonly Result<PayloadExtractor.PayloadPreparation> payloadPreparation;
 
     private string installDirectory;
     private string status = "Ready";
@@ -43,34 +43,30 @@ public sealed class WizardViewModel : ReactiveObject
     {
         Navigator = navigator;
         
-        // Extract payload and prefill defaults
-        try
-        {
-            var extracted = PayloadExtractor.Extract();
-            contentDir = extracted.contentDir;
-            metadata = extracted.meta;
+        payloadPreparation = PayloadExtractor.Prepare();
 
+        if (payloadPreparation.IsSuccess)
+        {
+            metadata = payloadPreparation.Value.Metadata;
             var baseDir = System.IO.Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Programs");
             var vendorPart = SanitizePathPart(metadata.Vendor);
             var appPart = SanitizePathPart(metadata.ApplicationName);
-            // Avoid duplicated segment when vendor equals app
             string defaultDir = string.Equals(vendorPart, appPart, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(vendorPart)
                 ? System.IO.Path.Combine(baseDir, appPart)
                 : System.IO.Path.Combine(baseDir, vendorPart, appPart);
 
             installDirectory = defaultDir;
         }
-        catch (Exception ex)
+        else
         {
             metadata = new InstallerMetadata("app", "App", "1.0.0", "Unknown");
-            contentDir = string.Empty;
             installDirectory = System.IO.Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Programs",
                 "App");
-            status = $"Error reading payload: {ex.Message}";
+            status = $"Error reading payload: {payloadPreparation.Error}";
         }
 
         // Build wizard
@@ -102,18 +98,25 @@ public sealed class WizardViewModel : ReactiveObject
             .StartWith(() => welcome, "Welcome")
             .ProceedWith(_ => EnhancedCommand.Create(() => Result.Success(Unit.Default), text: "Next"))
             .Then(_ => options, "Destination")
-            .ProceedWith(page => EnhancedCommand.Create(() => Result.Success(page.InstallDirectory), text: "Install"))
-            .Then(dir => new InstallPageVM(metadata, contentDir, dir), "Install")
-            .ProceedWith((vm, selectedDir) => EnhancedCommand.Create(() => ExecuteInstall(vm, metadata, selectedDir)))
+            .ProceedWith(page => EnhancedCommand.Create(() => PrepareInstallation(page.InstallDirectory), text: "Install"))
+            .Then(context => new InstallPageVM(metadata, context.ContentDirectory, context.InstallDirectory), "Install")
+            .ProceedWith((vm, _) => EnhancedCommand.Create(() => ExecuteInstall(vm, metadata)))
             .WithCompletionFinalStep();
     }
 
-    private static Result<string> ExecuteInstall(InstallPageVM vm, InstallerMetadata metadata, string targetDirectory)
+    private Result<InstallationContext> PrepareInstallation(string installDir)
+    {
+        return payloadPreparation
+            .Bind(preparation => preparation.ExtractContent()
+                .Map(contentDir => new InstallationContext(installDir, contentDir)));
+    }
+
+    private static Result<string> ExecuteInstall(InstallPageVM vm, InstallerMetadata metadata)
     {
         try
         {
             vm.Status = "Installing...";
-            Installer.Install(vm.ContentDir, targetDirectory, metadata);
+            Installer.Install(vm.ContentDir, vm.TargetDir, metadata);
             vm.Status = "Installed";
             return Result.Success("OK");
         }
@@ -131,4 +134,6 @@ public sealed class WizardViewModel : ReactiveObject
         var sanitized = new string(text.Where(c => !invalid.Contains(c)).ToArray());
         return string.IsNullOrWhiteSpace(sanitized) ? "App" : sanitized;
     }
+
+    private sealed record InstallationContext(string InstallDirectory, string ContentDirectory);
 }
