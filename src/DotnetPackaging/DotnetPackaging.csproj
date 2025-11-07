@@ -8,24 +8,12 @@
     <ItemGroup>
         <PackageReference Include="SixLabors.ImageSharp" />
         <PackageReference Include="NuGet.Versioning" />
+        <PackageReference Include="Zafiro.DivineBytes" />
+        <PackageReference Include="Zafiro.FileSystem" />
+        <PackageReference Include="Zafiro.FileSystem.Local" />
+        <PackageReference Include="Zafiro" />
+        <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" />
+        <PackageReference Include="System.IO.Abstractions" />
     </ItemGroup>
-    
-  <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'true'">
-      <ProjectReference Include="..\..\libs\Zafiro\src\Zafiro.DivineBytes\Zafiro.DivineBytes.csproj" />
-      <ProjectReference Include="..\..\libs\Zafiro\src\Zafiro.FileSystem\Zafiro.FileSystem.csproj" />
-      <ProjectReference Include="..\..\libs\Zafiro\src\Zafiro.FileSystem.Local\Zafiro.FileSystem.Local.csproj" />
-      <ProjectReference Include="..\..\libs\Zafiro\src\Zafiro\Zafiro.csproj" />
-    </ItemGroup>
-  <ItemGroup Condition="'$(UseLocalZafiroReferences)' == 'false'">
-      <PackageReference Include="Zafiro.DivineBytes" />
-      <PackageReference Include="Zafiro.FileSystem" />
-      <PackageReference Include="Zafiro.FileSystem.Local" />
-      <PackageReference Include="Zafiro" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" />
-    <PackageReference Include="System.IO.Abstractions" />
-  </ItemGroup>
 
 </Project>
