@@ -7,6 +7,9 @@
   </PropertyGroup>
   <Import Project="..\Common.props" />
   <ItemGroup>
+    <PackageReference Include="Serilog" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
   </ItemGroup>
 </Project>

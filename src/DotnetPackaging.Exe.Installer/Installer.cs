@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 
-namespace DotnetPackaging.InstallerStub;
+namespace DotnetPackaging.Exe.Installer;
 
 internal static class Installer
 {

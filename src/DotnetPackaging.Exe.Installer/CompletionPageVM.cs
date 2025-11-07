@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Reactive;
 using ReactiveUI;
 
-namespace DotnetPackaging.InstallerStub;
+namespace DotnetPackaging.Exe.Installer;
 
 public sealed class CompletionPageVM : ReactiveObject
 {

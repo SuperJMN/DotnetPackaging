@@ -13,7 +13,7 @@ using Zafiro.Avalonia.Misc;
 using Zafiro.UI;
 using Zafiro.UI.Navigation;
 
-namespace DotnetPackaging.InstallerStub;
+namespace DotnetPackaging.Exe.Installer;
 
 public sealed class App : Application
 {

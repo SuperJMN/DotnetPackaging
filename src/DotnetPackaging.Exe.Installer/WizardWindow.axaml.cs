@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Zafiro.UI.Commands;
 
-namespace DotnetPackaging.InstallerStub;
+namespace DotnetPackaging.Exe.Installer;
 
 public sealed partial class WizardWindow : Window
 {

@@ -3,7 +3,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ReactiveUI;
 
-namespace DotnetPackaging.InstallerStub;
+namespace DotnetPackaging.Exe.Installer;
 
 /// <summary>
 /// Minimal reactive property implementation to project observable values into bindable state.

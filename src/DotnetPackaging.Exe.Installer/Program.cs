@@ -1,7 +1,7 @@
 using Avalonia;
 using ReactiveUI.Avalonia;
 
-namespace DotnetPackaging.InstallerStub;
+namespace DotnetPackaging.Exe.Installer;
 
 internal static class Program
 {

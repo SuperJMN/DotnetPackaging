@@ -33,7 +33,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Flatpak", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Dmg", "src\DotnetPackaging.Dmg\DotnetPackaging.Dmg.csproj", "{ECEE61A8-139B-4637-AAB4-B34182980779}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.InstallerStub", "src\DotnetPackaging.InstallerStub\DotnetPackaging.InstallerStub.csproj", "{538A5A7E-390A-93C3-9605-E6A477235F61}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Exe.Installer", "src\DotnetPackaging.Exe.Installer\DotnetPackaging.Exe.Installer.csproj", "{538A5A7E-390A-93C3-9605-E6A477235F61}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Exe", "src\DotnetPackaging.Exe\DotnetPackaging.Exe.csproj", "{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -177,6 +179,18 @@ Global
 		{538A5A7E-390A-93C3-9605-E6A477235F61}.Release|x64.Build.0 = Release|Any CPU
 		{538A5A7E-390A-93C3-9605-E6A477235F61}.Release|x86.ActiveCfg = Release|Any CPU
 		{538A5A7E-390A-93C3-9605-E6A477235F61}.Release|x86.Build.0 = Release|Any CPU
+		{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}.Debug|x64.Build.0 = Debug|Any CPU
+		{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}.Debug|x86.Build.0 = Debug|Any CPU
+		{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}.Release|x64.ActiveCfg = Release|Any CPU
+		{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}.Release|x64.Build.0 = Release|Any CPU
+		{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}.Release|x86.ActiveCfg = Release|Any CPU
+		{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
