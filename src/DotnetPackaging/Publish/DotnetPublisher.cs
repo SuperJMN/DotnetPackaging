@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.IO.Abstractions;
 using System.Runtime.InteropServices;
@@ -30,47 +31,55 @@ public sealed class DotnetPublisher : IPublisher
 
     public async Task<Result<PublishResult>> Publish(ProjectPublishRequest request)
     {
-        logger.Information("Preparing to publish project {ProjectPath}", request.ProjectPath);
-
-        var outputDirResult = PrepareOutputDirectory();
-        if (outputDirResult.IsFailure)
+        try
         {
-            return Result.Failure<PublishResult>(outputDirResult.Error);
+            logger.Information("Preparing to publish project {ProjectPath}", request.ProjectPath);
+
+            var outputDirResult = PrepareOutputDirectory();
+            if (outputDirResult.IsFailure)
+            {
+                return Result.Failure<PublishResult>(outputDirResult.Error);
+            }
+
+            var outputDir = outputDirResult.Value;
+            var args = BuildArgs(request, outputDir);
+            LogPublishConfiguration(request);
+
+            var run = await command.Execute("dotnet", args);
+            if (run.IsFailure)
+            {
+                logger.Error("dotnet publish failed for {ProjectPath}: {Error}", request.ProjectPath, run.Error);
+                return Result.Failure<PublishResult>(run.Error);
+            }
+
+            logger.Information("dotnet publish completed for {ProjectPath}", request.ProjectPath);
+
+            var fileSystem = new FileSystem();
+            var localDir = new LocalDirectory(fileSystem.DirectoryInfo.New(outputDir));
+            var readOnly = await localDir.ToDirectory();
+            if (readOnly.IsFailure)
+            {
+                logger.Error("Unable to materialize directory {Directory}: {Error}", outputDir, readOnly.Error);
+                return Result.Failure<PublishResult>($"Unable to materialize directory: {readOnly.Error}");
+            }
+
+            var containerResult = ContainerUtils.BuildContainer(readOnly.Value);
+            if (containerResult.IsFailure)
+            {
+                logger.Error("Failed to build container for {Directory}: {Error}", outputDir, containerResult.Error);
+                return Result.Failure<PublishResult>(containerResult.Error);
+            }
+
+            var name = DeriveName(request.ProjectPath);
+            logger.Information("Publish succeeded for {ProjectPath} (Name: {Name})", request.ProjectPath, name.GetValueOrDefault("unknown"));
+
+            return Result.Success(new PublishResult(containerResult.Value, name, outputDir));
         }
-
-        var outputDir = outputDirResult.Value;
-        var args = BuildArgs(request, outputDir);
-        LogPublishConfiguration(request);
-
-        var run = await command.Execute("dotnet", args);
-        if (run.IsFailure)
+        catch (Exception ex)
         {
-            logger.Error("dotnet publish failed for {ProjectPath}: {Error}", request.ProjectPath, run.Error);
-            return Result.Failure<PublishResult>(run.Error);
+            logger.Error(ex, "Unexpected failure during publish for {ProjectPath}", request.ProjectPath);
+            return Result.Failure<PublishResult>($"Unexpected error during publish: {ex.Message}");
         }
-
-        logger.Information("dotnet publish completed for {ProjectPath}", request.ProjectPath);
-
-        var fileSystem = new FileSystem();
-        var localDir = new LocalDirectory(fileSystem.DirectoryInfo.New(outputDir));
-        var readOnly = await localDir.ToDirectory();
-        if (readOnly.IsFailure)
-        {
-            logger.Error("Unable to materialize directory {Directory}: {Error}", outputDir, readOnly.Error);
-            return Result.Failure<PublishResult>($"Unable to materialize directory: {readOnly.Error}");
-        }
-
-        var containerResult = ContainerUtils.BuildContainer(readOnly.Value);
-        if (containerResult.IsFailure)
-        {
-            logger.Error("Failed to build container for {Directory}: {Error}", outputDir, containerResult.Error);
-            return Result.Failure<PublishResult>(containerResult.Error);
-        }
-
-        var name = DeriveName(request.ProjectPath);
-        logger.Information("Publish succeeded for {ProjectPath} (Name: {Name})", request.ProjectPath, name.GetValueOrDefault("unknown"));
-
-        return Result.Success(new PublishResult(containerResult.Value, name, outputDir));
     }
 
     private static Maybe<string> DeriveName(string projectPath)
