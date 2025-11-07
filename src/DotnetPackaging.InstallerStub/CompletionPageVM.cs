@@ -13,7 +13,7 @@ public sealed class CompletionPageVM : ReactiveObject
         Metadata = result.Metadata;
         InstallDirectory = result.InstallDirectory;
         ExecutablePath = result.ExecutablePath;
-        status = $"Instalación completada en {InstallDirectory}.";
+        status = $"Installation completed in {InstallDirectory}.";
         LaunchCommand = ReactiveCommand.Create(LaunchApplication);
     }
 
@@ -42,11 +42,11 @@ public sealed class CompletionPageVM : ReactiveObject
                 UseShellExecute = true
             };
             Process.Start(startInfo);
-            Status = "Aplicación iniciada.";
+            Status = "Application launched.";
         }
         catch (Exception ex)
         {
-            Status = $"No se pudo iniciar la aplicación: {ex.Message}";
+            Status = $"Could not launch the application: {ex.Message}";
         }
     }
 }

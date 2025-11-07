@@ -51,8 +51,8 @@ public sealed class OptionsPageVM : ReactiveObject, IDisposable
     public string ProgressText => Progress.Value switch
     {
         AbsoluteProgress<RelativeProgress<long>> absolute =>
-            $"Copiado {absolute.Value.Value:N0} / {absolute.Value.Total:N0} bytes ({absolute.Value.Proportion:P0})",
-        _ => "Listo para instalar"
+            $"Copied {absolute.Value.Value:N0} / {absolute.Value.Total:N0} bytes ({absolute.Value.Proportion:P0})",
+        _ => "Ready to install"
     };
 
     public double ProgressFraction => Progress.Value switch

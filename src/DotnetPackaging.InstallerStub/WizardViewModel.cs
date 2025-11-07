@@ -101,12 +101,12 @@ public sealed class WizardViewModel : ReactiveObject, IDisposable
             .NextCommand((page, payload) =>
             {
                 page.ResetProgress();
-                var installCommand = EnhancedCommand.Create(() => InstallApplicationAsync(payload, page.InstallDirectory, page.ProgressObserver), text: "Instalar");
+                var installCommand = EnhancedCommand.Create(() => InstallApplicationAsync(payload, page.InstallDirectory, page.ProgressObserver), text: "Install");
                 page.Track(installCommand.HandleErrorsWith(notificationService));
                 return installCommand;
             })
             .Then(result => new CompletionPageVM(result), "Completed")
-            .Next(_ => "Done", "Cerrar")
+            .Next(_ => "Done", "Close")
             .Always()
             .WithCompletionFinalStep();
     }
