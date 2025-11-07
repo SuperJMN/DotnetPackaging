@@ -1,3 +1,4 @@
+using System;
 using System.Reactive;
 using Avalonia;
 using CSharpFunctionalExtensions;
@@ -18,7 +19,7 @@ namespace DotnetPackaging.InstallerStub;
 public sealed class WizardViewModel : ReactiveObject
 {
     private readonly InstallerMetadata metadata;
-    private readonly Result<PayloadExtractor.PayloadPreparation> payloadPreparation;
+    private readonly Lazy<Result<PayloadExtractor.PayloadPreparation>> payloadPreparation;
 
     private string installDirectory;
     private string status = "Ready";
@@ -43,11 +44,13 @@ public sealed class WizardViewModel : ReactiveObject
     {
         Navigator = navigator;
         
-        payloadPreparation = PayloadExtractor.Prepare();
+        payloadPreparation = new Lazy<Result<PayloadExtractor.PayloadPreparation>>(PayloadExtractor.Prepare);
 
-        if (payloadPreparation.IsSuccess)
+        var metadataResult = PayloadExtractor.ReadMetadata();
+
+        if (metadataResult.IsSuccess)
         {
-            metadata = payloadPreparation.Value.Metadata;
+            metadata = metadataResult.Value;
             var baseDir = System.IO.Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Programs");
@@ -66,7 +69,7 @@ public sealed class WizardViewModel : ReactiveObject
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Programs",
                 "App");
-            status = $"Error reading payload: {payloadPreparation.Error}";
+            status = $"Error reading payload: {metadataResult.Error}";
         }
 
         // Build wizard
@@ -106,7 +109,7 @@ public sealed class WizardViewModel : ReactiveObject
 
     private Result<InstallationContext> PrepareInstallation(string installDir)
     {
-        return payloadPreparation
+        return payloadPreparation.Value
             .Bind(preparation => preparation.ExtractContent()
                 .Map(contentDir => new InstallationContext(installDir, contentDir)));
     }

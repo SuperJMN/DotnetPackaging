@@ -13,6 +13,31 @@ internal static class PayloadExtractor
 {
     private const string Magic = "DPACKEXE1"; // legacy footer (concat mode)
 
+    public static Result<InstallerMetadata> ReadMetadata()
+    {
+        var attempts = new List<Func<Result<InstallerMetadata>>>
+        {
+            AttemptReadMetadataFrom(() => TryExtractFromManagedResource().ToResult("Managed payload not found")),
+            AttemptReadMetadataFrom(() => TryExtractFromResource().ToResult("Win32 resource payload not found")),
+            AttemptReadMetadataFrom(TryExtractFromAppendedPayload)
+        };
+
+        var errors = new List<string>();
+
+        foreach (var attempt in attempts)
+        {
+            var result = attempt();
+            if (result.IsSuccess)
+            {
+                return result;
+            }
+
+            errors.Add(result.Error);
+        }
+
+        return Result.Failure<InstallerMetadata>(string.Join(Environment.NewLine, errors.Distinct()));
+    }
+
     public static Result<PayloadPreparation> Prepare()
     {
         var attempts = new List<Func<Result<PayloadPreparation>>>
@@ -38,11 +63,32 @@ internal static class PayloadExtractor
         return Result.Failure<PayloadPreparation>(string.Join(Environment.NewLine, errors.Distinct()));
     }
 
+    private static Func<Result<InstallerMetadata>> AttemptReadMetadataFrom(Func<Result<PayloadLocation>> extractor)
+    {
+        return () => extractor()
+            .Bind(location =>
+            {
+                try
+                {
+                    return ReadMetadata(location.ZipPath);
+                }
+                finally
+                {
+                    TryDeleteDirectory(location.TempDir);
+                }
+            });
+    }
+
     private static Func<Result<PayloadPreparation>> AttemptFrom(Func<Maybe<PayloadLocation>> extractor, string missingMessage)
     {
         return () => extractor()
             .ToResult(missingMessage)
             .Bind(CreatePreparation);
+    }
+
+    private static Func<Result<InstallerMetadata>> AttemptReadMetadataFrom(Func<Maybe<PayloadLocation>> extractor, string missingMessage)
+    {
+        return AttemptReadMetadataFrom(() => extractor().ToResult(missingMessage));
     }
 
     private static Result<PayloadPreparation> CreatePreparation(PayloadLocation location)
@@ -181,6 +227,23 @@ internal static class PayloadExtractor
         public InstallerMetadata Metadata { get; }
 
         public Result<string> ExtractContent() => extraction.Value;
+    }
+
+    private static void TryDeleteDirectory(string tempDir)
+    {
+        if (string.IsNullOrWhiteSpace(tempDir))
+        {
+            return;
+        }
+
+        try
+        {
+            Directory.Delete(tempDir, true);
+        }
+        catch
+        {
+            // Best-effort cleanup
+        }
     }
 
     private static void CopyFixed(Stream src, Stream dst, long bytes)
