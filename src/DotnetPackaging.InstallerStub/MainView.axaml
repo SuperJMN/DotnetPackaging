@@ -14,6 +14,13 @@
     </Interaction.Behaviors>
     
     <UserControl.DataTemplates>
+        <DataTemplate DataType="{x:Type installerStub:WelcomePageVM}">
+            <StackPanel Spacing="12">
+                <TextBlock Text="{Binding Heading}" FontSize="20" FontWeight="Bold"/>
+                <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding AdditionalInfo}" TextWrapping="Wrap"/>
+            </StackPanel>
+        </DataTemplate>
         <DataTemplate DataType="{x:Type installerStub:OptionsPageVM}">
             <StackPanel Spacing="8">
                 <TextBlock Text="Choose destination folder" FontWeight="Bold"/>

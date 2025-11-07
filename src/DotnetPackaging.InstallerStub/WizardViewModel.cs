@@ -8,6 +8,7 @@ using Zafiro.Avalonia.Controls.Wizards.Slim;
 using Zafiro.Avalonia.Dialogs;
 using Zafiro.Avalonia.Dialogs.Implementations;
 using Zafiro.CSharpFunctionalExtensions;
+using Zafiro.UI.Commands;
 using Zafiro.UI.Navigation;
 using Zafiro.UI.Wizards.Slim;
 using Zafiro.UI.Wizards.Slim.Builder;
@@ -73,8 +74,9 @@ public sealed class WizardViewModel : ReactiveObject
         }
 
         // Build wizard
+        var welcome = new WelcomePageVM(metadata);
         var options = new OptionsPageVM(installDirectory);
-        var wizard = CreateWizard(options);
+        var wizard = CreateWizard(welcome, options);
         LoadWizard = ReactiveCommand.CreateFromTask(() => wizard.Navigate(Navigator, async (slimWizard, navigator) =>
         {
             var result = await dialog.ShowConfirmation("Cancel Installation", "Are you sure you want to cancel the installation?");
@@ -94,11 +96,15 @@ public sealed class WizardViewModel : ReactiveObject
 
     public ReactiveCommand<Unit, Maybe<string>> LoadWizard { get; }
 
-    private SlimWizard<string> CreateWizard(OptionsPageVM options)
+    private SlimWizard<string> CreateWizard(WelcomePageVM welcome, OptionsPageVM options)
     {
         return WizardBuilder
-            .StartWith(() => options, "Destination").Next(page => page.InstallDirectory).Always()
-            .Then(dir => new InstallPageVM(metadata, contentDir, dir), "Install").NextResult((vm, selectedDir) => ExecuteInstall(vm, metadata, selectedDir)).Always()
+            .StartWith(() => welcome, "Welcome")
+            .ProceedWith(_ => EnhancedCommand.Create(() => Result.Success(Unit.Default), text: "Next"))
+            .Then(_ => options, "Destination")
+            .ProceedWith(page => EnhancedCommand.Create(() => Result.Success(page.InstallDirectory), text: "Install"))
+            .Then(dir => new InstallPageVM(metadata, contentDir, dir), "Install")
+            .ProceedWith((vm, selectedDir) => EnhancedCommand.Create(() => ExecuteInstall(vm, metadata, selectedDir)))
             .WithCompletionFinalStep();
     }
 
