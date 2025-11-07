@@ -4,7 +4,7 @@ namespace DotnetPackaging.InstallerStub;
 
 internal static class Installer
 {
-    public static void Install(string contentDir, string targetDir, InstallerMetadata meta)
+    public static string Install(string contentDir, string targetDir, InstallerMetadata meta)
     {
         // 1) Delete previous install
         if (Directory.Exists(targetDir))
@@ -21,6 +21,8 @@ internal static class Installer
 
         // 4) Create Start Menu shortcut (per-user)
         TryCreateShortcut(meta.ApplicationName, exePath);
+
+        return exePath;
     }
 
     private static string ResolveMainExe(string targetDir, InstallerMetadata meta)

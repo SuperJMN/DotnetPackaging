@@ -33,6 +33,16 @@ internal static class PayloadExtractor
             errors.Add(result.Error);
         }
 
+#if DEBUG
+        var debugPayload = CreateDebugPayload();
+        if (debugPayload.IsSuccess)
+        {
+            return debugPayload;
+        }
+
+        errors.Add(debugPayload.Error);
+#endif
+
         return Result.Failure<InstallerPayload>(string.Join(Environment.NewLine, errors.Distinct()));
     }
 
@@ -70,11 +80,16 @@ internal static class PayloadExtractor
 
     private static Result<InstallerPayload> CreatePayload(PayloadLocation location)
     {
-        var result = ReadMetadata(location.ZipPath)
-            .Map(metadata => new InstallerPayload(
-                metadata,
-                ByteSource.FromStreamFactory(() => File.OpenRead(location.ZipPath)),
-                location.TempDir));
+        var bytesResult = Result.Try(() => File.ReadAllBytes(location.ZipPath), ex => $"Error loading payload: {ex.Message}");
+
+        var result = bytesResult
+            .Bind(bytes => ReadMetadata(bytes)
+                .Map(metadata => new InstallerPayload(
+                    metadata,
+                    ByteSource.FromBytes(bytes),
+                    location.TempDir)));
+
+        TryDeleteFile(location.ZipPath);
 
         if (result.IsFailure)
         {
@@ -84,14 +99,15 @@ internal static class PayloadExtractor
         return result;
     }
 
-    private static Result<InstallerMetadata> ReadMetadata(string zipPath)
+    private static Result<InstallerMetadata> ReadMetadata(byte[] zipBytes)
     {
         return Result.Try(() =>
         {
-            using var archive = ZipFile.OpenRead(zipPath);
+            using var stream = new MemoryStream(zipBytes, writable: false);
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
             var metaEntry = archive.GetEntry("metadata.json") ?? throw new InvalidOperationException("metadata.json missing");
-            using var stream = metaEntry.Open();
-            return JsonSerializer.Deserialize<InstallerMetadata>(stream)!;
+            using var entryStream = metaEntry.Open();
+            return JsonSerializer.Deserialize<InstallerMetadata>(entryStream)!;
         }, ex => $"Error reading payload metadata: {ex.Message}");
     }
 
@@ -204,6 +220,26 @@ internal static class PayloadExtractor
         }
     }
 
+    private static void TryDeleteFile(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch
+        {
+            // Ignore clean-up failures
+        }
+    }
+
     private static void CopyFixed(Stream src, Stream dst, long bytes)
     {
         var buffer = new byte[81920];
@@ -232,6 +268,32 @@ internal static class PayloadExtractor
 
     [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
+
+#if DEBUG
+    private static Result<InstallerPayload> CreateDebugPayload()
+    {
+        return Result.Try(() =>
+        {
+            var metadata = new InstallerMetadata("debug.app", "Debug Application", "1.0.0", "DotnetPackaging");
+            using var ms = new MemoryStream();
+            using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                var metadataEntry = archive.CreateEntry("metadata.json");
+                using (var metadataStream = metadataEntry.Open())
+                {
+                    JsonSerializer.Serialize(metadataStream, metadata);
+                }
+
+                var helloEntry = archive.CreateEntry("Content/Hello.txt");
+                using var writer = new StreamWriter(helloEntry.Open(), Encoding.UTF8, leaveOpen: false);
+                writer.Write("This is a text.");
+            }
+
+            var tempDir = Directory.CreateTempSubdirectory("dp-inst-debug-").FullName;
+            return new InstallerPayload(metadata, ByteSource.FromBytes(ms.ToArray()), tempDir);
+        }, ex => $"Failed to create debug payload: {ex.Message}");
+    }
+#endif
 }
 
 public sealed record InstallerPayload(InstallerMetadata Metadata, IByteSource Content, string WorkingDirectory);
