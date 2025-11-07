@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.IO.Compression;
@@ -13,19 +15,33 @@ internal static class PayloadExtractor
 
     public static Result<PayloadPreparation> Prepare()
     {
-        var managed = TryExtractFromManagedResource();
-        if (managed.HasValue)
+        var attempts = new List<Func<Result<PayloadPreparation>>>
         {
-            return CreatePreparation(managed.Value);
+            AttemptFrom(TryExtractFromManagedResource, "Managed payload not found"),
+            AttemptFrom(TryExtractFromResource, "Win32 resource payload not found"),
+            () => TryExtractFromAppendedPayload().Bind(CreatePreparation)
+        };
+
+        var errors = new List<string>();
+
+        foreach (var attempt in attempts)
+        {
+            var result = attempt();
+            if (result.IsSuccess)
+            {
+                return result;
+            }
+
+            errors.Add(result.Error);
         }
 
-        var fromRes = TryExtractFromResource();
-        if (fromRes.HasValue)
-        {
-            return CreatePreparation(fromRes.Value);
-        }
+        return Result.Failure<PayloadPreparation>(string.Join(Environment.NewLine, errors.Distinct()));
+    }
 
-        return TryExtractFromAppendedPayload()
+    private static Func<Result<PayloadPreparation>> AttemptFrom(Func<Maybe<PayloadLocation>> extractor, string missingMessage)
+    {
+        return () => extractor()
+            .ToResult(missingMessage)
             .Bind(CreatePreparation);
     }
 
