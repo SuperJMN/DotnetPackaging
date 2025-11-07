@@ -100,7 +100,7 @@ static class Program
             }
             else
             {
-                Console.WriteLine(result.Value);
+                Log.Information("{VerificationResult}", result.Value);
             }
         }, verifyCmd.Options.OfType<Option<FileInfo>>().First());
         dmgCommand.AddCommand(verifyCmd);
@@ -192,7 +192,7 @@ static class Program
             var stubWithPayload = await AutoPublishStubWithPayload(rid, zipRes.Value);
             if (stubWithPayload.IsFailure) { Console.Error.WriteLine(stubWithPayload.Error); return; }
             File.Copy(stubWithPayload.Value, outFile.FullName, overwrite: true);
-            Console.WriteLine(outFile.FullName);
+            Log.Information("{OutputFile}", outFile.FullName);
         }, exeInputDir, exeOutput, stubPath, optionsBinder, exVendor, exRidTop);
 
         // exe from-project
@@ -285,7 +285,7 @@ static class Program
             var stubRes2 = await AutoPublishStubWithPayload(effRid2, zipRes.Value);
             if (stubRes2.IsFailure) { Console.Error.WriteLine(stubRes2.Error); return; }
             File.Copy(stubRes2.Value, outFile.FullName, overwrite: true);
-            Console.WriteLine(outFile.FullName);
+            Log.Information("{OutputFile}", outFile.FullName);
         }, exProject, exRid, exSelfContained, exConfiguration, exSingleFile, exTrimmed, optionsBinder, exExtrasBinder);
 
         exeCommand.AddCommand(exFromProject);
@@ -822,7 +822,7 @@ static class Program
                 if (internalBytes.IsFailure) { Console.Error.WriteLine(internalBytes.Error); return; }
                 var wr = await internalBytes.Value.WriteTo(outFile.FullName);
                 if (wr.IsFailure) { Console.Error.WriteLine(wr.Error); return; }
-                Console.WriteLine(outFile.FullName);
+                Log.Information("{OutputFile}", outFile.FullName);
                 return;
             }
 
@@ -842,7 +842,7 @@ static class Program
             if (export.IsFailure) { Console.Error.WriteLine(export.Error); return; }
             var bundle = Run("flatpak", $"build-bundle \"{tmpRepoDir}\" \"{outFile.FullName}\" {plan.AppId} {fopt.Branch} --arch={effArch}");
             if (bundle.IsFailure) { Console.Error.WriteLine(bundle.Error); return; }
-            Console.WriteLine(outFile.FullName);
+            Log.Information("{OutputFile}", outFile.FullName);
         }, fpPrj, fpOut, fpUseSystem, binder, fpBinder);
 
         flatpakCommand.AddCommand(fromProjectCmd);
@@ -926,7 +926,7 @@ static class Program
                         var bundle = Run("flatpak", $"build-bundle \"{tmpRepoDir}\" \"{outPath}\" {plan.AppId} stable --arch={arch}");
                         if (bundle.IsSuccess)
                         {
-                            Console.WriteLine(outPath);
+                            Log.Information("{OutputFile}", outPath);
                             return;
                         }
                     }
@@ -947,7 +947,7 @@ static class Program
             }
             else
             {
-                Console.WriteLine(outPath);
+                Log.Information("{OutputFile}", outPath);
             }
         }, packInputDir, packOutputDir);
         
