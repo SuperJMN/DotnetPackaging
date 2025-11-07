@@ -9,7 +9,7 @@
     
     <Interaction.Behaviors>
         <LoadedTrigger>
-            <InvokeCommandAction Command="{Binding LoadWizard}" />
+            <InvokeCommandAction Command="{Binding LoadPayload}" />
         </LoadedTrigger>
     </Interaction.Behaviors>
     

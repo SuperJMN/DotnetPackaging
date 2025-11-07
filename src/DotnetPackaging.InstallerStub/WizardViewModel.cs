@@ -1,15 +1,14 @@
 using System;
+using System.IO;
+using System.Linq;
 using System.Reactive;
-using Avalonia;
 using CSharpFunctionalExtensions;
-using Microsoft.Extensions.DependencyInjection;
 using ReactiveUI;
-using Serilog;
 using Zafiro.Avalonia.Controls.Wizards.Slim;
 using Zafiro.Avalonia.Dialogs;
-using Zafiro.Avalonia.Dialogs.Implementations;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.UI.Commands;
+using Zafiro.UI.Fields;
 using Zafiro.UI.Navigation;
 using Zafiro.UI.Wizards.Slim;
 using Zafiro.UI.Wizards.Slim.Builder;
@@ -18,8 +17,7 @@ namespace DotnetPackaging.InstallerStub;
 
 public sealed class WizardViewModel : ReactiveObject
 {
-    private readonly InstallerMetadata metadata;
-    private readonly Lazy<Result<PayloadExtractor.PayloadPreparation>> payloadPreparation;
+    private InstallerMetadata metadata = new("app", "App", "1.0.0", "Unknown");
 
     private string installDirectory;
     private string status = "Ready";
@@ -43,75 +41,76 @@ public sealed class WizardViewModel : ReactiveObject
     public WizardViewModel(IDialog dialog, INavigator navigator, Action onCancel)
     {
         Navigator = navigator;
-        
-        payloadPreparation = new Lazy<Result<PayloadExtractor.PayloadPreparation>>(PayloadExtractor.Prepare);
 
-        var metadataResult = PayloadExtractor.ReadMetadata();
+        installDirectory = GetDefaultInstallDirectory(metadata);
 
-        if (metadataResult.IsSuccess)
+        LoadWizard = ReactiveCommand.CreateFromTask<InstallerPayload, Maybe<string>>(payload =>
         {
-            metadata = metadataResult.Value;
-            var baseDir = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Programs");
-            var vendorPart = SanitizePathPart(metadata.Vendor);
-            var appPart = SanitizePathPart(metadata.ApplicationName);
-            string defaultDir = string.Equals(vendorPart, appPart, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(vendorPart)
-                ? System.IO.Path.Combine(baseDir, appPart)
-                : System.IO.Path.Combine(baseDir, vendorPart, appPart);
-
-            installDirectory = defaultDir;
-        }
-        else
-        {
-            metadata = new InstallerMetadata("app", "App", "1.0.0", "Unknown");
-            installDirectory = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Programs",
-                "App");
-            status = $"Error reading payload: {metadataResult.Error}";
-        }
-
-        // Build wizard
-        var welcome = new WelcomePageVM(metadata);
-        var options = new OptionsPageVM(installDirectory);
-        var wizard = CreateWizard(welcome, options);
-        LoadWizard = ReactiveCommand.CreateFromTask(() => wizard.Navigate(Navigator, async (slimWizard, navigator) =>
-        {
-            var result = await dialog.ShowConfirmation("Cancel Installation", "Are you sure you want to cancel the installation?");
-            result.Tap(b =>
+            var wizard = CreateWizard(payload);
+            return wizard.Navigate(Navigator, async (_, _) =>
             {
-                if (b)
+                var result = await dialog.ShowConfirmation("Cancel Installation", "Are you sure you want to cancel the installation?");
+                result.Tap(b =>
                 {
-                    onCancel();
-                }
-            });
-            
-            return result.GetValueOrDefault(false);
-        }));
+                    if (b)
+                    {
+                        onCancel();
+                    }
+                });
 
-        LoadWizard.Execute().Subscribe();
+                return result.GetValueOrDefault(false);
+            });
+        });
+
+        LoadPayload = ReactiveCommand.Create(() =>
+        {
+            var payloadResult = PayloadExtractor.LoadPayload();
+
+            if (payloadResult.IsSuccess)
+            {
+                var payload = payloadResult.Value;
+                metadata = payload.Metadata;
+                this.RaisePropertyChanged(nameof(ApplicationName));
+                InstallDirectory = GetDefaultInstallDirectory(metadata);
+                Status = "Ready";
+            }
+            else
+            {
+                metadata = new InstallerMetadata("app", "App", "1.0.0", "Unknown");
+                this.RaisePropertyChanged(nameof(ApplicationName));
+                InstallDirectory = GetDefaultInstallDirectory(metadata);
+                Status = $"Error reading payload: {payloadResult.Error}";
+            }
+
+            return payloadResult;
+        });
+
+        LoadPayload.Successes().InvokeCommand(LoadWizard);
     }
 
-    public ReactiveCommand<Unit, Maybe<string>> LoadWizard { get; }
+    public ReactiveCommand<Unit, Result<InstallerPayload>> LoadPayload { get; }
 
-    private SlimWizard<string> CreateWizard(WelcomePageVM welcome, OptionsPageVM options)
+    public ReactiveCommand<InstallerPayload, Maybe<string>> LoadWizard { get; }
+
+    private SlimWizard<string> CreateWizard(InstallerPayload payload)
     {
+        var welcome = new WelcomePageVM(payload.Metadata);
+        var options = new OptionsPageVM(InstallDirectory);
+
         return WizardBuilder
             .StartWith(() => welcome, "Welcome")
             .ProceedWith(_ => EnhancedCommand.Create(() => Result.Success(Unit.Default), text: "Next"))
             .Then(_ => options, "Destination")
-            .ProceedWith(page => EnhancedCommand.Create(() => PrepareInstallation(page.InstallDirectory), text: "Install"))
-            .Then(context => new InstallPageVM(metadata, context.ContentDirectory, context.InstallDirectory), "Install")
-            .ProceedWith((vm, _) => EnhancedCommand.Create(() => ExecuteInstall(vm, metadata)))
+            .ProceedWith(page => EnhancedCommand.Create(() => PrepareInstallation(payload, page.InstallDirectory), text: "Install"))
+            .Then(context => new InstallPageVM(payload.Metadata, context.ContentDirectory, context.InstallDirectory), "Install")
+            .ProceedWith((vm, _) => EnhancedCommand.Create(() => ExecuteInstall(vm, payload.Metadata)))
             .WithCompletionFinalStep();
     }
 
-    private Result<InstallationContext> PrepareInstallation(string installDir)
+    private Result<InstallationContext> PrepareInstallation(InstallerPayload payload, string installDir)
     {
-        return payloadPreparation.Value
-            .Bind(preparation => preparation.ExtractContent()
-                .Map(contentDir => new InstallationContext(installDir, contentDir)));
+        return PayloadExtractor.ExtractContent(payload)
+            .Map(contentDir => new InstallationContext(installDir, contentDir));
     }
 
     private static Result<string> ExecuteInstall(InstallPageVM vm, InstallerMetadata metadata)
@@ -130,10 +129,23 @@ public sealed class WizardViewModel : ReactiveObject
         }
     }
 
+    private static string GetDefaultInstallDirectory(InstallerMetadata installerMetadata)
+    {
+        var baseDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Programs");
+        var vendorPart = SanitizePathPart(installerMetadata.Vendor);
+        var appPart = SanitizePathPart(installerMetadata.ApplicationName);
+
+        return string.Equals(vendorPart, appPart, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(vendorPart)
+            ? Path.Combine(baseDir, appPart)
+            : Path.Combine(baseDir, vendorPart, appPart);
+    }
+
     private static string SanitizePathPart(string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) return "App";
-        var invalid = System.IO.Path.GetInvalidFileNameChars();
+        var invalid = Path.GetInvalidFileNameChars();
         var sanitized = new string(text.Where(c => !invalid.Contains(c)).ToArray());
         return string.IsNullOrWhiteSpace(sanitized) ? "App" : sanitized;
     }

@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
-using System.IO.Compression;
-using System.Runtime.InteropServices;
-using System.Linq;
 using CSharpFunctionalExtensions;
+using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.InstallerStub;
 
@@ -13,13 +15,13 @@ internal static class PayloadExtractor
 {
     private const string Magic = "DPACKEXE1"; // legacy footer (concat mode)
 
-    public static Result<InstallerMetadata> ReadMetadata()
+    public static Result<InstallerPayload> LoadPayload()
     {
-        var attempts = new List<Func<Result<InstallerMetadata>>>
+        var attempts = new List<Func<Result<InstallerPayload>>>
         {
-            AttemptReadMetadataFrom(() => TryExtractFromManagedResource().ToResult("Managed payload not found")),
-            AttemptReadMetadataFrom(() => TryExtractFromResource().ToResult("Win32 resource payload not found")),
-            AttemptReadMetadataFrom(TryExtractFromAppendedPayload)
+            AttemptLoadPayloadFrom(TryExtractFromManagedResource, "Managed payload not found"),
+            AttemptLoadPayloadFrom(TryExtractFromResource, "Win32 resource payload not found"),
+            () => TryExtractFromAppendedPayload().Bind(CreatePayload)
         };
 
         var errors = new List<string>();
@@ -35,66 +37,55 @@ internal static class PayloadExtractor
             errors.Add(result.Error);
         }
 
-        return Result.Failure<InstallerMetadata>(string.Join(Environment.NewLine, errors.Distinct()));
+        return Result.Failure<InstallerPayload>(string.Join(Environment.NewLine, errors.Distinct()));
     }
 
-    public static Result<PayloadPreparation> Prepare()
+    public static Result<string> ExtractContent(InstallerPayload payload)
     {
-        var attempts = new List<Func<Result<PayloadPreparation>>>
+        return Result.Try(() =>
         {
-            AttemptFrom(TryExtractFromManagedResource, "Managed payload not found"),
-            AttemptFrom(TryExtractFromResource, "Win32 resource payload not found"),
-            () => TryExtractFromAppendedPayload().Bind(CreatePreparation)
-        };
-
-        var errors = new List<string>();
-
-        foreach (var attempt in attempts)
-        {
-            var result = attempt();
-            if (result.IsSuccess)
+            var contentOut = System.IO.Path.Combine(payload.WorkingDirectory, "Content");
+            if (Directory.Exists(contentOut) && Directory.EnumerateFileSystemEntries(contentOut).Any())
             {
-                return result;
+                return contentOut;
             }
 
-            errors.Add(result.Error);
-        }
+            Directory.CreateDirectory(payload.WorkingDirectory);
 
-        return Result.Failure<PayloadPreparation>(string.Join(Environment.NewLine, errors.Distinct()));
+            using var stream = payload.Content.ToStreamSeekable();
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
+            archive.ExtractToDirectory(payload.WorkingDirectory, true);
+
+            return contentOut;
+        }, ex => $"Error decompressing payload: {ex.Message}");
     }
 
-    private static Func<Result<InstallerMetadata>> AttemptReadMetadataFrom(Func<Result<PayloadLocation>> extractor)
-    {
-        return () => extractor()
-            .Bind(location =>
-            {
-                try
-                {
-                    return ReadMetadata(location.ZipPath);
-                }
-                finally
-                {
-                    TryDeleteDirectory(location.TempDir);
-                }
-            });
-    }
-
-    private static Func<Result<PayloadPreparation>> AttemptFrom(Func<Maybe<PayloadLocation>> extractor, string missingMessage)
+    private static Func<Result<InstallerPayload>> AttemptLoadPayloadFrom(Func<Maybe<PayloadLocation>> extractor, string missingMessage)
     {
         return () => extractor()
             .ToResult(missingMessage)
-            .Bind(CreatePreparation);
+            .Bind(CreatePayload);
     }
 
-    private static Func<Result<InstallerMetadata>> AttemptReadMetadataFrom(Func<Maybe<PayloadLocation>> extractor, string missingMessage)
+    private static Func<Result<InstallerPayload>> AttemptLoadPayloadFrom(Func<Result<PayloadLocation>> extractor)
     {
-        return AttemptReadMetadataFrom(() => extractor().ToResult(missingMessage));
+        return () => extractor().Bind(CreatePayload);
     }
 
-    private static Result<PayloadPreparation> CreatePreparation(PayloadLocation location)
+    private static Result<InstallerPayload> CreatePayload(PayloadLocation location)
     {
-        return ReadMetadata(location.ZipPath)
-            .Map(metadata => new PayloadPreparation(metadata, () => ExtractPayload(location)));
+        var result = ReadMetadata(location.ZipPath)
+            .Map(metadata => new InstallerPayload(
+                metadata,
+                ByteSource.FromStreamFactory(() => File.OpenRead(location.ZipPath)),
+                location.TempDir));
+
+        if (result.IsFailure)
+        {
+            TryDeleteDirectory(location.TempDir);
+        }
+
+        return result;
     }
 
     private static Result<InstallerMetadata> ReadMetadata(string zipPath)
@@ -106,20 +97,6 @@ internal static class PayloadExtractor
             using var stream = metaEntry.Open();
             return JsonSerializer.Deserialize<InstallerMetadata>(stream)!;
         }, ex => $"Error reading payload metadata: {ex.Message}");
-    }
-
-    private static Result<string> ExtractPayload(PayloadLocation location)
-    {
-        return Result.Try(() =>
-        {
-            var contentOut = Path.Combine(location.TempDir, "Content");
-            if (!Directory.Exists(contentOut) || !Directory.EnumerateFileSystemEntries(contentOut).Any())
-            {
-                ZipFile.ExtractToDirectory(location.ZipPath, location.TempDir, true);
-            }
-
-            return contentOut;
-        }, ex => $"Error decompressing payload: {ex.Message}");
     }
 
     private static Maybe<PayloadLocation> TryExtractFromManagedResource()
@@ -136,7 +113,7 @@ internal static class PayloadExtractor
             using var s = asm.GetManifestResourceStream(resName);
             if (s == null) return Maybe<PayloadLocation>.None;
             var tempDir = Directory.CreateTempSubdirectory("dp-inst-_").FullName;
-            var zipPath = Path.Combine(tempDir, "payload.zip");
+            var zipPath = System.IO.Path.Combine(tempDir, "payload.zip");
             using (var fs = File.Create(zipPath))
             {
                 s.CopyTo(fs);
@@ -167,7 +144,7 @@ internal static class PayloadExtractor
             Marshal.Copy(pData, bytes, 0, (int)size);
 
             var tempDir = Directory.CreateTempSubdirectory("dp-inst-_").FullName;
-            var zipPath = Path.Combine(tempDir, "payload.zip");
+            var zipPath = System.IO.Path.Combine(tempDir, "payload.zip");
             File.WriteAllBytes(zipPath, bytes);
             return new PayloadLocation(tempDir, zipPath);
         }
@@ -202,7 +179,7 @@ internal static class PayloadExtractor
             fs.Position = payloadStart;
 
             var tempDir = Directory.CreateTempSubdirectory("dp-inst-_").FullName;
-            var zipPath = Path.Combine(tempDir, "payload.zip");
+            var zipPath = System.IO.Path.Combine(tempDir, "payload.zip");
             using (var z = File.Create(zipPath))
             {
                 CopyFixed(fs, z, payloadLen);
@@ -213,21 +190,6 @@ internal static class PayloadExtractor
     }
 
     private sealed record PayloadLocation(string TempDir, string ZipPath);
-
-    internal sealed class PayloadPreparation
-    {
-        private readonly Lazy<Result<string>> extraction;
-
-        public PayloadPreparation(InstallerMetadata metadata, Func<Result<string>> extractContent)
-        {
-            Metadata = metadata;
-            extraction = new Lazy<Result<string>>(() => extractContent());
-        }
-
-        public InstallerMetadata Metadata { get; }
-
-        public Result<string> ExtractContent() => extraction.Value;
-    }
 
     private static void TryDeleteDirectory(string tempDir)
     {
@@ -275,3 +237,5 @@ internal static class PayloadExtractor
     [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
 }
+
+public sealed record InstallerPayload(InstallerMetadata Metadata, IByteSource Content, string WorkingDirectory);
