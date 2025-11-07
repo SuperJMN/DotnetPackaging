@@ -5,7 +5,7 @@
         xmlns:m="clr-namespace:DotnetPackaging.Exe.Installer"
         x:Class="DotnetPackaging.Exe.Installer.WizardWindow"
         Icon="/Assets/Icon.ico"
-        Width="800" Height="600"
+        Width="640" Height="480"
         WindowStartupLocation="CenterScreen"
         mc:Ignorable="d"
         Title="{Binding ApplicationName, StringFormat='{}{0} installer'}"
