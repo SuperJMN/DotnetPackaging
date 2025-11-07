@@ -14,7 +14,7 @@ using Zafiro.UI.Wizards.Slim;
 using Zafiro.UI.Wizards.Slim.Builder;
 using Zafiro.ProgressReporting;
 
-namespace DotnetPackaging.InstallerStub;
+namespace DotnetPackaging.Exe.Installer;
 
 public sealed class WizardViewModel : ReactiveObject, IDisposable
 {

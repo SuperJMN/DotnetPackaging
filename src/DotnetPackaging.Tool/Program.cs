@@ -1,8 +1,6 @@
 ﻿using System.CommandLine;
 using System.CommandLine.Parsing;
 using CSharpFunctionalExtensions;
-using System.IO.Compression;
-using System.Text.Json;
 using DotnetPackaging.AppImage;
 using System.Runtime.InteropServices;
 using DotnetPackaging.AppImage.Core;
@@ -159,41 +157,18 @@ static class Program
         exeCommand.AddOption(exExecutableName);
         exeCommand.AddOption(exRidTop);
 
+        var exeService = new ExePackagingService();
         exeCommand.SetHandler(async (DirectoryInfo inDir, FileInfo outFile, FileInfo? stub, Options opt, string? vendorOpt, string? ridOpt) =>
         {
-            var inferredExe = InferExecutableName(inDir, Maybe<string>.None);
-            var meta = BuildInstallerMetadata(opt, inDir, vendorOpt, inferredExe);
-            string? stubExe = stub?.FullName;
-            if (stubExe is null)
+            var result = await exeService.BuildFromDirectory(inDir, outFile, opt, vendorOpt, ridOpt, stub);
+            if (result.IsFailure)
             {
-                var effRid = ResolveWindowsRid(ridOpt);
-                if (effRid is null)
-                {
-                    Console.Error.WriteLine("--rid is required to auto-publish the installer stub when running on non-Windows hosts.");
-                    Environment.ExitCode = 1;
-                    return;
-                }
-                var stubRes = await AutoPublishStub(effRid);
-                if (stubRes.IsFailure)
-                {
-                    Console.Error.WriteLine($"Failed to auto-publish stub: {stubRes.Error}. Provide --stub explicitly.");
-                    Environment.ExitCode = 1;
-                    return;
-                }
-                stubExe = stubRes.Value;
+                Console.Error.WriteLine(result.Error);
+                Environment.ExitCode = 1;
+                return;
             }
 
-            // Build payload zip
-            var zipRes = await CreateInstallerPayloadZip(inDir.FullName, meta);
-            if (zipRes.IsFailure) { Console.Error.WriteLine(zipRes.Error); return; }
-
-            // Auto-publish stub embedding payload (single-file)
-            var rid = ResolveWindowsRid(ridOpt);
-            if (rid is null) { Console.Error.WriteLine("--rid is required when building EXE on non-Windows hosts."); return; }
-            var stubWithPayload = await AutoPublishStubWithPayload(rid, zipRes.Value);
-            if (stubWithPayload.IsFailure) { Console.Error.WriteLine(stubWithPayload.Error); return; }
-            File.Copy(stubWithPayload.Value, outFile.FullName, overwrite: true);
-            Log.Information("{OutputFile}", outFile.FullName);
+            Log.Information("{OutputFile}", result.Value.FullName);
         }, exeInputDir, exeOutput, stubPath, optionsBinder, exVendor, exRidTop);
 
         // exe from-project
@@ -226,68 +201,15 @@ static class Program
         var exExtrasBinder = new ExeFromProjectExtraBinder(exOut, exStub, exVendor);
         exFromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, Options opt, ExeFromProjectExtra extras) =>
         {
-            var outFile = extras.Output;
-            var stub = extras.Stub;
-            var vendorOpt = extras.Vendor;
-            if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            var result = await exeService.BuildFromProject(prj, ridVal, sc, cfg, sf, tr, extras.Output, opt, extras.Vendor, extras.Stub);
+            if (result.IsFailure)
             {
-                Console.Error.WriteLine("--rid is required when building EXE from-project on non-Windows hosts (e.g., win-x64/win-arm64).");
+                Console.Error.WriteLine(result.Error);
                 Environment.ExitCode = 1;
                 return;
             }
 
-            var publisher = new DotnetPackaging.Publish.DotnetPublisher();
-            var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
-            {
-                Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
-                SelfContained = sc,
-                Configuration = cfg,
-                SingleFile = sf,
-                Trimmed = tr
-            };
-            var pub = await publisher.Publish(req);
-            if (pub.IsFailure)
-            {
-                Console.Error.WriteLine(pub.Error);
-                Environment.ExitCode = 1;
-                return;
-            }
-
-            var ctxDir = new DirectoryInfo(pub.Value.OutputDirectory);
-            var inferredExe = InferExecutableName(ctxDir, pub.Value.Name);
-            var meta = BuildInstallerMetadata(opt, ctxDir, vendorOpt, inferredExe);
-
-            string? stubExe = stub?.FullName;
-            if (stubExe is null)
-            {
-                var effRid = ResolveWindowsRid(ridVal);
-                if (effRid is null)
-                {
-                    Console.Error.WriteLine("--rid is required to auto-publish the installer stub when running on non-Windows hosts.");
-                    Environment.ExitCode = 1;
-                    return;
-                }
-                var stubRes = await AutoPublishStub(effRid);
-                if (stubRes.IsFailure)
-                {
-                    Console.Error.WriteLine($"Failed to auto-publish stub: {stubRes.Error}. Provide --stub explicitly.");
-                    Environment.ExitCode = 1;
-                    return;
-                }
-                stubExe = stubRes.Value;
-            }
-
-            // Build payload zip
-            var zipRes = await CreateInstallerPayloadZip(pub.Value.OutputDirectory, meta);
-            if (zipRes.IsFailure) { Console.Error.WriteLine(zipRes.Error); return; }
-
-            // Auto-publish stub embedding payload (single-file)
-            var effRid2 = ResolveWindowsRid(ridVal);
-            if (effRid2 is null) { Console.Error.WriteLine("--rid is required when building EXE on non-Windows hosts."); return; }
-            var stubRes2 = await AutoPublishStubWithPayload(effRid2, zipRes.Value);
-            if (stubRes2.IsFailure) { Console.Error.WriteLine(stubRes2.Error); return; }
-            File.Copy(stubRes2.Value, outFile.FullName, overwrite: true);
-            Log.Information("{OutputFile}", outFile.FullName);
+            Log.Information("{OutputFile}", result.Value.FullName);
         }, exProject, exRid, exSelfContained, exConfiguration, exSingleFile, exTrimmed, optionsBinder, exExtrasBinder);
 
         exeCommand.AddCommand(exFromProject);
@@ -421,198 +343,6 @@ static class Program
             IsTerminal = options.IsTerminal.GetValueOrDefault(false),
             Categories = BuildCategories(options)
         };
-    }
-
-    private static InstallerMetadata BuildInstallerMetadata(Options options, DirectoryInfo contextDir, string? vendor, Maybe<string> inferredExecutable)
-    {
-        var appName = options.Name.GetValueOrDefault(contextDir.Name);
-        var packageName = appName.ToLowerInvariant().Replace(" ", "").Replace("-", "");
-        var appId = options.Id.GetValueOrDefault($"com.{packageName}");
-        var version = options.Version.GetValueOrDefault("1.0.0");
-        var exeName = options.ExecutableName
-            .Or(() => inferredExecutable)
-            .Map(NormalizeExecutableRelativePath)
-            .GetValueOrDefault(null);
-        var vendorEff = string.IsNullOrWhiteSpace(vendor) ? "Unknown" : vendor!;
-        return new InstallerMetadata(appId, appName, version, vendorEff, options.Comment.GetValueOrDefault(null), exeName);
-    }
-
-    private static Maybe<string> InferExecutableName(DirectoryInfo contextDir, Maybe<string> projectName)
-    {
-        try
-        {
-            var exeFiles = System.IO.Directory
-                .EnumerateFiles(contextDir.FullName, "*.exe", System.IO.SearchOption.AllDirectories)
-                .Select(path => new
-                {
-                    Relative = System.IO.Path.GetRelativePath(contextDir.FullName, path),
-                    Name = System.IO.Path.GetFileName(path),
-                    Stem = System.IO.Path.GetFileNameWithoutExtension(path)
-                })
-                .Where(candidate => !string.Equals(candidate.Name, "createdump.exe", StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            if (!exeFiles.Any())
-            {
-                Log.Warning("No executables were found under {Directory} when trying to infer the main executable.", contextDir.FullName);
-                return Maybe<string>.None;
-            }
-
-            var byProject = projectName
-                .Bind(name =>
-                {
-                    var match = exeFiles.FirstOrDefault(candidate => string.Equals(candidate.Stem, name, StringComparison.OrdinalIgnoreCase));
-                    if (match is null)
-                    {
-                        return Maybe<string>.None;
-                    }
-
-                    var relative = NormalizeExecutableRelativePath(match.Relative);
-                    Log.Information("Inferred executable '{Executable}' by matching the project name.", relative);
-                    return Maybe<string>.From(relative);
-                });
-
-            if (byProject.HasValue)
-            {
-                return byProject;
-            }
-
-            if (exeFiles.Count == 1)
-            {
-                var relative = NormalizeExecutableRelativePath(exeFiles[0].Relative);
-                Log.Information("Inferred executable '{Executable}' because it is the only candidate.", relative);
-                return Maybe<string>.From(relative);
-            }
-
-            var preferred = exeFiles
-                .Select(candidate => new
-                {
-                    candidate.Relative,
-                    Normalized = NormalizeExecutableRelativePath(candidate.Relative),
-                    Depth = candidate.Relative.Count(ch => ch == System.IO.Path.DirectorySeparatorChar || ch == System.IO.Path.AltDirectorySeparatorChar)
-                })
-                .OrderBy(candidate => candidate.Depth)
-                .ThenBy(candidate => candidate.Normalized.Length)
-                .First();
-
-            Log.Information("Inferred executable '{Executable}' by selecting the shallowest candidate.", preferred.Normalized);
-            return Maybe<string>.From(preferred.Normalized);
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Unable to infer the executable under {Directory}.", contextDir.FullName);
-            return Maybe<string>.None;
-        }
-    }
-
-    private static string NormalizeExecutableRelativePath(string relative)
-    {
-        return relative.Replace("\\", "/");
-    }
-
-    private static string? ResolveWindowsRid(string? rid)
-    {
-        if (!string.IsNullOrWhiteSpace(rid)) return rid;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            return RuntimeInformation.OSArchitecture == System.Runtime.InteropServices.Architecture.Arm64 ? "win-arm64" : "win-x64";
-        }
-        return null;
-    }
-
-    private static async Task<Result<string>> AutoPublishStub(string rid)
-    {
-        try
-        {
-            // Try to locate the stub csproj in a typical repo layout
-            var csproj = FindFileUpwards(Environment.CurrentDirectory, System.IO.Path.Combine("src", "DotnetPackaging.InstallerStub", "DotnetPackaging.InstallerStub.csproj"))
-                         ?? FindFileUpwards(AppContext.BaseDirectory, System.IO.Path.Combine("..", "..", "..", "src", "DotnetPackaging.InstallerStub", "DotnetPackaging.InstallerStub.csproj"));
-            if (csproj is null)
-            {
-                return Result.Failure<string>("Could not find DotnetPackaging.InstallerStub.csproj in repository layout.");
-            }
-
-            var publisher = new DotnetPackaging.Publish.DotnetPublisher();
-            var req = new DotnetPackaging.Publish.ProjectPublishRequest(csproj)
-            {
-                Rid = CSharpFunctionalExtensions.Maybe<string>.From(rid),
-                SelfContained = true,
-                Configuration = "Release",
-                SingleFile = true,
-                Trimmed = false,
-                MsBuildProperties = new Dictionary<string, string>
-                {
-                    { "IncludeNativeLibrariesForSelfExtract", "true" },
-                    { "IncludeAllContentForSelfExtract", "true" }
-                }
-            };
-            var pub = await publisher.Publish(req);
-            if (pub.IsFailure)
-                return Result.Failure<string>(pub.Error);
-
-            // pick first .exe from publish root
-            var exe = Directory.EnumerateFiles(pub.Value.OutputDirectory, "*.exe", SearchOption.TopDirectoryOnly).FirstOrDefault()
-                      ?? Directory.EnumerateFiles(pub.Value.OutputDirectory, "*.exe", SearchOption.AllDirectories).FirstOrDefault();
-            if (exe is null) return Result.Failure<string>("No stub .exe found after publishing");
-            return Result.Success(exe);
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure<string>(ex.Message);
-        }
-    }
-
-    private static async Task<Result<string>> AutoPublishStubWithPayload(string rid, string payloadZip)
-    {
-        try
-        {
-            var csproj = FindFileUpwards(Environment.CurrentDirectory, System.IO.Path.Combine("src", "DotnetPackaging.InstallerStub", "DotnetPackaging.InstallerStub.csproj"))
-                         ?? FindFileUpwards(AppContext.BaseDirectory, System.IO.Path.Combine("..", "..", "..", "src", "DotnetPackaging.InstallerStub", "DotnetPackaging.InstallerStub.csproj"));
-            if (csproj is null)
-                return Result.Failure<string>("Could not find DotnetPackaging.InstallerStub.csproj in repository layout.");
-
-            var publisher = new DotnetPackaging.Publish.DotnetPublisher();
-            var req = new DotnetPackaging.Publish.ProjectPublishRequest(csproj)
-            {
-                Rid = CSharpFunctionalExtensions.Maybe<string>.From(rid),
-                SelfContained = true,
-                Configuration = "Release",
-                SingleFile = true,
-                Trimmed = false,
-                MsBuildProperties = new Dictionary<string, string>
-                {
-                    { "InstallerPayload", payloadZip },
-                    { "IncludeNativeLibrariesForSelfExtract", "true" },
-                    { "IncludeAllContentForSelfExtract", "true" }
-                }
-            };
-            var pub = await publisher.Publish(req);
-            if (pub.IsFailure) return Result.Failure<string>(pub.Error);
-            var exe = Directory.EnumerateFiles(pub.Value.OutputDirectory, "*.exe", SearchOption.TopDirectoryOnly).FirstOrDefault()
-                      ?? Directory.EnumerateFiles(pub.Value.OutputDirectory, "*.exe", SearchOption.AllDirectories).FirstOrDefault();
-            if (exe is null) return Result.Failure<string>("No stub .exe found after publishing with payload");
-            return Result.Success(exe);
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure<string>(ex.Message);
-        }
-    }
-
-    private static string? FindFileUpwards(string startDir, string relativePath)
-    {
-        try
-        {
-            var dir = new DirectoryInfo(startDir);
-            while (dir != null)
-            {
-                var candidate = System.IO.Path.Combine(dir.FullName, relativePath);
-                if (File.Exists(candidate)) return System.IO.Path.GetFullPath(candidate);
-                dir = dir.Parent;
-            }
-        }
-        catch { }
-        return null;
     }
 
     private static void AddAppImageSubcommands(Command appImageCommand)
@@ -1240,44 +970,6 @@ static class Program
     private static void AddFlatpakFromProjectSubcommand(Command flatpakCommand)
     {
         // Implemented inside AddFlatpakSubcommands for access to shared options; placeholder to satisfy compiler
-    }
-
-    private static async Task<Result<string>> CreateInstallerPayloadZip(string publishDir, InstallerMetadata meta)
-    {
-        try
-        {
-            var tmp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-exe-payload-" + Guid.NewGuid());
-            System.IO.Directory.CreateDirectory(tmp);
-            var zipPath = System.IO.Path.Combine(tmp, "payload.zip");
-            await using var fs = System.IO.File.Create(zipPath);
-            using var zip = new ZipArchive(fs, ZipArchiveMode.Create, leaveOpen: false);
-
-            // metadata.json
-            var metaEntry = zip.CreateEntry("metadata.json", CompressionLevel.NoCompression);
-            await using (var s = metaEntry.Open())
-            {
-                await JsonSerializer.SerializeAsync(s, meta, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = false
-                });
-            }
-
-            foreach (var file in System.IO.Directory.EnumerateFiles(publishDir, "*", SearchOption.AllDirectories))
-            {
-                var rel = System.IO.Path.GetRelativePath(publishDir, file).Replace('\\', '/');
-                var entry = zip.CreateEntry($"Content/{rel}", CompressionLevel.Optimal);
-                await using var src = System.IO.File.OpenRead(file);
-                await using var dst = entry.Open();
-                await src.CopyToAsync(dst);
-            }
-
-            return Result.Success(zipPath);
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure<string>(ex.Message);
-        }
     }
 
     private static void AddRpmFromProjectSubcommand(Command rpmCommand)

@@ -33,7 +33,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetPackaging.Flatpak", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Dmg", "src\DotnetPackaging.Dmg\DotnetPackaging.Dmg.csproj", "{ECEE61A8-139B-4637-AAB4-B34182980779}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.InstallerStub", "src\DotnetPackaging.InstallerStub\DotnetPackaging.InstallerStub.csproj", "{538A5A7E-390A-93C3-9605-E6A477235F61}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Exe.Installer", "src\DotnetPackaging.Exe.Installer\DotnetPackaging.Exe.Installer.csproj", "{538A5A7E-390A-93C3-9605-E6A477235F61}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

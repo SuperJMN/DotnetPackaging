@@ -64,7 +64,7 @@ Packaging formats: status and details
   - How it works: emits an ISO9660/Joliet image (UDTO) with optional .app scaffolding if none exists. Special adornments like .VolumeIcon.icns and .background are hoisted to the image root when present.
   - Notes: intended for simple drag-and-drop installs. Not a full UDIF/UDZO implementation; signing and advanced Finder layouts are out of scope for now.
 - Windows EXE (.exe) — preview
-  - Status: preview. Dotnet-only SFX builder. Library: src/DotnetPackaging.Exe. Stub Avalonia: src/DotnetPackaging.InstallerStub (esqueleto WIP).
+  - Status: preview. Dotnet-only SFX builder. Library: src/DotnetPackaging.Exe. Stub Avalonia: src/DotnetPackaging.Exe.Installer (esqueleto WIP).
   - How it works: produces a self-extracting installer by concatenating [stub.exe][payload.zip][Int64 length]["DPACKEXE1"]. The payload contains metadata.json and Content/ (publish output). The stub leerá metadata y realizará la instalación.
   - CLI: exe (desde carpeta publish) y exe from-project (publica y empaqueta). --stub es opcional: si el repo está presente, el stub se publica automáticamente por RID; si no, puede pasarse manualmente.
   - Cross-platform build: el empaquetado (concatenación) funciona desde cualquier SO. El stub se publica por RID (win-x64/win-arm64).
@@ -155,7 +155,7 @@ Windows EXE (.exe) – progress log (snapshot)
 - Done:
   - Librería DotnetPackaging.Exe con SimpleExePacker (concatena stub + zip + footer).
   - Comandos CLI: exe (desde carpeta) y exe from-project (publica y empaqueta), ambos requieren --stub por ahora.
-  - Stub Avalonia creado (esqueleto) en src/DotnetPackaging.InstallerStub con lector de payload.
+  - Stub Avalonia creado (esqueleto) en src/DotnetPackaging.Exe.Installer con lector de payload.
 - Next:
   - UI: Integrar SlimWizard de Zafiro en el stub (ahora hay UI mínima). Navegación con WizardNavigator y páginas.
   - Lógica: Elevación UAC y carpeta por defecto en Program Files según arquitectura.

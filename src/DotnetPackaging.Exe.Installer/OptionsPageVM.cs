@@ -4,7 +4,7 @@ using System.Reactive.Subjects;
 using ReactiveUI;
 using Zafiro.ProgressReporting;
 
-namespace DotnetPackaging.InstallerStub;
+namespace DotnetPackaging.Exe.Installer;
 
 public sealed class OptionsPageVM : ReactiveObject, IDisposable
 {
