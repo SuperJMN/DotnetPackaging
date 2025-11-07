@@ -7,6 +7,10 @@
     "AppImage": {
       "commandName": "Project",
       "commandLineArgs": "appimage --directory /home/jmn/Escritorio/sample/ --output /home/jmn/Escritorio/pack.appimage"
+    },
+    "Exe": {
+      "commandName": "Project",
+      "commandLineArgs": "exe from-project --project \"F:\\Repos\\Zafiro.Avalonia\\samples\\TestApp\\TestApp.Desktop\\TestApp.Desktop.csproj\" --output C:\\Users\\JMN\\Desktop\\Setup.exe"
     }
   }
 }
