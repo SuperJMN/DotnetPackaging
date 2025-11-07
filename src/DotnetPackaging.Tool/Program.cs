@@ -161,7 +161,8 @@ static class Program
 
         exeCommand.SetHandler(async (DirectoryInfo inDir, FileInfo outFile, FileInfo? stub, Options opt, string? vendorOpt, string? ridOpt) =>
         {
-            var meta = BuildInstallerMetadata(opt, inDir, vendorOpt);
+            var inferredExe = InferExecutableName(inDir, Maybe<string>.None);
+            var meta = BuildInstallerMetadata(opt, inDir, vendorOpt, inferredExe);
             string? stubExe = stub?.FullName;
             if (stubExe is null)
             {
@@ -253,7 +254,8 @@ static class Program
             }
 
             var ctxDir = new DirectoryInfo(pub.Value.OutputDirectory);
-            var meta = BuildInstallerMetadata(opt, ctxDir, vendorOpt);
+            var inferredExe = InferExecutableName(ctxDir, pub.Value.Name);
+            var meta = BuildInstallerMetadata(opt, ctxDir, vendorOpt, inferredExe);
 
             string? stubExe = stub?.FullName;
             if (stubExe is null)
@@ -421,15 +423,91 @@ static class Program
         };
     }
 
-    private static InstallerMetadata BuildInstallerMetadata(Options options, DirectoryInfo contextDir, string? vendor)
+    private static InstallerMetadata BuildInstallerMetadata(Options options, DirectoryInfo contextDir, string? vendor, Maybe<string> inferredExecutable)
     {
         var appName = options.Name.GetValueOrDefault(contextDir.Name);
         var packageName = appName.ToLowerInvariant().Replace(" ", "").Replace("-", "");
         var appId = options.Id.GetValueOrDefault($"com.{packageName}");
         var version = options.Version.GetValueOrDefault("1.0.0");
-        var exeName = options.ExecutableName.GetValueOrDefault(null);
+        var exeName = options.ExecutableName
+            .Or(() => inferredExecutable)
+            .Map(NormalizeExecutableRelativePath)
+            .GetValueOrDefault(null);
         var vendorEff = string.IsNullOrWhiteSpace(vendor) ? "Unknown" : vendor!;
         return new InstallerMetadata(appId, appName, version, vendorEff, options.Comment.GetValueOrDefault(null), exeName);
+    }
+
+    private static Maybe<string> InferExecutableName(DirectoryInfo contextDir, Maybe<string> projectName)
+    {
+        try
+        {
+            var exeFiles = System.IO.Directory
+                .EnumerateFiles(contextDir.FullName, "*.exe", System.IO.SearchOption.AllDirectories)
+                .Select(path => new
+                {
+                    Relative = System.IO.Path.GetRelativePath(contextDir.FullName, path),
+                    Name = System.IO.Path.GetFileName(path),
+                    Stem = System.IO.Path.GetFileNameWithoutExtension(path)
+                })
+                .Where(candidate => !string.Equals(candidate.Name, "createdump.exe", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (!exeFiles.Any())
+            {
+                Log.Warning("No executables were found under {Directory} when trying to infer the main executable.", contextDir.FullName);
+                return Maybe<string>.None;
+            }
+
+            var byProject = projectName
+                .Bind(name =>
+                {
+                    var match = exeFiles.FirstOrDefault(candidate => string.Equals(candidate.Stem, name, StringComparison.OrdinalIgnoreCase));
+                    if (match is null)
+                    {
+                        return Maybe<string>.None;
+                    }
+
+                    var relative = NormalizeExecutableRelativePath(match.Relative);
+                    Log.Information("Inferred executable '{Executable}' by matching the project name.", relative);
+                    return Maybe<string>.From(relative);
+                });
+
+            if (byProject.HasValue)
+            {
+                return byProject;
+            }
+
+            if (exeFiles.Count == 1)
+            {
+                var relative = NormalizeExecutableRelativePath(exeFiles[0].Relative);
+                Log.Information("Inferred executable '{Executable}' because it is the only candidate.", relative);
+                return Maybe<string>.From(relative);
+            }
+
+            var preferred = exeFiles
+                .Select(candidate => new
+                {
+                    candidate.Relative,
+                    Normalized = NormalizeExecutableRelativePath(candidate.Relative),
+                    Depth = candidate.Relative.Count(ch => ch == System.IO.Path.DirectorySeparatorChar || ch == System.IO.Path.AltDirectorySeparatorChar)
+                })
+                .OrderBy(candidate => candidate.Depth)
+                .ThenBy(candidate => candidate.Normalized.Length)
+                .First();
+
+            Log.Information("Inferred executable '{Executable}' by selecting the shallowest candidate.", preferred.Normalized);
+            return Maybe<string>.From(preferred.Normalized);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Unable to infer the executable under {Directory}.", contextDir.FullName);
+            return Maybe<string>.None;
+        }
+    }
+
+    private static string NormalizeExecutableRelativePath(string relative)
+    {
+        return relative.Replace("\\", "/");
     }
 
     private static string? ResolveWindowsRid(string? rid)
