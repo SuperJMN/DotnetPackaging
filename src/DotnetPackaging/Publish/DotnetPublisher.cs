@@ -19,7 +19,7 @@ public sealed class DotnetPublisher : IPublisher
     {
     }
 
-    public DotnetPublisher(Maybe<ILogger> logger) : this(new Command(logger), logger)
+    public DotnetPublisher(Maybe<ILogger> logger) : this(new Command(logger.Map(x => x.ForContext<Command>())), logger)
     {
     }
 
