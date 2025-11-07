@@ -63,10 +63,9 @@ public sealed class OptionsPageVM : ReactiveObject, IDisposable
 
     public bool IsProgressVisible => Progress.Value is not null;
 
-    public void ResetProgress()
-    {
-        Progress.OnNext(null!);
-    }
+    public void ResetProgress() => Progress.OnNext(null);
+
+    public void Track(IDisposable disposable) => disposables.Add(disposable);
 
     public void Dispose()
     {

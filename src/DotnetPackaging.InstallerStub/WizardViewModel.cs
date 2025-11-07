@@ -7,6 +7,7 @@ using ReactiveUI;
 using Zafiro.Avalonia.Controls.Wizards.Slim;
 using Zafiro.Avalonia.Dialogs;
 using Zafiro.CSharpFunctionalExtensions;
+using Zafiro.UI;
 using Zafiro.UI.Commands;
 using Zafiro.UI.Navigation;
 using Zafiro.UI.Wizards.Slim;
@@ -19,11 +20,13 @@ public sealed class WizardViewModel : ReactiveObject, IDisposable
 {
     private readonly CompositeDisposable disposables = new();
     private InstallerMetadata metadata = new("app", "App", "1.0.0", "Unknown");
+    private readonly INotificationService notificationService;
     private InstallerPayload? currentPayload;
 
-    public WizardViewModel(IDialog dialog, INavigator navigator, Action onCancel)
+    public WizardViewModel(IDialog dialog, INavigator navigator, INotificationService notificationService, Action onCancel)
     {
         Navigator = navigator;
+        this.notificationService = notificationService;
 
         LoadMetadata = ReactiveCommand.Create(LoadMetadataCore);
 
@@ -32,7 +35,7 @@ public sealed class WizardViewModel : ReactiveObject, IDisposable
             null);
 
         var failureSubscription = LoadMetadata
-            .Where(result => result.IsFailure)
+            .Failures()
             .Subscribe(_ => Metadata.OnNext(default!));
         disposables.Add(failureSubscription);
 
@@ -98,7 +101,9 @@ public sealed class WizardViewModel : ReactiveObject, IDisposable
             .NextCommand((page, payload) =>
             {
                 page.ResetProgress();
-                return EnhancedCommand.Create(() => InstallApplicationAsync(payload, page.InstallDirectory, page.ProgressObserver), text: "Instalar");
+                var installCommand = EnhancedCommand.Create(() => InstallApplicationAsync(payload, page.InstallDirectory, page.ProgressObserver), text: "Instalar");
+                page.Track(installCommand.HandleErrorsWith(notificationService));
+                return installCommand;
             })
             .Then(result => new CompletionPageVM(result), "Completed")
             .Next(_ => "Done", "Cerrar")
@@ -110,11 +115,8 @@ public sealed class WizardViewModel : ReactiveObject, IDisposable
     {
         return Task.Run(() =>
             PayloadExtractor.CopyContentTo(payload, installDir, progressObserver)
-                .Bind(() => Result.Try(() =>
-                {
-                    var exePath = Installer.Install(installDir, payload.Metadata);
-                    return new InstallationResult(payload.Metadata, installDir, exePath);
-                }, ex => ex.Message)));
+                .Bind(() => Installer.Install(installDir, payload.Metadata))
+                .Map(exePath => new InstallationResult(payload.Metadata, installDir, exePath)));
     }
 
     private static string GetDefaultInstallDirectory(InstallerMetadata installerMetadata)

@@ -10,6 +10,7 @@ using ReactiveUI;
 using Serilog;
 using Zafiro.Avalonia.Dialogs.Implementations;
 using Zafiro.Avalonia.Misc;
+using Zafiro.UI;
 using Zafiro.UI.Navigation;
 
 namespace DotnetPackaging.InstallerStub;
@@ -37,8 +38,10 @@ public sealed class App : Application
 
         this.Connect(() => new MainView(), content =>
         {
+            var dialog = new DesktopDialog();
+            var notificationService = new NotificationDialog(dialog);
             var buildServiceProvider = new ServiceCollection().BuildServiceProvider();
-            return new WizardViewModel(new DesktopDialog(), new Navigator(buildServiceProvider, Maybe<ILogger>.None, RxApp.MainThreadScheduler), Shutdown);
+            return new WizardViewModel(dialog, new Navigator(buildServiceProvider, Maybe<ILogger>.None, RxApp.MainThreadScheduler), notificationService, Shutdown);
         }, () => new WizardWindow());
         
         base.OnFrameworkInitializationCompleted();
