@@ -111,7 +111,8 @@ internal static class Installer
         try
         {
             var programs = Environment.GetFolderPath(Environment.SpecialFolder.Programs);
-            var lnkPath = Path.Combine(programs, $"{appName}.lnk");
+            var shortcutName = BuildShortcutName(appName, targetExe);
+            var lnkPath = Path.Combine(programs, $"{shortcutName}.lnk");
             Type shellType = Type.GetTypeFromProgID("WScript.Shell")!;
             dynamic shell = Activator.CreateInstance(shellType)!;
             dynamic shortcut = shell.CreateShortcut(lnkPath);
@@ -123,5 +124,19 @@ internal static class Installer
         {
             // Best-effort shortcut
         }
+    }
+
+    private static string BuildShortcutName(string appName, string targetExe)
+    {
+        var desiredName = string.IsNullOrWhiteSpace(appName)
+            ? Path.GetFileNameWithoutExtension(targetExe)
+            : appName.Trim();
+
+        var invalidCharacters = Path.GetInvalidFileNameChars();
+        var sanitized = new string(desiredName.Where(character => !invalidCharacters.Contains(character)).ToArray());
+
+        return string.IsNullOrWhiteSpace(sanitized)
+            ? Path.GetFileNameWithoutExtension(targetExe)
+            : sanitized;
     }
 }
