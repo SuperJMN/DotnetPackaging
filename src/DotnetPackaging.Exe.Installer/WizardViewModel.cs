@@ -2,6 +2,7 @@ using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using CSharpFunctionalExtensions;
 using ReactiveUI;
 using Zafiro.Avalonia.Controls.Wizards.Slim;

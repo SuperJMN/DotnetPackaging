@@ -6,6 +6,13 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="DotnetPackaging.Exe.Installer.MainView"
              x:DataType="installerStub:WizardViewModel">
+
+    <Interaction.Behaviors>
+        <LoadedTrigger>
+            <InvokeCommandAction Command="{Binding LoadMetadata}" />
+        </LoadedTrigger>
+    </Interaction.Behaviors>
+
     <UserControl.DataTemplates>
         <DataTemplate DataType="{x:Type installerStub:WelcomePageVM}">
             <StackPanel Spacing="12">

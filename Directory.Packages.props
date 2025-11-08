@@ -29,8 +29,8 @@
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.3.8" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.8" />
     <PackageVersion Include="Avalonia.ReactiveUI" Version="11.3.6" />
-    <PackageVersion Include="Zafiro.Avalonia" Version="39.0.1" />
-    <PackageVersion Include="Zafiro.Avalonia.Dialogs" Version="$(ZafiroAvaloniaVersion)" />
+    <PackageVersion Include="Zafiro.Avalonia" Version="39.0.5" />
+    <PackageVersion Include="Zafiro.Avalonia.Dialogs" Version="39.0.5" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="Serilog.Sinks.XUnit" Version="3.0.19" />
     <PackageVersion Include="SharpCompress" Version="0.41.0" />
