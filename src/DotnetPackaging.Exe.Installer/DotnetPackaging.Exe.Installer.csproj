@@ -13,7 +13,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <AvaloniaResource Include="Assets\**"/>
+        <AvaloniaResource Include="Assets\**" />
     </ItemGroup>
 
     <!-- Embed dynamic payload when provided at publish time -->
@@ -24,11 +24,25 @@
     </ItemGroup>
 
     <ItemGroup>
-        <AvaloniaResource Include="Assets\**"/>
+        <AvaloniaResource Include="Assets\**" />
     </ItemGroup>
 
     <ItemGroup>
-        <Content Include="Assets\Icon.ico"/>
+        <Content Include="Assets\Icon.ico" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia.Desktop" />
+        <PackageReference Include="Avalonia.Fonts.Inter" />
+        <PackageReference Include="Avalonia.Themes.Fluent" />
+        <PackageReference Include="AvaloniaUI.DiagnosticsSupport" />
+        <PackageReference Include="Projektanker.Icons.Avalonia.FontAwesome" />
+        <PackageReference Include="Projektanker.Icons.Avalonia.MaterialDesign" />
+        <PackageReference Include="ReactiveUI.Avalonia" />
+        <PackageReference Include="Zafiro.Avalonia" />
+        <PackageReference Include="Zafiro" />
+        <PackageReference Include="Zafiro.Avalonia.Dialogs" />
+        <PackageReference Include="Zafiro.DivineBytes" />
     </ItemGroup>
 
     <ItemGroup>

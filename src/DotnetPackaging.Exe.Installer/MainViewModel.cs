@@ -1,8 +1,6 @@
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using System.Threading.Tasks;
-using System.Windows.Input;
 using CSharpFunctionalExtensions;
 using ReactiveUI;
 using Zafiro.Avalonia.Controls.Wizards.Slim;
@@ -17,14 +15,14 @@ using Zafiro.ProgressReporting;
 
 namespace DotnetPackaging.Exe.Installer;
 
-public sealed class WizardViewModel : ReactiveObject, IDisposable
+public sealed class MainViewModel : ReactiveObject, IDisposable
 {
     private readonly CompositeDisposable disposables = new();
     private InstallerMetadata metadata = new("app", "App", "1.0.0", "Unknown");
     private readonly INotificationService notificationService;
     private InstallerPayload? currentPayload;
 
-    public WizardViewModel(IDialog dialog, INavigator navigator, INotificationService notificationService, Action onCancel)
+    public MainViewModel(IDialog dialog, INavigator navigator, INotificationService notificationService, Action onCancel)
     {
         Navigator = navigator;
         this.notificationService = notificationService;

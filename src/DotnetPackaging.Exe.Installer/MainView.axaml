@@ -5,7 +5,7 @@
              xmlns:installerStub="clr-namespace:DotnetPackaging.Exe.Installer"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="DotnetPackaging.Exe.Installer.MainView"
-             x:DataType="installerStub:WizardViewModel">
+             x:DataType="installerStub:MainViewModel">
 
     <Interaction.Behaviors>
         <LoadedTrigger>

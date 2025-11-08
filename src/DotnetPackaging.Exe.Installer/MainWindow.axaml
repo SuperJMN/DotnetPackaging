@@ -9,7 +9,7 @@
         WindowStartupLocation="CenterScreen"
         mc:Ignorable="d"
         Title="{Binding ApplicationName, StringFormat='{}{0} installer'}"
-        x:DataType="m:WizardViewModel">
+        x:DataType="m:MainViewModel">
   
   <m:MainView />
   
