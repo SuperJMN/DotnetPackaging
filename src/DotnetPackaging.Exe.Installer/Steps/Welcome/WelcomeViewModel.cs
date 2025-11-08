@@ -1,4 +1,5 @@
-﻿using ReactiveUI;
+﻿using DotnetPackaging.Exe.Installer.Steps.Welcome;
+using ReactiveUI;
 
 namespace DotnetPackaging.Exe.Installer.Steps;
 

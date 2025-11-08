@@ -60,4 +60,11 @@
         <PackageReference Include="Zafiro.Avalonia.Dialogs" />
         <PackageReference Include="Zafiro.DivineBytes" />
     </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Steps\Welcome\WelcomeView.axaml.cs">
+        <DependentUpon>WelcomeView.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+    </ItemGroup>
 </Project>

@@ -1,8 +1,6 @@
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 
-namespace DotnetPackaging.Exe.Installer.Steps;
+namespace DotnetPackaging.Exe.Installer.Steps.Welcome;
 
 public partial class WelcomeView : UserControl
 {

@@ -20,7 +20,7 @@ public class InstallWizard
         var welcome = new WelcomeViewModel(metadata);
 
         return WizardBuilder
-            .StartWith(() => welcome, "Welcome").Next(_ => metadata).Always()
+            .StartWith(() => welcome, "").Next(_ => metadata).Always()
             .Then(md => new LocationViewModel(), "Destination").NextResult(vm => Result.Success(Unit.Default)).Always()
             .WithCompletionFinalStep();
     }
