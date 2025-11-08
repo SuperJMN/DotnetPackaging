@@ -1,4 +1,5 @@
 using System.Reactive.Disposables;
+using System.Reactive.Disposables.Fluent;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ReactiveUI;
@@ -17,23 +18,7 @@ public sealed class OptionsPageVM : ReactiveObject, IDisposable
         installDirectory = initialDir;
         Metadata = metadata;
 
-        Progress = new ReactiveProperty<Progress?>(
-            progressUpdates
-                .Select(progress => (Progress?)progress)
-                .ObserveOn(RxApp.MainThreadScheduler),
-            null);
-
-        var subscription = Progress.Changes
-            .Subscribe(_ =>
-            {
-                this.RaisePropertyChanged(nameof(ProgressText));
-                this.RaisePropertyChanged(nameof(ProgressFraction));
-                this.RaisePropertyChanged(nameof(IsProgressVisible));
-            });
-        disposables.Add(subscription);
-
-        disposables.Add(Progress);
-        disposables.Add(progressUpdates);
+        Progress = new Reactive.Bindings.ReactiveProperty<Progress?>(progressUpdates.Select(progress => (Progress?)progress).ObserveOn(RxApp.MainThreadScheduler), (Progress?)null).DisposeWith(disposables);
     }
 
     public InstallerMetadata Metadata { get; }
@@ -44,7 +29,7 @@ public sealed class OptionsPageVM : ReactiveObject, IDisposable
         set => this.RaiseAndSetIfChanged(ref installDirectory, value);
     }
 
-    public ReactiveProperty<Progress?> Progress { get; }
+    public Reactive.Bindings.ReactiveProperty<Progress?> Progress { get; }
 
     public IObserver<Progress> ProgressObserver => progressUpdates;
 
@@ -62,11 +47,7 @@ public sealed class OptionsPageVM : ReactiveObject, IDisposable
     };
 
     public bool IsProgressVisible => Progress.Value is not null;
-
-    public void ResetProgress() => Progress.OnNext(null);
-
-    public void Track(IDisposable disposable) => disposables.Add(disposable);
-
+    
     public void Dispose()
     {
         disposables.Dispose();

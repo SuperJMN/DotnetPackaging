@@ -21,6 +21,7 @@
     <PackageVersion Include="Octokit" Version="14.0.0" />
     <PackageVersion Include="Projektanker.Icons.Avalonia.FontAwesome" Version="9.6.2" />
     <PackageVersion Include="Projektanker.Icons.Avalonia.MaterialDesign" Version="9.6.2" />
+    <PackageVersion Include="ReactiveProperty" Version="9.7.0" />
     <PackageVersion Include="ReactiveUI.Avalonia" Version="11.3.8" />
     <PackageVersion Include="ReactiveUI.Fody" Version="19.5.41" />
     <PackageVersion Include="ReactiveUI" Version="20.1.63" />

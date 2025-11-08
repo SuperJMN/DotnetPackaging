@@ -1,17 +1,22 @@
+using CSharpFunctionalExtensions;
+using Reactive.Bindings;
+using ReactiveUI;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using CSharpFunctionalExtensions;
-using ReactiveUI;
+using System.Windows.Input;
 using Zafiro.Avalonia.Controls.Wizards.Slim;
 using Zafiro.Avalonia.Dialogs;
 using Zafiro.CSharpFunctionalExtensions;
+using Zafiro.ProgressReporting;
+using Zafiro.Reactive;
 using Zafiro.UI;
 using Zafiro.UI.Commands;
 using Zafiro.UI.Navigation;
+using Zafiro.UI.Wizards.Classic;
 using Zafiro.UI.Wizards.Slim;
 using Zafiro.UI.Wizards.Slim.Builder;
-using Zafiro.ProgressReporting;
+using ReactiveCommand = ReactiveUI.ReactiveCommand;
 
 namespace DotnetPackaging.Exe.Installer;
 
@@ -19,38 +24,37 @@ public sealed class MainViewModel : ReactiveObject, IDisposable
 {
     private readonly CompositeDisposable disposables = new();
     private InstallerMetadata metadata = new("app", "App", "1.0.0", "Unknown");
+    private readonly IDialog dialog;
     private readonly INotificationService notificationService;
+    private readonly Action onCancel;
     private InstallerPayload? currentPayload;
 
-    public MainViewModel(IDialog dialog, INavigator navigator, INotificationService notificationService, Action onCancel)
+    public MainViewModel(IDialog dialog, INavigator navigator, INotificationService notificationService,
+        Action onCancel)
     {
         Navigator = navigator;
+        this.dialog = dialog;
         this.notificationService = notificationService;
+        this.onCancel = onCancel;
 
         LoadMetadata = ReactiveCommand.Create(LoadMetadataCore);
+        Metadata = new Reactive.Bindings.ReactiveProperty<InstallerMetadata?>(LoadMetadata.Successes());
 
-        Metadata = new ReactiveProperty<InstallerMetadata?>(
-            LoadMetadata.Successes().Select(meta => (InstallerMetadata?)meta),
-            null);
 
-        var failureSubscription = LoadMetadata
-            .Failures()
-            .Subscribe(_ => Metadata.OnNext(default!));
-        disposables.Add(failureSubscription);
+        LoadWizard = ReactiveCommand.CreateFromTask(StartWizard);
+        LoadMetadata.ToSignal().InvokeCommand(LoadWizard);
+    }
 
-        var metadataSubscription = Metadata.Changes.Subscribe(meta =>
-        {
-            metadata = meta ?? new InstallerMetadata("app", "App", "1.0.0", "Unknown");
-            this.RaisePropertyChanged(nameof(ApplicationName));
-        });
-        disposables.Add(metadataSubscription);
+    public ICommand? LoadWizard { get; set; }
 
-        disposables.Add(Metadata);
-
+    private Task<Maybe<string>> StartWizard()
+    {
         var wizard = CreateWizard();
-        _ = wizard.Navigate(Navigator, async (_, _) =>
+
+        return wizard.Navigate(Navigator, async (_, _) =>
         {
-            var result = await dialog.ShowConfirmation("Cancel Installation", "Are you sure you want to cancel the installation?");
+            var result = await dialog.ShowConfirmation("Cancel Installation",
+                "Are you sure you want to cancel the installation?");
             result.Tap(b =>
             {
                 if (b)
@@ -69,7 +73,7 @@ public sealed class MainViewModel : ReactiveObject, IDisposable
 
     public ReactiveCommand<Unit, Result<InstallerMetadata>> LoadMetadata { get; }
 
-    public ReactiveProperty<InstallerMetadata?> Metadata { get; }
+    public Reactive.Bindings.ReactiveProperty<InstallerMetadata?> Metadata { get; }
 
     private Result<InstallerMetadata> LoadMetadataCore()
     {
@@ -86,31 +90,25 @@ public sealed class MainViewModel : ReactiveObject, IDisposable
 
     private SlimWizard<string> CreateWizard()
     {
-        var welcome = new WelcomePageVM(LoadMetadata, Metadata, () => currentPayload);
+        var welcome = new WelcomeViewModel(Metadata.Value!, () => currentPayload);
 
         return WizardBuilder
-            .StartWith(() => welcome, "Welcome")
-            .Next(page => page.GetPayloadOrThrow(), "Continue")
-            .When(page => page.CanContinue)
+            .StartWith(() => welcome, "Welcome").Next(page => page.GetPayloadOrThrow(), "Continue").Always()
             .Then(payload =>
             {
                 var installDir = GetDefaultInstallDirectory(payload.Metadata);
                 return new OptionsPageVM(installDir, payload.Metadata);
-            }, "Destination")
-            .NextCommand((page, payload) =>
+            }, "Destination").NextCommand((page, payload) =>
             {
-                page.ResetProgress();
                 var installCommand = EnhancedCommand.Create(() => InstallApplicationAsync(payload, page.InstallDirectory, page.ProgressObserver), text: "Install");
-                page.Track(installCommand.HandleErrorsWith(notificationService));
                 return installCommand;
             })
-            .Then(result => new CompletionPageVM(result), "Completed")
-            .Next(_ => "Done", "Close")
-            .Always()
+            .Then(result => new CompletionPageVM(result), "Completed").Next(_ => "Done", "Close").Always()
             .WithCompletionFinalStep();
     }
 
-    private static Task<Result<InstallationResult>> InstallApplicationAsync(InstallerPayload payload, string installDir, IObserver<Progress> progressObserver)
+    private static Task<Result<InstallationResult>> InstallApplicationAsync(InstallerPayload payload, string installDir,
+        IObserver<Progress> progressObserver)
     {
         return Task.Run(() =>
             PayloadExtractor.CopyContentTo(payload, installDir, progressObserver)
@@ -126,7 +124,8 @@ public sealed class MainViewModel : ReactiveObject, IDisposable
         var vendorPart = SanitizePathPart(installerMetadata.Vendor);
         var appPart = SanitizePathPart(installerMetadata.ApplicationName);
 
-        return string.Equals(vendorPart, appPart, StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(vendorPart)
+        return string.Equals(vendorPart, appPart, StringComparison.OrdinalIgnoreCase) ||
+               string.IsNullOrWhiteSpace(vendorPart)
             ? Path.Combine(baseDir, appPart)
             : Path.Combine(baseDir, vendorPart, appPart);
     }
