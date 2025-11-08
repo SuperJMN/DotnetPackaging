@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:installerStub="clr-namespace:DotnetPackaging.Exe.Installer"
+             xmlns:steps="clr-namespace:DotnetPackaging.Exe.Installer.Steps"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="DotnetPackaging.Exe.Installer.MainView"
              x:DataType="installerStub:MainViewModel">
@@ -14,27 +15,10 @@
     </Interaction.Behaviors>
 
     <UserControl.DataTemplates>
-        <DataTemplate DataType="{x:Type installerStub:WelcomeViewModel}">
-            <StackPanel Spacing="12">
-                <TextBlock Text="{Binding Heading}" FontSize="20" FontWeight="Bold"/>
-                <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
-                <TextBlock Text="{Binding AdditionalInfo}" TextWrapping="Wrap"/>
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Metadata" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding ApplicationNameDisplay}" />
-                    <TextBlock Text="{Binding VersionDisplay}" />
-                    <TextBlock Text="{Binding VendorDisplay}" TextWrapping="Wrap"/>
-                </StackPanel>
-                <TextBlock Text="{Binding ErrorMessage}" Foreground="Red" TextWrapping="Wrap"/>
-            </StackPanel>
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type installerStub:OptionsPageVM}">
+        <DataTemplate DataType="{x:Type installerStub:LocationViewModel}">
             <StackPanel Spacing="8">
                 <TextBlock Text="Select the installation folder" FontWeight="Bold"/>
-                <TextBlock Text="{Binding Metadata.ApplicationName, StringFormat='Destination for {0}', TargetNullValue='Application not loaded'}" FontStyle="Italic"/>
                 <TextBox Text="{Binding InstallDirectory, Mode=TwoWay}"/>
-                <ProgressBar Minimum="0" Maximum="1" Value="{Binding ProgressFraction}" IsVisible="{Binding IsProgressVisible}" Height="6"/>
-                <TextBlock Text="{Binding ProgressText}" FontStyle="Italic" IsVisible="{Binding IsProgressVisible}"/>
             </StackPanel>
         </DataTemplate>
         <DataTemplate DataType="{x:Type installerStub:CompletionPageVM}">

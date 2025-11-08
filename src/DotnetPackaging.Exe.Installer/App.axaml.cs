@@ -41,7 +41,8 @@ public sealed class App : Application
             var dialog = new DesktopDialog();
             var notificationService = new NotificationDialog(dialog);
             var buildServiceProvider = new ServiceCollection().BuildServiceProvider();
-            return new MainViewModel(dialog, new Navigator(buildServiceProvider, Maybe<ILogger>.None, RxApp.MainThreadScheduler), notificationService, Shutdown);
+            var navigator = new Navigator(buildServiceProvider, Maybe<ILogger>.None, RxApp.MainThreadScheduler);
+            return new MainViewModel(new InstallWizard(), dialog, navigator, notificationService, Shutdown);
         }, () => new WizardWindow());
         
         base.OnFrameworkInitializationCompleted();

@@ -8,14 +8,10 @@ using System.Windows.Input;
 using Zafiro.Avalonia.Controls.Wizards.Slim;
 using Zafiro.Avalonia.Dialogs;
 using Zafiro.CSharpFunctionalExtensions;
-using Zafiro.ProgressReporting;
 using Zafiro.Reactive;
 using Zafiro.UI;
-using Zafiro.UI.Commands;
 using Zafiro.UI.Navigation;
 using Zafiro.UI.Wizards.Classic;
-using Zafiro.UI.Wizards.Slim;
-using Zafiro.UI.Wizards.Slim.Builder;
 using ReactiveCommand = ReactiveUI.ReactiveCommand;
 
 namespace DotnetPackaging.Exe.Installer;
@@ -24,15 +20,17 @@ public sealed class MainViewModel : ReactiveObject, IDisposable
 {
     private readonly CompositeDisposable disposables = new();
     private InstallerMetadata metadata = new("app", "App", "1.0.0", "Unknown");
+    private readonly InstallWizard installWizard;
     private readonly IDialog dialog;
     private readonly INotificationService notificationService;
     private readonly Action onCancel;
     private InstallerPayload? currentPayload;
 
-    public MainViewModel(IDialog dialog, INavigator navigator, INotificationService notificationService,
+    public MainViewModel(InstallWizard installWizard, IDialog dialog, INavigator navigator, INotificationService notificationService,
         Action onCancel)
     {
         Navigator = navigator;
+        this.installWizard = installWizard;
         this.dialog = dialog;
         this.notificationService = notificationService;
         this.onCancel = onCancel;
@@ -47,9 +45,9 @@ public sealed class MainViewModel : ReactiveObject, IDisposable
 
     public ICommand? LoadWizard { get; set; }
 
-    private Task<Maybe<string>> StartWizard()
+    private Task<Maybe<Unit>> StartWizard()
     {
-        var wizard = CreateWizard();
+        var wizard = installWizard.CreateWizard(Metadata.Value!);
 
         return wizard.Navigate(Navigator, async (_, _) =>
         {
@@ -87,57 +85,7 @@ public sealed class MainViewModel : ReactiveObject, IDisposable
         currentPayload = payloadResult.Value;
         return Result.Success(currentPayload.Metadata);
     }
-
-    private SlimWizard<string> CreateWizard()
-    {
-        var welcome = new WelcomeViewModel(Metadata.Value!, () => currentPayload);
-
-        return WizardBuilder
-            .StartWith(() => welcome, "Welcome").Next(page => page.GetPayloadOrThrow(), "Continue").Always()
-            .Then(payload =>
-            {
-                var installDir = GetDefaultInstallDirectory(payload.Metadata);
-                return new OptionsPageVM(installDir, payload.Metadata);
-            }, "Destination").NextCommand((page, payload) =>
-            {
-                var installCommand = EnhancedCommand.Create(() => InstallApplicationAsync(payload, page.InstallDirectory, page.ProgressObserver), text: "Install");
-                return installCommand;
-            })
-            .Then(result => new CompletionPageVM(result), "Completed").Next(_ => "Done", "Close").Always()
-            .WithCompletionFinalStep();
-    }
-
-    private static Task<Result<InstallationResult>> InstallApplicationAsync(InstallerPayload payload, string installDir,
-        IObserver<Progress> progressObserver)
-    {
-        return Task.Run(() =>
-            PayloadExtractor.CopyContentTo(payload, installDir, progressObserver)
-                .Bind(() => Installer.Install(installDir, payload.Metadata))
-                .Map(exePath => new InstallationResult(payload.Metadata, installDir, exePath)));
-    }
-
-    private static string GetDefaultInstallDirectory(InstallerMetadata installerMetadata)
-    {
-        var baseDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Programs");
-        var vendorPart = SanitizePathPart(installerMetadata.Vendor);
-        var appPart = SanitizePathPart(installerMetadata.ApplicationName);
-
-        return string.Equals(vendorPart, appPart, StringComparison.OrdinalIgnoreCase) ||
-               string.IsNullOrWhiteSpace(vendorPart)
-            ? Path.Combine(baseDir, appPart)
-            : Path.Combine(baseDir, vendorPart, appPart);
-    }
-
-    private static string SanitizePathPart(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return "App";
-        var invalid = Path.GetInvalidFileNameChars();
-        var sanitized = new string(text.Where(c => !invalid.Contains(c)).ToArray());
-        return string.IsNullOrWhiteSpace(sanitized) ? "App" : sanitized;
-    }
-
+  
     public void Dispose()
     {
         disposables.Dispose();

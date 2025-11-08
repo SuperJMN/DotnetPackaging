@@ -43,6 +43,7 @@
         <PackageReference Include="Zafiro.Avalonia" />
         <PackageReference Include="Zafiro" />
         <PackageReference Include="Zafiro.Avalonia.Dialogs" />
+        <PackageReference Include="Zafiro.Avalonia.Generators" />
         <PackageReference Include="Zafiro.DivineBytes" />
     </ItemGroup>
 

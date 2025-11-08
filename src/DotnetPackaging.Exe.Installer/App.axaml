@@ -3,6 +3,7 @@
              x:Class="DotnetPackaging.Exe.Installer.App">
     
     <Application.DataTemplates>
+        <DataTypeViewLocator />
         <DataTemplate DataType="MessageDialogViewModel">
             <MessageDialogView />
         </DataTemplate>
