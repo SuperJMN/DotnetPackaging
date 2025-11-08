@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Linq;
 using CSharpFunctionalExtensions;
 
 namespace DotnetPackaging.Exe.Installer;
@@ -20,19 +21,89 @@ internal static class Installer
                 throw new DirectoryNotFoundException($"Installation directory '{targetDir}' was not found.");
             }
 
-            if (!string.IsNullOrWhiteSpace(meta.ExecutableName))
+            var explicitExecutable = TryResolveExplicitExecutable(targetDir, meta.ExecutableName);
+            if (explicitExecutable.HasValue)
             {
-                var candidate = Path.Combine(targetDir, meta.ExecutableName);
-                if (File.Exists(candidate)) return candidate;
+                return explicitExecutable.Value;
             }
 
-            var firstExe = Directory.EnumerateFiles(targetDir, "*.exe", SearchOption.AllDirectories)
-                .OrderBy(p => p.Length)
-                .FirstOrDefault();
-            if (firstExe is null)
+            var candidates = EnumerateExecutableCandidates(targetDir);
+            if (!candidates.Any())
+            {
                 throw new InvalidOperationException("No .exe found in installed content.");
-            return firstExe;
+            }
+
+            var byApplicationName = TryMatchByApplicationName(candidates, meta.ApplicationName);
+            return byApplicationName.Match(
+                value => value,
+                () => SelectBestExecutable(targetDir, candidates));
         }, ex => ex.Message);
+    }
+
+    private static Maybe<string> TryResolveExplicitExecutable(string targetDir, string? executableName)
+    {
+        if (string.IsNullOrWhiteSpace(executableName))
+        {
+            return Maybe<string>.None;
+        }
+
+        var normalized = executableName.Replace('/', Path.DirectorySeparatorChar);
+        var candidate = Path.Combine(targetDir, normalized);
+        return File.Exists(candidate)
+            ? Maybe<string>.From(candidate)
+            : Maybe<string>.None;
+    }
+
+    private static IReadOnlyList<string> EnumerateExecutableCandidates(string targetDir)
+    {
+        return Directory.EnumerateFiles(targetDir, "*.exe", SearchOption.AllDirectories)
+            .Where(candidate => !string.Equals(Path.GetFileName(candidate), "createdump.exe", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private static Maybe<string> TryMatchByApplicationName(IEnumerable<string> candidates, string applicationName)
+    {
+        if (string.IsNullOrWhiteSpace(applicationName))
+        {
+            return Maybe<string>.None;
+        }
+
+        var normalizedApplicationName = NormalizeExecutableStem(applicationName);
+        var match = candidates
+            .Select(candidate => new
+            {
+                Path = candidate,
+                Stem = NormalizeExecutableStem(System.IO.Path.GetFileNameWithoutExtension(candidate))
+            })
+            .FirstOrDefault(candidate => string.Equals(candidate.Stem, normalizedApplicationName, StringComparison.OrdinalIgnoreCase));
+
+        return match is null ? Maybe<string>.None : Maybe<string>.From(match.Path);
+    }
+
+    private static string SelectBestExecutable(string targetDir, IReadOnlyCollection<string> candidates)
+    {
+        return candidates
+            .Select(candidate => new
+            {
+                Path = candidate,
+                Depth = GetDepth(targetDir, candidate),
+                Length = candidate.Length
+            })
+            .OrderBy(candidate => candidate.Depth)
+            .ThenBy(candidate => candidate.Length)
+            .First()
+            .Path;
+    }
+
+    private static int GetDepth(string root, string candidate)
+    {
+        var relative = Path.GetRelativePath(root, candidate);
+        return relative.Count(ch => ch == Path.DirectorySeparatorChar || ch == Path.AltDirectorySeparatorChar);
+    }
+
+    private static string NormalizeExecutableStem(string text)
+    {
+        return new string(text.Where(char.IsLetterOrDigit).ToArray());
     }
 
     private static void TryCreateShortcut(string appName, string targetExe)
