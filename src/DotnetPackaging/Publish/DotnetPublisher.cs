@@ -1,9 +1,6 @@
-using System;
-using System.IO;
 using System.IO.Abstractions;
 using System.Runtime.InteropServices;
 using Zafiro.Commands;
-using Zafiro.DivineBytes;
 using Zafiro.FileSystem.Core;
 using Zafiro.Mixins;
 using LocalDirectory = Zafiro.FileSystem.Local.Directory;
@@ -19,7 +16,7 @@ public sealed class DotnetPublisher : IPublisher
     {
     }
 
-    public DotnetPublisher(Maybe<ILogger> logger) : this(new Command(logger.Map(x => x.ForContext<Command>())), logger)
+    public DotnetPublisher(Maybe<ILogger> logger) : this(new Command(logger.Map(x => x.ForContext("Module", "COMMAND"))), logger)
     {
     }
 

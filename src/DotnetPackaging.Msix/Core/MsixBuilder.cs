@@ -22,7 +22,7 @@ public class MsixBuilder : IAsyncDisposable
 
     public MsixBuilder(Stream stream, Maybe<ILogger> logger)
     {
-        this.logger = logger.Map(l => l.ForContext<MsixBuilder>());
+        this.logger = logger.Map(l => l.ForContext("Module", "MSIX"));
         baseStream = stream ?? throw new ArgumentNullException(nameof(stream));
     }
 
