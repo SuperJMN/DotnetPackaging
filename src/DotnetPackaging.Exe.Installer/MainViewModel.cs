@@ -47,7 +47,7 @@ public sealed class MainViewModel : ReactiveObject, IDisposable
 
     private Task<Maybe<Unit>> StartWizard()
     {
-        var wizard = installWizard.CreateWizard(Metadata.Value!);
+        var wizard = installWizard.CreateWizard();
 
         return wizard.Navigate(Navigator, async (_, _) =>
         {

@@ -1,6 +1,9 @@
 using System.Reactive;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Exe.Installer.Steps;
+using DotnetPackaging.Exe.Installer.Steps.Finish;
+using DotnetPackaging.Exe.Installer.Steps.Installation;
+using DotnetPackaging.Exe.Installer.Steps.Welcome;
 using Zafiro.ProgressReporting;
 using Zafiro.UI.Commands;
 using Zafiro.UI.Wizards.Slim;
@@ -15,13 +18,15 @@ public class InstallWizard
         
     }
     
-    public SlimWizard<Unit> CreateWizard(InstallerMetadata metadata)
+    public SlimWizard<Unit> CreateWizard()
     {
-        var welcome = new WelcomeViewModel(metadata);
+        var welcome = new WelcomeViewModel();
 
         return WizardBuilder
-            .StartWith(() => welcome, "").Next(_ => metadata).Always()
-            .Then(md => new LocationViewModel(), "Destination").NextResult(vm => Result.Success(Unit.Default)).Always()
+            .StartWith(() => welcome, "").Next(w => w.Metadata.Value).WhenValid()
+            .Then(md => new Steps.Location.LocationViewModel(), "Destination").Next((vm, m) => new { vm.InstallDirectory, m }).WhenValid()
+            .Then(s => new InstallationViewModel(s.m, s.InstallDirectory!), "Ready to install").NextCommand(model => model.Install.Enhance("Install"))
+            .Then(m => new FinishViewModel(m), "Installation finished").NextUnit("Close").Always()
             .WithCompletionFinalStep();
     }
 

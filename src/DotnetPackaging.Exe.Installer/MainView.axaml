@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:installerStub="clr-namespace:DotnetPackaging.Exe.Installer"
              xmlns:steps="clr-namespace:DotnetPackaging.Exe.Installer.Steps"
+             xmlns:location="clr-namespace:DotnetPackaging.Exe.Installer.Steps.Location"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="DotnetPackaging.Exe.Installer.MainView"
              x:DataType="installerStub:MainViewModel">
@@ -15,7 +16,7 @@
     </Interaction.Behaviors>
 
     <UserControl.DataTemplates>
-        <DataTemplate DataType="{x:Type installerStub:LocationViewModel}">
+        <DataTemplate DataType="{x:Type location:LocationViewModel}">
             <StackPanel Spacing="8">
                 <TextBlock Text="Select the installation folder" FontWeight="Bold"/>
                 <TextBox Text="{Binding InstallDirectory, Mode=TwoWay}"/>

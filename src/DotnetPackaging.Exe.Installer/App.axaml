@@ -3,6 +3,7 @@
              x:Class="DotnetPackaging.Exe.Installer.App">
     
     <Application.DataTemplates>
+        <DataTemplateInclude Source="avares://Zafiro.Avalonia/DataTemplates.axaml" />
         <DataTypeViewLocator />
         <DataTemplate DataType="MessageDialogViewModel">
             <MessageDialogView />
