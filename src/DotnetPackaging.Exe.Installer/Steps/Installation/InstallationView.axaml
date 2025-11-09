@@ -9,7 +9,7 @@
     <Grid>
         <TextBlock IsVisible="{Binding !Install.IsExecuting^}">We will now install the application. Click Install to proceed with the installation</TextBlock>
         <TextBlock IsVisible="{Binding Install.IsExecuting^}">Installing...</TextBlock>
-        <ProgressBar IsVisible="{Binding Install.IsExecuting^}" />
+        <ProgressControl Progress="{Binding Progress^}" IsVisible="{Binding Install.IsExecuting^}" />
     </Grid>
     
 </UserControl>

@@ -97,8 +97,8 @@ internal static class PayloadExtractor
                 entryStream.CopyTo(fileStream);
 
                 copiedBytes += entry.Length;
-                var relativeProgress = new RelativeProgress<long>(safeTotal, copiedBytes);
-                progressObserver?.OnNext(new AbsoluteProgress<RelativeProgress<long>>(relativeProgress));
+                var relativeProgress = new Absolute(safeTotal, copiedBytes);
+                progressObserver?.OnNext(relativeProgress);
             }
         }, ex => $"Error extracting payload content: {ex.Message}");
     }
