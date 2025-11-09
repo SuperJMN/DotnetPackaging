@@ -30,50 +30,33 @@ public sealed class App : Application
             .Register<FontAwesomeIconProvider>()
             .Register<MaterialDesignIconProvider>();
         
-        var lifetime = (IClassicDesktopStyleApplicationLifetime) ApplicationLifetime!;
-        
-        var root = new Window
+       
+
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
         {
-            Width = 1000,
-            Height = 1000,
-            Opacity = 0,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            CanResize = false,
-            SystemDecorations = SystemDecorations.None,
-            ShowInTaskbar = false
-        };
+            var root = new Window
+            {
+                Width = 1000,
+                Height = 1000,
+                Opacity = 0,
+                WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                CanResize = false,
+                SystemDecorations = SystemDecorations.None,
+                ShowInTaskbar = false
+            };
 
-        lifetime.MainWindow = root;
-        root.Show();
+            lifetime.MainWindow = root;
+            root.Show();
         
-        var dialog = new DesktopDialog();
-        var notificationService = new NotificationDialog(dialog);
-        var buildServiceProvider = new ServiceCollection().BuildServiceProvider();
-        var navigator = new Navigator(buildServiceProvider, Maybe<ILogger>.None, RxApp.MainThreadScheduler);
-        var wizard =new InstallWizard().CreateWizard();
+            var dialog = new DesktopDialog();
+            var notificationService = new NotificationDialog(dialog);
+            var buildServiceProvider = new ServiceCollection().BuildServiceProvider();
+            var folderPicker = new AvaloniaFolderPickerService(root.StorageProvider);
+            var wizard = new InstallWizard(folderPicker).CreateWizard();
         
-        await wizard.ShowInDialog(dialog, "notificationService");
+            await wizard.ShowInDialog(dialog, "Installer");
 
-        lifetime.Shutdown();
-        // return;
-        //
-        // void Shutdown()
-        // {
-        //     if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        //     {
-        //         desktop.Shutdown();
-        //     }
-        // }
-        //
-        // this.Connect(() => new MainView(), content =>
-        // {
-        //     var dialog = new DesktopDialog();
-        //     var notificationService = new NotificationDialog(dialog);
-        //     var buildServiceProvider = new ServiceCollection().BuildServiceProvider();
-        //     var navigator = new Navigator(buildServiceProvider, Maybe<ILogger>.None, RxApp.MainThreadScheduler);
-        //     return new MainViewModel(new InstallWizard(), dialog, navigator, notificationService, Shutdown);
-        // }, () => new WizardWindow());
-        //
-        base.OnFrameworkInitializationCompleted();
+            lifetime.Shutdown();
+        }
     }
 }

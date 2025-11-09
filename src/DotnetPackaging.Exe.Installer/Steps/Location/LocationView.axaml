@@ -3,11 +3,14 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:l="clr-namespace:DotnetPackaging.Exe.Installer.Steps.Location"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             mc:Ignorable="d" 
              x:Class="DotnetPackaging.Exe.Installer.Steps.Location.LocationView"
              x:DataType="l:ILocationViewModel">
     <StackPanel Spacing="8">
         <TextBlock Text="Select the installation folder" FontWeight="Bold"/>
-        <TextBox Text="{Binding InstallDirectory, Mode=TwoWay}"/>
+        <DockPanel HorizontalSpacing="8">
+            <Button DockPanel.Dock="Right" Content="Browse…" Command="{Binding Browse}"/>
+            <TextBox Text="{Binding InstallDirectory, Mode=TwoWay}" MinWidth="200" />
+        </DockPanel>
     </StackPanel>
 </UserControl>

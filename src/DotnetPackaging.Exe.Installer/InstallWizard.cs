@@ -3,6 +3,7 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging.Exe.Installer.Steps;
 using DotnetPackaging.Exe.Installer.Steps.Finish;
 using DotnetPackaging.Exe.Installer.Steps.Installation;
+using DotnetPackaging.Exe.Installer.Steps.Location;
 using DotnetPackaging.Exe.Installer.Steps.Welcome;
 using Zafiro.ProgressReporting;
 using Zafiro.UI.Commands;
@@ -13,9 +14,11 @@ namespace DotnetPackaging.Exe.Installer;
 
 public class InstallWizard
 {
-    public InstallWizard()
+    private readonly IFolderPickerService folderPicker;
+
+    public InstallWizard(IFolderPickerService folderPicker)
     {
-        
+        this.folderPicker = folderPicker;
     }
     
     public SlimWizard<Unit> CreateWizard()
@@ -24,7 +27,7 @@ public class InstallWizard
 
         return WizardBuilder
             .StartWith(() => welcome, "").Next(w => w.Metadata.Value).WhenValid()
-            .Then(md => new Steps.Location.LocationViewModel(), "Destination").Next((vm, m) => new { vm.InstallDirectory, m }).WhenValid()
+            .Then(md => new LocationViewModel(folderPicker), "Destination").Next((vm, m) => new { vm.InstallDirectory, m }).WhenValid()
             .Then(s => new InstallationViewModel(s.m, s.InstallDirectory!), "Ready to install").NextCommand(model => model.Install.Enhance("Install"))
             .Then(m => new FinishViewModel(m), "Installation finished").NextUnit("Close").Always()
             .WithCompletionFinalStep();
