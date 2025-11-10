@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -14,6 +15,12 @@ internal static class PayloadExtractor
 
     public static Result<InstallerPayload> LoadPayload()
     {
+#if DEBUG
+        if (Environment.GetEnvironmentVariable("DP_ATTACH_DEBUGGER") == "1")
+        {
+            try { Debugger.Launch(); } catch { /* ignore */ }
+        }
+#endif
         var attempts = new List<Func<Result<InstallerPayload>>>
         {
             AttemptLoadPayloadFrom(TryExtractFromManagedResource, "Managed payload not found"),
@@ -144,7 +151,8 @@ internal static class PayloadExtractor
             using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
             var metaEntry = archive.GetEntry("metadata.json") ?? throw new InvalidOperationException("metadata.json missing");
             using var entryStream = metaEntry.Open();
-            return JsonSerializer.Deserialize<InstallerMetadata>(entryStream)!;
+            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            return JsonSerializer.Deserialize<InstallerMetadata>(entryStream, opts)!;
         }, ex => $"Error reading payload metadata: {ex.Message}");
     }
 

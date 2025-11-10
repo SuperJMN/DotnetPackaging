@@ -86,7 +86,7 @@ public sealed class ExePackagingService
     private async Task<Result<FileInfo>> Build(ExePackagingRequest request)
     {
         var inferredExecutable = InferExecutableName(request.PublishDirectory, request.ProjectName);
-        var metadata = BuildInstallerMetadata(request.Options, request.PublishDirectory, request.Vendor, inferredExecutable);
+        var metadata = BuildInstallerMetadata(request.Options, request.PublishDirectory, request.Vendor, inferredExecutable, request.ProjectName);
 
         if (request.Stub.HasValue)
         {
@@ -144,9 +144,13 @@ public sealed class ExePackagingService
         Options options,
         DirectoryInfo contextDir,
         Maybe<string> vendor,
-        Maybe<string> inferredExecutable)
+        Maybe<string> inferredExecutable,
+        Maybe<string> projectName)
     {
-        var appName = options.Name.GetValueOrDefault(contextDir.Name);
+        // Prefer explicit --application-name, then project name (when packaging from-project), then publish directory name
+        var appName = options.Name
+            .Or(() => projectName)
+            .GetValueOrDefault(contextDir.Name);
         var packageName = appName.ToLowerInvariant().Replace(" ", string.Empty).Replace("-", string.Empty);
         var appId = options.Id.GetValueOrDefault($"com.{packageName}");
         var version = options.Version.GetValueOrDefault("1.0.0");
