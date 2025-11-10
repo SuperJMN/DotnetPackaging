@@ -14,9 +14,15 @@ public partial class LocationViewModel : ReactiveValidationObject, IValidatable,
     [Reactive]
     private string? installDirectory;
 
-    public LocationViewModel(IFolderPickerService folderPicker)
+    public LocationViewModel(IFolderPickerService folderPicker, string? defaultInstallDirectory = null)
     {
+        // Allow rooted paths even if they don't exist yet; the installer will create them
         this.ValidationRule<LocationViewModel, string>(model => model.InstallDirectory, IsValidPath, "Path is not valid. Please choose a valid path.");
+
+        if (!string.IsNullOrWhiteSpace(defaultInstallDirectory))
+        {
+            InstallDirectory = defaultInstallDirectory;
+        }
 
         Browse = ReactiveCommand.CreateFromTask(async () =>
         {
@@ -32,7 +38,7 @@ public partial class LocationViewModel : ReactiveValidationObject, IValidatable,
 
     private static bool IsValidPath(string? s)
     {
-        return Directory.Exists(s) && Path.IsPathRooted(s);
+        return !string.IsNullOrWhiteSpace(s) && Path.IsPathRooted(s);
     }
 
     public IObservable<bool> IsValid => this.IsValid();

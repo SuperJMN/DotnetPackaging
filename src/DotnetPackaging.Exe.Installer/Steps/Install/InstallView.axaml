@@ -2,10 +2,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:installation="clr-namespace:DotnetPackaging.Exe.Installer.Steps.Installation"
+             xmlns:installation="clr-namespace:DotnetPackaging.Exe.Installer.Steps.Install"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="DotnetPackaging.Exe.Installer.Steps.Installation.InstallationView" 
-             x:DataType="installation:InstallationViewModel">
+             x:Class="DotnetPackaging.Exe.Installer.Steps.Install.InstallView" 
+             x:DataType="installation:InstallViewModel">
     <Grid>
         <TextBlock IsVisible="{Binding !Install.IsExecuting^}">We will now install the application. Click Install to proceed with the installation</TextBlock>
         <TextBlock IsVisible="{Binding Install.IsExecuting^}">Installing...</TextBlock>

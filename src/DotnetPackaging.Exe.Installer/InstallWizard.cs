@@ -2,7 +2,7 @@ using System.Reactive;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Exe.Installer.Steps;
 using DotnetPackaging.Exe.Installer.Steps.Finish;
-using DotnetPackaging.Exe.Installer.Steps.Installation;
+using DotnetPackaging.Exe.Installer.Steps.Install;
 using DotnetPackaging.Exe.Installer.Steps.Location;
 using DotnetPackaging.Exe.Installer.Steps.Welcome;
 using Zafiro.ProgressReporting;
@@ -21,15 +21,15 @@ public class InstallWizard
         this.folderPicker = folderPicker;
     }
     
-    public SlimWizard<Unit> CreateWizard()
+    public SlimWizard<InstallationResult> CreateWizard()
     {
         var welcome = new WelcomeViewModel();
 
         return WizardBuilder
             .StartWith(() => welcome, "").Next(w => w.Metadata.Value).WhenValid()
-            .Then(md => new LocationViewModel(folderPicker), "Destination").Next((vm, m) => new { vm.InstallDirectory, m }).WhenValid()
-            .Then(s => new InstallationViewModel(s.m, s.InstallDirectory!), "Ready to install").NextCommand(model => model.Install.Enhance("Install"))
-            .Then(m => new FinishViewModel(m), "Installation finished").NextUnit("Close").Always()
+            .Then(md => new LocationViewModel(folderPicker, GetDefaultInstallDirectory(md)), "Destination").Next((vm, m) => new { vm.InstallDirectory, m }).WhenValid()
+            .Then(s => new InstallViewModel(s.m, s.InstallDirectory!), "Ready to install").NextCommand(model => model.Install.Enhance("Install"))
+            .Then(m => new FinishViewModel(m), "Installation finished").NextCommand(vm => vm.Close.Enhance("Close"))
             .WithCompletionFinalStep();
     }
 

@@ -45,7 +45,7 @@ public sealed class MainViewModel : ReactiveObject, IDisposable
 
     public ICommand? LoadWizard { get; set; }
 
-    private Task<Maybe<Unit>> StartWizard()
+    private Task<Maybe<InstallationResult>> StartWizard()
     {
         var wizard = installWizard.CreateWizard();
 

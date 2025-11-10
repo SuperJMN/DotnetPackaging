@@ -5,5 +5,10 @@
              xmlns:finish="clr-namespace:DotnetPackaging.Exe.Installer.Steps.Finish"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="DotnetPackaging.Exe.Installer.Steps.Finish.FinishView" x:DataType="finish:FinishViewModel">
-    The application has been installed
+    <StackPanel Spacing="8">
+        <TextBlock>The application has been installed successfully.</TextBlock>
+        <CheckBox IsChecked="{Binding LaunchOnClose}"
+                  Content="Launch the application when closing"
+                  IsThreeState="False"/>
+    </StackPanel>
 </UserControl>
