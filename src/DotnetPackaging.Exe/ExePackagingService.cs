@@ -3,6 +3,9 @@ using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Linq;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Reflection;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Publish;
 using Serilog;
@@ -115,13 +118,20 @@ public sealed class ExePackagingService
                 return Result.Failure<FileInfo>(ridResult.Error);
             }
 
-            var stubResult = await AutoPublishStubWithPayload(ridResult.Value, payloadPath);
-            if (stubResult.IsFailure)
+            // Resolve stub from cache or download from GitHub Releases
+            var version = GetToolVersion();
+            var stubPathResult = await GetOrDownloadStub(ridResult.Value, version);
+            if (stubPathResult.IsFailure)
             {
-                return Result.Failure<FileInfo>(stubResult.Error);
+                return Result.Failure<FileInfo>(stubPathResult.Error);
             }
 
-            File.Copy(stubResult.Value, request.Output.FullName, true);
+            var packResult = await SimpleExePacker.Build(stubPathResult.Value, request.PublishDirectory.FullName, metadata, request.Output.FullName);
+            if (packResult.IsFailure)
+            {
+                return Result.Failure<FileInfo>(packResult.Error);
+            }
+
             return Result.Success(request.Output);
         }
         finally
@@ -256,80 +266,9 @@ public sealed class ExePackagingService
         return Result.Failure<string>("--rid is required when building EXE on non-Windows hosts (e.g., win-x64/win-arm64).");
     }
 
-    private async Task<Result<string>> AutoPublishStubWithPayload(string rid, string payloadZip)
-    {
-        try
-        {
-            var csproj = FindStubProject();
-            if (csproj is null)
-            {
-                return Result.Failure<string>("Could not find DotnetPackaging.Exe.Installer.csproj in repository layout.");
-            }
+    // Legacy local-build path removed in favor of downloading prebuilt stub from GitHub Releases.
+    // Kept as private method name preservation intentionally avoided to prevent accidental use.
 
-            var request = new ProjectPublishRequest(csproj)
-            {
-                Rid = Maybe<string>.From(rid),
-                SelfContained = true,
-                Configuration = "Release",
-                SingleFile = true,
-                Trimmed = false,
-                MsBuildProperties = new Dictionary<string, string>
-                {
-                    { "InstallerPayload", payloadZip },
-                    { "IncludeNativeLibrariesForSelfExtract", "true" },
-                    { "IncludeAllContentForSelfExtract", "true" }
-                }
-            };
-
-            var publish = await publisher.Publish(request);
-            if (publish.IsFailure)
-            {
-                return Result.Failure<string>(publish.Error);
-            }
-
-            var exe = Directory.EnumerateFiles(publish.Value.OutputDirectory, "*.exe", SearchOption.TopDirectoryOnly).FirstOrDefault()
-                      ?? Directory.EnumerateFiles(publish.Value.OutputDirectory, "*.exe", SearchOption.AllDirectories).FirstOrDefault();
-            if (exe is null)
-            {
-                return Result.Failure<string>("No stub .exe found after publishing with payload");
-            }
-
-            return Result.Success(exe);
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure<string>(ex.Message);
-        }
-    }
-
-    private static string? FindStubProject()
-    {
-        return FindFileUpwards(Environment.CurrentDirectory, Path.Combine("src", "DotnetPackaging.Exe.Installer", "DotnetPackaging.Exe.Installer.csproj"))
-               ?? FindFileUpwards(AppContext.BaseDirectory, Path.Combine("..", "..", "..", "src", "DotnetPackaging.Exe.Installer", "DotnetPackaging.Exe.Installer.csproj"));
-    }
-
-    private static string? FindFileUpwards(string startDir, string relativePath)
-    {
-        try
-        {
-            var dir = new DirectoryInfo(startDir);
-            while (dir is not null)
-            {
-                var candidate = Path.Combine(dir.FullName, relativePath);
-                if (File.Exists(candidate))
-                {
-                    return Path.GetFullPath(candidate);
-                }
-
-                dir = dir.Parent;
-            }
-        }
-        catch
-        {
-        }
-
-        return null;
-    }
 
     private static async Task<Result<string>> CreateInstallerPayloadZip(string publishDir, InstallerMetadata meta)
     {
@@ -361,6 +300,118 @@ public sealed class ExePackagingService
             }
 
             return Result.Success(zipPath);
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure<string>(ex.Message);
+        }
+    }
+
+    private static string GetToolVersion()
+    {
+        // Allow override via env var for CI/testing
+        var env = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_VERSION");
+        if (!string.IsNullOrWhiteSpace(env))
+        {
+            return env!.TrimStart('v', 'V');
+        }
+
+        // Use InformationalVersion if present, fallback to assembly version
+        var asm = typeof(ExePackagingService).Assembly;
+        var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        if (!string.IsNullOrWhiteSpace(info))
+        {
+            // Strip possible metadata like +sha
+            var plus = info!.IndexOf('+');
+            var ver = plus > 0 ? info.Substring(0, plus) : info;
+            return ver.TrimStart('v', 'V');
+        }
+        var v = asm.GetName().Version;
+        return v is null ? "0.0.0" : new Version(v.Major, v.Minor, v.Build < 0 ? 0 : v.Build).ToString();
+    }
+
+    private static string GetDefaultCacheDir()
+    {
+        var baseDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(baseDir)) baseDir = Path.GetTempPath();
+        return Path.Combine(baseDir, "DotnetPackaging", "stubs");
+    }
+
+    private static async Task<Result<string>> GetOrDownloadStub(string rid, string version)
+    {
+        try
+        {
+            var overridePath = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_PATH");
+            if (!string.IsNullOrWhiteSpace(overridePath) && File.Exists(overridePath))
+            {
+                return Result.Success(Path.GetFullPath(overridePath));
+            }
+
+            var cacheBase = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_CACHE");
+            if (string.IsNullOrWhiteSpace(cacheBase)) cacheBase = GetDefaultCacheDir();
+            var cacheDir = Path.Combine(cacheBase, rid, version);
+            Directory.CreateDirectory(cacheDir);
+            var targetPath = Path.Combine(cacheDir, "InstallerStub.exe");
+            if (File.Exists(targetPath))
+            {
+                return Result.Success(targetPath);
+            }
+
+            var baseUrl = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_URL_BASE");
+            if (string.IsNullOrWhiteSpace(baseUrl))
+            {
+                baseUrl = $"https://github.com/SuperJMN/DotnetPackaging/releases/download/v{version}/";
+            }
+            if (!baseUrl.EndsWith('/')) baseUrl += "/";
+
+            var assetName = $"DotnetPackaging.Exe.Installer-{rid}-v{version}.exe";
+            var shaName = assetName + ".sha256";
+            var exeUrl = baseUrl + assetName;
+            var shaUrl = baseUrl + shaName;
+
+            using var http = new HttpClient();
+            // Download sha first
+            var shaText = await http.GetStringAsync(shaUrl);
+            if (string.IsNullOrWhiteSpace(shaText))
+            {
+                return Result.Failure<string>($"Failed to download checksum: {shaUrl}");
+            }
+            var firstToken = shaText.Trim().Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(firstToken))
+            {
+                return Result.Failure<string>("Invalid .sha256 file contents");
+            }
+            var expected = firstToken!.Trim();
+
+            var tmpDir = Path.Combine(Path.GetTempPath(), "dp-stub-dl-" + Guid.NewGuid());
+            Directory.CreateDirectory(tmpDir);
+            var tmpPath = Path.Combine(tmpDir, assetName);
+            await using (var outFs = File.Create(tmpPath))
+            {
+                using var resp = await http.GetAsync(exeUrl, HttpCompletionOption.ResponseHeadersRead);
+                if (!resp.IsSuccessStatusCode)
+                    return Result.Failure<string>($"Failed to download stub: {exeUrl} (HTTP {(int)resp.StatusCode})");
+                await using var stream = await resp.Content.ReadAsStreamAsync();
+                await stream.CopyToAsync(outFs);
+            }
+
+            // Verify hash
+            await using (var fs = File.OpenRead(tmpPath))
+            {
+                using var sha = SHA256.Create();
+                var hash = await sha.ComputeHashAsync(fs);
+                var actual = Convert.ToHexString(hash);
+                if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
+                {
+                    try { File.Delete(tmpPath); Directory.Delete(tmpDir, true); } catch { }
+                    return Result.Failure<string>($"Checksum mismatch for stub. Expected {expected}, got {actual}");
+                }
+            }
+
+            // Move to cache
+            File.Move(tmpPath, targetPath, overwrite: true);
+            try { Directory.Delete(tmpDir, true); } catch { }
+            return Result.Success(targetPath);
         }
         catch (Exception ex)
         {

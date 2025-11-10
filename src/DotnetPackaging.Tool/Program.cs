@@ -114,8 +114,8 @@ static class Program
         AddMsixSubcommands(msixCommand);
         rootCommand.AddCommand(msixCommand);
 
-        // EXE SFX command (preview)
-        var exeCommand = new Command("exe", "Windows self-extracting installer (.exe). Preview: requires a prebuilt stub via --stub.");
+        // EXE SFX command
+        var exeCommand = new Command("exe", "Windows self-extracting installer (.exe). If --stub is not provided, the tool downloads the appropriate stub from GitHub Releases.");
         var exeInputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
         var exeOutput = new Option<FileInfo>("--output", "Output installer .exe") { IsRequired = true };
         var stubPath = new Option<FileInfo>("--stub", "Path to the prebuilt stub (WinExe) to concatenate (optional if repo layout is present)");
@@ -181,7 +181,7 @@ static class Program
         var exOut = new Option<FileInfo>("--output", "Output installer .exe") { IsRequired = true };
         var exStub = new Option<FileInfo>("--stub", "Path to the prebuilt stub (WinExe) to concatenate (optional if repo layout is present)");
 
-        var exFromProject = new Command("from-project", "Publish a .NET project and build a Windows self-extracting installer (.exe). Preview: requires --stub.");
+        var exFromProject = new Command("from-project", "Publish a .NET project and build a Windows self-extracting installer (.exe). If --stub is not provided, the tool downloads the appropriate stub from GitHub Releases.");
         exFromProject.AddOption(exProject);
         exFromProject.AddOption(exRid);
         exFromProject.AddOption(exSelfContained);
