@@ -7,12 +7,21 @@ variables:
   - name: BuildConfiguration
     value: Release
 
+pool:
+  vmImage: 'windows-latest'
+
 steps:
   - checkout: self
     submodules: true
     fetchDepth: 0
 
   # Ensure .NET SDK available before installing tools
+  - task: UseDotNet@2
+    displayName: 'Use .NET 9.x'
+    inputs:
+      packageType: 'sdk'
+      version: '9.x'
+
   - task: UseDotNet@2
     displayName: 'Use .NET 8.x'
     inputs:
