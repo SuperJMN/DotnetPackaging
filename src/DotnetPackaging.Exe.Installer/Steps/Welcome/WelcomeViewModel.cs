@@ -10,9 +10,12 @@ namespace DotnetPackaging.Exe.Installer.Steps.Welcome;
 
 public sealed class WelcomeViewModel : ReactiveValidationObject, IWelcomeViewModel, IValidatable
 {
-    public WelcomeViewModel()
+    private readonly IInstallerPayload payload;
+
+    public WelcomeViewModel(IInstallerPayload payload)
     {
-        LoadMetadata = ReactiveCommand.Create(LoadMetadataCore);
+        this.payload = payload;
+        LoadMetadata = ReactiveCommand.CreateFromTask(() => this.payload.GetMetadata());
         Metadata = new Reactive.Bindings.ReactiveProperty<InstallerMetadata?>(LoadMetadata.Successes());
         this.ValidationRule(model => model.Metadata.Value, m => m is not null, "Metadata is required");
     }
@@ -20,17 +23,6 @@ public sealed class WelcomeViewModel : ReactiveValidationObject, IWelcomeViewMod
     public Reactive.Bindings.ReactiveProperty<InstallerMetadata?> Metadata { get; }
 
     public ReactiveCommand<Unit, Result<InstallerMetadata>> LoadMetadata { get; }
-    
-    private static Result<InstallerMetadata> LoadMetadataCore()
-    {
-        var payloadResult = PayloadExtractor.LoadPayload();
-        if (payloadResult.IsFailure)
-        {
-            return Result.Failure<InstallerMetadata>(payloadResult.Error);
-        }
-
-        return Result.Success(payloadResult.Value.Metadata);
-    }
 
     public IObservable<bool> IsValid => this.IsValid();
 }

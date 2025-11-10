@@ -52,7 +52,8 @@ public sealed class App : Application
             var notificationService = new NotificationDialog(dialog);
             var buildServiceProvider = new ServiceCollection().BuildServiceProvider();
             var folderPicker = new AvaloniaFolderPickerService(root.StorageProvider);
-            var wizard = new InstallWizard(folderPicker).CreateWizard();
+var payload = new DefaultInstallerPayload();
+            var wizard = new InstallWizard(folderPicker, payload).CreateWizard();
         
             await wizard.ShowInDialog(dialog, "Installer");
 

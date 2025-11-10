@@ -15,20 +15,22 @@ namespace DotnetPackaging.Exe.Installer;
 public class InstallWizard
 {
     private readonly IFolderPickerService folderPicker;
+    private readonly IInstallerPayload payload;
 
-    public InstallWizard(IFolderPickerService folderPicker)
+    public InstallWizard(IFolderPickerService folderPicker, IInstallerPayload payload)
     {
         this.folderPicker = folderPicker;
+        this.payload = payload;
     }
     
     public SlimWizard<InstallationResult> CreateWizard()
     {
-        var welcome = new WelcomeViewModel();
+        var welcome = new WelcomeViewModel(payload);
 
         return WizardBuilder
             .StartWith(() => welcome, "").Next(w => w.Metadata.Value).WhenValid()
             .Then(md => new LocationViewModel(folderPicker, GetDefaultInstallDirectory(md)), "Destination").Next((vm, m) => new { vm.InstallDirectory, m }).WhenValid()
-            .Then(s => new InstallViewModel(s.m, s.InstallDirectory!), "Ready to install").NextCommand(model => model.Install.Enhance("Install"))
+            .Then(s => new InstallViewModel(payload, s.m, s.InstallDirectory!), "Ready to install").NextCommand(model => model.Install.Enhance("Install"))
             .Then(m => new FinishViewModel(m), "Installation finished").NextCommand(vm => vm.Close.Enhance("Close"))
             .WithCompletionFinalStep();
     }

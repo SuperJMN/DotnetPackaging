@@ -10,9 +10,11 @@ namespace DotnetPackaging.Exe.Installer.Steps.Install;
 public class InstallViewModel 
 {
     private readonly ISubject<Progress> progress = new ReplaySubject<Progress>(1);
+    private readonly IInstallerPayload payload;
 
-    public InstallViewModel(InstallerMetadata installerMetadata, string installDirectory)
+    public InstallViewModel(IInstallerPayload payload, InstallerMetadata installerMetadata, string installDirectory)
     {
+        this.payload = payload;
         // Emit initial unknown progress for the UI
         progress.OnNext(Unknown.Instance);
 
@@ -21,19 +23,17 @@ public class InstallViewModel
 
     private Task<Result<InstallationResult>> DoInstall(InstallerMetadata installerMetadata, string installDirectory)
     {
-        // Load payload and copy its Content/ tree into the chosen install directory, reporting progress
-        var payloadResult = PayloadExtractor.LoadPayload();
-        if (payloadResult.IsFailure)
+        return Task.Run(async () =>
         {
-            return Task.FromResult(Result.Failure<InstallationResult>(payloadResult.Error));
-        }
+            var copyRes = await payload.CopyContents(installDirectory, progress).ConfigureAwait(false);
+            if (copyRes.IsFailure)
+            {
+                return Result.Failure<InstallationResult>(copyRes.Error);
+            }
 
-        var payload = payloadResult.Value;
-        return Task.Run(() =>
-            PayloadExtractor.CopyContentTo(payload, installDirectory, progress)
-                .Bind(() => Installer.Install(installDirectory, installerMetadata))
-                .Map(exePath => new InstallationResult(installerMetadata, installDirectory, exePath))
-        );
+            return Installer.Install(installDirectory, installerMetadata)
+                .Map(exePath => new InstallationResult(installerMetadata, installDirectory, exePath));
+        });
     }
 
     public IObservable<Progress> Progress => progress.AsObservable();
