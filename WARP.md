@@ -6,27 +6,40 @@ Scope: whole repository (DotnetPackaging).
 
 CI pipeline (Azure Pipelines)
 - Definition: azure-pipelines.yml at repo root.
-- Agent: ubuntu-latest.
-- Tools: installs DotnetDeployer.Tool globally.
-- Behavior by branch:
-  - master: packs and pushes all packable projects to NuGet via dotnetdeployer nuget --api-key $(NuGetApiKey)
-  - other branches and PRs: dry run (packs but does not push) via --no-push
-- Packable projects: every project with IsPackable/PackAsTool set. This includes the CLI tool (src/DotnetPackaging.Console), since PackAsTool=true and it is part of the solution.
+- Agent: windows-latest.
+- Versioning: computed with GitVersion.Tool; packages use MajorMinorPatch as Version; GitHub Release tag uses v{SemVer}.
+- Behavior on master:
+  - Restore, build and pack all projects; push .nupkg (non-symbol) to NuGet (skip-duplicate) with $(NuGetApiKey).
+  - Publish Windows EXE stubs (DotnetPackaging.Exe.Installer) for win-x64 and win-arm64 as single-file self-extract apps (IncludeNativeLibrariesForSelfExtract/IncludeAllContentForSelfExtract, no trimming).
+  - Produce .sha256 for each stub and upload both .exe and .sha256 to a GitHub Release tagged v{SemVer} using gh CLI.
+- Other branches/PRs: build and pack only (no push, no release).
+- Packable projects: every project with IsPackable/PackAsTool set. The CLI tool lives in src/DotnetPackaging.Tool (PackAsTool=true).
 
 Versioning (GitVersion)
-- DotnetDeployer determines the version primarily using GitVersion (NuGetVersion or MajorMinorPatch).
-- If GitVersion is unavailable, the tool falls back to git describe --tags --long and converts it to a NuGet-compatible version.
-- Practical effect: merging a PR into master automatically triggers a publish with the GitVersion-computed version.
+- GitVersion.Tool runs in CI to produce:
+  - Version: MajorMinorPatch (used for dotnet build/pack).
+  - TagName: v{SemVer} (used to create/update the GitHub Release).
+- Practical effect: merging to master triggers package publish to NuGet and stub upload to a GitHub Release for the computed tag.
 
 Secrets
 - The pipeline expects a variable group named api-keys providing:
-  - NuGetApiKey: API key used by dotnetdeployer to push packages.
-- Do not hardcode secrets. Locally, export environment variables and pass them to the tool.
+  - NuGetApiKey: API key used to push packages to NuGet.
+  - GitHubApiKey: token exposed as GITHUB_TOKEN to create/update releases and upload stub assets via gh.
+- Do not hardcode secrets. Locally, export environment variables and pass them to the CLI tools.
 
 Local replication
-- Install tool: dotnet tool install --global DotnetDeployer.Tool
-- Dry run (no push): dotnetdeployer nuget --api-key "$NUGET_API_KEY" --no-push
-- Real publish (imitates master): dotnetdeployer nuget --api-key "$NUGET_API_KEY"
+- Pack locally:
+  - dotnet restore
+  - dotnet build -c Release -p:ContinuousIntegrationBuild=true -p:Version=1.2.3 --no-restore
+  - dotnet pack -c Release --no-build -p:IncludeSymbols=false -p:SymbolPackageFormat=snupkg -p:Version=1.2.3 -o ./artifacts/nuget
+- Push to NuGet:
+  - For each .nupkg (non-symbol): dotnet nuget push ./artifacts/nuget/<pkg>.nupkg --api-key "$env:NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+- Build Windows stubs (on Windows):
+  - dotnet publish src/DotnetPackaging.Exe.Installer/DotnetPackaging.Exe.Installer.csproj -c Release -r win-x64 -p:PublishSingleFile=true -p:SelfContained=true -p:IncludeNativeLibrariesForSelfExtract=true -p:IncludeAllContentForSelfExtract=true -p:PublishTrimmed=false -o ./artifacts/stubs/win-x64
+  - Repeat for win-arm64 by changing -r.
+- Release (optional):
+  - gh release create v1.2.3 --title "DotnetPackaging 1.2.3" --notes "Local release"
+  - gh release upload v1.2.3 ./artifacts/stubs/win-*/DotnetPackaging.Exe.Installer*.exe ./artifacts/stubs/win-*/DotnetPackaging.Exe.Installer*.exe.sha256 -R <owner>/<repo>
 
 Notes
 - Because the CLI is a dotnet tool (PackAsTool=true) and is included in the solution, CI will pack and publish it to NuGet alongside the libraries when running on master.
@@ -66,9 +79,9 @@ Packaging formats: status and details
 - Windows EXE (.exe) — preview
   - Status: preview. Dotnet-only SFX builder. Library: src/DotnetPackaging.Exe. Stub Avalonia: src/DotnetPackaging.Exe.Installer (esqueleto WIP).
   - How it works: produces a self-extracting installer by concatenating [stub.exe][payload.zip][Int64 length]["DPACKEXE1"]. The payload contains metadata.json and Content/ (publish output). The stub leerá metadata y realizará la instalación.
-  - CLI: exe (desde carpeta publish) y exe from-project (publica y empaqueta). --stub es opcional: si el repo está presente, el stub se publica automáticamente por RID; si no, puede pasarse manualmente.
+  - CLI: exe (desde carpeta publish) y exe from-project (publica y empaqueta). Si omites --stub, el packer descargará automáticamente el stub que corresponda desde GitHub Releases; puedes pasar --stub para forzar uno concreto.
   - Cross-platform build: el empaquetado (concatenación) funciona desde cualquier SO. El stub se publica por RID (win-x64/win-arm64).
-  - Defaults: self-contained=true al generar desde proyecto; RID obligatorio en hosts no Windows (para auto-publicar el stub).
+  - Defaults: self-contained=true al generar desde proyecto; en hosts no Windows, especifica --rid (win-x64/win-arm64) para elegir el stub/target correcto.
 
 CLI tool (dotnet tool)
 - Project: src/DotnetPackaging.Tool (PackAsTool=true, ToolCommandName=dotnetpackaging).
@@ -83,7 +96,7 @@ CLI tool (dotnet tool)
   - flatpak from-project: publish a .NET project and build a .flatpak bundle.
   - msix (experimental): msix pack (from directory) and msix from-project.
   - dmg (experimental): dmg (from directory) and dmg from-project (publishes then builds a .dmg).
-  - exe (preview): Windows self-extracting installer (.exe) from directory; and exe from-project (publica y empaqueta). Requiere --stub por ahora.
+  - exe (preview): Windows self-extracting installer (.exe) from directory; and exe from-project (publica y empaqueta). Si omites --stub, se descargará el stub apropiado automáticamente.
 - Common options (all commands share a metadata set):
   - --directory <dir> (required): input directory to package from.
   - --output <file> (required): output file (.AppImage, .deb, .rpm, .msix, .flatpak, .dmg).
@@ -114,10 +127,12 @@ Tests
   - Integration tests covering metadata and tar entries layout.
 - MSIX tests (src/DotnetPackaging.Msix.Tests):
   - Validate building MSIX and unpacking with makeappx to assert structure.
+- EXE tests (test/DotnetPackaging.Exe.Tests):
+  - Validate metadata zip creation and concatenation format; basic install path resolution.
 - Gaps / TODOs:
-  - Add CLI end-to-end tests (invocation of dotnetpackaging appimage/deb on temp publishes and validating outputs).
-  - Integrate dotnet test into azure-pipelines.yml (currently only packaging/publish runs).
-  - Expose msix in CLI and add corresponding tests.
+  - Add CLI end-to-end tests (invocation of dotnetpackaging appimage/deb/rpm/exe on temp publishes and validating outputs).
+  - Integrate dotnet test into azure-pipelines.yml.
+  - Improve EXE installer UI and add Windows E2E tests.
 
 Developer workflow tips
 - Publish input
@@ -125,8 +140,8 @@ Developer workflow tips
   - For AppImage, ensure an ELF executable is present (self-contained single-file publish is acceptable). If not specified, the first eligible ELF is chosen.
 - RID/self-contained
   - from-project defaults:
-    - rpm/deb/appimage: self-contained=true by default. If running on a non-Linux host, --rid is required (e.g., linux-x64/linux-arm64) to avoid host RID inference.
-    - msix: self-contained=false by default. If running on a non-Windows host, --rid is required (e.g., win-x64/win-arm64).
+    - rpm/deb/appimage: self-contained=true by default. RID is optional; if you need to cross-publish (target a different OS/arch than the host), pass --rid (e.g., linux-x64/linux-arm64).
+    - msix: self-contained=false by default. RID is optional; pass --rid when cross-publishing (e.g., win-x64/win-arm64).
     - dmg: requires --rid (osx-x64 or osx-arm64). Host RID inference is intentionally not used to avoid producing non-mac binaries when running on Linux/Windows.
     - flatpak: framework-dependent by default; uses its own runtime. You can still publish self-contained by passing --self-contained and --rid if needed.
 - RPM prerequisites
@@ -143,23 +158,27 @@ Repository map (relevant)
 - src/DotnetPackaging.Deb: Debian packaging (Tar entries, DebFile).
 - src/DotnetPackaging.Rpm: RPM packaging (layout builder and rpmbuild spec generation).
 - src/DotnetPackaging.Msix: MSIX packaging (builder and helpers).
-- src/DotnetPackaging.Tool: CLI (dotnet tool) with commands appimage, deb, rpm, flatpak.
-- test/*: AppImage and Deb tests; src/DotnetPackaging.Msix.Tests for MSIX validation.
+- src/DotnetPackaging.Exe: Windows SFX packer (concatenation and metadata).
+- src/DotnetPackaging.Exe.Installer: Avalonia stub installer.
+- src/DotnetPackaging.Tool: CLI (dotnet tool) with commands appimage, deb, rpm, flatpak, msix, exe.
+- test/*: AppImage and Deb tests; src/DotnetPackaging.Msix.Tests for MSIX; test/DotnetPackaging.Exe.Tests for EXE packaging.
 
 Backlog / Future work
-- Expose msix as a first-class command in the CLI.
-- Add CLI E2E tests (including rpm) and hook dotnet test in CI.
+- Add CLI E2E tests (including rpm/exe) and hook dotnet test in CI.
 - Optional: enrich icon detection strategies and metadata mapping (e.g., auto-appId from name + reverse DNS).
 
 Windows EXE (.exe) – progress log (snapshot)
 - Done:
   - Librería DotnetPackaging.Exe con SimpleExePacker (concatena stub + zip + footer).
-  - Comandos CLI: exe (desde carpeta) y exe from-project (publica y empaqueta), ambos requieren --stub por ahora.
+  - Comandos CLI: exe (desde carpeta) y exe from-project (publica y empaqueta). --stub es opcional; si se omite, el packer descarga el stub que corresponda desde GitHub Releases.
   - Stub Avalonia creado (esqueleto) en src/DotnetPackaging.Exe.Installer con lector de payload.
+  - Instalador: opción de crear acceso directo en Escritorio en el paso Finish; acceso directo en Start Menu se mantiene.
+  - CI: publica stubs win-x64 y win-arm64 como single-file self-extract con hashes y los sube a un GitHub Release (tag v{SemVer}).
+  - Packer: logging antes de descargar el stub para informar del tiempo de espera.
 - Next:
   - UI: Integrar SlimWizard de Zafiro en el stub (ahora hay UI mínima). Navegación con WizardNavigator y páginas.
   - Lógica: Elevación UAC y carpeta por defecto en Program Files según arquitectura.
-  - Packer: Publicar stub por RID automáticamente desde el packer (evitar --stub manual).
+  - Packer: caché local de stubs y reintentos/validación de hashes.
   - Detección avanzada de ejecutable e icono (paridad con .deb/.appimage).
   - Modo silencioso.
   - Pruebas E2E en Windows.
