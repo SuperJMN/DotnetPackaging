@@ -2,19 +2,127 @@ variables:
   - group: api-keys
   - name: Agent.Source.Git.ShallowFetchDepth
     value: 0
+  - name: StubProject
+    value: src/DotnetPackaging.Exe.Installer/DotnetPackaging.Exe.Installer.csproj
+  - name: BuildConfiguration
+    value: Release
 
 steps:
   - checkout: self
     submodules: true
     fetchDepth: 0
 
-  - pwsh: dotnet tool install --global DotnetDeployer.Tool
-    displayName: Install DotnetDeployer.Tool
+  # Ensure .NET SDK available before installing tools
+  - task: UseDotNet@2
+    displayName: 'Use .NET 8.x'
+    inputs:
+      packageType: 'sdk'
+      version: '8.x'
 
-  - pwsh: dotnetdeployer nuget --api-key $(NuGetApiKey)
-    displayName: Publish NuGet packages
-    condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
-  
-  - pwsh: dotnetdeployer nuget --api-key $(NuGetApiKey) --no-push
-    displayName: Publish NuGet packages (dry run)
-    condition: ne(variables['Build.SourceBranch'], 'refs/heads/master')
+  # GitVersion: compute semantic version and expose variables
+  - pwsh: |
+      $ErrorActionPreference = 'Stop'
+      dotnet tool install --global GitVersion.Tool --version 6.*
+      $env:PATH += ";$env:USERPROFILE\\.dotnet\\tools"
+      $json = dotnet-gitversion /output json
+      if (-not $json) { throw 'GitVersion returned no output' }
+      $gv = $json | ConvertFrom-Json
+      $nugetVersion = $gv.NuGetVersionV2
+      if (-not $nugetVersion) { $nugetVersion = $gv.NuGetVersion }
+      if (-not $nugetVersion) { $nugetVersion = $gv.SemVer }
+      $semVer = $gv.SemVer
+      if (-not $nugetVersion) { throw 'Could not determine version from GitVersion output' }
+      if (-not $semVer) { $semVer = $gv.MajorMinorPatch }
+      Write-Host "GitVersion NuGetVersion: $nugetVersion, SemVer: $semVer"
+      Write-Host "##vso[task.setvariable variable=Version]$nugetVersion"
+      Write-Host "##vso[task.setvariable variable=TagName]v$semVer"
+    displayName: 'Compute version with GitVersion'
+
+  # Restore, build and pack using GitVersioned $(Version)
+  - pwsh: dotnet restore
+    displayName: 'dotnet restore'
+
+  - pwsh: dotnet build -c $(BuildConfiguration) -p:ContinuousIntegrationBuild=true -p:Version=$(Version) --no-restore
+    displayName: 'dotnet build'
+
+  - pwsh: |
+      dotnet pack -c $(BuildConfiguration) --no-build -p:IncludeSymbols=false -p:SymbolPackageFormat=snupkg -p:Version=$(Version) -o $(Build.SourcesDirectory)\artifacts\nuget
+    displayName: 'dotnet pack'
+
+  # Push NuGet packages on tagged builds
+  - pwsh: |
+      $ErrorActionPreference = 'Stop'
+      $pkgs = Get-ChildItem -Recurse -Path "$(Build.SourcesDirectory)\artifacts\nuget" -Include *.nupkg | Where-Object { $_.FullName -notlike '*.symbols.nupkg' }
+      if (-not $pkgs) { throw 'No packages found to push' }
+      foreach ($pkg in $pkgs) {
+        Write-Host "Pushing $($pkg.Name)"
+        dotnet nuget push "$($pkg.FullName)" --api-key "$(NuGetApiKey)" --source https://api.nuget.org/v3/index.json --skip-duplicate
+      }
+    displayName: 'Push packages to NuGet (on tag)'
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+
+  # Build Windows stubs for x64 and arm64 (only on tags)
+  - pwsh: |
+      $ErrorActionPreference = 'Stop'
+      $rid = 'win-x64'
+      $out = "$(Build.SourcesDirectory)\artifacts\stubs\$rid"
+      mkdir $out -Force | Out-Null
+      dotnet publish "$(StubProject)" -c "$(BuildConfiguration)" -r $rid -p:PublishSingleFile=true -p:SelfContained=true -p:DebugType=embedded -o $out --nologo
+    displayName: 'Publish stub (win-x64)'
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+
+  - pwsh: |
+      $ErrorActionPreference = 'Stop'
+      $rid = 'win-arm64'
+      $out = "$(Build.SourcesDirectory)\artifacts\stubs\$rid"
+      mkdir $out -Force | Out-Null
+      dotnet publish "$(StubProject)" -c "$(BuildConfiguration)" -r $rid -p:PublishSingleFile=true -p:SelfContained=true -p:DebugType=embedded -o $out --nologo
+    displayName: 'Publish stub (win-arm64)'
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+
+  # Rename stub outputs and produce .sha256 files
+  - pwsh: |
+      $ErrorActionPreference = 'Stop'
+      $releases = "$(Build.SourcesDirectory)\artifacts\releases"
+      mkdir $releases -Force | Out-Null
+
+      function Rename-And-Hash {
+        param([string]$dir, [string]$rid)
+        $exe = Get-ChildItem -Path $dir -Filter *.exe | Select-Object -First 1
+        if (-not $exe) { throw "No .exe found in $dir" }
+        $target = Join-Path $releases "DotnetPackaging.Exe.Installer-$rid-v$(Version).exe"
+        Copy-Item $exe.FullName $target -Force
+        $hash = Get-FileHash -Path $target -Algorithm SHA256
+        $shaPath = "$target.sha256"
+        "$($hash.Hash)  $([System.IO.Path]::GetFileName($target))" | Out-File -FilePath $shaPath -Encoding ascii -NoNewline
+      }
+
+      Rename-And-Hash "$(Build.SourcesDirectory)\artifacts\stubs\win-x64" 'win-x64'
+      Rename-And-Hash "$(Build.SourcesDirectory)\artifacts\stubs\win-arm64" 'win-arm64'
+    displayName: 'Prepare release assets (.exe + .sha256)'
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+
+  # Create/Update GitHub Release and upload stub assets
+  - pwsh: |
+      $ErrorActionPreference = 'Stop'
+      $env:GITHUB_TOKEN = "$(GitHubToken)"
+      if (-not $env:GITHUB_TOKEN) { throw 'Missing GitHubToken variable' }
+
+      $repo = "$(Build.Repository.Name)"  # owner/name
+      $tag = "$(TagName)"
+      $title = "DotnetPackaging $(Version)"
+      $notes = "Automated release from Azure Pipelines."
+
+      if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw 'GitHub CLI (gh) not found on agent' }
+
+      gh release view "$tag" -R "$repo" *> $null
+      if ($LASTEXITCODE -ne 0) {
+        gh release create "$tag" -R "$repo" --title "$title" --notes "$notes"
+      }
+
+      $assets = Get-ChildItem "$(Build.SourcesDirectory)\artifacts\releases" -File | ForEach-Object { $_.FullName }
+      foreach ($asset in $assets) {
+        gh release upload "$tag" "$asset" -R "$repo" --clobber
+      }
+    displayName: 'GitHub Release: upload stubs'
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
