@@ -24,8 +24,16 @@ static class Program
     
     public static Task<int> Main(string[] args)
     {
+        // Detect debug flag early (before command handlers) via args or env var
+        var debugEnabled = args.Contains("--debug") || args.Contains("-d") ||
+                           (Environment.GetEnvironmentVariable("DOTNETPACKAGING_DEBUG")?.Trim().ToLowerInvariant()) is "1" or "true" or "yes";
+
+        var levelSwitch = new Serilog.Core.LoggingLevelSwitch(Serilog.Events.LogEventLevel.Information);
+        if (debugEnabled) levelSwitch.MinimumLevel = Serilog.Events.LogEventLevel.Debug;
+
         Log.Logger = new LoggerConfiguration()
-            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3} {Module}] {Message:lj}{NewLine}{Exception}")
+            .MinimumLevel.ControlledBy(levelSwitch)
+            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3} {SourceContext}] {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
         
         var rootCommand = new RootCommand
@@ -37,6 +45,10 @@ static class Program
                           "- appimage: Build a portable AppImage (.AppImage) bundle or work with AppDir workflows.\n\n" +
                           "Tip: run `dotnetpackaging <verb> --help` to see format-specific options."
         };
+
+        // Global --debug option (purely for discoverability; value already read above)
+        var debugOption = new Option<bool>(new[] { "--debug", "-d" }, "Enable verbose debug logging");
+        rootCommand.AddGlobalOption(debugOption);
 
         var debCommand = CreateCommand(
             "deb",

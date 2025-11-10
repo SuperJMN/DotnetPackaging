@@ -357,26 +357,83 @@ public sealed class ExePackagingService
                 return Result.Success(targetPath);
             }
 
-            var baseUrl = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_URL_BASE");
-            if (string.IsNullOrWhiteSpace(baseUrl))
-            {
-                baseUrl = $"https://github.com/SuperJMN/DotnetPackaging/releases/download/v{version}/";
-            }
-            if (!baseUrl.EndsWith('/')) baseUrl += "/";
-
+            var configuredBase = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_URL_BASE");
             var assetName = $"DotnetPackaging.Exe.Installer-{rid}-v{version}.exe";
             var shaName = assetName + ".sha256";
-            var exeUrl = baseUrl + assetName;
-            var shaUrl = baseUrl + shaName;
 
             using var http = new HttpClient();
-            // Download sha first
-            var shaText = await http.GetStringAsync(shaUrl);
-            if (string.IsNullOrWhiteSpace(shaText))
+            // GitHub API requires a User-Agent
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("DotnetPackaging.Tool");
+
+            // Resolve the correct release base URL. If DOTNETPACKAGING_STUB_URL_BASE is provided, use it as-is.
+            // Otherwise, try tag v{version} and then v{version}-N (N=1..5) until the checksum is found.
+            string? resolvedBase = null;
+            string? cachedShaText = null;
+            if (!string.IsNullOrWhiteSpace(configuredBase))
+            {
+                resolvedBase = configuredBase.EndsWith('/') ? configuredBase : configuredBase + "/";
+            }
+            else
+            {
+                var tagCandidates = new List<string> { $"v{version}" };
+                tagCandidates.AddRange(Enumerable.Range(1, 5).Select(i => $"v{version}-{i}"));
+
+                foreach (var tag in tagCandidates)
+                {
+                    var candidateBase = $"https://github.com/SuperJMN/DotnetPackaging/releases/download/{tag}/";
+                    var candidateSha = candidateBase + shaName;
+                    try
+                    {
+                        Log.Debug("Probing checksum: {Url}", candidateSha);
+                        var resp = await http.GetAsync(candidateSha);
+                        if (resp.IsSuccessStatusCode)
+                        {
+                            // We got the right tag – read the contents and keep the base
+                            var shaTextProbe = await resp.Content.ReadAsStringAsync();
+                            if (!string.IsNullOrWhiteSpace(shaTextProbe))
+                            {
+                                resolvedBase = candidateBase;
+                                // stash the sha so we don't download twice
+                                cachedShaText = shaTextProbe;
+                                break;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug(ex, "Probe failed for {Url}", candidateSha);
+                        // ignore and try next candidate
+                    }
+                }
+            }
+
+            if (resolvedBase is null)
+            {
+                return Result.Failure<string>($"Could not locate a release tag for v{version} (tried plain tag and -1..-5)");
+            }
+
+            Log.Debug("Resolved release base: {Base}", resolvedBase);
+
+            var exeUrl = resolvedBase + assetName;
+            var shaUrl = resolvedBase + shaName;
+
+            // If we already fetched the sha during probing, reuse it; otherwise fetch now
+            string? shaTextFinal;
+            if (cachedShaText is not null)
+            {
+                Log.Debug("Using probed checksum from {Url}", shaUrl);
+                shaTextFinal = cachedShaText;
+            }
+            else
+            {
+                Log.Debug("Downloading checksum: {Url}", shaUrl);
+                shaTextFinal = await http.GetStringAsync(shaUrl);
+            }
+            if (string.IsNullOrWhiteSpace(shaTextFinal))
             {
                 return Result.Failure<string>($"Failed to download checksum: {shaUrl}");
             }
-            var firstToken = shaText.Trim().Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            var firstToken = shaTextFinal.Trim().Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
             if (string.IsNullOrWhiteSpace(firstToken))
             {
                 return Result.Failure<string>("Invalid .sha256 file contents");
@@ -388,6 +445,7 @@ public sealed class ExePackagingService
             var tmpPath = Path.Combine(tmpDir, assetName);
             await using (var outFs = File.Create(tmpPath))
             {
+                Log.Debug("Downloading stub: {Url}", exeUrl);
                 using var resp = await http.GetAsync(exeUrl, HttpCompletionOption.ResponseHeadersRead);
                 if (!resp.IsSuccessStatusCode)
                     return Result.Failure<string>($"Failed to download stub: {exeUrl} (HTTP {(int)resp.StatusCode})");
