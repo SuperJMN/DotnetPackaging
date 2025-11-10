@@ -7,7 +7,7 @@ internal static class Installer
     public static Result<string> Install(string targetDir, InstallerMetadata meta)
     {
         return ResolveMainExe(targetDir, meta)
-            .Tap(exePath => TryCreateShortcut(meta.ApplicationName, exePath));
+            .Tap(exePath => ShortcutService.TryCreateStartMenuShortcut(meta.ApplicationName, exePath));
     }
 
     private static Result<string> ResolveMainExe(string targetDir, InstallerMetadata meta)
@@ -102,39 +102,5 @@ internal static class Installer
     private static string NormalizeExecutableStem(string text)
     {
         return new string(text.Where(char.IsLetterOrDigit).ToArray());
-    }
-
-    private static void TryCreateShortcut(string appName, string targetExe)
-    {
-        try
-        {
-            var programs = Environment.GetFolderPath(Environment.SpecialFolder.Programs);
-            var shortcutName = BuildShortcutName(appName, targetExe);
-            var lnkPath = Path.Combine(programs, $"{shortcutName}.lnk");
-            Type shellType = Type.GetTypeFromProgID("WScript.Shell")!;
-            dynamic shell = Activator.CreateInstance(shellType)!;
-            dynamic shortcut = shell.CreateShortcut(lnkPath);
-            shortcut.TargetPath = targetExe;
-            shortcut.WorkingDirectory = Path.GetDirectoryName(targetExe);
-            shortcut.Save();
-        }
-        catch
-        {
-            // Best-effort shortcut
-        }
-    }
-
-    private static string BuildShortcutName(string appName, string targetExe)
-    {
-        var desiredName = string.IsNullOrWhiteSpace(appName)
-            ? Path.GetFileNameWithoutExtension(targetExe)
-            : appName.Trim();
-
-        var invalidCharacters = Path.GetInvalidFileNameChars();
-        var sanitized = new string(desiredName.Where(character => !invalidCharacters.Contains(character)).ToArray());
-
-        return string.IsNullOrWhiteSpace(sanitized)
-            ? Path.GetFileNameWithoutExtension(targetExe)
-            : sanitized;
     }
 }

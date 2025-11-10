@@ -14,10 +14,12 @@ public class FinishViewModel
     {
         Result = result;
         LaunchOnClose = true;
+        CreateDesktopShortcut = false;
         Close = ReactiveCommand.CreateFromTask<Unit, CFE.Result<InstallationResult>>(_ => Task.FromResult(ExecuteClose())).Enhance();
     }
 
     public bool LaunchOnClose { get; set; }
+    public bool CreateDesktopShortcut { get; set; }
 
     public InstallationResult Result { get; }
 
@@ -27,6 +29,11 @@ public class FinishViewModel
     {
         try
         {
+            if (CreateDesktopShortcut)
+            {
+                ShortcutService.TryCreateDesktopShortcut(Result.Metadata.ApplicationName, Result.ExecutablePath);
+            }
+
             if (LaunchOnClose)
             {
                 Process.Start(new ProcessStartInfo
@@ -41,7 +48,7 @@ public class FinishViewModel
         }
         catch (Exception ex)
         {
-            return CFE.Result.Failure<InstallationResult>($"Failed to launch application: {ex.Message}");
+            return CFE.Result.Failure<InstallationResult>($"Failed to finish: {ex.Message}");
         }
     }
 }
