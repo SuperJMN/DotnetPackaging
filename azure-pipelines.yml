@@ -36,9 +36,13 @@ steps:
       $json = dotnet-gitversion /output json
       if (-not $json) { throw 'GitVersion returned no output' }
       $gv = $json | ConvertFrom-Json
-      $nugetVersion = $gv.NuGetVersionV2
-      if (-not $nugetVersion) { $nugetVersion = $gv.NuGetVersion }
+      $nugetVersion = $gv.NuGetVersion
       if (-not $nugetVersion) { $nugetVersion = $gv.SemVer }
+      if (-not $nugetVersion) { $nugetVersion = $gv.NuGetVersionV2 }
+      # Normalize versions like 8.0.1-1 (numeric-only prerelease) to SemVer2-friendly label
+      if ($nugetVersion -match '^(?<core>\d+\.\d+\.\d+)-(?<pre>\d+)$') {
+        $nugetVersion = "$($Matches.core)-ci.$($Matches.pre)"
+      }
       $semVer = $gv.SemVer
       if (-not $nugetVersion) { throw 'Could not determine version from GitVersion output' }
       if (-not $semVer) { $semVer = $gv.MajorMinorPatch }
@@ -114,7 +118,6 @@ steps:
   # Create/Update GitHub Release and upload stub assets
   - pwsh: |
       $ErrorActionPreference = 'Stop'
-      $env:GITHUB_TOKEN = "$(GitHubToken)"
       if (-not $env:GITHUB_TOKEN) { throw 'Missing GitHubToken variable' }
 
       $repo = "$(Build.Repository.Name)"  # owner/name
@@ -134,4 +137,6 @@ steps:
         gh release upload "$tag" "$asset" -R "$repo" --clobber
       }
     displayName: 'GitHub Release: upload stubs'
+    env:
+      GITHUB_TOKEN: $(GitHubToken)
     condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
