@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -410,15 +411,25 @@ public sealed class ExePackagingService
                 }
             }
 
+            string exeUrl;
+            string shaUrl;
             if (resolvedBase is null)
             {
-                return Result.Failure<string>($"Could not locate a release tag for v{version} (tried plain tag and -1..-5)");
+                Log.Warning("Could not locate a release tag for v{Version}; falling back to latest release", version);
+                var latest = await TryResolveFromLatestRelease(http, assetName, shaName);
+                if (latest.IsFailure)
+                {
+                    return Result.Failure<string>($"Could not locate a release tag for v{version} (tried plain tag and -1..-5) and latest release did not contain required assets: {latest.Error}");
+                }
+                exeUrl = latest.Value.ExeUrl;
+                shaUrl = latest.Value.ShaUrl;
             }
-
-            Log.Debug("Resolved release base: {Base}", resolvedBase);
-
-            var exeUrl = resolvedBase + assetName;
-            var shaUrl = resolvedBase + shaName;
+            else
+            {
+                Log.Debug("Resolved release base: {Base}", resolvedBase);
+                exeUrl = resolvedBase + assetName;
+                shaUrl = resolvedBase + shaName;
+            }
 
             // If we already fetched the sha during probing, reuse it; otherwise fetch now
             string? shaTextFinal;
@@ -477,6 +488,57 @@ public sealed class ExePackagingService
         catch (Exception ex)
         {
             return Result.Failure<string>(ex.Message);
+        }
+    }
+
+    private sealed record AssetUrls(string ExeUrl, string ShaUrl);
+
+    private sealed class GhRelease
+    {
+        [JsonPropertyName("tag_name")] public string TagName { get; init; } = string.Empty;
+        [JsonPropertyName("assets")] public List<GhAsset> Assets { get; init; } = new();
+    }
+
+    private sealed class GhAsset
+    {
+        [JsonPropertyName("name")] public string Name { get; init; } = string.Empty;
+        [JsonPropertyName("browser_download_url")] public string BrowserDownloadUrl { get; init; } = string.Empty;
+    }
+
+    private static async Task<Result<AssetUrls>> TryResolveFromLatestRelease(HttpClient http, string assetName, string shaName)
+    {
+        try
+        {
+            const string apiUrl = "https://api.github.com/repos/SuperJMN/DotnetPackaging/releases/latest";
+            await using var stream = await http.GetStreamAsync(apiUrl);
+            var release = await JsonSerializer.DeserializeAsync<GhRelease>(stream, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            if (release is null || release.Assets is null)
+            {
+                return Result.Failure<AssetUrls>("Empty response from GitHub latest release API");
+            }
+
+            var exeAsset = release.Assets.FirstOrDefault(a => string.Equals(a.Name, assetName, StringComparison.OrdinalIgnoreCase));
+            var shaAsset = release.Assets.FirstOrDefault(a => string.Equals(a.Name, shaName, StringComparison.OrdinalIgnoreCase));
+            if (exeAsset is null || shaAsset is null)
+            {
+                var missing = string.Join(", ", new[] { exeAsset is null ? assetName : null, shaAsset is null ? shaName : null }.Where(s => s is not null));
+                return Result.Failure<AssetUrls>($"Missing assets in latest release: {missing}");
+            }
+
+            if (!Uri.TryCreate(exeAsset.BrowserDownloadUrl, UriKind.Absolute, out _) ||
+                !Uri.TryCreate(shaAsset.BrowserDownloadUrl, UriKind.Absolute, out _))
+            {
+                return Result.Failure<AssetUrls>("GitHub returned invalid asset URLs for latest release");
+            }
+
+            return Result.Success(new AssetUrls(exeAsset.BrowserDownloadUrl, shaAsset.BrowserDownloadUrl));
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure<AssetUrls>(ex.Message);
         }
     }
 
