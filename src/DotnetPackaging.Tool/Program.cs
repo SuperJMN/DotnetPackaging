@@ -149,12 +149,13 @@ static class Program
         exeCommand.AddOption(exeInputDir);
         exeCommand.AddOption(exeOutput);
         exeCommand.AddOption(stubPath);
-        exeCommand.AddOption(exAppName);
-        exeCommand.AddOption(exComment);
-        exeCommand.AddOption(exVersion);
-        exeCommand.AddOption(exAppId);
-        exeCommand.AddOption(exVendor);
-        exeCommand.AddOption(exExecutableName);
+        // Make metadata options global so subcommands can use them without re-adding
+        exeCommand.AddGlobalOption(exAppName);
+        exeCommand.AddGlobalOption(exComment);
+        exeCommand.AddGlobalOption(exVersion);
+        exeCommand.AddGlobalOption(exAppId);
+        exeCommand.AddGlobalOption(exVendor);
+        exeCommand.AddGlobalOption(exExecutableName);
         exeCommand.AddOption(exRidTop);
 
         var exeService = new ExePackagingService();
@@ -190,12 +191,6 @@ static class Program
         exFromProject.AddOption(exTrimmed);
         exFromProject.AddOption(exOut);
         exFromProject.AddOption(exStub);
-        exFromProject.AddOption(exAppName);
-        exFromProject.AddOption(exComment);
-        exFromProject.AddOption(exVersion);
-        exFromProject.AddOption(exAppId);
-        exFromProject.AddOption(exVendor);
-        exFromProject.AddOption(exExecutableName);
 
         // Use a compact binder to avoid exceeding SetHandler's supported parameter count
         var exExtrasBinder = new ExeFromProjectExtraBinder(exOut, exStub, exVendor);
