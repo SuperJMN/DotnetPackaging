@@ -36,18 +36,15 @@ steps:
       $json = dotnet-gitversion /output json
       if (-not $json) { throw 'GitVersion returned no output' }
       $gv = $json | ConvertFrom-Json
-      $nugetVersion = $gv.NuGetVersion
-      if (-not $nugetVersion) { $nugetVersion = $gv.SemVer }
-      if (-not $nugetVersion) { $nugetVersion = $gv.NuGetVersionV2 }
-      # Normalize versions like 8.0.1-1 (numeric-only prerelease) to SemVer2-friendly label
-      if ($nugetVersion -match '^(?<core>\d+\.\d+\.\d+)-(?<pre>\d+)$') {
-        $nugetVersion = "$($Matches.core)-ci.$($Matches.pre)"
-      }
+      # Use strictly MajorMinorPatch for package Version (no prerelease/metadata)
+      $version = $gv.MajorMinorPatch
+      if (-not $version) { throw 'Could not determine version from GitVersion output' }
+
       $semVer = $gv.SemVer
-      if (-not $nugetVersion) { throw 'Could not determine version from GitVersion output' }
       if (-not $semVer) { $semVer = $gv.MajorMinorPatch }
-      Write-Host "GitVersion NuGetVersion: $nugetVersion, SemVer: $semVer"
-      Write-Host "##vso[task.setvariable variable=Version]$nugetVersion"
+
+      Write-Host "GitVersion Version: $version, SemVer: $semVer"
+      Write-Host "##vso[task.setvariable variable=Version]$version"
       Write-Host "##vso[task.setvariable variable=TagName]v$semVer"
     displayName: 'Compute version with GitVersion'
 
@@ -138,5 +135,5 @@ steps:
       }
     displayName: 'GitHub Release: upload stubs'
     env:
-      GITHUB_TOKEN: $(GitHubToken)
+      GITHUB_TOKEN: $(GitHubApiKey)
     condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
