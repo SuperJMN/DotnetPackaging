@@ -350,38 +350,43 @@ public sealed class ExePackagingService
 
             var cacheBase = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_CACHE");
             if (string.IsNullOrWhiteSpace(cacheBase)) cacheBase = GetDefaultCacheDir();
-            var cacheDir = Path.Combine(cacheBase, rid, version);
-            Directory.CreateDirectory(cacheDir);
-            var targetPath = Path.Combine(cacheDir, "InstallerStub.exe");
-            if (File.Exists(targetPath))
-            {
-                return Result.Success(targetPath);
-            }
-
-            // Inform users that the first-time download can take longer and that the result is cached
-            Log.Information("Downloading installer stub for {RID} v{Version}. This may take a while the first time. Cache: {CacheDir}", rid, version, cacheDir);
 
             var configuredBase = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_URL_BASE");
-            var assetName = $"DotnetPackaging.Exe.Installer-{rid}-v{version}.exe";
-            var shaName = assetName + ".sha256";
+
+            // We'll first try to use the requested version. If it cannot be found, we'll fall back to the latest release.
+            string chosenVersion = version;
+            string assetName = $"DotnetPackaging.Exe.Installer-{rid}-v{chosenVersion}.exe";
+            string shaName = assetName + ".sha256";
+            string? exeUrl = null;
+            string? shaUrl = null;
+            string? cachedShaText = null;
 
             using var http = new HttpClient();
-            // GitHub API requires a User-Agent
             http.DefaultRequestHeaders.UserAgent.ParseAdd("DotnetPackaging.Tool");
 
-            // Resolve the correct release base URL. If DOTNETPACKAGING_STUB_URL_BASE is provided, use it as-is.
-            // Otherwise, try tag v{version} and then v{version}-N (N=1..5) until the checksum is found.
-            string? resolvedBase = null;
-            string? cachedShaText = null;
+            // 1) Check if the stub for the requested version is already cached
+            var requestedVersionCacheDir = Path.Combine(cacheBase, rid, chosenVersion);
+            Directory.CreateDirectory(requestedVersionCacheDir);
+            var requestedTargetPath = Path.Combine(requestedVersionCacheDir, "InstallerStub.exe");
+            if (File.Exists(requestedTargetPath))
+            {
+                return Result.Success(requestedTargetPath);
+            }
+
+            // Inform about download and cache
+            Log.Information("Downloading installer stub for {RID} v{Version}. This may take a while the first time. Cache: {CacheDir}", rid, chosenVersion, requestedVersionCacheDir);
+
+            // 2) Try to resolve URLs for the requested version
             if (!string.IsNullOrWhiteSpace(configuredBase))
             {
-                resolvedBase = configuredBase.EndsWith('/') ? configuredBase : configuredBase + "/";
+                var baseUrl = configuredBase.EndsWith('/') ? configuredBase : configuredBase + "/";
+                exeUrl = baseUrl + assetName;
+                shaUrl = baseUrl + shaName;
             }
             else
             {
-                var tagCandidates = new List<string> { $"v{version}" };
-                tagCandidates.AddRange(Enumerable.Range(1, 5).Select(i => $"v{version}-{i}"));
-
+                var tagCandidates = new List<string> { $"v{chosenVersion}" };
+                tagCandidates.AddRange(Enumerable.Range(1, 5).Select(i => $"v{chosenVersion}-{i}"));
                 foreach (var tag in tagCandidates)
                 {
                     var candidateBase = $"https://github.com/SuperJMN/DotnetPackaging/releases/download/{tag}/";
@@ -389,16 +394,15 @@ public sealed class ExePackagingService
                     try
                     {
                         Log.Debug("Probing checksum: {Url}", candidateSha);
-                        var resp = await http.GetAsync(candidateSha);
+                        using var resp = await http.GetAsync(candidateSha);
                         if (resp.IsSuccessStatusCode)
                         {
-                            // We got the right tag – read the contents and keep the base
                             var shaTextProbe = await resp.Content.ReadAsStringAsync();
                             if (!string.IsNullOrWhiteSpace(shaTextProbe))
                             {
-                                resolvedBase = candidateBase;
-                                // stash the sha so we don't download twice
                                 cachedShaText = shaTextProbe;
+                                exeUrl = candidateBase + assetName;
+                                shaUrl = candidateSha;
                                 break;
                             }
                         }
@@ -406,42 +410,75 @@ public sealed class ExePackagingService
                     catch (Exception ex)
                     {
                         Log.Debug(ex, "Probe failed for {Url}", candidateSha);
-                        // ignore and try next candidate
                     }
                 }
             }
 
-            string exeUrl;
-            string shaUrl;
-            if (resolvedBase is null)
+            // 3) If we couldn't resolve the requested version, fall back to the latest release via GitHub API
+            if (exeUrl is null || shaUrl is null)
             {
-                Log.Warning("Could not locate a release tag for v{Version}; falling back to latest release", version);
-                var latest = await TryResolveFromLatestRelease(http, assetName, shaName);
-                if (latest.IsFailure)
+                try
                 {
-                    return Result.Failure<string>($"Could not locate a release tag for v{version} (tried plain tag and -1..-5) and latest release did not contain required assets: {latest.Error}");
+                    Log.Warning("Could not locate a release tag for v{Version}. Falling back to the latest release.", chosenVersion);
+                    var latestApi = "https://api.github.com/repos/SuperJMN/DotnetPackaging/releases/latest";
+                    using var latestResp = await http.GetAsync(latestApi);
+                    if (!latestResp.IsSuccessStatusCode)
+                    {
+                        return Result.Failure<string>($"Could not locate a release tag for v{version} and failed to query latest release (HTTP {(int)latestResp.StatusCode}).");
+                    }
+                    var json = await latestResp.Content.ReadAsStringAsync();
+                    var latest = JsonSerializer.Deserialize<GhRelease>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    if (latest is null)
+                    {
+                        return Result.Failure<string>("Invalid response from GitHub releases API.");
+                    }
+
+                    // Choose the asset for the requested RID
+                    var exeAsset = latest.Assets.FirstOrDefault(a => a.Name.StartsWith($"DotnetPackaging.Exe.Installer-{rid}-", StringComparison.OrdinalIgnoreCase) && a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+                    if (exeAsset is null)
+                    {
+                        return Result.Failure<string>($"Latest release does not contain a stub asset for {rid}.");
+                    }
+
+                    var expectedPrefix = Path.GetFileNameWithoutExtension(exeAsset.Name); // DotnetPackaging.Exe.Installer-{rid}-vX.Y.Z
+                    var shaAsset = latest.Assets.FirstOrDefault(a => a.Name.Equals(exeAsset.Name + ".sha256", StringComparison.OrdinalIgnoreCase));
+                    if (shaAsset is null)
+                    {
+                        // Also try name-based match in case naming differs
+                        shaAsset = latest.Assets.FirstOrDefault(a => a.Name.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase) && a.Name.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase));
+                    }
+                    if (shaAsset is null)
+                    {
+                        return Result.Failure<string>($"Latest release is missing checksum for asset {exeAsset.Name}.");
+                    }
+
+                    exeUrl = exeAsset.BrowserDownloadUrl;
+                    shaUrl = shaAsset.BrowserDownloadUrl;
+
+                    // Derive the actual version from tag name (strip leading 'v' if present)
+                    if (!string.IsNullOrWhiteSpace(latest.TagName))
+                    {
+                        var raw = latest.TagName.Trim();
+                        chosenVersion = raw.TrimStart('v', 'V');
+                    }
+
+                    // Refresh cache dir and target path to use the chosen (latest) version
+                    requestedVersionCacheDir = Path.Combine(cacheBase, rid, chosenVersion);
+                    Directory.CreateDirectory(requestedVersionCacheDir);
+                    requestedTargetPath = Path.Combine(requestedVersionCacheDir, "InstallerStub.exe");
                 }
-                exeUrl = latest.Value.ExeUrl;
-                shaUrl = latest.Value.ShaUrl;
-            }
-            else
-            {
-                Log.Debug("Resolved release base: {Base}", resolvedBase);
-                exeUrl = resolvedBase + assetName;
-                shaUrl = resolvedBase + shaName;
+                catch (Exception ex)
+                {
+                    return Result.Failure<string>($"Could not locate a release tag for v{version} and failed to resolve latest release: {ex.Message}");
+                }
             }
 
-            // If we already fetched the sha during probing, reuse it; otherwise fetch now
-            string? shaTextFinal;
-            if (cachedShaText is not null)
-            {
-                Log.Debug("Using probed checksum from {Url}", shaUrl);
-                shaTextFinal = cachedShaText;
-            }
-            else
+            // 4) Fetch checksum if we didn't already during probing
+            string? shaTextFinal = cachedShaText;
+            if (shaTextFinal is null)
             {
                 Log.Debug("Downloading checksum: {Url}", shaUrl);
-                shaTextFinal = await http.GetStringAsync(shaUrl);
+                shaTextFinal = await http.GetStringAsync(shaUrl!);
             }
             if (string.IsNullOrWhiteSpace(shaTextFinal))
             {
@@ -454,20 +491,21 @@ public sealed class ExePackagingService
             }
             var expected = firstToken!.Trim();
 
+            // 5) Download the stub
             var tmpDir = Path.Combine(Path.GetTempPath(), "dp-stub-dl-" + Guid.NewGuid());
             Directory.CreateDirectory(tmpDir);
             var tmpPath = Path.Combine(tmpDir, assetName);
             await using (var outFs = File.Create(tmpPath))
             {
                 Log.Debug("Downloading stub: {Url}", exeUrl);
-                using var resp = await http.GetAsync(exeUrl, HttpCompletionOption.ResponseHeadersRead);
+                using var resp = await http.GetAsync(exeUrl!, HttpCompletionOption.ResponseHeadersRead);
                 if (!resp.IsSuccessStatusCode)
                     return Result.Failure<string>($"Failed to download stub: {exeUrl} (HTTP {(int)resp.StatusCode})");
                 await using var stream = await resp.Content.ReadAsStreamAsync();
                 await stream.CopyToAsync(outFs);
             }
 
-            // Verify hash
+            // 6) Verify checksum
             await using (var fs = File.OpenRead(tmpPath))
             {
                 using var sha = SHA256.Create();
@@ -480,10 +518,10 @@ public sealed class ExePackagingService
                 }
             }
 
-            // Move to cache
-            File.Move(tmpPath, targetPath, overwrite: true);
+            // 7) Move to cache (using the chosen version's directory)
+            File.Move(tmpPath, requestedTargetPath, overwrite: true);
             try { Directory.Delete(tmpDir, true); } catch { }
-            return Result.Success(targetPath);
+            return Result.Success(requestedTargetPath);
         }
         catch (Exception ex)
         {
@@ -491,55 +529,16 @@ public sealed class ExePackagingService
         }
     }
 
-    private sealed record AssetUrls(string ExeUrl, string ShaUrl);
-
     private sealed class GhRelease
     {
-        [JsonPropertyName("tag_name")] public string TagName { get; init; } = string.Empty;
-        [JsonPropertyName("assets")] public List<GhAsset> Assets { get; init; } = new();
+        [JsonPropertyName("tag_name")] public string TagName { get; set; } = string.Empty;
+        [JsonPropertyName("assets")] public List<GhAsset> Assets { get; set; } = new();
     }
 
     private sealed class GhAsset
     {
-        [JsonPropertyName("name")] public string Name { get; init; } = string.Empty;
-        [JsonPropertyName("browser_download_url")] public string BrowserDownloadUrl { get; init; } = string.Empty;
-    }
-
-    private static async Task<Result<AssetUrls>> TryResolveFromLatestRelease(HttpClient http, string assetName, string shaName)
-    {
-        try
-        {
-            const string apiUrl = "https://api.github.com/repos/SuperJMN/DotnetPackaging/releases/latest";
-            await using var stream = await http.GetStreamAsync(apiUrl);
-            var release = await JsonSerializer.DeserializeAsync<GhRelease>(stream, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-            if (release is null || release.Assets is null)
-            {
-                return Result.Failure<AssetUrls>("Empty response from GitHub latest release API");
-            }
-
-            var exeAsset = release.Assets.FirstOrDefault(a => string.Equals(a.Name, assetName, StringComparison.OrdinalIgnoreCase));
-            var shaAsset = release.Assets.FirstOrDefault(a => string.Equals(a.Name, shaName, StringComparison.OrdinalIgnoreCase));
-            if (exeAsset is null || shaAsset is null)
-            {
-                var missing = string.Join(", ", new[] { exeAsset is null ? assetName : null, shaAsset is null ? shaName : null }.Where(s => s is not null));
-                return Result.Failure<AssetUrls>($"Missing assets in latest release: {missing}");
-            }
-
-            if (!Uri.TryCreate(exeAsset.BrowserDownloadUrl, UriKind.Absolute, out _) ||
-                !Uri.TryCreate(shaAsset.BrowserDownloadUrl, UriKind.Absolute, out _))
-            {
-                return Result.Failure<AssetUrls>("GitHub returned invalid asset URLs for latest release");
-            }
-
-            return Result.Success(new AssetUrls(exeAsset.BrowserDownloadUrl, shaAsset.BrowserDownloadUrl));
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure<AssetUrls>(ex.Message);
-        }
+        [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+        [JsonPropertyName("browser_download_url")] public string BrowserDownloadUrl { get; set; } = string.Empty;
     }
 
     private static void TryDelete(string path)
