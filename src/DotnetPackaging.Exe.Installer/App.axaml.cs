@@ -52,10 +52,16 @@ public sealed class App : Application
             var notificationService = new NotificationDialog(dialog);
             var buildServiceProvider = new ServiceCollection().BuildServiceProvider();
             var folderPicker = new AvaloniaFolderPickerService(root.StorageProvider);
-var payload = new DefaultInstallerPayload();
+            var payload = new DefaultInstallerPayload();
             var wizard = new InstallWizard(folderPicker, payload).CreateWizard();
+
+            // Title = "<AppName> Installer" if metadata is available; fallback to generic title
+            var metaResult = await payload.GetMetadata();
+            var title = metaResult.IsSuccess && !string.IsNullOrWhiteSpace(metaResult.Value.ApplicationName)
+                ? $"{metaResult.Value.ApplicationName} Installer"
+                : "Installer";
         
-            await wizard.ShowInDialog(dialog, "Installer");
+            await wizard.ShowInDialog(dialog, title);
 
             lifetime.Shutdown();
         }
