@@ -1,6 +1,7 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Exe.Installer.Core;
 using ReactiveUI;
 using Zafiro.ProgressReporting;
 using Zafiro.UI.Commands;
@@ -31,7 +32,7 @@ public class InstallViewModel
                 return Result.Failure<InstallationResult>(copyRes.Error);
             }
 
-            return Installer.Install(installDirectory, installerMetadata)
+            return Core.Installer.Install(installDirectory, installerMetadata)
                 .Map(exePath => new InstallationResult(installerMetadata, installDirectory, exePath));
         });
     }

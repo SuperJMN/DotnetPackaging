@@ -1,7 +1,6 @@
-using System.Linq;
 using Avalonia.Platform.Storage;
 
-namespace DotnetPackaging.Exe.Installer;
+namespace DotnetPackaging.Exe.Installer.Core;
 
 public sealed class AvaloniaFolderPickerService(IStorageProvider storageProvider) : IFolderPickerService
 {

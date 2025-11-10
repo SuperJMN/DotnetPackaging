@@ -4,6 +4,7 @@ using CFE = CSharpFunctionalExtensions;
 using ReactiveUI;
 using Zafiro.UI.Commands;
 using System.Threading.Tasks;
+using DotnetPackaging.Exe.Installer.Core;
 
 namespace DotnetPackaging.Exe.Installer.Steps.Finish;
 

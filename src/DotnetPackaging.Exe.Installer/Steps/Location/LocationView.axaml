@@ -6,7 +6,7 @@
              mc:Ignorable="d" 
              x:Class="DotnetPackaging.Exe.Installer.Steps.Location.LocationView"
              x:DataType="l:ILocationViewModel">
-    <StackPanel Spacing="8">
+    <StackPanel Spacing="8" VerticalAlignment="Center">
         <TextBlock Text="Select the installation folder" FontWeight="Bold"/>
         <DockPanel HorizontalSpacing="8">
             <Button DockPanel.Dock="Right" Content="Browse…" Command="{Binding Browse}"/>

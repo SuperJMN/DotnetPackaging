@@ -1,6 +1,4 @@
-using System.Reactive;
 using CSharpFunctionalExtensions;
-using DotnetPackaging.Exe.Installer.Steps;
 using DotnetPackaging.Exe.Installer.Steps.Finish;
 using DotnetPackaging.Exe.Installer.Steps.Install;
 using DotnetPackaging.Exe.Installer.Steps.Location;
@@ -10,7 +8,7 @@ using Zafiro.UI.Commands;
 using Zafiro.UI.Wizards.Slim;
 using Zafiro.UI.Wizards.Slim.Builder;
 
-namespace DotnetPackaging.Exe.Installer;
+namespace DotnetPackaging.Exe.Installer.Core;
 
 public class InstallWizard
 {

@@ -6,7 +6,7 @@ using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
 using Zafiro.ProgressReporting;
 
-namespace DotnetPackaging.Exe.Installer;
+namespace DotnetPackaging.Exe.Installer.Core;
 
 internal static class PayloadExtractor
 {

@@ -1,8 +1,6 @@
-using System.Runtime.InteropServices;
-using System.Linq;
 using CSharpFunctionalExtensions;
 
-namespace DotnetPackaging.Exe.Installer;
+namespace DotnetPackaging.Exe.Installer.Core;
 
 internal static class Installer
 {

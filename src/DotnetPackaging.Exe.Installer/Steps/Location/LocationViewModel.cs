@@ -5,6 +5,7 @@ using ReactiveUI.Validation.Extensions;
 using ReactiveUI.Validation.Helpers;
 using Zafiro.UI;
 using DotnetPackaging.Exe.Installer;
+using DotnetPackaging.Exe.Installer.Core;
 using Zafiro.UI.Commands;
 
 namespace DotnetPackaging.Exe.Installer.Steps.Location;

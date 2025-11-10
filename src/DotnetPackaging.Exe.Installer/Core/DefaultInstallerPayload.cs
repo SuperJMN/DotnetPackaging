@@ -1,9 +1,7 @@
-using System.Threading;
-using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using Zafiro.ProgressReporting;
 
-namespace DotnetPackaging.Exe.Installer;
+namespace DotnetPackaging.Exe.Installer.Core;
 
 public sealed class DefaultInstallerPayload : IInstallerPayload
 {

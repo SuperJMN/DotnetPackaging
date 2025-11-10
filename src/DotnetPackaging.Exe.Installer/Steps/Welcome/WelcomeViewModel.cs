@@ -1,5 +1,6 @@
 ﻿using System.Reactive;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Exe.Installer.Core;
 using ReactiveUI;
 using ReactiveUI.Validation.Extensions;
 using ReactiveUI.Validation.Helpers;

@@ -1,5 +1,6 @@
 using System.Reactive;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Exe.Installer.Core;
 using ReactiveUI;
 
 namespace DotnetPackaging.Exe.Installer.Steps.Welcome;

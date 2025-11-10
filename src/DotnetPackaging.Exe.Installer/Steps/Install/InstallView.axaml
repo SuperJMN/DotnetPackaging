@@ -3,7 +3,6 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:installation="clr-namespace:DotnetPackaging.Exe.Installer.Steps.Install"
-             xmlns:progressReporting="clr-namespace:Zafiro.ProgressReporting;assembly=Zafiro"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="DotnetPackaging.Exe.Installer.Steps.Install.InstallView" 
              x:DataType="installation:InstallViewModel">
@@ -16,13 +15,9 @@
     </UserControl.Resources>
     
     <Grid>
-        <TextBlock Margin="14 0" IsVisible="{Binding !Install.IsExecuting^}">We will now install the application. Click Install to proceed with the installation</TextBlock>
+        <TextBlock TextWrapping="Wrap" Margin="14 0" IsVisible="{Binding !Install.IsExecuting^}">We will now install the application. Click Install to proceed with the installation.</TextBlock>
         <TextBlock HorizontalAlignment="Center" IsVisible="{Binding Install.IsExecuting^}">Installing...</TextBlock>
-        <ProgressControl>
-            <ProgressControl.Progress>
-                <progressReporting:Unknown />
-            </ProgressControl.Progress>
-        </ProgressControl>
+        <ProgressControl CurrentTemplate="{StaticResource DoubleToBytesTemplate}" TotalTemplate="{StaticResource DoubleToBytesTemplate}" Progress="{Binding Progress^}" IsVisible="{Binding Install.IsExecuting^}" />
     </Grid>
     
 </UserControl>
