@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -530,14 +531,14 @@ public sealed class ExePackagingService
 
     private sealed class GhRelease
     {
-        public string TagName { get; set; } = string.Empty;
-        public List<GhAsset> Assets { get; set; } = new();
+        [JsonPropertyName("tag_name")] public string TagName { get; set; } = string.Empty;
+        [JsonPropertyName("assets")] public List<GhAsset> Assets { get; set; } = new();
     }
 
     private sealed class GhAsset
     {
-        public string Name { get; set; } = string.Empty;
-        public string BrowserDownloadUrl { get; set; } = string.Empty;
+        [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+        [JsonPropertyName("browser_download_url")] public string BrowserDownloadUrl { get; set; } = string.Empty;
     }
 
     private static void TryDelete(string path)
