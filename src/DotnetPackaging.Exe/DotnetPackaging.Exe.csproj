@@ -3,18 +3,13 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
   <Import Project="..\Common.props" />
-
   <ItemGroup>
-    <PackageReference Include="SharpCompress" />
-    <PackageReference Include="SharpZipLib" />
-    <PackageReference Include="SixLabors.ImageSharp" />
-    <PackageReference Include="Zafiro.FileSystem.Unix" />
+    <PackageReference Include="Serilog" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
   </ItemGroup>
-
 </Project>

@@ -1,0 +1,55 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net8.0-windows</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <UseWPF>false</UseWPF>
+        <UseWindowsForms>false</UseWindowsForms>
+        <EnableWindowsTargeting>true</EnableWindowsTargeting>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <IsPackable>false</IsPackable>
+        <ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <AvaloniaResource Include="Assets\**" />
+    </ItemGroup>
+
+    <!-- Embed dynamic payload when provided at publish time -->
+    <ItemGroup Condition="'$(InstallerPayload)' != '' and Exists('$(InstallerPayload)')">
+        <EmbeddedResource Include="$(InstallerPayload)">
+            <LogicalName>PAYLOAD</LogicalName>
+        </EmbeddedResource>
+    </ItemGroup>
+
+
+    <ItemGroup>
+        <Content Include="Assets\Icon.ico" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia.Desktop" />
+        <PackageReference Include="Avalonia.Fonts.Inter" />
+        <PackageReference Include="Avalonia.Themes.Fluent" />
+        <PackageReference Include="AvaloniaUI.DiagnosticsSupport" />
+        <PackageReference Include="ByteSize" />
+        <PackageReference Include="Projektanker.Icons.Avalonia.FontAwesome" />
+        <PackageReference Include="Projektanker.Icons.Avalonia.MaterialDesign" />
+        <PackageReference Include="ReactiveProperty" />
+        <PackageReference Include="ReactiveUI.Avalonia" />
+        <PackageReference Include="Zafiro.Avalonia" />
+        <PackageReference Include="Zafiro" />
+        <PackageReference Include="Zafiro.Avalonia.Dialogs" />
+        <PackageReference Include="Zafiro.Avalonia.Generators" />
+        <PackageReference Include="Zafiro.DivineBytes" />
+    </ItemGroup>
+
+
+    <ItemGroup>
+      <Compile Update="Steps\Welcome\WelcomeView.axaml.cs">
+        <DependentUpon>WelcomeView.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+    </ItemGroup>
+</Project>

@@ -14,6 +14,7 @@ using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
 using Zafiro.FileSystem.Core;
 using System.Diagnostics;
+using DotnetPackaging.Exe;
 
 namespace DotnetPackaging.Tool;
 
@@ -24,7 +25,7 @@ static class Program
     public static Task<int> Main(string[] args)
     {
         Log.Logger = new LoggerConfiguration()
-            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3} {Platform}] {Message:lj}{NewLine}{Exception}")
+            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3} {Module}] {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
         
         var rootCommand = new RootCommand
@@ -97,7 +98,7 @@ static class Program
             }
             else
             {
-                Console.WriteLine(result.Value);
+                Log.Information("{VerificationResult}", result.Value);
             }
         }, verifyCmd.Options.OfType<Option<FileInfo>>().First());
         dmgCommand.AddCommand(verifyCmd);
@@ -112,6 +113,103 @@ static class Program
         var msixCommand = new Command("msix", "MSIX packaging (experimental)");
         AddMsixSubcommands(msixCommand);
         rootCommand.AddCommand(msixCommand);
+
+        // EXE SFX command
+        var exeCommand = new Command("exe", "Windows self-extracting installer (.exe). If --stub is not provided, the tool downloads the appropriate stub from GitHub Releases.");
+        var exeInputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
+        var exeOutput = new Option<FileInfo>("--output", "Output installer .exe") { IsRequired = true };
+        var stubPath = new Option<FileInfo>("--stub", "Path to the prebuilt stub (WinExe) to concatenate (optional if repo layout is present)");
+        var exRidTop = new Option<string?>("--rid", "Runtime identifier for the stub (win-x64, win-arm64)");
+
+        // Reuse metadata options
+        var exAppName = new Option<string>("--application-name", "Application name") { IsRequired = false };
+        var exComment = new Option<string>("--comment", "Comment / long description") { IsRequired = false };
+        var exVersion = new Option<string>("--version", "Version") { IsRequired = false };
+        var exAppId = new Option<string>("--appId", "Application Id (Reverse DNS typical)") { IsRequired = false };
+        var exVendor = new Option<string>("--vendor", "Vendor/Publisher") { IsRequired = false };
+        var exExecutableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
+        var optionsBinder = new OptionsBinder(
+            exAppName,
+            new Option<string>("--wm-class"),
+            new Option<IEnumerable<string>>("--keywords"),
+            exComment,
+            new Option<MainCategory?>("--main-category"),
+            new Option<IEnumerable<AdditionalCategory>>("--additional-categories"),
+            new Option<IIcon?>("--icon", GetIcon),
+            exVersion,
+            new Option<Uri>("--homepage"),
+            new Option<string>("--license"),
+            new Option<IEnumerable<Uri>>("--screenshot-urls"),
+            new Option<string>("--summary"),
+            exAppId,
+            exExecutableName,
+            new Option<bool>("--is-terminal")
+        );
+
+        exeCommand.AddOption(exeInputDir);
+        exeCommand.AddOption(exeOutput);
+        exeCommand.AddOption(stubPath);
+        // Make metadata options global so subcommands can use them without re-adding
+        exeCommand.AddGlobalOption(exAppName);
+        exeCommand.AddGlobalOption(exComment);
+        exeCommand.AddGlobalOption(exVersion);
+        exeCommand.AddGlobalOption(exAppId);
+        exeCommand.AddGlobalOption(exVendor);
+        exeCommand.AddGlobalOption(exExecutableName);
+        exeCommand.AddOption(exRidTop);
+
+        var exeService = new ExePackagingService();
+        exeCommand.SetHandler(async (DirectoryInfo inDir, FileInfo outFile, FileInfo? stub, Options opt, string? vendorOpt, string? ridOpt) =>
+        {
+            var result = await exeService.BuildFromDirectory(inDir, outFile, opt, vendorOpt, ridOpt, stub);
+            if (result.IsFailure)
+            {
+                Console.Error.WriteLine(result.Error);
+                Environment.ExitCode = 1;
+                return;
+            }
+
+            Log.Information("{OutputFile}", result.Value.FullName);
+        }, exeInputDir, exeOutput, stubPath, optionsBinder, exVendor, exRidTop);
+
+        // exe from-project
+        var exProject = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
+        var exRid = new Option<string?>("--rid", "Runtime identifier (e.g. win-x64, win-arm64)");
+        var exSelfContained = new Option<bool>("--self-contained", () => true, "Publish self-contained");
+        var exConfiguration = new Option<string>("--configuration", () => "Release", "Build configuration");
+        var exSingleFile = new Option<bool>("--single-file", "Publish single-file");
+        var exTrimmed = new Option<bool>("--trimmed", "Enable trimming");
+        var exOut = new Option<FileInfo>("--output", "Output installer .exe") { IsRequired = true };
+        var exStub = new Option<FileInfo>("--stub", "Path to the prebuilt stub (WinExe) to concatenate (optional if repo layout is present)");
+
+        var exFromProject = new Command("from-project", "Publish a .NET project and build a Windows self-extracting installer (.exe). If --stub is not provided, the tool downloads the appropriate stub from GitHub Releases.");
+        exFromProject.AddOption(exProject);
+        exFromProject.AddOption(exRid);
+        exFromProject.AddOption(exSelfContained);
+        exFromProject.AddOption(exConfiguration);
+        exFromProject.AddOption(exSingleFile);
+        exFromProject.AddOption(exTrimmed);
+        exFromProject.AddOption(exOut);
+        exFromProject.AddOption(exStub);
+
+        // Use a compact binder to avoid exceeding SetHandler's supported parameter count
+        var exExtrasBinder = new ExeFromProjectExtraBinder(exOut, exStub, exVendor);
+        exFromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, Options opt, ExeFromProjectExtra extras) =>
+        {
+            var result = await exeService.BuildFromProject(prj, ridVal, sc, cfg, sf, tr, extras.Output, opt, extras.Vendor, extras.Stub);
+            if (result.IsFailure)
+            {
+                Console.Error.WriteLine(result.Error);
+                Environment.ExitCode = 1;
+                return;
+            }
+
+            Log.Information("{OutputFile}", result.Value.FullName);
+        }, exProject, exRid, exSelfContained, exConfiguration, exSingleFile, exTrimmed, optionsBinder, exExtrasBinder);
+
+        exeCommand.AddCommand(exFromProject);
+
+        rootCommand.AddCommand(exeCommand);
         
         return rootCommand.InvokeAsync(args);
     }
@@ -527,7 +625,7 @@ static class Program
                 if (internalBytes.IsFailure) { Console.Error.WriteLine(internalBytes.Error); return; }
                 var wr = await internalBytes.Value.WriteTo(outFile.FullName);
                 if (wr.IsFailure) { Console.Error.WriteLine(wr.Error); return; }
-                Console.WriteLine(outFile.FullName);
+                Log.Information("{OutputFile}", outFile.FullName);
                 return;
             }
 
@@ -547,7 +645,7 @@ static class Program
             if (export.IsFailure) { Console.Error.WriteLine(export.Error); return; }
             var bundle = Run("flatpak", $"build-bundle \"{tmpRepoDir}\" \"{outFile.FullName}\" {plan.AppId} {fopt.Branch} --arch={effArch}");
             if (bundle.IsFailure) { Console.Error.WriteLine(bundle.Error); return; }
-            Console.WriteLine(outFile.FullName);
+            Log.Information("{OutputFile}", outFile.FullName);
         }, fpPrj, fpOut, fpUseSystem, binder, fpBinder);
 
         flatpakCommand.AddCommand(fromProjectCmd);
@@ -631,7 +729,7 @@ static class Program
                         var bundle = Run("flatpak", $"build-bundle \"{tmpRepoDir}\" \"{outPath}\" {plan.AppId} stable --arch={arch}");
                         if (bundle.IsSuccess)
                         {
-                            Console.WriteLine(outPath);
+                            Log.Information("{OutputFile}", outPath);
                             return;
                         }
                     }
@@ -652,7 +750,7 @@ static class Program
             }
             else
             {
-                Console.WriteLine(outPath);
+                Log.Information("{OutputFile}", outPath);
             }
         }, packInputDir, packOutputDir);
         
@@ -1393,6 +1491,38 @@ static class Program
                 Filesystems = pr.GetValueForOption(filesystems)!,
                 ArchitectureOverride = parsedArch == null ? Maybe<Architecture>.None : Maybe<Architecture>.From(parsedArch),
                 CommandOverride = pr.GetValueForOption(command) is { } s && !string.IsNullOrWhiteSpace(s) ? Maybe<string>.From(s) : Maybe<string>.None
+            };
+        }
+    }
+
+    private sealed class ExeFromProjectExtra
+    {
+        public required FileInfo Output { get; init; }
+        public FileInfo? Stub { get; init; }
+        public string? Vendor { get; init; }
+    }
+
+    private sealed class ExeFromProjectExtraBinder : System.CommandLine.Binding.BinderBase<ExeFromProjectExtra>
+    {
+        private readonly Option<FileInfo> output;
+        private readonly Option<FileInfo> stub;
+        private readonly Option<string> vendor;
+
+        public ExeFromProjectExtraBinder(Option<FileInfo> output, Option<FileInfo> stub, Option<string> vendor)
+        {
+            this.output = output;
+            this.stub = stub;
+            this.vendor = vendor;
+        }
+
+        protected override ExeFromProjectExtra GetBoundValue(System.CommandLine.Binding.BindingContext bindingContext)
+        {
+            var pr = bindingContext.ParseResult;
+            return new ExeFromProjectExtra
+            {
+                Output = pr.GetValueForOption(output)!,
+                Stub = pr.GetValueForOption(stub),
+                Vendor = pr.GetValueForOption(vendor)
             };
         }
     }

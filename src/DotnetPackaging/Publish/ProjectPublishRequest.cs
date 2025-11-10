@@ -16,4 +16,5 @@ public sealed class ProjectPublishRequest
     public string Configuration { get; init; } = "Release";
     public bool SingleFile { get; init; }
     public bool Trimmed { get; init; }
+    public IReadOnlyDictionary<string, string>? MsBuildProperties { get; init; }
 }

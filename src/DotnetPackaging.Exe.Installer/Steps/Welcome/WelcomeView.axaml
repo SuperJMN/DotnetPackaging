@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:welcome="clr-namespace:DotnetPackaging.Exe.Installer.Steps.Welcome"
+             mc:Ignorable="d"
+             x:Class="DotnetPackaging.Exe.Installer.Steps.Welcome.WelcomeView"
+             x:DataType="welcome:IWelcomeViewModel">
+
+    <Design.DataContext>
+        <welcome:WelcomeViewModelMock />
+    </Design.DataContext>
+    
+    <Interaction.Behaviors>
+        <LoadedTrigger>
+            <InvokeCommandAction Command="{Binding LoadMetadata}" />
+        </LoadedTrigger>
+    </Interaction.Behaviors>
+
+    <Loading IsLoading="{Binding LoadMetadata.IsExecuting^}">
+        <DockPanel VerticalSpacing="12">
+            <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" HorizontalAlignment="Center" Text="{Binding Metadata.Value.ApplicationName, StringFormat='Welcome to the {0} installation wizard'}" FontSize="20" FontWeight="Bold" />
+            <TextBlock DockPanel.Dock="Top" Text="{Binding Metadata.Value.ApplicationName, StringFormat='This wizard will help you install {0} on this system'}" />
+
+            <StackPanel Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock>Click Next to continue</TextBlock>
+            </StackPanel>
+        </DockPanel>
+    </Loading>
+</UserControl>
