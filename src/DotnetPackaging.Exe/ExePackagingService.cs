@@ -357,6 +357,9 @@ public sealed class ExePackagingService
                 return Result.Success(targetPath);
             }
 
+            // Inform users that the first-time download can take longer and that the result is cached
+            Log.Information("Downloading installer stub for {RID} v{Version}. This may take a while the first time. Cache: {CacheDir}", rid, version, cacheDir);
+
             var configuredBase = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_URL_BASE");
             var assetName = $"DotnetPackaging.Exe.Installer-{rid}-v{version}.exe";
             var shaName = assetName + ".sha256";
