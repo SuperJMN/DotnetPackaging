@@ -30,7 +30,7 @@
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.8" />
     <PackageVersion Include="Avalonia.ReactiveUI" Version="11.3.6" />
     <PackageVersion Include="Zafiro.Avalonia" Version="40.0.1" />
-    <PackageVersion Include="Zafiro.Avalonia.Dialogs" Version="40.0.0" />
+    <PackageVersion Include="Zafiro.Avalonia.Dialogs" Version="40.0.1" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="Serilog.Sinks.XUnit" Version="3.0.19" />
     <PackageVersion Include="SharpCompress" Version="0.41.0" />
@@ -51,12 +51,12 @@
     <PackageVersion Include="System.IO.Hashing" Version="9.0.10" />
     <PackageVersion Include="DeflateBlockCompressor" Version="0.0.13" />
     <PackageVersion Include="NuGet.Versioning" Version="6.14.0" />
-    <PackageVersion Include="Zafiro" Version="40.0.0" />
+    <PackageVersion Include="Zafiro" Version="41.0.1" />
     <PackageVersion Include="Zafiro.Avalonia.Generators" Version="40.0.1" />
-    <PackageVersion Include="Zafiro.FileSystem" Version="40.0.0" />
-    <PackageVersion Include="Zafiro.FileSystem.Unix" Version="40.0.0" />
-    <PackageVersion Include="Zafiro.FileSystem.Local" Version="40.0.0" />
-    <PackageVersion Include="Zafiro.DivineBytes" Version="40.0.0" />
+    <PackageVersion Include="Zafiro.FileSystem" Version="41.0.1" />
+    <PackageVersion Include="Zafiro.FileSystem.Unix" Version="41.0.1" />
+    <PackageVersion Include="Zafiro.FileSystem.Local" Version="41.0.1" />
+    <PackageVersion Include="Zafiro.DivineBytes" Version="41.0.1" />
     <PackageVersion Include="DiscUtils" Version="0.16.13" />
   </ItemGroup>
 </Project>
