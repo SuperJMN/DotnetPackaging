@@ -1,19 +1,19 @@
-# Gu√≠a de estilo y operaciones generales
+# GuÌa de estilo y operaciones generales
 
-Gu√≠a operativa y de estilo para trabajar con este repositorio usando agentes.
+GuÌa operativa y de estilo para trabajar con este repositorio usando agentes.
 
 Precedencia de reglas
-- Las reglas se aplican en orden de precedencia creciente: las que aparecen m√°s tarde prevalecen sobre las anteriores.
+- Las reglas se aplican en orden de precedencia creciente: las que aparecen m·s tarde prevalecen sobre las anteriores.
 - Las reglas de proyecto (asociadas a rutas concretas) tienen prioridad sobre reglas personales.
 - Entre reglas de proyecto, las de subdirectorios prevalecen sobre las del directorio padre.
 
-## Comunicaci√≥n y formato
-- Conversaciones y asistencia: en espa√±ol.
-- C√≥digo, mensajes de commit, comentarios de c√≥digo y res√∫menes de PR: en ingl√©s.
+## ComunicaciÛn y formato
+- Conversaciones y asistencia: en espaÒol.
+- CÛdigo, mensajes de commit, comentarios de cÛdigo y res˙menes de PR: en inglÈs.
 - PR: usar texto sin escapar en asunto y cuerpo.
 
-## Terminal y ejecuci√≥n
-- No cerrar la terminal ni ejecutar comandos que finalicen la sesi√≥n.
+## Terminal y ejecuciÛn
+- No cerrar la terminal ni ejecutar comandos que finalicen la sesiÛn.
 - Evitar comandos interactivos salvo que sea estrictamente necesario.
 - Extremar cuidado con comillas simples y dobles en los comandos.
 
@@ -22,17 +22,17 @@ Precedencia de reglas
 - Se realiza mediante azure-pipelines.yml.
 - La build debe pasar correctamente antes de fusionar una PR.
 
-## Lineamientos de dise√±o y estilo (C# / Reactive)
+## Lineamientos de diseÒo y estilo (C# / Reactive)
 
-- Preferir programaci√≥n funcional y reactiva cuando no complique en exceso.
-- Validaci√≥n: preferir ReactiveUI.Validations.
+- Preferir programaciÛn funcional y reactiva cuando no complique en exceso.
+- ValidaciÛn: preferir ReactiveUI.Validations.
 - Result handling: usar CSharpFunctionalExtensions cuando sea posible.
 - Convenciones:
-    - No usar sufijo ‚ÄúAsync‚Äù en m√©todos que devuelven Task.
+    - No usar sufijo ìAsyncî en mÈtodos que devuelven Task.
     - No usar guiones bajos para campos privados.
-    - Evitar eventos (salvo indicaci√≥n expl√≠cita).
+    - Evitar eventos (salvo indicaciÛn explÌcita).
     - Favorecer inmutabilidad; mutar solo lo estrictamente necesario.
-    - Evitar poner l√≥gica en Observable.Subscribe; preferir encadenar operadores y proyecciones.
+    - Evitar poner lÛgica en Observable.Subscribe; preferir encadenar operadores y proyecciones.
 
 # Errores y notificaciones
 
@@ -41,21 +41,21 @@ Precedencia de reglas
 
 # Toolkit Zafiro
 
-Es mi propio toolkit. Disponible en https://github.com/SuperJMN/Zafiro. Muchos de los m√©todos que no conozcas pueden formar parte de este toolkit. Tenlo en consideraci√≥n.
+Es mi propio toolkit. Disponible en https://github.com/SuperJMN/Zafiro. Muchos de los mÈtodos que no conozcas pueden formar parte de este toolkit. Tenlo en consideraciÛn.
 
 # Manejo de bytes (sin Streams imperativos)
 
 - Usar Zafiro.DivineBytes para flujos de bytes evitables con Stream.
-- ByteSource es la abstracci√≥n observable y componible equivalente a un stream de lectura.
+- ByteSource es la abstracciÛn observable y componible equivalente a un stream de lectura.
 
-# Refactorizaci√≥n guiada por responsabilidades
+# RefactorizaciÛn guiada por responsabilidades
 
-1. Leer el c√≥digo y describir primero sus responsabilidades.
+1. Leer el cÛdigo y describir primero sus responsabilidades.
 2. Enumerar cada responsabilidad como una frase nominal clara.
-3. Para cada responsabilidad, crear una clase o m√©todo con nombre espec√≠fico y sem√°ntico.
-4. Extraer campos y dependencias seg√∫n cada responsabilidad.
-5. Evitar variables compartidas entre responsabilidades; si aparecen, replantear los l√≠mites.
-6. No introducir patrones arbitrarios; mantener la interfaz p√∫blica estable.
+3. Para cada responsabilidad, crear una clase o mÈtodo con nombre especÌfico y sem·ntico.
+4. Extraer campos y dependencias seg˙n cada responsabilidad.
+5. Evitar variables compartidas entre responsabilidades; si aparecen, replantear los lÌmites.
+6. No introducir patrones arbitrarios; mantener la interfaz p˙blica estable.
 7. No eliminar logs ni validaciones existentes.
 
 
@@ -137,11 +137,11 @@ Packaging formats: status and details
   - Status: experimental cross-platform builder. Library: src/DotnetPackaging.Dmg.
   - How it works: emits an ISO9660/Joliet image (UDTO) with optional .app scaffolding if none exists. Special adornments like .VolumeIcon.icns and .background are hoisted to the image root when present.
   - Notes: intended for simple drag-and-drop installs. Not a full UDIF/UDZO implementation; signing and advanced Finder layouts are out of scope for now.
-- Windows EXE (.exe) ‚Äî preview
+- Windows EXE (.exe) ó preview
   - Status: preview. Dotnet-only SFX builder. Library: src/DotnetPackaging.Exe. Stub Avalonia: src/DotnetPackaging.Exe.Installer (esqueleto WIP).
-  - How it works: produces a self-extracting installer by concatenating [stub.exe][payload.zip][Int64 length]["DPACKEXE1"]. The payload contains metadata.json and Content/ (publish output). The stub leer√° metadata y realizar√° la instalaci√≥n.
-  - CLI: exe (desde carpeta publish) y exe from-project (publica y empaqueta). Si omites --stub, el packer descargar√° autom√°ticamente el stub que corresponda desde GitHub Releases; puedes pasar --stub para forzar uno concreto.
-  - Cross-platform build: el empaquetado (concatenaci√≥n) funciona desde cualquier SO. El stub se publica por RID (win-x64/win-arm64).
+  - How it works: produces a self-extracting installer by concatenating [stub.exe][payload.zip][Int64 length]["DPACKEXE1"]. The payload contains metadata.json and Content/ (publish output). The stub leer· metadata y realizar· la instalaciÛn.
+  - CLI: exe (desde carpeta publish) y exe from-project (publica y empaqueta). Si omites --stub, el packer descargar· autom·ticamente el stub que corresponda desde GitHub Releases; puedes pasar --stub para forzar uno concreto.
+  - Cross-platform build: el empaquetado (concatenaciÛn) funciona desde cualquier SO. El stub se publica por RID (win-x64/win-arm64).
   - Defaults: self-contained=true al generar desde proyecto; en hosts no Windows, especifica --rid (win-x64/win-arm64) para elegir el stub/target correcto.
 
 CLI tool (dotnet tool)
@@ -157,7 +157,7 @@ CLI tool (dotnet tool)
   - flatpak from-project: publish a .NET project and build a .flatpak bundle.
   - msix (experimental): msix pack (from directory) and msix from-project.
   - dmg (experimental): dmg (from directory) and dmg from-project (publishes then builds a .dmg).
-  - exe (preview): Windows self-extracting installer (.exe) from directory; and exe from-project (publica y empaqueta). Si omites --stub, se descargar√° el stub apropiado autom√°ticamente.
+  - exe (preview): Windows self-extracting installer (.exe) from directory; and exe from-project (publica y empaqueta). Si omites --stub, se descargar· el stub apropiado autom·ticamente.
 - Common options (all commands share a metadata set):
   - --directory <dir> (required): input directory to package from.
   - --output <file> (required): output file (.AppImage, .deb, .rpm, .msix, .flatpak, .dmg).
@@ -228,18 +228,18 @@ Backlog / Future work
 - Add CLI E2E tests (including rpm/exe) and hook dotnet test in CI.
 - Optional: enrich icon detection strategies and metadata mapping (e.g., auto-appId from name + reverse DNS).
 
-Windows EXE (.exe) ‚Äì progress log (snapshot)
+Windows EXE (.exe) ñ progress log (snapshot)
 - Done:
-  - Librer√≠a DotnetPackaging.Exe con SimpleExePacker (concatena stub + zip + footer).
+  - LibrerÌa DotnetPackaging.Exe con SimpleExePacker (concatena stub + zip + footer).
   - Comandos CLI: exe (desde carpeta) y exe from-project (publica y empaqueta). --stub es opcional; si se omite, el packer descarga el stub que corresponda desde GitHub Releases.
   - Stub Avalonia creado (esqueleto) en src/DotnetPackaging.Exe.Installer con lector de payload.
-  - Instalador: opci√≥n de crear acceso directo en Escritorio en el paso Finish; acceso directo en Start Menu se mantiene.
+  - Instalador: opciÛn de crear acceso directo en Escritorio en el paso Finish; acceso directo en Start Menu se mantiene.
   - CI: publica stubs win-x64 y win-arm64 como single-file self-extract con hashes y los sube a un GitHub Release (tag v{SemVer}).
   - Packer: logging antes de descargar el stub para informar del tiempo de espera.
 - Next:
-  - UI: Integrar SlimWizard de Zafiro en el stub (ahora hay UI m√≠nima). Navegaci√≥n con WizardNavigator y p√°ginas.
-  - L√≥gica: Elevaci√≥n UAC y carpeta por defecto en Program Files seg√∫n arquitectura.
-  - Packer: cach√© local de stubs y reintentos/validaci√≥n de hashes.
-  - Detecci√≥n avanzada de ejecutable e icono (paridad con .deb/.appimage).
+  - UI: Integrar SlimWizard de Zafiro en el stub (ahora hay UI mÌnima). NavegaciÛn con WizardNavigator y p·ginas.
+  - LÛgica: ElevaciÛn UAC y carpeta por defecto en Program Files seg˙n arquitectura.
+  - Packer: cachÈ local de stubs y reintentos/validaciÛn de hashes.
+  - DetecciÛn avanzada de ejecutable e icono (paridad con .deb/.appimage).
   - Modo silencioso.
   - Pruebas E2E en Windows.
