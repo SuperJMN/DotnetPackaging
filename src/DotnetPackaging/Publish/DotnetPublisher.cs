@@ -32,6 +32,14 @@ public sealed class DotnetPublisher : IPublisher
         {
             logger.Information("Preparing to publish project {ProjectPath}", request.ProjectPath);
 
+            // Validate that RID is provided when SelfContained is true
+            if (request.SelfContained && !request.Rid.HasValue)
+            {
+                var error = $"RID is required when publishing self-contained applications. Please specify a RID for project {request.ProjectPath}";
+                logger.Error(error);
+                return Result.Failure<PublishResult>(error);
+            }
+
             var outputDirResult = PrepareOutputDirectory();
             if (outputDirResult.IsFailure)
             {
@@ -98,7 +106,7 @@ public sealed class DotnetPublisher : IPublisher
         {
             var outputDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dp-publish-{Guid.NewGuid():N}");
             System.IO.Directory.CreateDirectory(outputDir);
-            logger.Information("Using temporary publish directory {Directory}", outputDir);
+            logger.Debug("Using temporary publish directory {Directory}", outputDir);
             return outputDir;
         }, ex =>
         {
@@ -109,10 +117,9 @@ public sealed class DotnetPublisher : IPublisher
 
     private void LogPublishConfiguration(ProjectPublishRequest request)
     {
-        var rid = request.Rid.Match(
+        var ridDisplay = request.Rid.Match(
             value => value,
-            () => request.SelfContained ? InferHostRid() : null);
-        var ridDisplay = rid ?? "(default)";
+            () => "(default)");
         logger.Information(
             "Executing dotnet publish for {ProjectPath} | Configuration: {Configuration} | Self-contained: {SelfContained} | Single-file: {SingleFile} | Trimmed: {Trimmed} | RID: {Rid}",
             request.ProjectPath,
@@ -129,12 +136,9 @@ public sealed class DotnetPublisher : IPublisher
         sb.Append($"publish \"{r.ProjectPath}\" ");
         sb.Append($"-c {r.Configuration} ");
 
-        string? ridToUse = r.Rid.HasValue
-            ? r.Rid.Value
-            : (r.SelfContained ? InferHostRid() : null);
-        if (!string.IsNullOrWhiteSpace(ridToUse))
+        if (r.Rid.HasValue)
         {
-            sb.Append($"-r {ridToUse} ");
+            sb.Append($"-r {r.Rid.Value} ");
         }
 
         sb.Append(r.SelfContained ? "--self-contained true " : "--self-contained false ");
@@ -152,46 +156,4 @@ public sealed class DotnetPublisher : IPublisher
         return sb.ToString();
     }
 
-    private static string? InferHostRid()
-    {
-        try
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                return RuntimeInformation.OSArchitecture switch
-                {
-                    System.Runtime.InteropServices.Architecture.X64 => "linux-x64",
-                    System.Runtime.InteropServices.Architecture.Arm64 => "linux-arm64",
-                    System.Runtime.InteropServices.Architecture.X86 => "linux-x86",
-                    System.Runtime.InteropServices.Architecture.Arm => "linux-arm",
-                    _ => null
-                };
-            }
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return RuntimeInformation.OSArchitecture switch
-                {
-                    System.Runtime.InteropServices.Architecture.X64 => "win-x64",
-                    System.Runtime.InteropServices.Architecture.Arm64 => "win-arm64",
-                    System.Runtime.InteropServices.Architecture.X86 => "win-x86",
-                    System.Runtime.InteropServices.Architecture.Arm => "win-arm",
-                    _ => null
-                };
-            }
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                return RuntimeInformation.OSArchitecture switch
-                {
-                    System.Runtime.InteropServices.Architecture.X64 => "osx-x64",
-                    System.Runtime.InteropServices.Architecture.Arm64 => "osx-arm64",
-                    _ => null
-                };
-            }
-            return null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
 }
