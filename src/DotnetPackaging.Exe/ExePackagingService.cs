@@ -17,15 +17,27 @@ namespace DotnetPackaging.Exe;
 public sealed class ExePackagingService
 {
     private readonly DotnetPublisher publisher;
+    private readonly ILogger logger;
 
     public ExePackagingService()
-        : this(new DotnetPublisher())
+        : this(new DotnetPublisher(), Log.Logger)
+    {
+    }
+
+    public ExePackagingService(ILogger? logger)
+        : this(new DotnetPublisher(ToMaybe(logger)), logger)
     {
     }
 
     public ExePackagingService(DotnetPublisher publisher)
+        : this(publisher, null)
     {
-        this.publisher = publisher;
+    }
+
+    public ExePackagingService(DotnetPublisher publisher, ILogger? logger)
+    {
+        this.publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
+        this.logger = logger ?? Log.Logger;
     }
 
     public Task<Result<FileInfo>> BuildFromDirectory(
@@ -175,7 +187,7 @@ public sealed class ExePackagingService
         return new InstallerMetadata(appId, appName, version, effectiveVendor, description, executable);
     }
 
-    private static Maybe<string> InferExecutableName(DirectoryInfo contextDir, Maybe<string> projectName)
+    private Maybe<string> InferExecutableName(DirectoryInfo contextDir, Maybe<string> projectName)
     {
         try
         {
@@ -192,7 +204,7 @@ public sealed class ExePackagingService
 
             if (!candidates.Any())
             {
-                Log.Warning("No executables were found under {Directory} when trying to infer the main executable.", contextDir.FullName);
+                logger.Warning("No executables were found under {Directory} when trying to infer the main executable.", contextDir.FullName);
                 return Maybe<string>.None;
             }
 
@@ -206,7 +218,7 @@ public sealed class ExePackagingService
                     }
 
                     var relative = NormalizeExecutableRelativePath(match.Relative);
-                    Log.Information("Inferred executable '{Executable}' by matching the project name.", relative);
+                    logger.Debug("Inferred executable '{Executable}' by matching the project name.", relative);
                     return Maybe<string>.From(relative);
                 });
 
@@ -218,7 +230,7 @@ public sealed class ExePackagingService
             if (candidates.Count == 1)
             {
                 var relative = NormalizeExecutableRelativePath(candidates[0].Relative);
-                Log.Information("Inferred executable '{Executable}' because it is the only candidate.", relative);
+                logger.Debug("Inferred executable '{Executable}' because it is the only candidate.", relative);
                 return Maybe<string>.From(relative);
             }
 
@@ -233,12 +245,12 @@ public sealed class ExePackagingService
                 .ThenBy(candidate => candidate.Normalized.Length)
                 .First();
 
-            Log.Information("Inferred executable '{Executable}' by selecting the shallowest candidate.", preferred.Normalized);
+            logger.Debug("Inferred executable '{Executable}' by selecting the shallowest candidate.", preferred.Normalized);
             return Maybe<string>.From(preferred.Normalized);
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Unable to infer the executable under {Directory}.", contextDir.FullName);
+            logger.Warning(ex, "Unable to infer the executable under {Directory}.", contextDir.FullName);
             return Maybe<string>.None;
         }
     }
@@ -374,7 +386,7 @@ public sealed class ExePackagingService
             }
 
             // Inform about download and cache
-            Log.Information("Downloading installer stub for {RID} v{Version}. This may take a while the first time. Cache: {CacheDir}", rid, chosenVersion, requestedVersionCacheDir);
+            logger.Information("Downloading installer stub for {RID} v{Version}. This may take a while the first time. Cache: {CacheDir}", rid, chosenVersion, requestedVersionCacheDir);
 
             // 2) Try to resolve URLs for the requested version
             if (!string.IsNullOrWhiteSpace(configuredBase))
@@ -393,7 +405,7 @@ public sealed class ExePackagingService
                     var candidateSha = candidateBase + shaName;
                     try
                     {
-                        Log.Debug("Probing checksum: {Url}", candidateSha);
+                        logger.Debug("Probing checksum: {Url}", candidateSha);
                         using var resp = await http.GetAsync(candidateSha);
                         if (resp.IsSuccessStatusCode)
                         {
@@ -409,7 +421,7 @@ public sealed class ExePackagingService
                     }
                     catch (Exception ex)
                     {
-                        Log.Debug(ex, "Probe failed for {Url}", candidateSha);
+                        logger.Debug(ex, "Probe failed for {Url}", candidateSha);
                     }
                 }
             }
@@ -419,7 +431,7 @@ public sealed class ExePackagingService
             {
                 try
                 {
-                    Log.Warning("Could not locate a release tag for v{Version}. Falling back to the latest release.", chosenVersion);
+                    logger.Warning("Could not locate a release tag for v{Version}. Falling back to the latest release.", chosenVersion);
                     var latestApi = "https://api.github.com/repos/SuperJMN/DotnetPackaging/releases/latest";
                     using var latestResp = await http.GetAsync(latestApi);
                     if (!latestResp.IsSuccessStatusCode)
@@ -477,7 +489,7 @@ public sealed class ExePackagingService
             string? shaTextFinal = cachedShaText;
             if (shaTextFinal is null)
             {
-                Log.Debug("Downloading checksum: {Url}", shaUrl);
+                logger.Debug("Downloading checksum: {Url}", shaUrl);
                 shaTextFinal = await http.GetStringAsync(shaUrl!);
             }
             if (string.IsNullOrWhiteSpace(shaTextFinal))
@@ -497,7 +509,7 @@ public sealed class ExePackagingService
             var tmpPath = Path.Combine(tmpDir, assetName);
             await using (var outFs = File.Create(tmpPath))
             {
-                Log.Debug("Downloading stub: {Url}", exeUrl);
+                logger.Debug("Downloading stub: {Url}", exeUrl);
                 using var resp = await http.GetAsync(exeUrl!, HttpCompletionOption.ResponseHeadersRead);
                 if (!resp.IsSuccessStatusCode)
                     return Result.Failure<string>($"Failed to download stub: {exeUrl} (HTTP {(int)resp.StatusCode})");
