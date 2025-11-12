@@ -106,7 +106,7 @@ public sealed class DotnetPublisher : IPublisher
         {
             var outputDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dp-publish-{Guid.NewGuid():N}");
             System.IO.Directory.CreateDirectory(outputDir);
-            logger.Information("Using temporary publish directory {Directory}", outputDir);
+            logger.Debug("Using temporary publish directory {Directory}", outputDir);
             return outputDir;
         }, ex =>
         {
