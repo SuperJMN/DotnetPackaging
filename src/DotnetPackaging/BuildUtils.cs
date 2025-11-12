@@ -20,8 +20,10 @@ public static class BuildUtils
         Architecture architecture,
         INamedByteSourceWithPath exec,
         bool isTerminal,
-        Maybe<string> containerName)
+        Maybe<string> containerName,
+        ILogger? logger = null)
     {
+        var log = logger ?? Log.Logger;
         var package = ComputePackageName(setup, exec);
         var iconPlan = IconDiscovery.Discover(container, package.ToLowerInvariant());
         var label = containerName.GetValueOrDefault("container root");
@@ -32,7 +34,7 @@ public static class BuildUtils
         if (iconPlan.Png.HasValue)
         {
             var pngResource = iconPlan.Png.Value;
-            Log.Information("Found icon in resource {Resource}", RelativePath(pngResource));
+            log.Information("Found icon in resource {Resource}", RelativePath(pngResource));
 
             var iconResult = await Icon.FromData(Data.FromByteArray(pngResource.Array()));
             if (iconResult.IsSuccess)
@@ -41,16 +43,16 @@ public static class BuildUtils
             }
             else
             {
-                Log.Warning("Icon autodetection: unable to load PNG '{Resource}': {Error}", RelativePath(pngResource), iconResult.Error);
+                log.Warning("Icon autodetection: unable to load PNG '{Resource}': {Error}", RelativePath(pngResource), iconResult.Error);
             }
         }
         else if (iconPlan.Svg.HasValue)
         {
-            Log.Information("Found icon in resource {Resource}", RelativePath(iconPlan.Svg.Value));
+            log.Information("Found icon in resource {Resource}", RelativePath(iconPlan.Svg.Value));
         }
         else
         {
-            Log.Warning("Icon autodetection: Could not find any icon in '{Label}'. Looked for candidates such as icon.svg, icon.png, icon-256.png", label);
+            log.Warning("Icon autodetection: Could not find any icon in '{Label}'. Looked for candidates such as icon.svg, icon.png, icon-256.png", label);
         }
 
         var dirIcon = iconPlan.DirIcon;
@@ -108,11 +110,11 @@ public static class BuildUtils
         return packageMetadata;
     }
 
-    public static Task<Result<INamedByteSourceWithPath>> GetExecutable(IContainer container, FromDirectoryOptions setup)
+    public static Task<Result<INamedByteSourceWithPath>> GetExecutable(IContainer container, FromDirectoryOptions setup, ILogger? logger = null)
     {
         return setup.ExecutableName.Match(
-            s => ExecutableLookupByName(container, s),
-            () => ExecutableLookupWithoutName(container));
+            s => ExecutableLookupByName(container, s, logger),
+            () => ExecutableLookupWithoutName(container, logger));
     }
 
     public static Task<Result<Architecture>> GetArch(FromDirectoryOptions setup, INamedByteSource exec)
@@ -136,21 +138,23 @@ public static class BuildUtils
             .Bind(result => result);
     }
 
-    private static async Task<Result<INamedByteSourceWithPath>> ExecutableLookupByName(IContainer container, string execName)
+    private static async Task<Result<INamedByteSourceWithPath>> ExecutableLookupByName(IContainer container, string execName, ILogger? logger)
     {
-        Log.Information("Looking up for executable named '{ExecName}'", execName);
+        var log = logger ?? Log.Logger;
+        log.Debug("Looking up for executable named '{ExecName}'", execName);
 
         var resources = container.ResourcesWithPathsRecursive().ToList();
         var result = await Task.FromResult(resources
             .TryFirst(x => string.Equals(x.Name, execName, StringComparison.Ordinal))
             .ToResult($"Could not find executable file '{execName}'"));
 
-        return result.Tap(resource => Log.Information("Executable found successfully at {Path}", RelativePath(resource)));
+        return result.Tap(resource => log.Debug("Executable found successfully at {Path}", RelativePath(resource)));
     }
 
-    private static async Task<Result<INamedByteSourceWithPath>> ExecutableLookupWithoutName(IContainer container)
+    private static async Task<Result<INamedByteSourceWithPath>> ExecutableLookupWithoutName(IContainer container, ILogger? logger)
     {
-        Log.Information("No executable has been specified. Looking up for candidates.");
+        var log = logger ?? Log.Logger;
+        log.Debug("No executable has been specified. Looking up for candidates.");
         var rootResources = container.Resources
             .Select(resource => (INamedByteSourceWithPath)new ResourceWithPath(DivinePath.Empty, resource))
             .ToList();
@@ -167,7 +171,7 @@ public static class BuildUtils
         return execFiles
             .TryFirst()
             .ToResult("Could not find any executable file in the container root")
-            .Tap(resource => Log.Information("Choosing {Executable}", RelativePath(resource)));
+            .Tap(resource => log.Debug("Choosing {Executable}", RelativePath(resource)));
     }
 
     private static string RelativePath(INamedByteSourceWithPath resource)
