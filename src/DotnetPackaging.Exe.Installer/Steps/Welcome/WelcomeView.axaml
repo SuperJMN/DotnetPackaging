@@ -19,8 +19,8 @@
 
     <Loading IsLoading="{Binding LoadMetadata.IsExecuting^}">
         <DockPanel VerticalSpacing="12">
-            <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" HorizontalAlignment="Center" Text="{Binding Metadata.Value.ApplicationName, StringFormat='Welcome to the {0} installation wizard'}" FontSize="20" FontWeight="Bold" />
-            <TextBlock DockPanel.Dock="Top" HorizontalAlignment="Center" Text="{Binding Metadata.Value.Version, StringFormat='Version {0}'}" />
+            <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Text="{Binding Metadata.Value.ApplicationName, StringFormat='Welcome to the {0} installation wizard'}" FontSize="20" FontWeight="Bold" />
+            <TextBlock DockPanel.Dock="Bottom" HorizontalAlignment="Right" Text="{Binding Metadata.Value.Version, StringFormat='Version {0}'}" />
             <TextBlock DockPanel.Dock="Top" Text="{Binding Metadata.Value.ApplicationName, StringFormat='This wizard will help you install {0} on this system'}" />
 
             <StackPanel Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
