@@ -5,7 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Avalonia.Desktop" Version="11.3.8" />
-    <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.1.0" />
+    <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.1.1" />
     <PackageVersion Include="ByteSize" Version="2.1.2" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4">
       <PrivateAssets>all</PrivateAssets>
@@ -14,13 +14,13 @@
     <PackageVersion Include="CSharpFunctionalExtensions" Version="3.6.0" />
     <PackageVersion Include="CSharpFunctionalExtensions.FluentAssertions" Version="3.6.0" />
     <PackageVersion Include="FluentAssertions" Version="8.8.0" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.10" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageVersion Include="NyaFs" Version="1.0.8" />
     <PackageVersion Include="Octokit" Version="14.0.0" />
     <PackageVersion Include="Projektanker.Icons.Avalonia.FontAwesome" Version="9.6.2" />
     <PackageVersion Include="Projektanker.Icons.Avalonia.MaterialDesign" Version="9.6.2" />
-    <PackageVersion Include="ReactiveProperty" Version="9.7.0" />
+    <PackageVersion Include="ReactiveProperty" Version="9.8.0" />
     <PackageVersion Include="ReactiveUI.Avalonia" Version="11.3.8" />
     <PackageVersion Include="ReactiveUI.Fody" Version="19.5.41" />
     <PackageVersion Include="ReactiveUI" Version="20.1.63" />
@@ -29,16 +29,16 @@
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.3.8" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.8" />
     <PackageVersion Include="Avalonia.ReactiveUI" Version="11.3.6" />
-    <PackageVersion Include="Zafiro.Avalonia" Version="40.0.1" />
-    <PackageVersion Include="Zafiro.Avalonia.Dialogs" Version="40.0.1" />
+    <PackageVersion Include="Zafiro.Avalonia" Version="40.0.4" />
+    <PackageVersion Include="Zafiro.Avalonia.Dialogs" Version="40.0.4" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="Serilog.Sinks.XUnit" Version="3.0.19" />
     <PackageVersion Include="SharpCompress" Version="0.41.0" />
     <PackageVersion Include="SharpZipLib" Version="1.4.2" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.0" />
     <PackageVersion Include="System.IO.Abstractions.TestingHelpers" Version="22.0.16" />
-    <PackageVersion Include="System.Security.Permissions" Version="9.0.10" />
+    <PackageVersion Include="System.Security.Permissions" Version="10.0.0" />
     <PackageVersion Include="TestableIO.System.IO.Abstractions.Extensions" Version="2.2.5" />
     <PackageVersion Include="TestableIO.System.IO.Abstractions.Wrappers" Version="22.0.16" />
     <PackageVersion Include="System.IO.Abstractions" Version="22.0.16" />
@@ -48,10 +48,10 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
-    <PackageVersion Include="System.IO.Hashing" Version="9.0.10" />
+    <PackageVersion Include="System.IO.Hashing" Version="10.0.0" />
     <PackageVersion Include="DeflateBlockCompressor" Version="0.0.13" />
-    <PackageVersion Include="NuGet.Versioning" Version="6.14.0" />
-    <PackageVersion Include="Zafiro.Avalonia.Generators" Version="40.0.1" />
+    <PackageVersion Include="NuGet.Versioning" Version="7.0.0" />
+    <PackageVersion Include="Zafiro.Avalonia.Generators" Version="40.0.4" />
     <PackageVersion Include="Zafiro.FileSystem" Version="41.2.0" />
     <PackageVersion Include="Zafiro" Version="41.2.0" />
     <PackageVersion Include="Zafiro.FileSystem.Unix" Version="41.2.0" />
