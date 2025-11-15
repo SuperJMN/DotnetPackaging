@@ -14,9 +14,9 @@
     <FluentTheme />
     <StyleInclude Source="avares://Zafiro.Avalonia/Styles.axaml" />
     <StyleInclude Source="avares://Zafiro.Avalonia.Dialogs/Styles.axaml" />
-    <Style Selector="UserControl">
-        <Setter Property="MinWidth" Value="400" />
-        <Setter Property="Height" Value="400" />
+    <Style Selector=":is(UserControl)">
+        <Setter Property="Width" Value="500" />
+        <Setter Property="Height" Value="300" />
     </Style>
   </Application.Styles>
 </Application>

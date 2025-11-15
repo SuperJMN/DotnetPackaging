@@ -10,7 +10,7 @@
         <TextBlock Text="Select the installation folder" FontWeight="Bold"/>
         <DockPanel HorizontalSpacing="8">
             <Button DockPanel.Dock="Right" Content="Browse…" Command="{Binding Browse}"/>
-            <TextBox Text="{Binding InstallDirectory, Mode=TwoWay}" MinWidth="200" />
+            <TextBox Text="{Binding InstallDirectory, Mode=TwoWay}" />
         </DockPanel>
     </StackPanel>
 </UserControl>
