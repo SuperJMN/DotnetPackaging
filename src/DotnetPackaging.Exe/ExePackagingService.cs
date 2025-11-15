@@ -56,13 +56,16 @@ public sealed class ExePackagingService
         string? vendor,
         FileInfo? stubFile)
     {
+        var versionProperties = MsBuildVersionPropertiesFactory.Create(options.Version);
+
         var publishRequest = new ProjectPublishRequest(projectFile.FullName)
         {
             Rid = ToMaybe(runtimeIdentifier),
             SelfContained = selfContained,
             Configuration = configuration,
             SingleFile = singleFile,
-            Trimmed = trimmed
+            Trimmed = trimmed,
+            MsBuildProperties = versionProperties
         };
 
         var publishResult = await publisher.Publish(publishRequest);

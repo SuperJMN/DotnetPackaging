@@ -601,7 +601,8 @@ static class Program
                 SelfContained = false,
                 Configuration = "Release",
                 SingleFile = false,
-                Trimmed = false
+                Trimmed = false,
+                MsBuildProperties = DotnetPackaging.Publish.MsBuildVersionPropertiesFactory.Create(opt.Version)
             };
             var pub = await publisher.Publish(req);
             if (pub.IsFailure)
@@ -1040,7 +1041,8 @@ static class Program
                 SelfContained = sc,
                 Configuration = cfg,
                 SingleFile = sf,
-                Trimmed = tr
+                Trimmed = tr,
+                MsBuildProperties = DotnetPackaging.Publish.MsBuildVersionPropertiesFactory.Create(opt.Version)
             };
 
             var pub = await publisher.Publish(req);
@@ -1140,7 +1142,8 @@ static class Program
                 SelfContained = sc,
                 Configuration = cfg,
                 SingleFile = sf,
-                Trimmed = tr
+                Trimmed = tr,
+                MsBuildProperties = DotnetPackaging.Publish.MsBuildVersionPropertiesFactory.Create(opt.Version)
             };
 
             var pub = await publisher.Publish(req);
@@ -1306,7 +1309,8 @@ static class Program
                 SelfContained = sc,
                 Configuration = cfg,
                 SingleFile = sf,
-                Trimmed = tr
+                Trimmed = tr,
+                MsBuildProperties = DotnetPackaging.Publish.MsBuildVersionPropertiesFactory.Create(opt.Version)
             };
 
             var pub = await publisher.Publish(req);
@@ -1406,7 +1410,8 @@ static class Program
                 SelfContained = sc,
                 Configuration = cfg,
                 SingleFile = sf,
-                Trimmed = tr
+                Trimmed = tr,
+                MsBuildProperties = DotnetPackaging.Publish.MsBuildVersionPropertiesFactory.Create(opt.Version)
             };
 
             var pub = await publisher.Publish(req);
