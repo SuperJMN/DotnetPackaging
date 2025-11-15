@@ -37,9 +37,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Exe.Install
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Exe", "src\DotnetPackaging.Exe\DotnetPackaging.Exe.csproj", "{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{0C88DD14-F956-CE84-757C-A364CCF449FC}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Flatpak.Tests", "test\DotnetPackaging.Flatpak.Tests\DotnetPackaging.Flatpak.Tests.csproj", "{F090C5BD-3B1C-4D32-93AD-5D90E4819A69}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Tests", "test\DotnetPackaging.Tests\DotnetPackaging.Tests.csproj", "{D33B643F-CF99-4233-8596-2CD03DE46868}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -207,6 +207,18 @@ Global
 		{F090C5BD-3B1C-4D32-93AD-5D90E4819A69}.Release|x64.Build.0 = Release|Any CPU
 		{F090C5BD-3B1C-4D32-93AD-5D90E4819A69}.Release|x86.ActiveCfg = Release|Any CPU
 		{F090C5BD-3B1C-4D32-93AD-5D90E4819A69}.Release|x86.Build.0 = Release|Any CPU
+		{D33B643F-CF99-4233-8596-2CD03DE46868}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D33B643F-CF99-4233-8596-2CD03DE46868}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D33B643F-CF99-4233-8596-2CD03DE46868}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D33B643F-CF99-4233-8596-2CD03DE46868}.Debug|x64.Build.0 = Debug|Any CPU
+		{D33B643F-CF99-4233-8596-2CD03DE46868}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D33B643F-CF99-4233-8596-2CD03DE46868}.Debug|x86.Build.0 = Debug|Any CPU
+		{D33B643F-CF99-4233-8596-2CD03DE46868}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D33B643F-CF99-4233-8596-2CD03DE46868}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D33B643F-CF99-4233-8596-2CD03DE46868}.Release|x64.ActiveCfg = Release|Any CPU
+		{D33B643F-CF99-4233-8596-2CD03DE46868}.Release|x64.Build.0 = Release|Any CPU
+		{D33B643F-CF99-4233-8596-2CD03DE46868}.Release|x86.ActiveCfg = Release|Any CPU
+		{D33B643F-CF99-4233-8596-2CD03DE46868}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -215,6 +227,7 @@ Global
 		{79928283-5F6E-49F4-ACC4-FE5994DA1116} = {F33ABB7A-E6A3-4F45-BFB5-9A014B8C5F12}
 		{DF914DC0-903B-4733-8F85-45F733F2DE5F} = {F33ABB7A-E6A3-4F45-BFB5-9A014B8C5F12}
 		{F090C5BD-3B1C-4D32-93AD-5D90E4819A69} = {F33ABB7A-E6A3-4F45-BFB5-9A014B8C5F12}
+		{D33B643F-CF99-4233-8596-2CD03DE46868} = {F33ABB7A-E6A3-4F45-BFB5-9A014B8C5F12}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1D869DF1-9147-472D-A3D9-D519518A6951}
