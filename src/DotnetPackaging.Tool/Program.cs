@@ -20,6 +20,7 @@ using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
 using Zafiro.FileSystem.Core;
 using DotnetPackaging.Exe;
+using System.Threading;
 
 namespace DotnetPackaging.Tool;
 
@@ -58,8 +59,12 @@ static class Program
         };
 
         // Global --verbose option (purely for discoverability; value already read above)
-        var verboseOption = new Option<bool>(new[] { "--verbose", "-v", "--debug", "-d" }, "Enable verbose logging");
-        rootCommand.AddGlobalOption(verboseOption);
+        var verboseOption = new Option<bool>("--verbose", "-v", "--debug", "-d")
+        {
+            Description = "Enable verbose logging",
+            Recursive = true
+        };
+        rootCommand.Add(verboseOption);
 
         var debCommand = CreateCommand(
             "deb",
@@ -70,7 +75,7 @@ static class Program
             "pack-deb",
             "debian");
         AddDebFromProjectSubcommand(debCommand);
-        rootCommand.AddCommand(debCommand);
+        rootCommand.Add(debCommand);
 
         var rpmCommand = CreateCommand(
             "rpm",
@@ -81,7 +86,7 @@ static class Program
             "pack-rpm");
         // Add rpm from-project subcommand
         AddRpmFromProjectSubcommand(rpmCommand);
-        rootCommand.AddCommand(rpmCommand);
+        rootCommand.Add(rpmCommand);
 
         var appImageCommand = CreateCommand(
             "appimage",
@@ -93,7 +98,7 @@ static class Program
         // Add subcommands for AppImage
         AddAppImageSubcommands(appImageCommand);
         AddAppImageFromProjectSubcommand(appImageCommand);
-        rootCommand.AddCommand(appImageCommand);
+        rootCommand.Add(appImageCommand);
 
         // DMG command (experimental, cross-platform)
         var dmgCommand = CreateCommand(
@@ -104,15 +109,21 @@ static class Program
             "Create a simple macOS disk image (.dmg). Currently uses an ISO/UDF (UDTO) payload for broad compatibility.",
             "pack-dmg");
         AddDmgFromProjectSubcommand(dmgCommand);
-        rootCommand.AddCommand(dmgCommand);
+        rootCommand.Add(dmgCommand);
 
         // dmg verify subcommand
+        var verifyFileOption = new Option<FileInfo>("--file")
+        {
+            Description = "Path to the .dmg file",
+            Required = true
+        };
         var verifyCmd = new Command("verify", "Verify that a .dmg file has a macOS-friendly structure (ISO/UDTO or UDIF).")
         {
-            new Option<FileInfo>("--file", "Path to the .dmg file") { IsRequired = true }
+            verifyFileOption
         };
-        verifyCmd.SetHandler(async (FileInfo file) =>
+        verifyCmd.SetAction(async parseResult =>
         {
+            var file = parseResult.GetValue(verifyFileOption)!;
             await ExecuteWithLogging("dmg-verify", file.FullName, async logger =>
             {
                 var result = await DotnetPackaging.Dmg.DmgVerifier.Verify(file.FullName);
@@ -127,34 +138,78 @@ static class Program
                     logger.Information("{VerificationResult}", result.Value);
                 }
             });
-        }, verifyCmd.Options.OfType<Option<FileInfo>>().First());
-        dmgCommand.AddCommand(verifyCmd);
+        });
+        dmgCommand.Add(verifyCmd);
 
         // Flatpak command
-        var flatpakCommand = new Command("flatpak", "Flatpak packaging: generate layout, OSTree repo, or bundle (.flatpak). Can use system flatpak or internal bundler.");
+        var flatpakCommand = new Command("flatpak") { Description = "Flatpak packaging: generate layout, OSTree repo, or bundle (.flatpak). Can use system flatpak or internal bundler." };
         AddFlatpakSubcommands(flatpakCommand);
         AddFlatpakFromProjectSubcommand(flatpakCommand);
-        rootCommand.AddCommand(flatpakCommand);
+        rootCommand.Add(flatpakCommand);
 
         // MSIX command (experimental)
-        var msixCommand = new Command("msix", "MSIX packaging (experimental)");
+        var msixCommand = new Command("msix") { Description = "MSIX packaging (experimental)" };
         AddMsixSubcommands(msixCommand);
-        rootCommand.AddCommand(msixCommand);
+        rootCommand.Add(msixCommand);
 
         // EXE SFX command
-        var exeCommand = new Command("exe", "Windows self-extracting installer (.exe). If --stub is not provided, the tool downloads the appropriate stub from GitHub Releases.");
-        var exeInputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
-        var exeOutput = new Option<FileInfo>("--output", "Output installer .exe") { IsRequired = true };
-        var stubPath = new Option<FileInfo>("--stub", "Path to the prebuilt stub (WinExe) to concatenate (optional if repo layout is present)");
-        var exRidTop = new Option<string?>("--rid", "Runtime identifier for the stub (win-x64, win-arm64)");
+        var exeCommand = new Command("exe") { Description = "Windows self-extracting installer (.exe). If --stub is not provided, the tool downloads the appropriate stub from GitHub Releases." };
+        var exeInputDir = new Option<DirectoryInfo>("--directory")
+        {
+            Description = "The input directory (publish output)",
+            Required = true
+        };
+        var exeOutput = new Option<FileInfo>("--output")
+        {
+            Description = "Output installer .exe",
+            Required = true
+        };
+        var stubPath = new Option<FileInfo>("--stub")
+        {
+            Description = "Path to the prebuilt stub (WinExe) to concatenate (optional if repo layout is present)"
+        };
+        var exRidTop = new Option<string?>("--rid")
+        {
+            Description = "Runtime identifier for the stub (win-x64, win-arm64)"
+        };
 
         // Reuse metadata options
-        var exAppName = new Option<string>("--application-name", "Application name") { IsRequired = false };
-        var exComment = new Option<string>("--comment", "Comment / long description") { IsRequired = false };
-        var exVersion = new Option<string>("--version", "Version") { IsRequired = false };
-        var exAppId = new Option<string>("--appId", "Application Id (Reverse DNS typical)") { IsRequired = false };
-        var exVendor = new Option<string>("--vendor", "Vendor/Publisher") { IsRequired = false };
-        var exExecutableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
+        var exAppName = new Option<string>("--application-name")
+        {
+            Description = "Application name",
+            Required = false
+        };
+        var exComment = new Option<string>("--comment")
+        {
+            Description = "Comment / long description",
+            Required = false
+        };
+        var exVersion = new Option<string>("--version")
+        {
+            Description = "Version",
+            Required = false
+        };
+        var exAppId = new Option<string>("--appId")
+        {
+            Description = "Application Id (Reverse DNS typical)",
+            Required = false
+        };
+        var exVendor = new Option<string>("--vendor")
+        {
+            Description = "Vendor/Publisher",
+            Required = false
+        };
+        var exExecutableName = new Option<string>("--executable-name")
+        {
+            Description = "Name of your application's executable",
+            Required = false
+        };
+        var exIconOption = new Option<IIcon?>("--icon")
+        {
+            Description = "Path to the application icon"
+        };
+        exIconOption.CustomParser = GetIcon;
+
         var optionsBinder = new OptionsBinder(
             exAppName,
             new Option<string>("--wm-class"),
@@ -162,7 +217,7 @@ static class Program
             exComment,
             new Option<MainCategory?>("--main-category"),
             new Option<IEnumerable<AdditionalCategory>>("--additional-categories"),
-            new Option<IIcon?>("--icon", GetIcon),
+            exIconOption,
             exVersion,
             new Option<Uri>("--homepage"),
             new Option<string>("--license"),
@@ -173,20 +228,32 @@ static class Program
             new Option<bool>("--is-terminal")
         );
 
-        exeCommand.AddOption(exeInputDir);
-        exeCommand.AddOption(exeOutput);
-        exeCommand.AddOption(stubPath);
+        exeCommand.Add(exeInputDir);
+        exeCommand.Add(exeOutput);
+        exeCommand.Add(stubPath);
         // Make metadata options global so subcommands can use them without re-adding
-        exeCommand.AddGlobalOption(exAppName);
-        exeCommand.AddGlobalOption(exComment);
-        exeCommand.AddGlobalOption(exVersion);
-        exeCommand.AddGlobalOption(exAppId);
-        exeCommand.AddGlobalOption(exVendor);
-        exeCommand.AddGlobalOption(exExecutableName);
-        exeCommand.AddOption(exRidTop);
+        exAppName.Recursive = true;
+        exComment.Recursive = true;
+        exVersion.Recursive = true;
+        exAppId.Recursive = true;
+        exVendor.Recursive = true;
+        exExecutableName.Recursive = true;
+        exeCommand.Add(exAppName);
+        exeCommand.Add(exComment);
+        exeCommand.Add(exVersion);
+        exeCommand.Add(exAppId);
+        exeCommand.Add(exVendor);
+        exeCommand.Add(exExecutableName);
+        exeCommand.Add(exRidTop);
 
-        exeCommand.SetHandler(async (DirectoryInfo inDir, FileInfo outFile, FileInfo? stub, Options opt, string? vendorOpt, string? ridOpt) =>
+        exeCommand.SetAction(async parseResult =>
         {
+            var inDir = parseResult.GetValue(exeInputDir)!;
+            var outFile = parseResult.GetValue(exeOutput)!;
+            var stub = parseResult.GetValue(stubPath);
+            var opt = optionsBinder.Bind(parseResult);
+            var vendorOpt = parseResult.GetValue(exVendor);
+            var ridOpt = parseResult.GetValue(exRidTop);
             await ExecuteWithLogging("exe", outFile.FullName, async logger =>
             {
                 var exeService = new ExePackagingService(logger);
@@ -201,36 +268,72 @@ static class Program
 
                 logger.Information("{OutputFile}", result.Value.FullName);
             });
-        }, exeInputDir, exeOutput, stubPath, optionsBinder, exVendor, exRidTop);
+        });
 
         // exe from-project
-        var exProject = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
-        var exRid = new Option<string?>("--rid", "Runtime identifier (e.g. win-x64, win-arm64)");
-        var exSelfContained = new Option<bool>("--self-contained", () => true, "Publish self-contained");
-        var exConfiguration = new Option<string>("--configuration", () => "Release", "Build configuration");
-        var exSingleFile = new Option<bool>("--single-file", "Publish single-file");
-        var exTrimmed = new Option<bool>("--trimmed", "Enable trimming");
-        var exOut = new Option<FileInfo>("--output", "Output installer .exe") { IsRequired = true };
-        var exStub = new Option<FileInfo>("--stub", "Path to the prebuilt stub (WinExe) to concatenate (optional if repo layout is present)");
-
-        var exFromProject = new Command("from-project", "Publish a .NET project and build a Windows self-extracting installer (.exe). If --stub is not provided, the tool downloads the appropriate stub from GitHub Releases.");
-        exFromProject.AddOption(exProject);
-        exFromProject.AddOption(exRid);
-        exFromProject.AddOption(exSelfContained);
-        exFromProject.AddOption(exConfiguration);
-        exFromProject.AddOption(exSingleFile);
-        exFromProject.AddOption(exTrimmed);
-        exFromProject.AddOption(exOut);
-        exFromProject.AddOption(exStub);
-
-        // Use a compact binder to avoid exceeding SetHandler's supported parameter count
-        var exExtrasBinder = new ExeFromProjectExtraBinder(exOut, exStub, exVendor);
-        exFromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, Options opt, ExeFromProjectExtra extras) =>
+        var exProject = new Option<FileInfo>("--project")
         {
-            await ExecuteWithLogging("exe-from-project", extras.Output.FullName, async logger =>
+            Description = "Path to the .csproj file",
+            Required = true
+        };
+        var exRid = new Option<string?>("--rid")
+        {
+            Description = "Runtime identifier (e.g. win-x64, win-arm64)"
+        };
+        var exSelfContained = new Option<bool>("--self-contained")
+        {
+            Description = "Publish self-contained"
+        };
+        exSelfContained.DefaultValueFactory = _ => true;
+        var exConfiguration = new Option<string>("--configuration")
+        {
+            Description = "Build configuration"
+        };
+        exConfiguration.DefaultValueFactory = _ => "Release";
+        var exSingleFile = new Option<bool>("--single-file")
+        {
+            Description = "Publish single-file"
+        };
+        var exTrimmed = new Option<bool>("--trimmed")
+        {
+            Description = "Enable trimming"
+        };
+        var exOut = new Option<FileInfo>("--output")
+        {
+            Description = "Output installer .exe",
+            Required = true
+        };
+        var exStub = new Option<FileInfo>("--stub")
+        {
+            Description = "Path to the prebuilt stub (WinExe) to concatenate (optional if repo layout is present)"
+        };
+
+        var exFromProject = new Command("from-project") { Description = "Publish a .NET project and build a Windows self-extracting installer (.exe). If --stub is not provided, the tool downloads the appropriate stub from GitHub Releases." };
+        exFromProject.Add(exProject);
+        exFromProject.Add(exRid);
+        exFromProject.Add(exSelfContained);
+        exFromProject.Add(exConfiguration);
+        exFromProject.Add(exSingleFile);
+        exFromProject.Add(exTrimmed);
+        exFromProject.Add(exOut);
+        exFromProject.Add(exStub);
+
+        exFromProject.SetAction(async parseResult =>
+        {
+            var prj = parseResult.GetValue(exProject)!;
+            var ridVal = parseResult.GetValue(exRid);
+            var sc = parseResult.GetValue(exSelfContained);
+            var cfg = parseResult.GetValue(exConfiguration)!;
+            var sf = parseResult.GetValue(exSingleFile);
+            var tr = parseResult.GetValue(exTrimmed);
+            var extrasOutput = parseResult.GetValue(exOut)!;
+            var extrasStub = parseResult.GetValue(exStub);
+            var vendorOpt = parseResult.GetValue(exVendor);
+            var opt = optionsBinder.Bind(parseResult);
+            await ExecuteWithLogging("exe-from-project", extrasOutput.FullName, async logger =>
             {
                 var exeService = new ExePackagingService(logger);
-                var result = await exeService.BuildFromProject(prj, ridVal, sc, cfg, sf, tr, extras.Output, opt, extras.Vendor, extras.Stub);
+                var result = await exeService.BuildFromProject(prj, ridVal, sc, cfg, sf, tr, extrasOutput, opt, vendorOpt, extrasStub);
                 if (result.IsFailure)
                 {
                     logger.Error("EXE from project packaging failed: {Error}", result.Error);
@@ -241,13 +344,14 @@ static class Program
 
                 logger.Information("{OutputFile}", result.Value.FullName);
             });
-        }, exProject, exRid, exSelfContained, exConfiguration, exSingleFile, exTrimmed, optionsBinder, exExtrasBinder);
+        });
 
-        exeCommand.AddCommand(exFromProject);
+        exeCommand.Add(exFromProject);
 
-        rootCommand.AddCommand(exeCommand);
+        rootCommand.Add(exeCommand);
         
-        var exitCode = await rootCommand.InvokeAsync(args);
+        var parseResult = rootCommand.Parse(args, configuration: null);
+        var exitCode = await parseResult.InvokeAsync(parseResult.InvocationConfiguration, CancellationToken.None);
         Log.Information("dotnetpackaging completed with exit code {ExitCode}", exitCode);
         return exitCode;
     }
@@ -296,27 +400,97 @@ static class Program
         string? description = null,
         params string[] aliases)
     {
-        var buildDir = new Option<DirectoryInfo>("--directory", "Published application directory (for example: bin/Release/<tfm>/publish)") { IsRequired = true };
-        var outputFileOption = new Option<FileInfo>("--output", $"Destination path for the generated {extension} file") { IsRequired = true };
-        var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
-        var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
-        var mainCategory = new Option<MainCategory?>("--main-category", "Main category") { IsRequired = false, Arity = ArgumentArity.ZeroOrOne, };
-        var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories", "Additional categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
-        var keywords = new Option<IEnumerable<string>>("--keywords", "Keywords") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
-        var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
-        var version = new Option<string>("--version", "Version") { IsRequired = false };
-        var homePage = new Option<Uri>("--homepage", "Home page of the application") { IsRequired = false };
-        var license = new Option<string>("--license", "License of the application") { IsRequired = false };
-        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls", "Screenshot URLs") { IsRequired = false };
-        var summary = new Option<string>("--summary", "Summary. Short description that should not end in a dot.") { IsRequired = false };
-        var appId = new Option<string>("--appId", "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication") { IsRequired = false };
-        var executableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
-        var isTerminal = new Option<bool>("--is-terminal", "Indicates whether your application is a terminal application") { IsRequired = false };
-        var iconOption = new Option<IIcon?>("--icon", GetIcon )
+        var buildDir = new Option<DirectoryInfo>("--directory")
         {
-            IsRequired = false,
+            Description = "Published application directory (for example: bin/Release/<tfm>/publish)",
+            Required = true
+        };
+        var outputFileOption = new Option<FileInfo>("--output")
+        {
+            Description = $"Destination path for the generated {extension} file",
+            Required = true
+        };
+        var appName = new Option<string>("--application-name")
+        {
+            Description = "Application name",
+            Required = false
+        };
+        var startupWmClass = new Option<string>("--wm-class")
+        {
+            Description = "Startup WM Class",
+            Required = false
+        };
+        var mainCategory = new Option<MainCategory?>("--main-category")
+        {
+            Description = "Main category",
+            Required = false,
+            Arity = ArgumentArity.ZeroOrOne,
+        };
+        var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories")
+        {
+            Description = "Additional categories",
+            Required = false,
+            Arity = ArgumentArity.ZeroOrMore,
+            AllowMultipleArgumentsPerToken = true
+        };
+        var keywords = new Option<IEnumerable<string>>("--keywords")
+        {
+            Description = "Keywords",
+            Required = false,
+            Arity = ArgumentArity.ZeroOrMore,
+            AllowMultipleArgumentsPerToken = true
+        };
+        var comment = new Option<string>("--comment")
+        {
+            Description = "Comment",
+            Required = false
+        };
+        var version = new Option<string>("--version")
+        {
+            Description = "Version",
+            Required = false
+        };
+        var homePage = new Option<Uri>("--homepage")
+        {
+            Description = "Home page of the application",
+            Required = false
+        };
+        var license = new Option<string>("--license")
+        {
+            Description = "License of the application",
+            Required = false
+        };
+        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls")
+        {
+            Description = "Screenshot URLs",
+            Required = false
+        };
+        var summary = new Option<string>("--summary")
+        {
+            Description = "Summary. Short description that should not end in a dot.",
+            Required = false
+        };
+        var appId = new Option<string>("--appId")
+        {
+            Description = "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication",
+            Required = false
+        };
+        var executableName = new Option<string>("--executable-name")
+        {
+            Description = "Name of your application's executable",
+            Required = false
+        };
+        var isTerminal = new Option<bool>("--is-terminal")
+        {
+            Description = "Indicates whether your application is a terminal application",
+            Required = false
+        };
+        var iconOption = new Option<IIcon?>("--icon")
+        {
+            Required = false,
             Description = "Path to the application icon"
         };
+        iconOption.CustomParser = GetIcon;
 
         var defaultDescription = description ??
                                  $"Create a {friendlyName} from a directory with the published application contents. Everything is inferred. For .NET apps this is usually the 'publish' directory.";
@@ -326,27 +500,27 @@ static class Program
         {
             if (!string.IsNullOrWhiteSpace(alias))
             {
-                fromBuildDir.AddAlias(alias);
+                fromBuildDir.Aliases.Add(alias);
             }
         }
 
-        fromBuildDir.AddOption(buildDir);
-        fromBuildDir.AddOption(outputFileOption);
-        fromBuildDir.AddOption(appName);
-        fromBuildDir.AddOption(startupWmClass);
-        fromBuildDir.AddOption(mainCategory);
-        fromBuildDir.AddOption(keywords);
-        fromBuildDir.AddOption(comment);
-        fromBuildDir.AddOption(iconOption);
-        fromBuildDir.AddOption(additionalCategories);
-        fromBuildDir.AddOption(version);
-        fromBuildDir.AddOption(homePage);
-        fromBuildDir.AddOption(license);
-        fromBuildDir.AddOption(screenshotUrls);
-        fromBuildDir.AddOption(summary);
-        fromBuildDir.AddOption(appId);
-        fromBuildDir.AddOption(executableName);
-        fromBuildDir.AddOption(isTerminal);
+        fromBuildDir.Add(buildDir);
+        fromBuildDir.Add(outputFileOption);
+        fromBuildDir.Add(appName);
+        fromBuildDir.Add(startupWmClass);
+        fromBuildDir.Add(mainCategory);
+        fromBuildDir.Add(keywords);
+        fromBuildDir.Add(comment);
+        fromBuildDir.Add(iconOption);
+        fromBuildDir.Add(additionalCategories);
+        fromBuildDir.Add(version);
+        fromBuildDir.Add(homePage);
+        fromBuildDir.Add(license);
+        fromBuildDir.Add(screenshotUrls);
+        fromBuildDir.Add(summary);
+        fromBuildDir.Add(appId);
+        fromBuildDir.Add(executableName);
+        fromBuildDir.Add(isTerminal);
 
         var options = new OptionsBinder(
             appName, 
@@ -365,10 +539,13 @@ static class Program
             executableName, 
             isTerminal);
         
-        fromBuildDir.SetHandler(async (DirectoryInfo directory, FileInfo output, Options opts) =>
+        fromBuildDir.SetAction(async parseResult =>
         {
+            var directory = parseResult.GetValue(buildDir)!;
+            var output = parseResult.GetValue(outputFileOption)!;
+            var opts = options.Bind(parseResult);
             await ExecuteWithLogging(commandName, output.FullName, logger => handler(directory, output, opts, logger));
-        }, buildDir, outputFileOption, options);
+        });
         return fromBuildDir;
     }
 
@@ -439,25 +616,26 @@ static class Program
     private static void AddAppImageSubcommands(Command appImageCommand)
     {
         // Common options for metadata
-        var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
-        var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
-        var mainCategory = new Option<MainCategory?>("--main-category", "Main category") { IsRequired = false, Arity = ArgumentArity.ZeroOrOne };
-        var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories", "Additional categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
-        var keywords = new Option<IEnumerable<string>>("--keywords", "Keywords") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
-        var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
-        var version = new Option<string>("--version", "Version") { IsRequired = false };
-        var homePage = new Option<Uri>("--homepage", "Home page of the application") { IsRequired = false };
-        var license = new Option<string>("--license", "License of the application") { IsRequired = false };
-        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls", "Screenshot URLs") { IsRequired = false };
-        var summary = new Option<string>("--summary", "Summary. Short description that should not end in a dot.") { IsRequired = false };
-        var appId = new Option<string>("--appId", "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication") { IsRequired = false };
-        var executableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
-        var isTerminal = new Option<bool>("--is-terminal", "Indicates whether your application is a terminal application") { IsRequired = false };
-        var iconOption = new Option<IIcon?>("--icon", GetIcon )
+        var appName = new Option<string>("--application-name") { Description = "Application name", Required = false };
+        var startupWmClass = new Option<string>("--wm-class") { Description = "Startup WM Class", Required = false };
+        var mainCategory = new Option<MainCategory?>("--main-category") { Description = "Main category", Required = false, Arity = ArgumentArity.ZeroOrOne };
+        var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories") { Description = "Additional categories", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var keywords = new Option<IEnumerable<string>>("--keywords") { Description = "Keywords", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var comment = new Option<string>("--comment") { Description = "Comment", Required = false };
+        var version = new Option<string>("--version") { Description = "Version", Required = false };
+        var homePage = new Option<Uri>("--homepage") { Description = "Home page of the application", Required = false };
+        var license = new Option<string>("--license") { Description = "License of the application", Required = false };
+        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls") { Description = "Screenshot URLs", Required = false };
+        var summary = new Option<string>("--summary") { Description = "Summary. Short description that should not end in a dot.", Required = false };
+        var appId = new Option<string>("--appId") { Description = "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication", Required = false };
+        var executableName = new Option<string>("--executable-name") { Description = "Name of your application's executable", Required = false };
+        var isTerminal = new Option<bool>("--is-terminal") { Description = "Indicates whether your application is a terminal application", Required = false };
+        var iconOption = new Option<IIcon?>("--icon")
         {
-            IsRequired = false,
+            Required = false,
             Description = "Path to the application icon"
         };
+        iconOption.CustomParser = GetIcon;
 
         var binder = new OptionsBinder(
             appName,
@@ -477,85 +655,93 @@ static class Program
             isTerminal);
 
         // appimage appdir
-        var inputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
-        var outputDir = new Option<DirectoryInfo>("--output-dir", "Destination directory for the AppDir") { IsRequired = true };
-        var appDirCmd = new Command("appdir", "Creates an AppDir from a directory (does not package an .AppImage). For .NET apps, pass the publish directory.");
-        appDirCmd.AddOption(inputDir);
-        appDirCmd.AddOption(outputDir);
-        appDirCmd.AddOption(appName);
-        appDirCmd.AddOption(startupWmClass);
-        appDirCmd.AddOption(mainCategory);
-        appDirCmd.AddOption(additionalCategories);
-        appDirCmd.AddOption(keywords);
-        appDirCmd.AddOption(comment);
-        appDirCmd.AddOption(version);
-        appDirCmd.AddOption(homePage);
-        appDirCmd.AddOption(license);
-        appDirCmd.AddOption(screenshotUrls);
-        appDirCmd.AddOption(summary);
-        appDirCmd.AddOption(appId);
-        appDirCmd.AddOption(executableName);
-        appDirCmd.AddOption(isTerminal);
-        appDirCmd.AddOption(iconOption);
-        appDirCmd.SetHandler(async (DirectoryInfo directory, DirectoryInfo output, Options metadata) =>
+        var inputDir = new Option<DirectoryInfo>("--directory") { Description = "The input directory (publish output)", Required = true };
+        var outputDir = new Option<DirectoryInfo>("--output-dir") { Description = "Destination directory for the AppDir", Required = true };
+        var appDirCmd = new Command("appdir") { Description = "Creates an AppDir from a directory (does not package an .AppImage). For .NET apps, pass the publish directory." };
+        appDirCmd.Add(inputDir);
+        appDirCmd.Add(outputDir);
+        appDirCmd.Add(appName);
+        appDirCmd.Add(startupWmClass);
+        appDirCmd.Add(mainCategory);
+        appDirCmd.Add(additionalCategories);
+        appDirCmd.Add(keywords);
+        appDirCmd.Add(comment);
+        appDirCmd.Add(version);
+        appDirCmd.Add(homePage);
+        appDirCmd.Add(license);
+        appDirCmd.Add(screenshotUrls);
+        appDirCmd.Add(summary);
+        appDirCmd.Add(appId);
+        appDirCmd.Add(executableName);
+        appDirCmd.Add(isTerminal);
+        appDirCmd.Add(iconOption);
+        appDirCmd.SetAction(async parseResult =>
         {
+            var directory = parseResult.GetValue(inputDir)!;
+            var output = parseResult.GetValue(outputDir)!;
+            var metadata = binder.Bind(parseResult);
             await ExecuteWithLogging("appimage-appdir", output.FullName, logger => CreateAppDir(directory, output, metadata, logger));
-        }, inputDir, outputDir, binder);
+        });
 
         // appimage from-appdir
-        var appDirPath = new Option<DirectoryInfo>("--directory", "The AppDir directory to package") { IsRequired = true };
-        var outputFile = new Option<FileInfo>("--output", "Output .AppImage file") { IsRequired = true };
-        var execRel = new Option<string>("--executable-relative-path", "Executable inside the AppDir (relative), e.g., usr/bin/MyApp") { IsRequired = false };
-        var fromAppDirCmd = new Command("from-appdir", "Creates an AppImage from an existing AppDir directory.");
-        fromAppDirCmd.AddOption(appDirPath);
-        fromAppDirCmd.AddOption(outputFile);
-        fromAppDirCmd.AddOption(execRel);
-        fromAppDirCmd.AddOption(appName);
-        fromAppDirCmd.AddOption(startupWmClass);
-        fromAppDirCmd.AddOption(mainCategory);
-        fromAppDirCmd.AddOption(additionalCategories);
-        fromAppDirCmd.AddOption(keywords);
-        fromAppDirCmd.AddOption(comment);
-        fromAppDirCmd.AddOption(version);
-        fromAppDirCmd.AddOption(homePage);
-        fromAppDirCmd.AddOption(license);
-        fromAppDirCmd.AddOption(screenshotUrls);
-        fromAppDirCmd.AddOption(summary);
-        fromAppDirCmd.AddOption(appId);
-        fromAppDirCmd.AddOption(executableName);
-        fromAppDirCmd.AddOption(isTerminal);
-        fromAppDirCmd.AddOption(iconOption);
-        fromAppDirCmd.SetHandler(async (DirectoryInfo directory, FileInfo output, string? relativeExec, Options metadata) =>
+        var appDirPath = new Option<DirectoryInfo>("--directory") { Description = "The AppDir directory to package", Required = true };
+        var outputFile = new Option<FileInfo>("--output") { Description = "Output .AppImage file", Required = true };
+        var execRel = new Option<string>("--executable-relative-path") { Description = "Executable inside the AppDir (relative), e.g., usr/bin/MyApp", Required = false };
+        var fromAppDirCmd = new Command("from-appdir") { Description = "Creates an AppImage from an existing AppDir directory." };
+        fromAppDirCmd.Add(appDirPath);
+        fromAppDirCmd.Add(outputFile);
+        fromAppDirCmd.Add(execRel);
+        fromAppDirCmd.Add(appName);
+        fromAppDirCmd.Add(startupWmClass);
+        fromAppDirCmd.Add(mainCategory);
+        fromAppDirCmd.Add(additionalCategories);
+        fromAppDirCmd.Add(keywords);
+        fromAppDirCmd.Add(comment);
+        fromAppDirCmd.Add(version);
+        fromAppDirCmd.Add(homePage);
+        fromAppDirCmd.Add(license);
+        fromAppDirCmd.Add(screenshotUrls);
+        fromAppDirCmd.Add(summary);
+        fromAppDirCmd.Add(appId);
+        fromAppDirCmd.Add(executableName);
+        fromAppDirCmd.Add(isTerminal);
+        fromAppDirCmd.Add(iconOption);
+        fromAppDirCmd.SetAction(async parseResult =>
         {
+            var directory = parseResult.GetValue(appDirPath)!;
+            var output = parseResult.GetValue(outputFile)!;
+            var relativeExec = parseResult.GetValue(execRel);
+            var metadata = binder.Bind(parseResult);
             await ExecuteWithLogging("appimage-from-appdir", output.FullName, logger => CreateAppImageFromAppDir(directory, output, relativeExec, metadata, logger));
-        }, appDirPath, outputFile, execRel, binder);
+        });
 
-        appImageCommand.AddCommand(appDirCmd);
-        appImageCommand.AddCommand(fromAppDirCmd);
+        appImageCommand.Add(appDirCmd);
+        appImageCommand.Add(fromAppDirCmd);
     }
 
     private static void AddFlatpakSubcommands(Command flatpakCommand)
     {
         // Options reused for metadata
-        var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
-        var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
-        var mainCategory = new Option<MainCategory?>("--main-category", "Main category") { IsRequired = false, Arity = ArgumentArity.ZeroOrOne };
-        var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories", "Additional categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
-        var keywords = new Option<IEnumerable<string>>("--keywords", "Keywords") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
-        var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
-        var version = new Option<string>("--version", "Version") { IsRequired = false };
-        var homePage = new Option<Uri>("--homepage", "Home page of the application") { IsRequired = false };
-        var license = new Option<string>("--license", "License of the application") { IsRequired = false };
-        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls", "Screenshot URLs") { IsRequired = false };
-        var summary = new Option<string>("--summary", "Summary. Short description that should not end in a dot.") { IsRequired = false };
-        var appId = new Option<string>("--appId", "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication") { IsRequired = false };
-        var executableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
-        var isTerminal = new Option<bool>("--is-terminal", "Indicates whether your application is a terminal application") { IsRequired = false };
-        var iconOption = new Option<IIcon?>("--icon", GetIcon )
+        var appName = new Option<string>("--application-name") { Description = "Application name", Required = false };
+        var startupWmClass = new Option<string>("--wm-class") { Description = "Startup WM Class", Required = false };
+        var mainCategory = new Option<MainCategory?>("--main-category") { Description = "Main category", Required = false, Arity = ArgumentArity.ZeroOrOne };
+        var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories") { Description = "Additional categories", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var keywords = new Option<IEnumerable<string>>("--keywords") { Description = "Keywords", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var comment = new Option<string>("--comment") { Description = "Comment", Required = false };
+        var version = new Option<string>("--version") { Description = "Version", Required = false };
+        var homePage = new Option<Uri>("--homepage") { Description = "Home page of the application", Required = false };
+        var license = new Option<string>("--license") { Description = "License of the application", Required = false };
+        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls") { Description = "Screenshot URLs", Required = false };
+        var summary = new Option<string>("--summary") { Description = "Summary. Short description that should not end in a dot.", Required = false };
+        var appId = new Option<string>("--appId") { Description = "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication", Required = false };
+        var executableName = new Option<string>("--executable-name") { Description = "Name of your application's executable", Required = false };
+        var isTerminal = new Option<bool>("--is-terminal") { Description = "Indicates whether your application is a terminal application", Required = false };
+        var iconOption = new Option<IIcon?>("--icon")
         {
-            IsRequired = false,
+            Required = false,
             Description = "Path to the application icon"
         };
+        iconOption.CustomParser = GetIcon;
 
         var binder = new OptionsBinder(
             appName,
@@ -575,129 +761,152 @@ static class Program
             isTerminal);
 
         // Flatpak-specific options
-        var fpRuntime = new Option<string>("--runtime", () => "org.freedesktop.Platform", "Flatpak runtime (e.g. org.freedesktop.Platform)");
-        var fpSdk = new Option<string>("--sdk", () => "org.freedesktop.Sdk", "Flatpak SDK (e.g. org.freedesktop.Sdk)");
-        var fpBranch = new Option<string>("--branch", () => "stable", "Flatpak branch (e.g. stable)");
-        var fpRuntimeVersion = new Option<string>("--runtime-version", () => "23.08", "Flatpak runtime version");
-        var fpShared = new Option<IEnumerable<string>>("--shared", () => new[] { "network", "ipc" }, "Flatpak [Context] shared permissions") { AllowMultipleArgumentsPerToken = true };
-        var fpSockets = new Option<IEnumerable<string>>("--sockets", () => new[] { "wayland", "x11", "pulseaudio" }, "Flatpak [Context] sockets") { AllowMultipleArgumentsPerToken = true };
-        var fpDevices = new Option<IEnumerable<string>>("--devices", () => new[] { "dri" }, "Flatpak [Context] devices") { AllowMultipleArgumentsPerToken = true };
-        var fpFilesystems = new Option<IEnumerable<string>>("--filesystems", () => new[] { "home" }, "Flatpak [Context] filesystems") { AllowMultipleArgumentsPerToken = true };
-        var fpArch = new Option<string?>("--arch", "Override architecture (x86_64, aarch64, i386, armhf)");
-        var fpCommandOverride = new Option<string?>("--command", "Override command name inside Flatpak (defaults to AppId)");
+        var fpRuntime = new Option<string>("--runtime") { Description = "Flatpak runtime (e.g. org.freedesktop.Platform)" };
+        fpRuntime.DefaultValueFactory = _ => "org.freedesktop.Platform";
+        var fpSdk = new Option<string>("--sdk") { Description = "Flatpak SDK (e.g. org.freedesktop.Sdk)" };
+        fpSdk.DefaultValueFactory = _ => "org.freedesktop.Sdk";
+        var fpBranch = new Option<string>("--branch") { Description = "Flatpak branch (e.g. stable)" };
+        fpBranch.DefaultValueFactory = _ => "stable";
+        var fpRuntimeVersion = new Option<string>("--runtime-version") { Description = "Flatpak runtime version" };
+        fpRuntimeVersion.DefaultValueFactory = _ => "23.08";
+        var fpShared = new Option<IEnumerable<string>>("--shared") { Description = "Flatpak [Context] shared permissions", AllowMultipleArgumentsPerToken = true };
+        fpShared.DefaultValueFactory = _ => new[] { "network", "ipc" };
+        var fpSockets = new Option<IEnumerable<string>>("--sockets") { Description = "Flatpak [Context] sockets", AllowMultipleArgumentsPerToken = true };
+        fpSockets.DefaultValueFactory = _ => new[] { "wayland", "x11", "pulseaudio" };
+        var fpDevices = new Option<IEnumerable<string>>("--devices") { Description = "Flatpak [Context] devices", AllowMultipleArgumentsPerToken = true };
+        fpDevices.DefaultValueFactory = _ => new[] { "dri" };
+        var fpFilesystems = new Option<IEnumerable<string>>("--filesystems") { Description = "Flatpak [Context] filesystems", AllowMultipleArgumentsPerToken = true };
+        fpFilesystems.DefaultValueFactory = _ => new[] { "home" };
+        var fpArch = new Option<string?>("--arch") { Description = "Override architecture (x86_64, aarch64, i386, armhf)" };
+        var fpCommandOverride = new Option<string?>("--command") { Description = "Override command name inside Flatpak (defaults to AppId)" };
 
-        var inputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
-        var outputDir = new Option<DirectoryInfo>("--output-dir", "Destination directory for the Flatpak layout") { IsRequired = true };
-        var layoutCmd = new Command("layout", "Creates a Flatpak layout (metadata, files/) from a published directory.");
-        layoutCmd.AddOption(inputDir);
-        layoutCmd.AddOption(outputDir);
-        layoutCmd.AddOption(appName);
-        layoutCmd.AddOption(startupWmClass);
-        layoutCmd.AddOption(mainCategory);
-        layoutCmd.AddOption(additionalCategories);
-        layoutCmd.AddOption(keywords);
-        layoutCmd.AddOption(comment);
-        layoutCmd.AddOption(version);
-        layoutCmd.AddOption(homePage);
-        layoutCmd.AddOption(license);
-        layoutCmd.AddOption(screenshotUrls);
-        layoutCmd.AddOption(summary);
-        layoutCmd.AddOption(appId);
-        layoutCmd.AddOption(executableName);
-        layoutCmd.AddOption(isTerminal);
-        layoutCmd.AddOption(iconOption);
-        layoutCmd.AddOption(fpRuntime);
-        layoutCmd.AddOption(fpSdk);
-        layoutCmd.AddOption(fpBranch);
-        layoutCmd.AddOption(fpRuntimeVersion);
-        layoutCmd.AddOption(fpShared);
-        layoutCmd.AddOption(fpSockets);
-        layoutCmd.AddOption(fpDevices);
-        layoutCmd.AddOption(fpFilesystems);
-        layoutCmd.AddOption(fpArch);
-        layoutCmd.AddOption(fpCommandOverride);
+        var inputDir = new Option<DirectoryInfo>("--directory") { Description = "The input directory (publish output)", Required = true };
+        var outputDir = new Option<DirectoryInfo>("--output-dir") { Description = "Destination directory for the Flatpak layout", Required = true };
+        var layoutCmd = new Command("layout") { Description = "Creates a Flatpak layout (metadata, files/) from a published directory." };
+        layoutCmd.Add(inputDir);
+        layoutCmd.Add(outputDir);
+        layoutCmd.Add(appName);
+        layoutCmd.Add(startupWmClass);
+        layoutCmd.Add(mainCategory);
+        layoutCmd.Add(additionalCategories);
+        layoutCmd.Add(keywords);
+        layoutCmd.Add(comment);
+        layoutCmd.Add(version);
+        layoutCmd.Add(homePage);
+        layoutCmd.Add(license);
+        layoutCmd.Add(screenshotUrls);
+        layoutCmd.Add(summary);
+        layoutCmd.Add(appId);
+        layoutCmd.Add(executableName);
+        layoutCmd.Add(isTerminal);
+        layoutCmd.Add(iconOption);
+        layoutCmd.Add(fpRuntime);
+        layoutCmd.Add(fpSdk);
+        layoutCmd.Add(fpBranch);
+        layoutCmd.Add(fpRuntimeVersion);
+        layoutCmd.Add(fpShared);
+        layoutCmd.Add(fpSockets);
+        layoutCmd.Add(fpDevices);
+        layoutCmd.Add(fpFilesystems);
+        layoutCmd.Add(fpArch);
+        layoutCmd.Add(fpCommandOverride);
         var fpBinder = new FlatpakOptionsBinder(fpRuntime, fpSdk, fpBranch, fpRuntimeVersion, fpShared, fpSockets, fpDevices, fpFilesystems, fpArch, fpCommandOverride);
-        layoutCmd.SetHandler(async (DirectoryInfo directory, DirectoryInfo output, Options opts, FlatpakOptions fpOpts) =>
+        layoutCmd.SetAction(async parseResult =>
         {
+            var directory = parseResult.GetValue(inputDir)!;
+            var output = parseResult.GetValue(outputDir)!;
+            var opts = binder.Bind(parseResult);
+            var fpOpts = fpBinder.Bind(parseResult);
             await ExecuteWithLogging("flatpak-layout", output.FullName, logger => CreateFlatpakLayout(directory, output, opts, fpOpts, logger));
-        }, inputDir, outputDir, binder, fpBinder);
+        });
 
-        flatpakCommand.AddCommand(layoutCmd);
+        flatpakCommand.Add(layoutCmd);
 
-        var bundleInputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
-        var bundleOutput = new Option<FileInfo>("--output", "Output .flatpak file") { IsRequired = true };
-        var bundleCmd = new Command("bundle", "Creates a single-file .flatpak bundle from a published directory. By default uses internal bundler; pass --system to use installed flatpak.");
-        bundleCmd.AddOption(bundleInputDir);
-        bundleCmd.AddOption(bundleOutput);
-        var useSystem = new Option<bool>("--system", "Use system 'flatpak' (build-export/build-bundle) if available");
-        bundleCmd.AddOption(useSystem);
-        bundleCmd.AddOption(appName);
-        bundleCmd.AddOption(startupWmClass);
-        bundleCmd.AddOption(mainCategory);
-        bundleCmd.AddOption(additionalCategories);
-        bundleCmd.AddOption(keywords);
-        bundleCmd.AddOption(comment);
-        bundleCmd.AddOption(version);
-        bundleCmd.AddOption(homePage);
-        bundleCmd.AddOption(license);
-        bundleCmd.AddOption(screenshotUrls);
-        bundleCmd.AddOption(summary);
-        bundleCmd.AddOption(appId);
-        bundleCmd.AddOption(executableName);
-        bundleCmd.AddOption(isTerminal);
-        bundleCmd.AddOption(iconOption);
-        bundleCmd.AddOption(fpRuntime);
-        bundleCmd.AddOption(fpSdk);
-        bundleCmd.AddOption(fpBranch);
-        bundleCmd.AddOption(fpRuntimeVersion);
-        bundleCmd.AddOption(fpShared);
-        bundleCmd.AddOption(fpSockets);
-        bundleCmd.AddOption(fpDevices);
-        bundleCmd.AddOption(fpFilesystems);
-        bundleCmd.AddOption(fpArch);
-        bundleCmd.AddOption(fpCommandOverride);
-        bundleCmd.SetHandler(async (DirectoryInfo directory, FileInfo output, bool system, Options opts, FlatpakOptions fpOpts) =>
+        var bundleInputDir = new Option<DirectoryInfo>("--directory") { Description = "The input directory (publish output)", Required = true };
+        var bundleOutput = new Option<FileInfo>("--output") { Description = "Output .flatpak file", Required = true };
+        var bundleCmd = new Command("bundle") { Description = "Creates a single-file .flatpak bundle from a published directory. By default uses internal bundler; pass --system to use installed flatpak." };
+        bundleCmd.Add(bundleInputDir);
+        bundleCmd.Add(bundleOutput);
+        var useSystem = new Option<bool>("--system") { Description = "Use system 'flatpak' (build-export/build-bundle) if available" };
+        bundleCmd.Add(useSystem);
+        bundleCmd.Add(appName);
+        bundleCmd.Add(startupWmClass);
+        bundleCmd.Add(mainCategory);
+        bundleCmd.Add(additionalCategories);
+        bundleCmd.Add(keywords);
+        bundleCmd.Add(comment);
+        bundleCmd.Add(version);
+        bundleCmd.Add(homePage);
+        bundleCmd.Add(license);
+        bundleCmd.Add(screenshotUrls);
+        bundleCmd.Add(summary);
+        bundleCmd.Add(appId);
+        bundleCmd.Add(executableName);
+        bundleCmd.Add(isTerminal);
+        bundleCmd.Add(iconOption);
+        bundleCmd.Add(fpRuntime);
+        bundleCmd.Add(fpSdk);
+        bundleCmd.Add(fpBranch);
+        bundleCmd.Add(fpRuntimeVersion);
+        bundleCmd.Add(fpShared);
+        bundleCmd.Add(fpSockets);
+        bundleCmd.Add(fpDevices);
+        bundleCmd.Add(fpFilesystems);
+        bundleCmd.Add(fpArch);
+        bundleCmd.Add(fpCommandOverride);
+        bundleCmd.SetAction(async parseResult =>
         {
+            var directory = parseResult.GetValue(bundleInputDir)!;
+            var output = parseResult.GetValue(bundleOutput)!;
+            var system = parseResult.GetValue(useSystem);
+            var opts = binder.Bind(parseResult);
+            var fpOpts = fpBinder.Bind(parseResult);
             await ExecuteWithLogging("flatpak-bundle", output.FullName, logger => CreateFlatpakBundle(directory, output, system, opts, fpOpts, logger));
-        }, bundleInputDir, bundleOutput, useSystem, binder, fpBinder);
+        });
 
-        flatpakCommand.AddCommand(bundleCmd);
+        flatpakCommand.Add(bundleCmd);
 
         // flatpak from-project (bundle)
-        var fpPrj = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
-        var fpOut = new Option<FileInfo>("--output", "Output .flatpak file") { IsRequired = true };
-        var fpUseSystem = new Option<bool>("--system", "Use system 'flatpak' (build-export/build-bundle) if available");
-        var fromProjectCmd = new Command("from-project", "Publish a .NET project and build a .flatpak bundle.");
-        fromProjectCmd.AddOption(fpPrj);
-        fromProjectCmd.AddOption(fpOut);
-        fromProjectCmd.AddOption(fpUseSystem);
-        fromProjectCmd.AddOption(appName);
-        fromProjectCmd.AddOption(startupWmClass);
-        fromProjectCmd.AddOption(mainCategory);
-        fromProjectCmd.AddOption(additionalCategories);
-        fromProjectCmd.AddOption(keywords);
-        fromProjectCmd.AddOption(comment);
-        fromProjectCmd.AddOption(version);
-        fromProjectCmd.AddOption(homePage);
-        fromProjectCmd.AddOption(license);
-        fromProjectCmd.AddOption(screenshotUrls);
-        fromProjectCmd.AddOption(summary);
-        fromProjectCmd.AddOption(appId);
-        fromProjectCmd.AddOption(executableName);
-        fromProjectCmd.AddOption(isTerminal);
-        fromProjectCmd.AddOption(iconOption);
-        fromProjectCmd.AddOption(fpRuntime);
-        fromProjectCmd.AddOption(fpSdk);
-        fromProjectCmd.AddOption(fpBranch);
-        fromProjectCmd.AddOption(fpRuntimeVersion);
-        fromProjectCmd.AddOption(fpShared);
-        fromProjectCmd.AddOption(fpSockets);
-        fromProjectCmd.AddOption(fpDevices);
-        fromProjectCmd.AddOption(fpFilesystems);
-        fromProjectCmd.AddOption(fpArch);
-        fromProjectCmd.AddOption(fpCommandOverride);
-        fromProjectCmd.SetHandler(async (FileInfo prj, FileInfo outFile, bool useSystemBundler, Options opt, FlatpakOptions fopt) =>
+        var fpPrj = new Option<FileInfo>("--project") { Description = "Path to the .csproj file", Required = true };
+        var fpOut = new Option<FileInfo>("--output") { Description = "Output .flatpak file", Required = true };
+        var fpUseSystem = new Option<bool>("--system") { Description = "Use system 'flatpak' (build-export/build-bundle) if available" };
+        var fromProjectCmd = new Command("from-project") { Description = "Publish a .NET project and build a .flatpak bundle." };
+        fromProjectCmd.Add(fpPrj);
+        fromProjectCmd.Add(fpOut);
+        fromProjectCmd.Add(fpUseSystem);
+        fromProjectCmd.Add(appName);
+        fromProjectCmd.Add(startupWmClass);
+        fromProjectCmd.Add(mainCategory);
+        fromProjectCmd.Add(additionalCategories);
+        fromProjectCmd.Add(keywords);
+        fromProjectCmd.Add(comment);
+        fromProjectCmd.Add(version);
+        fromProjectCmd.Add(homePage);
+        fromProjectCmd.Add(license);
+        fromProjectCmd.Add(screenshotUrls);
+        fromProjectCmd.Add(summary);
+        fromProjectCmd.Add(appId);
+        fromProjectCmd.Add(executableName);
+        fromProjectCmd.Add(isTerminal);
+        fromProjectCmd.Add(iconOption);
+        fromProjectCmd.Add(fpRuntime);
+        fromProjectCmd.Add(fpSdk);
+        fromProjectCmd.Add(fpBranch);
+        fromProjectCmd.Add(fpRuntimeVersion);
+        fromProjectCmd.Add(fpShared);
+        fromProjectCmd.Add(fpSockets);
+        fromProjectCmd.Add(fpDevices);
+        fromProjectCmd.Add(fpFilesystems);
+        fromProjectCmd.Add(fpArch);
+        fromProjectCmd.Add(fpCommandOverride);
+        fromProjectCmd.SetAction(async parseResult =>
         {
+            var prj = parseResult.GetValue(fpPrj)!;
+            var outFile = parseResult.GetValue(fpOut)!;
+            var useSystemBundler = parseResult.GetValue(fpUseSystem);
+            var opt = binder.Bind(parseResult);
+            var fopt = fpBinder.Bind(parseResult);
+
             await ExecuteWithLogging("flatpak-from-project", outFile.FullName, async logger =>
             {
                 var publisher = new DotnetPackaging.Publish.DotnetPublisher(Maybe<ILogger>.From(logger));
@@ -825,55 +1034,61 @@ static class Program
 
                 logger.Information("{OutputFile}", outFile.FullName);
             });
-        }, fpPrj, fpOut, fpUseSystem, binder, fpBinder);
+        });
 
-        flatpakCommand.AddCommand(fromProjectCmd);
+        flatpakCommand.Add(fromProjectCmd);
 
-        var repoInputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
-        var repoOutDir = new Option<DirectoryInfo>("--output-dir", "Destination directory for the OSTree repo") { IsRequired = true };
-        var repoCmd = new Command("repo", "Creates an OSTree repo directory from a published directory (debug/validation).");
-        repoCmd.AddOption(repoInputDir);
-        repoCmd.AddOption(repoOutDir);
-        repoCmd.AddOption(appName);
-        repoCmd.AddOption(startupWmClass);
-        repoCmd.AddOption(mainCategory);
-        repoCmd.AddOption(additionalCategories);
-        repoCmd.AddOption(keywords);
-        repoCmd.AddOption(comment);
-        repoCmd.AddOption(version);
-        repoCmd.AddOption(homePage);
-        repoCmd.AddOption(license);
-        repoCmd.AddOption(screenshotUrls);
-        repoCmd.AddOption(summary);
-        repoCmd.AddOption(appId);
-        repoCmd.AddOption(executableName);
-        repoCmd.AddOption(isTerminal);
-        repoCmd.AddOption(iconOption);
-        repoCmd.AddOption(fpRuntime);
-        repoCmd.AddOption(fpSdk);
-        repoCmd.AddOption(fpBranch);
-        repoCmd.AddOption(fpRuntimeVersion);
-        repoCmd.AddOption(fpShared);
-        repoCmd.AddOption(fpSockets);
-        repoCmd.AddOption(fpDevices);
-        repoCmd.AddOption(fpFilesystems);
-        repoCmd.AddOption(fpArch);
-        repoCmd.AddOption(fpCommandOverride);
-        repoCmd.SetHandler(async (DirectoryInfo directory, DirectoryInfo output, Options opts, FlatpakOptions fpOpts) =>
+        var repoInputDir = new Option<DirectoryInfo>("--directory") { Description = "The input directory (publish output)", Required = true };
+        var repoOutDir = new Option<DirectoryInfo>("--output-dir") { Description = "Destination directory for the OSTree repo", Required = true };
+        var repoCmd = new Command("repo") { Description = "Creates an OSTree repo directory from a published directory (debug/validation)." };
+        repoCmd.Add(repoInputDir);
+        repoCmd.Add(repoOutDir);
+        repoCmd.Add(appName);
+        repoCmd.Add(startupWmClass);
+        repoCmd.Add(mainCategory);
+        repoCmd.Add(additionalCategories);
+        repoCmd.Add(keywords);
+        repoCmd.Add(comment);
+        repoCmd.Add(version);
+        repoCmd.Add(homePage);
+        repoCmd.Add(license);
+        repoCmd.Add(screenshotUrls);
+        repoCmd.Add(summary);
+        repoCmd.Add(appId);
+        repoCmd.Add(executableName);
+        repoCmd.Add(isTerminal);
+        repoCmd.Add(iconOption);
+        repoCmd.Add(fpRuntime);
+        repoCmd.Add(fpSdk);
+        repoCmd.Add(fpBranch);
+        repoCmd.Add(fpRuntimeVersion);
+        repoCmd.Add(fpShared);
+        repoCmd.Add(fpSockets);
+        repoCmd.Add(fpDevices);
+        repoCmd.Add(fpFilesystems);
+        repoCmd.Add(fpArch);
+        repoCmd.Add(fpCommandOverride);
+        repoCmd.SetAction(async parseResult =>
         {
+            var directory = parseResult.GetValue(repoInputDir)!;
+            var output = parseResult.GetValue(repoOutDir)!;
+            var opts = binder.Bind(parseResult);
+            var fpOpts = fpBinder.Bind(parseResult);
             await ExecuteWithLogging("flatpak-repo", output.FullName, logger => CreateFlatpakRepo(directory, output, opts, fpOpts, logger));
-        }, repoInputDir, repoOutDir, binder, fpBinder);
+        });
 
-        flatpakCommand.AddCommand(repoCmd);
+        flatpakCommand.Add(repoCmd);
 
         // flatpak pack (minimal UX): only directory and output-dir, prefer system bundler with fallback
-        var packInputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
-        var packOutputDir = new Option<DirectoryInfo>("--output-dir", "Destination directory for the resulting .flatpak") { IsRequired = true };
-        var packCmd = new Command("pack", "Pack a .flatpak with minimal parameters. Uses system flatpak if available, otherwise falls back to internal bundler.");
-        packCmd.AddOption(packInputDir);
-        packCmd.AddOption(packOutputDir);
-        packCmd.SetHandler(async (DirectoryInfo inDir, DirectoryInfo outDir) =>
+        var packInputDir = new Option<DirectoryInfo>("--directory") { Description = "The input directory (publish output)", Required = true };
+        var packOutputDir = new Option<DirectoryInfo>("--output-dir") { Description = "Destination directory for the resulting .flatpak", Required = true };
+        var packCmd = new Command("pack") { Description = "Pack a .flatpak with minimal parameters. Uses system flatpak if available, otherwise falls back to internal bundler." };
+        packCmd.Add(packInputDir);
+        packCmd.Add(packOutputDir);
+        packCmd.SetAction(async parseResult =>
         {
+            var inDir = parseResult.GetValue(packInputDir)!;
+            var outDir = parseResult.GetValue(packOutputDir)!;
             await ExecuteWithLogging("flatpak-pack", outDir.FullName, async logger =>
             {
                 var dirInfo = FileSystem.DirectoryInfo.New(inDir.FullName);
@@ -955,9 +1170,9 @@ static class Program
                     logger.Information("{OutputFile}", outPath);
                 }
             });
-        }, packInputDir, packOutputDir);
+        });
         
-        flatpakCommand.AddCommand(packCmd);
+        flatpakCommand.Add(packCmd);
     }
 
     private static Task CreateAppDir(DirectoryInfo inputDir, DirectoryInfo outputDir, Options options, ILogger logger)
@@ -1179,65 +1394,78 @@ static class Program
 
     private static void AddRpmFromProjectSubcommand(Command rpmCommand)
     {
-        var project = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
-        var rid = new Option<string?>("--rid", "Runtime identifier (e.g. linux-x64, linux-arm64)");
-        var selfContained = new Option<bool>("--self-contained", () => true, "Publish self-contained");
-        var configuration = new Option<string>("--configuration", () => "Release", "Build configuration");
-        var singleFile = new Option<bool>("--single-file", "Publish single-file");
-        var trimmed = new Option<bool>("--trimmed", "Enable trimming");
-        var output = new Option<FileInfo>("--output", "Destination path for the generated .rpm") { IsRequired = true };
+        var project = new Option<FileInfo>("--project") { Description = "Path to the .csproj file", Required = true };
+        var rid = new Option<string?>("--rid") { Description = "Runtime identifier (e.g. linux-x64, linux-arm64)" };
+        var selfContained = new Option<bool>("--self-contained") { Description = "Publish self-contained" };
+        selfContained.DefaultValueFactory = _ => true;
+        var configuration = new Option<string>("--configuration") { Description = "Build configuration" };
+        configuration.DefaultValueFactory = _ => "Release";
+        var singleFile = new Option<bool>("--single-file") { Description = "Publish single-file" };
+        var trimmed = new Option<bool>("--trimmed") { Description = "Enable trimming" };
+        var output = new Option<FileInfo>("--output") { Description = "Destination path for the generated .rpm", Required = true };
 
         // Reuse metadata options via OptionsBinder
-        var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
-        var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
-        var mainCategory = new Option<MainCategory?>("--main-category", "Main category") { IsRequired = false, Arity = ArgumentArity.ZeroOrOne, };
-        var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories", "Additional categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
-        var keywords = new Option<IEnumerable<string>>("--keywords", "Keywords") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
-        var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
-        var version = new Option<string>("--version", "Version") { IsRequired = false };
-        var homePage = new Option<Uri>("--homepage", "Home page of the application") { IsRequired = false };
-        var license = new Option<string>("--license", "License of the application") { IsRequired = false };
-        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls", "Screenshot URLs") { IsRequired = false };
-        var summary = new Option<string>("--summary", "Summary. Short description that should not end in a dot.") { IsRequired = false };
-        var appId = new Option<string>("--appId", "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication") { IsRequired = false };
-        var executableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
-        var isTerminal = new Option<bool>("--is-terminal", "Indicates whether your application is a terminal application") { IsRequired = false };
-        var iconOption = new Option<IIcon?>("--icon", GetIcon ) { IsRequired = false, Description = "Path to the application icon" };
+        var appName = new Option<string>("--application-name") { Description = "Application name", Required = false };
+        var startupWmClass = new Option<string>("--wm-class") { Description = "Startup WM Class", Required = false };
+        var mainCategory = new Option<MainCategory?>("--main-category") { Description = "Main category", Required = false, Arity = ArgumentArity.ZeroOrOne, };
+        var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories") { Description = "Additional categories", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var keywords = new Option<IEnumerable<string>>("--keywords") { Description = "Keywords", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var comment = new Option<string>("--comment") { Description = "Comment", Required = false };
+        var version = new Option<string>("--version") { Description = "Version", Required = false };
+        var homePage = new Option<Uri>("--homepage") { Description = "Home page of the application", Required = false };
+        var license = new Option<string>("--license") { Description = "License of the application", Required = false };
+        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls") { Description = "Screenshot URLs", Required = false };
+        var summary = new Option<string>("--summary") { Description = "Summary. Short description that should not end in a dot.", Required = false };
+        var appId = new Option<string>("--appId") { Description = "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication", Required = false };
+        var executableName = new Option<string>("--executable-name") { Description = "Name of your application's executable", Required = false };
+        var isTerminal = new Option<bool>("--is-terminal") { Description = "Indicates whether your application is a terminal application", Required = false };
+        var iconOption = new Option<IIcon?>("--icon") { Required = false, Description = "Path to the application icon" };
+        iconOption.CustomParser = GetIcon;
 
         var optionsBinder = new OptionsBinder(appName, startupWmClass, keywords, comment, mainCategory, additionalCategories, iconOption, version, homePage, license, screenshotUrls, summary, appId, executableName, isTerminal);
 
-        var fromProject = new Command("from-project", "Publish a .NET project and build an RPM from the published output (no code duplication; library drives the pipeline).");
-        fromProject.AddOption(project);
-        fromProject.AddOption(rid);
-        fromProject.AddOption(selfContained);
-        fromProject.AddOption(configuration);
-        fromProject.AddOption(singleFile);
-        fromProject.AddOption(trimmed);
-        fromProject.AddOption(output);
-        fromProject.AddOption(appName);
-        fromProject.AddOption(startupWmClass);
-        fromProject.AddOption(mainCategory);
-        fromProject.AddOption(additionalCategories);
-        fromProject.AddOption(keywords);
-        fromProject.AddOption(comment);
-        fromProject.AddOption(version);
-        fromProject.AddOption(homePage);
-        fromProject.AddOption(license);
-        fromProject.AddOption(screenshotUrls);
-        fromProject.AddOption(summary);
-        fromProject.AddOption(appId);
-        fromProject.AddOption(executableName);
-        fromProject.AddOption(isTerminal);
-        fromProject.AddOption(iconOption);
+        var fromProject = new Command("from-project") { Description = "Publish a .NET project and build an RPM from the published output (no code duplication; library drives the pipeline)." };
+        fromProject.Add(project);
+        fromProject.Add(rid);
+        fromProject.Add(selfContained);
+        fromProject.Add(configuration);
+        fromProject.Add(singleFile);
+        fromProject.Add(trimmed);
+        fromProject.Add(output);
+        fromProject.Add(appName);
+        fromProject.Add(startupWmClass);
+        fromProject.Add(mainCategory);
+        fromProject.Add(additionalCategories);
+        fromProject.Add(keywords);
+        fromProject.Add(comment);
+        fromProject.Add(version);
+        fromProject.Add(homePage);
+        fromProject.Add(license);
+        fromProject.Add(screenshotUrls);
+        fromProject.Add(summary);
+        fromProject.Add(appId);
+        fromProject.Add(executableName);
+        fromProject.Add(isTerminal);
+        fromProject.Add(iconOption);
 
-        fromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, FileInfo outFile, Options opt) =>
+        fromProject.SetAction(async parseResult =>
         {
+            var prj = parseResult.GetValue(project)!;
+            var ridVal = parseResult.GetValue(rid);
+            var sc = parseResult.GetValue(selfContained);
+            var cfg = parseResult.GetValue(configuration)!;
+            var sf = parseResult.GetValue(singleFile);
+            var tr = parseResult.GetValue(trimmed);
+            var outFile = parseResult.GetValue(output)!;
+            var opt = optionsBinder.Bind(parseResult);
+
             if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 Console.Error.WriteLine("--rid is required when building RPM from-project on non-Linux hosts (e.g., linux-x64/linux-arm64).");
                 Environment.ExitCode = 1;
                 return;
             }
+
             var publisher = new DotnetPackaging.Publish.DotnetPublisher();
             var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
             {
@@ -1257,7 +1485,7 @@ static class Program
             }
 
             var container = pub.Value.Container;
-            var name = pub.Value.Name.GetValueOrDefault(null);
+            var name = pub.Value.Name.Match(value => value, () => (string?)null);
             var builder = RpmFile.From().Container(container, name);
             var built = await builder.Configure(o => o.From(opt)).Build();
             if (built.IsFailure)
@@ -1273,71 +1501,84 @@ static class Program
                 Console.Error.WriteLine(copy.Error);
                 Environment.ExitCode = 1;
             }
-        }, project, rid, selfContained, configuration, singleFile, trimmed, output, optionsBinder);
+        });
 
-        rpmCommand.AddCommand(fromProject);
+        rpmCommand.Add(fromProject);
     }
 
     private static void AddDebFromProjectSubcommand(Command debCommand)
     {
-        var project = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
-        var rid = new Option<string?>("--rid", "Runtime identifier (e.g. linux-x64, linux-arm64)");
-        var selfContained = new Option<bool>("--self-contained", () => true, "Publish self-contained");
-        var configuration = new Option<string>("--configuration", () => "Release", "Build configuration");
-        var singleFile = new Option<bool>("--single-file", "Publish single-file");
-        var trimmed = new Option<bool>("--trimmed", "Enable trimming");
-        var output = new Option<FileInfo>("--output", "Destination path for the generated .deb") { IsRequired = true };
+        var project = new Option<FileInfo>("--project") { Description = "Path to the .csproj file", Required = true };
+        var rid = new Option<string?>("--rid") { Description = "Runtime identifier (e.g. linux-x64, linux-arm64)" };
+        var selfContained = new Option<bool>("--self-contained") { Description = "Publish self-contained" };
+        selfContained.DefaultValueFactory = _ => true;
+        var configuration = new Option<string>("--configuration") { Description = "Build configuration" };
+        configuration.DefaultValueFactory = _ => "Release";
+        var singleFile = new Option<bool>("--single-file") { Description = "Publish single-file" };
+        var trimmed = new Option<bool>("--trimmed") { Description = "Enable trimming" };
+        var output = new Option<FileInfo>("--output") { Description = "Destination path for the generated .deb", Required = true };
 
-        var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
-        var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
-        var mainCategory = new Option<MainCategory?>("--main-category", "Main category") { IsRequired = false, Arity = ArgumentArity.ZeroOrOne, };
-        var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories", "Additional categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
-        var keywords = new Option<IEnumerable<string>>("--keywords", "Keywords") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
-        var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
-        var version = new Option<string>("--version", "Version") { IsRequired = false };
-        var homePage = new Option<Uri>("--homepage", "Home page of the application") { IsRequired = false };
-        var license = new Option<string>("--license", "License of the application") { IsRequired = false };
-        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls", "Screenshot URLs") { IsRequired = false };
-        var summary = new Option<string>("--summary", "Summary. Short description that should not end in a dot.") { IsRequired = false };
-        var appId = new Option<string>("--appId", "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication") { IsRequired = false };
-        var executableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
-        var isTerminal = new Option<bool>("--is-terminal", "Indicates whether your application is a terminal application") { IsRequired = false };
-        var iconOption = new Option<IIcon?>("--icon", GetIcon ) { IsRequired = false, Description = "Path to the application icon" };
+        var appName = new Option<string>("--application-name") { Description = "Application name", Required = false };
+        var startupWmClass = new Option<string>("--wm-class") { Description = "Startup WM Class", Required = false };
+        var mainCategory = new Option<MainCategory?>("--main-category") { Description = "Main category", Required = false, Arity = ArgumentArity.ZeroOrOne, };
+        var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories") { Description = "Additional categories", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var keywords = new Option<IEnumerable<string>>("--keywords") { Description = "Keywords", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var comment = new Option<string>("--comment") { Description = "Comment", Required = false };
+        var version = new Option<string>("--version") { Description = "Version", Required = false };
+        var homePage = new Option<Uri>("--homepage") { Description = "Home page of the application", Required = false };
+        var license = new Option<string>("--license") { Description = "License of the application", Required = false };
+        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls") { Description = "Screenshot URLs", Required = false };
+        var summary = new Option<string>("--summary") { Description = "Summary. Short description that should not end in a dot.", Required = false };
+        var appId = new Option<string>("--appId") { Description = "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication", Required = false };
+        var executableName = new Option<string>("--executable-name") { Description = "Name of your application's executable", Required = false };
+        var isTerminal = new Option<bool>("--is-terminal") { Description = "Indicates whether your application is a terminal application", Required = false };
+        var iconOption = new Option<IIcon?>("--icon") { Required = false, Description = "Path to the application icon" };
+        iconOption.CustomParser = GetIcon;
 
         var optionsBinder = new OptionsBinder(appName, startupWmClass, keywords, comment, mainCategory, additionalCategories, iconOption, version, homePage, license, screenshotUrls, summary, appId, executableName, isTerminal);
 
-        var fromProject = new Command("from-project", "Publish a .NET project and build a Debian .deb from the published output.");
-        fromProject.AddOption(project);
-        fromProject.AddOption(rid);
-        fromProject.AddOption(selfContained);
-        fromProject.AddOption(configuration);
-        fromProject.AddOption(singleFile);
-        fromProject.AddOption(trimmed);
-        fromProject.AddOption(output);
-        fromProject.AddOption(appName);
-        fromProject.AddOption(startupWmClass);
-        fromProject.AddOption(mainCategory);
-        fromProject.AddOption(additionalCategories);
-        fromProject.AddOption(keywords);
-        fromProject.AddOption(comment);
-        fromProject.AddOption(version);
-        fromProject.AddOption(homePage);
-        fromProject.AddOption(license);
-        fromProject.AddOption(screenshotUrls);
-        fromProject.AddOption(summary);
-        fromProject.AddOption(appId);
-        fromProject.AddOption(executableName);
-        fromProject.AddOption(isTerminal);
-        fromProject.AddOption(iconOption);
+        var fromProject = new Command("from-project") { Description = "Publish a .NET project and build a Debian .deb from the published output." };
+        fromProject.Add(project);
+        fromProject.Add(rid);
+        fromProject.Add(selfContained);
+        fromProject.Add(configuration);
+        fromProject.Add(singleFile);
+        fromProject.Add(trimmed);
+        fromProject.Add(output);
+        fromProject.Add(appName);
+        fromProject.Add(startupWmClass);
+        fromProject.Add(mainCategory);
+        fromProject.Add(additionalCategories);
+        fromProject.Add(keywords);
+        fromProject.Add(comment);
+        fromProject.Add(version);
+        fromProject.Add(homePage);
+        fromProject.Add(license);
+        fromProject.Add(screenshotUrls);
+        fromProject.Add(summary);
+        fromProject.Add(appId);
+        fromProject.Add(executableName);
+        fromProject.Add(isTerminal);
+        fromProject.Add(iconOption);
 
-        fromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, FileInfo outFile, Options opt) =>
+        fromProject.SetAction(async parseResult =>
         {
+            var prj = parseResult.GetValue(project)!;
+            var ridVal = parseResult.GetValue(rid);
+            var sc = parseResult.GetValue(selfContained);
+            var cfg = parseResult.GetValue(configuration)!;
+            var sf = parseResult.GetValue(singleFile);
+            var tr = parseResult.GetValue(trimmed);
+            var outFile = parseResult.GetValue(output)!;
+            var opt = optionsBinder.Bind(parseResult);
+
             if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 Console.Error.WriteLine("--rid is required when building DEB from-project on non-Linux hosts (e.g., linux-x64/linux-arm64).");
                 Environment.ExitCode = 1;
                 return;
             }
+
             var publisher = new DotnetPackaging.Publish.DotnetPublisher();
             var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
             {
@@ -1357,7 +1598,7 @@ static class Program
             }
 
             var container = pub.Value.Container;
-            var name = pub.Value.Name.GetValueOrDefault(null);
+            var name = pub.Value.Name.Match(value => value, () => (string?)null);
             var built = await Deb.DebFile.From().Container(container, name).Configure(o => o.From(opt)).Build();
             if (built.IsFailure)
             {
@@ -1374,51 +1615,64 @@ static class Program
                 Console.Error.WriteLine(dumpRes.Error);
                 Environment.ExitCode = 1;
             }
-        }, project, rid, selfContained, configuration, singleFile, trimmed, output, optionsBinder);
+        });
 
-        debCommand.AddCommand(fromProject);
+        debCommand.Add(fromProject);
     }
 
     private static void AddMsixSubcommands(Command msixCommand)
     {
-        var inputDir = new Option<DirectoryInfo>("--directory", "The input directory (publish output)") { IsRequired = true };
-        var outputFile = new Option<FileInfo>("--output", "Output .msix file") { IsRequired = true };
-        var packCmd = new Command("pack", "Create an MSIX from a directory (expects AppxManifest.xml in the tree or pre-baked metadata). Experimental.");
-        packCmd.AddOption(inputDir);
-        packCmd.AddOption(outputFile);
-        packCmd.SetHandler(async (DirectoryInfo inDir, FileInfo outFile) =>
+        var inputDir = new Option<DirectoryInfo>("--directory") { Description = "The input directory (publish output)", Required = true };
+        var outputFile = new Option<FileInfo>("--output") { Description = "Output .msix file", Required = true };
+        var packCmd = new Command("pack") { Description = "Create an MSIX from a directory (expects AppxManifest.xml in the tree or pre-baked metadata). Experimental." };
+        packCmd.Add(inputDir);
+        packCmd.Add(outputFile);
+        packCmd.SetAction(async parseResult =>
         {
+            var inDir = parseResult.GetValue(inputDir)!;
+            var outFile = parseResult.GetValue(outputFile)!;
             var dirInfo = new System.IO.Abstractions.FileSystem().DirectoryInfo.New(inDir.FullName);
             var container = new Zafiro.DivineBytes.System.IO.DirectoryContainer(dirInfo);
             await DotnetPackaging.Msix.Msix.FromDirectory(container, Maybe<Serilog.ILogger>.None)
                 .Bind(bytes => bytes.WriteTo(outFile.FullName))
                 .WriteResult();
-        }, inputDir, outputFile);
-        msixCommand.AddCommand(packCmd);
+        });
+        msixCommand.Add(packCmd);
 
-        var project = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
-        var rid = new Option<string?>("--rid", "Runtime identifier (e.g. win-x64)");
-        var selfContained = new Option<bool>("--self-contained", () => false, "Publish self-contained");
-        var configuration = new Option<string>("--configuration", () => "Release", "Build configuration");
-        var singleFile = new Option<bool>("--single-file", "Publish single-file");
-        var trimmed = new Option<bool>("--trimmed", "Enable trimming");
-        var outMsix = new Option<FileInfo>("--output", "Output .msix file") { IsRequired = true };
-        var fromProject = new Command("from-project", "Publish a .NET project and build an MSIX from the published output (expects manifest/assets).");
-        fromProject.AddOption(project);
-        fromProject.AddOption(rid);
-        fromProject.AddOption(selfContained);
-        fromProject.AddOption(configuration);
-        fromProject.AddOption(singleFile);
-        fromProject.AddOption(trimmed);
-        fromProject.AddOption(outMsix);
-        fromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, FileInfo outFile) =>
+        var project = new Option<FileInfo>("--project") { Description = "Path to the .csproj file", Required = true };
+        var rid = new Option<string?>("--rid") { Description = "Runtime identifier (e.g. win-x64)" };
+        var selfContained = new Option<bool>("--self-contained") { Description = "Publish self-contained" };
+        selfContained.DefaultValueFactory = _ => false;
+        var configuration = new Option<string>("--configuration") { Description = "Build configuration" };
+        configuration.DefaultValueFactory = _ => "Release";
+        var singleFile = new Option<bool>("--single-file") { Description = "Publish single-file" };
+        var trimmed = new Option<bool>("--trimmed") { Description = "Enable trimming" };
+        var outMsix = new Option<FileInfo>("--output") { Description = "Output .msix file", Required = true };
+        var fromProject = new Command("from-project") { Description = "Publish a .NET project and build an MSIX from the published output (expects manifest/assets)." };
+        fromProject.Add(project);
+        fromProject.Add(rid);
+        fromProject.Add(selfContained);
+        fromProject.Add(configuration);
+        fromProject.Add(singleFile);
+        fromProject.Add(trimmed);
+        fromProject.Add(outMsix);
+        fromProject.SetAction(async parseResult =>
         {
+            var prj = parseResult.GetValue(project)!;
+            var ridVal = parseResult.GetValue(rid);
+            var sc = parseResult.GetValue(selfContained);
+            var cfg = parseResult.GetValue(configuration)!;
+            var sf = parseResult.GetValue(singleFile);
+            var tr = parseResult.GetValue(trimmed);
+            var outFile = parseResult.GetValue(outMsix)!;
+
             if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 Console.Error.WriteLine("--rid is required when building MSIX from-project on non-Windows hosts (e.g., win-x64/win-arm64).");
                 Environment.ExitCode = 1;
                 return;
             }
+
             var publisher = new DotnetPackaging.Publish.DotnetPublisher();
             var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
             {
@@ -1439,71 +1693,84 @@ static class Program
             await DotnetPackaging.Msix.Msix.FromDirectory(pub.Value.Container, Maybe<Serilog.ILogger>.None)
                 .Bind(bytes => bytes.WriteTo(outFile.FullName))
                 .WriteResult();
-        }, project, rid, selfContained, configuration, singleFile, trimmed, outMsix);
-        msixCommand.AddCommand(fromProject);
+        });
+        msixCommand.Add(fromProject);
     }
 
     private static void AddAppImageFromProjectSubcommand(Command appImageCommand)
     {
-        var project = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
-        var rid = new Option<string?>("--rid", "Runtime identifier (e.g. linux-x64, linux-arm64)");
-        var selfContained = new Option<bool>("--self-contained", () => true, "Publish self-contained");
-        var configuration = new Option<string>("--configuration", () => "Release", "Build configuration");
-        var singleFile = new Option<bool>("--single-file", "Publish single-file");
-        var trimmed = new Option<bool>("--trimmed", "Enable trimming");
-        var output = new Option<FileInfo>("--output", "Output .AppImage file") { IsRequired = true };
+        var project = new Option<FileInfo>("--project") { Description = "Path to the .csproj file", Required = true };
+        var rid = new Option<string?>("--rid") { Description = "Runtime identifier (e.g. linux-x64, linux-arm64)" };
+        var selfContained = new Option<bool>("--self-contained") { Description = "Publish self-contained" };
+        selfContained.DefaultValueFactory = _ => true;
+        var configuration = new Option<string>("--configuration") { Description = "Build configuration" };
+        configuration.DefaultValueFactory = _ => "Release";
+        var singleFile = new Option<bool>("--single-file") { Description = "Publish single-file" };
+        var trimmed = new Option<bool>("--trimmed") { Description = "Enable trimming" };
+        var output = new Option<FileInfo>("--output") { Description = "Output .AppImage file", Required = true };
 
         // Reuse metadata options via OptionsBinder
-        var appName = new Option<string>("--application-name", "Application name") { IsRequired = false };
-        var startupWmClass = new Option<string>("--wm-class", "Startup WM Class") { IsRequired = false };
-        var mainCategory = new Option<MainCategory?>("--main-category", "Main category") { IsRequired = false, Arity = ArgumentArity.ZeroOrOne };
-        var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories", "Additional categories") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
-        var keywords = new Option<IEnumerable<string>>("--keywords", "Keywords") { IsRequired = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
-        var comment = new Option<string>("--comment", "Comment") { IsRequired = false };
-        var version = new Option<string>("--version", "Version") { IsRequired = false };
-        var homePage = new Option<Uri>("--homepage", "Home page of the application") { IsRequired = false };
-        var license = new Option<string>("--license", "License of the application") { IsRequired = false };
-        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls", "Screenshot URLs") { IsRequired = false };
-        var summary = new Option<string>("--summary", "Summary. Short description that should not end in a dot.") { IsRequired = false };
-        var appId = new Option<string>("--appId", "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication") { IsRequired = false };
-        var executableName = new Option<string>("--executable-name", "Name of your application's executable") { IsRequired = false };
-        var isTerminal = new Option<bool>("--is-terminal", "Indicates whether your application is a terminal application") { IsRequired = false };
-        var iconOption = new Option<IIcon?>("--icon", GetIcon ) { IsRequired = false, Description = "Path to the application icon" };
+        var appName = new Option<string>("--application-name") { Description = "Application name", Required = false };
+        var startupWmClass = new Option<string>("--wm-class") { Description = "Startup WM Class", Required = false };
+        var mainCategory = new Option<MainCategory?>("--main-category") { Description = "Main category", Required = false, Arity = ArgumentArity.ZeroOrOne };
+        var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories") { Description = "Additional categories", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var keywords = new Option<IEnumerable<string>>("--keywords") { Description = "Keywords", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var comment = new Option<string>("--comment") { Description = "Comment", Required = false };
+        var version = new Option<string>("--version") { Description = "Version", Required = false };
+        var homePage = new Option<Uri>("--homepage") { Description = "Home page of the application", Required = false };
+        var license = new Option<string>("--license") { Description = "License of the application", Required = false };
+        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls") { Description = "Screenshot URLs", Required = false };
+        var summary = new Option<string>("--summary") { Description = "Summary. Short description that should not end in a dot.", Required = false };
+        var appId = new Option<string>("--appId") { Description = "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication", Required = false };
+        var executableName = new Option<string>("--executable-name") { Description = "Name of your application's executable", Required = false };
+        var isTerminal = new Option<bool>("--is-terminal") { Description = "Indicates whether your application is a terminal application", Required = false };
+        var iconOption = new Option<IIcon?>("--icon") { Required = false, Description = "Path to the application icon" };
+        iconOption.CustomParser = GetIcon;
 
         var optionsBinder = new OptionsBinder(appName, startupWmClass, keywords, comment, mainCategory, additionalCategories, iconOption, version, homePage, license, screenshotUrls, summary, appId, executableName, isTerminal);
 
-        var fromProject = new Command("from-project", "Publish a .NET project and build an AppImage from the published output.");
-        fromProject.AddOption(project);
-        fromProject.AddOption(rid);
-        fromProject.AddOption(selfContained);
-        fromProject.AddOption(configuration);
-        fromProject.AddOption(singleFile);
-        fromProject.AddOption(trimmed);
-        fromProject.AddOption(output);
-        fromProject.AddOption(appName);
-        fromProject.AddOption(startupWmClass);
-        fromProject.AddOption(mainCategory);
-        fromProject.AddOption(additionalCategories);
-        fromProject.AddOption(keywords);
-        fromProject.AddOption(comment);
-        fromProject.AddOption(version);
-        fromProject.AddOption(homePage);
-        fromProject.AddOption(license);
-        fromProject.AddOption(screenshotUrls);
-        fromProject.AddOption(summary);
-        fromProject.AddOption(appId);
-        fromProject.AddOption(executableName);
-        fromProject.AddOption(isTerminal);
-        fromProject.AddOption(iconOption);
+        var fromProject = new Command("from-project") { Description = "Publish a .NET project and build an AppImage from the published output." };
+        fromProject.Add(project);
+        fromProject.Add(rid);
+        fromProject.Add(selfContained);
+        fromProject.Add(configuration);
+        fromProject.Add(singleFile);
+        fromProject.Add(trimmed);
+        fromProject.Add(output);
+        fromProject.Add(appName);
+        fromProject.Add(startupWmClass);
+        fromProject.Add(mainCategory);
+        fromProject.Add(additionalCategories);
+        fromProject.Add(keywords);
+        fromProject.Add(comment);
+        fromProject.Add(version);
+        fromProject.Add(homePage);
+        fromProject.Add(license);
+        fromProject.Add(screenshotUrls);
+        fromProject.Add(summary);
+        fromProject.Add(appId);
+        fromProject.Add(executableName);
+        fromProject.Add(isTerminal);
+        fromProject.Add(iconOption);
 
-        fromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, FileInfo outFile, Options opt) =>
+        fromProject.SetAction(async parseResult =>
         {
+            var prj = parseResult.GetValue(project)!;
+            var ridVal = parseResult.GetValue(rid);
+            var sc = parseResult.GetValue(selfContained);
+            var cfg = parseResult.GetValue(configuration)!;
+            var sf = parseResult.GetValue(singleFile);
+            var tr = parseResult.GetValue(trimmed);
+            var outFile = parseResult.GetValue(output)!;
+            var opt = optionsBinder.Bind(parseResult);
+
             if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 Console.Error.WriteLine("--rid is required when building AppImage from-project on non-Linux hosts (e.g., linux-x64/linux-arm64).");
                 Environment.ExitCode = 1;
                 return;
             }
+
             var publisher = new DotnetPackaging.Publish.DotnetPublisher();
             var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
             {
@@ -1534,9 +1801,9 @@ static class Program
                 Console.Error.WriteLine(res.Error);
                 Environment.ExitCode = 1;
             }
-        }, project, rid, selfContained, configuration, singleFile, trimmed, output, optionsBinder);
+        });
 
-        appImageCommand.AddCommand(fromProject);
+        appImageCommand.Add(fromProject);
     }
 
     private static Result CopyRpmToOutput(FileInfo rpmFile, FileInfo outputFile)
@@ -1567,23 +1834,28 @@ static class Program
 
     private static void AddDmgFromProjectSubcommand(Command dmgCommand)
     {
-        var project = new Option<FileInfo>("--project", "Path to the .csproj file") { IsRequired = true };
-        var rid = new Option<string?>("--rid", "Runtime identifier (e.g. osx-x64, osx-arm64)") { IsRequired = true };
-        var selfContained = new Option<bool>("--self-contained", () => true, "Publish self-contained");
-        var configuration = new Option<string>("--configuration", () => "Release", "Build configuration");
-        var singleFile = new Option<bool>("--single-file", "Publish single-file");
-        var trimmed = new Option<bool>("--trimmed", "Enable trimming");
-        var output = new Option<FileInfo>("--output", "Output .dmg file") { IsRequired = true };
+        var project = new Option<FileInfo>("--project") { Description = "Path to the .csproj file", Required = true };
+        var rid = new Option<string?>("--rid") { Description = "Runtime identifier (e.g. osx-x64, osx-arm64)", Required = true };
+        var selfContained = new Option<bool>("--self-contained") { Description = "Publish self-contained" };
+        selfContained.DefaultValueFactory = _ => true;
+        var configuration = new Option<string>("--configuration") { Description = "Build configuration" };
+        configuration.DefaultValueFactory = _ => "Release";
+        var singleFile = new Option<bool>("--single-file") { Description = "Publish single-file" };
+        var trimmed = new Option<bool>("--trimmed") { Description = "Enable trimming" };
+        var output = new Option<FileInfo>("--output") { Description = "Output .dmg file", Required = true };
 
         // Reuse metadata options to get volume name from --application-name if present
-        var appName = new Option<string>("--application-name", "Application name / volume name") { IsRequired = false };
+        var appName = new Option<string>("--application-name") { Description = "Application name / volume name", Required = false };
+        var dmgIconOption = new Option<IIcon?>("--icon") { Description = "Path to the application icon" };
+        dmgIconOption.CustomParser = GetIcon;
+
         var optionsBinder = new OptionsBinder(appName,
             new Option<string>("--wm-class"),
             new Option<IEnumerable<string>>("--keywords"),
             new Option<string>("--comment"),
             new Option<MainCategory?>("--main-category"),
             new Option<IEnumerable<AdditionalCategory>>("--additional-categories"),
-            new Option<IIcon?>("--icon", GetIcon),
+            dmgIconOption,
             new Option<string>("--version"),
             new Option<Uri>("--homepage"),
             new Option<string>("--license"),
@@ -1593,18 +1865,27 @@ static class Program
             new Option<string>("--executable-name"),
             new Option<bool>("--is-terminal"));
 
-        var fromProject = new Command("from-project", "Publish a .NET project and build a .dmg from the published output (.app bundle auto-generated if missing). Experimental.");
-        fromProject.AddOption(project);
-        fromProject.AddOption(rid);
-        fromProject.AddOption(selfContained);
-        fromProject.AddOption(configuration);
-        fromProject.AddOption(singleFile);
-        fromProject.AddOption(trimmed);
-        fromProject.AddOption(output);
-        fromProject.AddOption(appName);
+        var fromProject = new Command("from-project") { Description = "Publish a .NET project and build a .dmg from the published output (.app bundle auto-generated if missing). Experimental." };
+        fromProject.Add(project);
+        fromProject.Add(rid);
+        fromProject.Add(selfContained);
+        fromProject.Add(configuration);
+        fromProject.Add(singleFile);
+        fromProject.Add(trimmed);
+        fromProject.Add(output);
+        fromProject.Add(appName);
 
-        fromProject.SetHandler(async (FileInfo prj, string? ridVal, bool sc, string cfg, bool sf, bool tr, FileInfo outFile, Options opt) =>
+        fromProject.SetAction(async parseResult =>
         {
+            var prj = parseResult.GetValue(project)!;
+            var ridVal = parseResult.GetValue(rid);
+            var sc = parseResult.GetValue(selfContained);
+            var cfg = parseResult.GetValue(configuration)!;
+            var sf = parseResult.GetValue(singleFile);
+            var tr = parseResult.GetValue(trimmed);
+            var outFile = parseResult.GetValue(output)!;
+            var opt = optionsBinder.Bind(parseResult);
+
             var publisher = new DotnetPackaging.Publish.DotnetPublisher();
             var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
             {
@@ -1626,9 +1907,9 @@ static class Program
             var volName = opt.Name.GetValueOrDefault(pub.Value.Name.GetValueOrDefault("App"));
             await DotnetPackaging.Dmg.DmgIsoBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName);
             Log.Information("Success");
-        }, project, rid, selfContained, configuration, singleFile, trimmed, output, optionsBinder);
+        });
 
-        dmgCommand.AddCommand(fromProject);
+        dmgCommand.Add(fromProject);
     }
 
     private static IIcon? GetIcon(ArgumentResult result)
@@ -1642,13 +1923,13 @@ static class Program
         var dataResult = Data.FromFileInfo(FileSystem.FileInfo.New(iconPath));
         if (dataResult.IsFailure)
         {
-            result.ErrorMessage = $"Invalid icon '{iconPath}': {dataResult.Error}";
+            result.AddError($"Invalid icon '{iconPath}': {dataResult.Error}");
         }
 
         // For now, do not eagerly parse the icon (async). We rely on auto-detection or later stages.
         return null;
     }
-    private sealed class FlatpakOptionsBinder : System.CommandLine.Binding.BinderBase<FlatpakOptions>
+    private sealed class FlatpakOptionsBinder
     {
         private readonly Option<string> runtime;
         private readonly Option<string> sdk;
@@ -1685,55 +1966,22 @@ static class Program
             this.command = command;
         }
 
-        protected override FlatpakOptions GetBoundValue(System.CommandLine.Binding.BindingContext bindingContext)
+        public FlatpakOptions Bind(ParseResult parseResult)
         {
-            var pr = bindingContext.ParseResult;
-            var archStr = pr.GetValueForOption(arch);
+            var archStr = parseResult.GetValue(arch);
             var parsedArch = string.IsNullOrWhiteSpace(archStr) ? null : ParseArchitecture(archStr!);
             return new FlatpakOptions
             {
-                Runtime = pr.GetValueForOption(runtime)!,
-                Sdk = pr.GetValueForOption(sdk)!,
-                Branch = pr.GetValueForOption(branch)!,
-                RuntimeVersion = pr.GetValueForOption(runtimeVersion)!,
-                Shared = pr.GetValueForOption(shared)!,
-                Sockets = pr.GetValueForOption(sockets)!,
-                Devices = pr.GetValueForOption(devices)!,
-                Filesystems = pr.GetValueForOption(filesystems)!,
+                Runtime = parseResult.GetValue(runtime)!,
+                Sdk = parseResult.GetValue(sdk)!,
+                Branch = parseResult.GetValue(branch)!,
+                RuntimeVersion = parseResult.GetValue(runtimeVersion)!,
+                Shared = parseResult.GetValue(shared)!,
+                Sockets = parseResult.GetValue(sockets)!,
+                Devices = parseResult.GetValue(devices)!,
+                Filesystems = parseResult.GetValue(filesystems)!,
                 ArchitectureOverride = parsedArch == null ? Maybe<Architecture>.None : Maybe<Architecture>.From(parsedArch),
-                CommandOverride = pr.GetValueForOption(command) is { } s && !string.IsNullOrWhiteSpace(s) ? Maybe<string>.From(s) : Maybe<string>.None
-            };
-        }
-    }
-
-    private sealed class ExeFromProjectExtra
-    {
-        public required FileInfo Output { get; init; }
-        public FileInfo? Stub { get; init; }
-        public string? Vendor { get; init; }
-    }
-
-    private sealed class ExeFromProjectExtraBinder : System.CommandLine.Binding.BinderBase<ExeFromProjectExtra>
-    {
-        private readonly Option<FileInfo> output;
-        private readonly Option<FileInfo> stub;
-        private readonly Option<string> vendor;
-
-        public ExeFromProjectExtraBinder(Option<FileInfo> output, Option<FileInfo> stub, Option<string> vendor)
-        {
-            this.output = output;
-            this.stub = stub;
-            this.vendor = vendor;
-        }
-
-        protected override ExeFromProjectExtra GetBoundValue(System.CommandLine.Binding.BindingContext bindingContext)
-        {
-            var pr = bindingContext.ParseResult;
-            return new ExeFromProjectExtra
-            {
-                Output = pr.GetValueForOption(output)!,
-                Stub = pr.GetValueForOption(stub),
-                Vendor = pr.GetValueForOption(vendor)
+                CommandOverride = parseResult.GetValue(command) is { } s && !string.IsNullOrWhiteSpace(s) ? Maybe<string>.From(s) : Maybe<string>.None
             };
         }
     }
