@@ -28,7 +28,7 @@ public sealed class App : Application
             return;
         }
 
-        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktopLifetime)
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime)
         {
             return;
         }
