@@ -33,7 +33,7 @@ public sealed class App : Application
             return;
         }
 
-        await Installation.Installation.Launch(ApplicationLifetime);
+        await Installation.Installation.Launch();
     }
 
     private static void RegisterIcons()
