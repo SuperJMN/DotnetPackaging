@@ -3,12 +3,13 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:welcome="clr-namespace:DotnetPackaging.Exe.Installer.Steps.Welcome"
+             xmlns:welcome1="clr-namespace:DotnetPackaging.Exe.Installer.Installation.Wizard.Welcome"
              mc:Ignorable="d"
-             x:Class="DotnetPackaging.Exe.Installer.Steps.Welcome.WelcomeView"
-             x:DataType="welcome:IWelcomeViewModel">
+             x:Class="DotnetPackaging.Exe.Installer.Installation.Wizard.Welcome.WelcomeView"
+             x:DataType="welcome1:IWelcomeViewModel">
 
     <Design.DataContext>
-        <welcome:WelcomeViewModelMock />
+        <welcome1:WelcomeViewModelMock />
     </Design.DataContext>
     
     <Interaction.Behaviors>

@@ -3,7 +3,7 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging.Exe.Installer.Core;
 using ReactiveUI;
 
-namespace DotnetPackaging.Exe.Installer.Steps.Welcome;
+namespace DotnetPackaging.Exe.Installer.Installation.Wizard.Welcome;
 
 public class WelcomeViewModelMock : IWelcomeViewModel
 {

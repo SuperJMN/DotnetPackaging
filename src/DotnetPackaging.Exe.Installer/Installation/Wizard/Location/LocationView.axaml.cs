@@ -1,8 +1,6 @@
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 
-namespace DotnetPackaging.Exe.Installer.Steps.Location;
+namespace DotnetPackaging.Exe.Installer.Installation.Wizard.Location;
 
 public partial class LocationView : UserControl
 {

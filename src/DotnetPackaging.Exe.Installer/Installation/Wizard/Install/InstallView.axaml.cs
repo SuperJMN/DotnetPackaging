@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace DotnetPackaging.Exe.Installer.Steps.Install;
+namespace DotnetPackaging.Exe.Installer.Installation.Wizard.Install;
 
 public partial class InstallView : UserControl
 {

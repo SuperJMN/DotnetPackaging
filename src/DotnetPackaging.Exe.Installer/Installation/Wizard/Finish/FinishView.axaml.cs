@@ -1,8 +1,6 @@
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 
-namespace DotnetPackaging.Exe.Installer.Steps.Finish;
+namespace DotnetPackaging.Exe.Installer.Installation.Wizard.Finish;
 
 public partial class FinishView : UserControl
 {

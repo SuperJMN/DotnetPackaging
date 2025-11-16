@@ -3,9 +3,11 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:l="clr-namespace:DotnetPackaging.Exe.Installer.Steps.Location"
+             xmlns:location="clr-namespace:DotnetPackaging.Exe.Installer.Installation.Steps.Location"
+             xmlns:location1="clr-namespace:DotnetPackaging.Exe.Installer.Installation.Wizard.Location"
              mc:Ignorable="d" 
-             x:Class="DotnetPackaging.Exe.Installer.Steps.Location.LocationView"
-             x:DataType="l:ILocationViewModel">
+             x:Class="DotnetPackaging.Exe.Installer.Installation.Wizard.Location.LocationView"
+             x:DataType="location1:ILocationViewModel">
     <StackPanel Spacing="8" VerticalAlignment="Center">
         <TextBlock Text="Select the installation folder" FontWeight="Bold"/>
         <DockPanel HorizontalSpacing="8">
