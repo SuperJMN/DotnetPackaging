@@ -2,10 +2,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:finish="clr-namespace:DotnetPackaging.Exe.Installer.Steps.Finish"
-             xmlns:finish1="clr-namespace:DotnetPackaging.Exe.Installer.Installation.Wizard.Finish"
+             xmlns:finish="clr-namespace:DotnetPackaging.Exe.Installer.Installation.Wizard.Finish"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="DotnetPackaging.Exe.Installer.Installation.Wizard.Finish.FinishView" x:DataType="finish1:FinishViewModel">
+             x:Class="DotnetPackaging.Exe.Installer.Installation.Wizard.Finish.FinishView" x:DataType="finish:FinishViewModel">
     <StackPanel Spacing="8">
         <TextBlock>The application has been installed successfully.</TextBlock>
         <CheckBox IsChecked="{Binding CreateDesktopShortcut}"

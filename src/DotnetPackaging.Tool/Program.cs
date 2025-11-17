@@ -32,6 +32,7 @@ static class Program
     
     public static async Task<int> Main(string[] args)
     {
+        Environment.ExitCode = 0;
         var verboseEnabled = IsVerboseRequested(args);
         SetVerboseEnvironment(verboseEnabled);
 
@@ -352,8 +353,10 @@ static class Program
         
         var parseResult = rootCommand.Parse(args, configuration: null);
         var exitCode = await parseResult.InvokeAsync(parseResult.InvocationConfiguration, CancellationToken.None);
-        Log.Information("dotnetpackaging completed with exit code {ExitCode}", exitCode);
-        return exitCode;
+        var finalExitCode = Environment.ExitCode != 0 ? Environment.ExitCode : exitCode;
+        Environment.ExitCode = finalExitCode;
+        Log.Information("dotnetpackaging completed with exit code {ExitCode}", finalExitCode);
+        return finalExitCode;
     }
 
     private static bool IsVerboseRequested(string[] args)
