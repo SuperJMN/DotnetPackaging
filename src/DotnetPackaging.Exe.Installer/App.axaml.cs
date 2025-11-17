@@ -1,9 +1,12 @@
+using System.Collections.Generic;
 using System.IO.Compression;
+using System.Linq;
 using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using DotnetPackaging.Exe.Installer.Core;
+using DotnetPackaging.Exe.Installer.Uninstallation;
 using Projektanker.Icons.Avalonia;
 using Projektanker.Icons.Avalonia.FontAwesome;
 using Projektanker.Icons.Avalonia.MaterialDesign;
@@ -28,8 +31,15 @@ public sealed class App : Application
             return;
         }
 
-        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime)
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktopLifetime)
         {
+            return;
+        }
+
+        var args = desktopLifetime.Args ?? Array.Empty<string>();
+        if (IsUninstallMode(args))
+        {
+            await Uninstallation.Uninstallation.Launch();
             return;
         }
 
@@ -96,4 +106,7 @@ public sealed class App : Application
             return true;
         }
     }
+
+    private static bool IsUninstallMode(IEnumerable<string> args)
+        => args.Any(arg => string.Equals(arg, "--uninstall", StringComparison.OrdinalIgnoreCase));
 }

@@ -25,6 +25,25 @@ internal static class ShortcutService
         }
     }
 
+    public static void TryDeleteStartMenuShortcut(string appName, string targetExe)
+    {
+        var programs = Environment.GetFolderPath(Environment.SpecialFolder.Programs);
+        TryDeleteShortcut(programs, appName, targetExe);
+    }
+
+    public static void TryDeleteDesktopShortcut(string appName, string targetExe)
+    {
+        try
+        {
+            var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            TryDeleteShortcut(desktop, appName, targetExe);
+        }
+        catch
+        {
+            // Best-effort shortcut
+        }
+    }
+
     private static void TryCreateShortcut(string directory, string appName, string targetExe)
     {
         try
@@ -32,8 +51,7 @@ internal static class ShortcutService
             if (string.IsNullOrWhiteSpace(directory)) return;
 
             Directory.CreateDirectory(directory);
-            var shortcutName = BuildShortcutName(appName, targetExe);
-            var lnkPath = Path.Combine(directory, $"{shortcutName}.lnk");
+            var lnkPath = BuildShortcutPath(directory, appName, targetExe);
             Type shellType = Type.GetTypeFromProgID("WScript.Shell")!;
             dynamic shell = Activator.CreateInstance(shellType)!;
             dynamic shortcut = shell.CreateShortcut(lnkPath);
@@ -45,6 +63,30 @@ internal static class ShortcutService
         {
             // Best-effort shortcut
         }
+    }
+
+    private static void TryDeleteShortcut(string directory, string appName, string targetExe)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(directory)) return;
+
+            var lnkPath = BuildShortcutPath(directory, appName, targetExe);
+            if (File.Exists(lnkPath))
+            {
+                File.Delete(lnkPath);
+            }
+        }
+        catch
+        {
+            // Best-effort shortcut removal
+        }
+    }
+
+    private static string BuildShortcutPath(string directory, string appName, string targetExe)
+    {
+        var shortcutName = BuildShortcutName(appName, targetExe);
+        return Path.Combine(directory, $"{shortcutName}.lnk");
     }
 
     private static string BuildShortcutName(string appName, string targetExe)

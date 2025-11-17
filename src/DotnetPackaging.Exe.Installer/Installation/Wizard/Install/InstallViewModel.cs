@@ -33,7 +33,8 @@ public class InstallViewModel
             }
 
             return Core.Installer.Install(installDirectory, installerMetadata)
-                .Map(exePath => new InstallationResult(installerMetadata, installDirectory, exePath));
+                .Map(exePath => new InstallationResult(installerMetadata, installDirectory, exePath))
+                .Bind(result => InstallationRegistry.Register(result).Map(() => result));
         });
     }
 
