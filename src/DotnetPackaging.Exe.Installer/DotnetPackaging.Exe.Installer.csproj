@@ -22,8 +22,7 @@
             <LogicalName>PAYLOAD</LogicalName>
         </EmbeddedResource>
     </ItemGroup>
-
-
+    
     <ItemGroup>
         <Content Include="Assets\Icon.ico" />
     </ItemGroup>

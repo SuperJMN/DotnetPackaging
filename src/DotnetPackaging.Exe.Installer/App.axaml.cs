@@ -1,20 +1,13 @@
+using System.IO.Compression;
+using System.Text.Json;
 using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using CSharpFunctionalExtensions;
 using DotnetPackaging.Exe.Installer.Core;
-using Microsoft.Extensions.DependencyInjection;
 using Projektanker.Icons.Avalonia;
 using Projektanker.Icons.Avalonia.FontAwesome;
 using Projektanker.Icons.Avalonia.MaterialDesign;
-using ReactiveUI;
-using Serilog;
-using Zafiro.Avalonia.Dialogs.Implementations;
-using Zafiro.Avalonia.Dialogs.Wizards.Slim;
-using Zafiro.Avalonia.Misc;
-using Zafiro.UI;
-using Zafiro.UI.Navigation;
+using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Exe.Installer;
 
@@ -27,44 +20,80 @@ public sealed class App : Application
 
     public override async void OnFrameworkInitializationCompleted()
     {
+        RegisterIcons();
+
+        if (TryHandleMetadataDump())
+        {
+            (ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+            return;
+        }
+
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime)
+        {
+            return;
+        }
+
+        await Installation.Installation.Launch();
+    }
+
+    private static void RegisterIcons()
+    {
         IconProvider.Current
             .Register<FontAwesomeIconProvider>()
             .Register<MaterialDesignIconProvider>();
-        
-       
+    }
 
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
+    private static bool TryHandleMetadataDump()
+    {
+        var dumpPath = Environment.GetEnvironmentVariable("DP_DUMP_METADATA_JSON");
+        var dumpRawPath = Environment.GetEnvironmentVariable("DP_DUMP_RAW_METADATA_JSON");
+
+        if (string.IsNullOrWhiteSpace(dumpPath) && string.IsNullOrWhiteSpace(dumpRawPath))
         {
-            var root = new Window
+            return false;
+        }
+
+        try
+        {
+            var payload = PayloadExtractor.LoadPayload();
+            if (payload.IsSuccess)
             {
-                Width = 1000,
-                Height = 1000,
-                Opacity = 0,
-                WindowStartupLocation = WindowStartupLocation.CenterScreen,
-                CanResize = false,
-                SystemDecorations = SystemDecorations.None,
-                ShowInTaskbar = false
-            };
+                if (!string.IsNullOrWhiteSpace(dumpPath))
+                {
+                    var json = JsonSerializer.Serialize(payload.Value.Metadata);
+                    File.WriteAllText(dumpPath!, json);
+                }
 
-            lifetime.MainWindow = root;
-            root.Show();
-        
-            var dialog = new DesktopDialog();
-            var notificationService = new NotificationDialog(dialog);
-            var buildServiceProvider = new ServiceCollection().BuildServiceProvider();
-            var folderPicker = new AvaloniaFolderPickerService(root.StorageProvider);
-            var payload = new DefaultInstallerPayload();
-            var wizard = new InstallWizard(folderPicker, payload).CreateWizard();
+                if (!string.IsNullOrWhiteSpace(dumpRawPath))
+                {
+                    using var stream = payload.Value.Content.ToStreamSeekable();
+                    using var zip = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
+                    var entry = zip.GetEntry("metadata.json");
+                    if (entry is null)
+                    {
+                        File.WriteAllText(dumpRawPath!, "ERROR: metadata.json missing");
+                    }
+                    else
+                    {
+                        using var entryStream = entry.Open();
+                        using var reader = new StreamReader(entryStream);
+                        var text = reader.ReadToEnd();
+                        File.WriteAllText(dumpRawPath!, text);
+                    }
+                }
 
-            // Title = "<AppName> Installer" if metadata is available; fallback to generic title
-            var metaResult = await payload.GetMetadata();
-            var title = metaResult.IsSuccess && !string.IsNullOrWhiteSpace(metaResult.Value.ApplicationName)
-                ? $"{metaResult.Value.ApplicationName} Installer"
-                : "Installer";
-        
-            await wizard.ShowInDialog(dialog, title);
+                return true;
+            }
 
-            lifetime.Shutdown();
+            var errTarget = !string.IsNullOrWhiteSpace(dumpPath) ? dumpPath! : dumpRawPath!;
+            File.WriteAllText(errTarget, $"ERROR: {payload.Error}");
+            return true;
+        }
+        catch (Exception metaEx)
+        {
+            var errTarget = !string.IsNullOrWhiteSpace(dumpPath) ? dumpPath! : dumpRawPath!;
+            File.WriteAllText(errTarget, $"ERROR: {metaEx}");
+            return true;
         }
     }
 }

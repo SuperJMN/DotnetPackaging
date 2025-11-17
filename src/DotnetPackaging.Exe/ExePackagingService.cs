@@ -131,6 +131,24 @@ public sealed class ExePackagingService
                 return Result.Failure<FileInfo>(ridResult.Error);
             }
 
+            var localStubResult = await TryResolveLocalStub(ridResult.Value);
+            if (localStubResult.IsFailure)
+            {
+                return Result.Failure<FileInfo>(localStubResult.Error);
+            }
+
+            var localStub = localStubResult.Value;
+            if (localStub.HasValue)
+            {
+                var localPackResult = await SimpleExePacker.Build(localStub.Value, request.PublishDirectory.FullName, metadata, request.Output.FullName);
+                if (localPackResult.IsFailure)
+                {
+                    return Result.Failure<FileInfo>(localPackResult.Error);
+                }
+
+                return Result.Success(request.Output);
+            }
+
             // Resolve stub from cache or download from GitHub Releases
             var version = GetToolVersion();
             var stubPathResult = await GetOrDownloadStub(ridResult.Value, version);
@@ -277,6 +295,160 @@ public sealed class ExePackagingService
         }
 
         return Result.Failure<string>("--rid is required when building EXE on non-Windows hosts (e.g., win-x64/win-arm64).");
+    }
+
+    private async Task<Result<Maybe<string>>> TryResolveLocalStub(string rid)
+    {
+        var projectPath = FindLocalStubProject();
+        if (projectPath.HasNoValue)
+        {
+            return Result.Success(Maybe<string>.None);
+        }
+
+        logger.Information("Building installer stub locally from {ProjectPath} for {RID}.", projectPath.Value, rid);
+        var publishRequest = new ProjectPublishRequest(projectPath.Value)
+        {
+            Rid = ToMaybe(rid),
+            SelfContained = true,
+            Configuration = "Release",
+            SingleFile = true,
+            Trimmed = false,
+            MsBuildProperties = new Dictionary<string, string>
+            {
+                ["IncludeNativeLibrariesForSelfExtract"] = "true",
+                ["IncludeAllContentForSelfExtract"] = "true",
+                ["PublishTrimmed"] = "false",
+                ["DebugType"] = "embedded"
+            }
+        };
+
+        var publishResult = await publisher.Publish(publishRequest);
+        if (publishResult.IsFailure)
+        {
+            return Result.Failure<Maybe<string>>($"Failed to publish installer stub from {projectPath.Value}: {publishResult.Error}");
+        }
+
+        var stubPath = ResolveStubOutputPath(projectPath.Value, publishResult.Value.OutputDirectory);
+        if (stubPath.HasNoValue)
+        {
+            return Result.Failure<Maybe<string>>($"Installer stub was published but no executable was located under {publishResult.Value.OutputDirectory}.");
+        }
+
+        logger.Information("Using locally built installer stub at {StubPath}", stubPath.Value);
+        return Result.Success(Maybe<string>.From(stubPath.Value));
+    }
+
+    private Maybe<string> FindLocalStubProject()
+    {
+        var currentDirectory = Directory.GetCurrentDirectory();
+        var repositoryRoot = LocateRepositoryRoot(currentDirectory);
+        var searchRoots = BuildSearchRoots(currentDirectory, repositoryRoot);
+
+        foreach (var root in searchRoots)
+        {
+            var match = TryFindStubProjectUnder(root);
+            if (match.HasValue)
+            {
+                return match;
+            }
+        }
+
+        return Maybe<string>.None;
+    }
+
+    private IEnumerable<string> BuildSearchRoots(string currentDirectory, Maybe<string> repositoryRoot)
+    {
+        if (repositoryRoot.HasValue)
+        {
+            yield return repositoryRoot.Value;
+            if (!PathsEqual(repositoryRoot.Value, currentDirectory))
+            {
+                yield return currentDirectory;
+            }
+        }
+        else
+        {
+            yield return currentDirectory;
+        }
+    }
+
+    private Maybe<string> TryFindStubProjectUnder(string root)
+    {
+        var normalizedRoot = Path.GetFullPath(root);
+        var directCandidate = Path.Combine(normalizedRoot, "src", "DotnetPackaging.Exe.Installer", "DotnetPackaging.Exe.Installer.csproj");
+        if (File.Exists(directCandidate))
+        {
+            return Maybe<string>.From(directCandidate);
+        }
+
+        try
+        {
+            var match = Directory
+                .EnumerateFiles(normalizedRoot, "DotnetPackaging.Exe.Installer.csproj", SearchOption.AllDirectories)
+                .OrderBy(path => path.Length)
+                .FirstOrDefault();
+            return match is null ? Maybe<string>.None : Maybe<string>.From(Path.GetFullPath(match));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.Debug(ex, "Unable to enumerate DotnetPackaging.Exe.Installer.csproj under {Directory}", normalizedRoot);
+            return Maybe<string>.None;
+        }
+    }
+
+    private static bool PathsEqual(string left, string right)
+    {
+        var l = Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var r = Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return string.Equals(l, r, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    }
+
+    private Maybe<string> LocateRepositoryRoot(string startDirectory)
+    {
+        try
+        {
+            var dir = Path.GetFullPath(startDirectory);
+            while (!string.IsNullOrWhiteSpace(dir))
+            {
+                var gitDir = Path.Combine(dir, ".git");
+                if (Directory.Exists(gitDir) || File.Exists(gitDir))
+                {
+                    return Maybe<string>.From(dir);
+                }
+
+                var parent = Directory.GetParent(dir);
+                if (parent is null)
+                {
+                    break;
+                }
+                dir = parent.FullName;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.Debug(ex, "Unable to determine git repository root from {Directory}", startDirectory);
+        }
+
+        return Maybe<string>.None;
+    }
+
+    private static Maybe<string> ResolveStubOutputPath(string projectPath, string publishDirectory)
+    {
+        var assemblyName = Path.GetFileNameWithoutExtension(projectPath);
+        if (!string.IsNullOrWhiteSpace(assemblyName))
+        {
+            var candidate = Path.Combine(publishDirectory, $"{assemblyName}.exe");
+            if (File.Exists(candidate))
+            {
+                return Maybe<string>.From(candidate);
+            }
+        }
+
+        var fallback = Directory
+            .EnumerateFiles(publishDirectory, "*.exe", SearchOption.AllDirectories)
+            .FirstOrDefault(file => !string.Equals(Path.GetFileName(file), "createdump.exe", StringComparison.OrdinalIgnoreCase));
+
+        return fallback is null ? Maybe<string>.None : Maybe<string>.From(fallback);
     }
 
     // Legacy local-build path removed in favor of downloading prebuilt stub from GitHub Releases.

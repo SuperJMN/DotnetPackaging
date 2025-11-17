@@ -1,14 +1,15 @@
 using CSharpFunctionalExtensions;
-using DotnetPackaging.Exe.Installer.Steps.Finish;
-using DotnetPackaging.Exe.Installer.Steps.Install;
-using DotnetPackaging.Exe.Installer.Steps.Location;
-using DotnetPackaging.Exe.Installer.Steps.Welcome;
+using DotnetPackaging.Exe.Installer.Core;
+using DotnetPackaging.Exe.Installer.Installation.Wizard.Finish;
+using DotnetPackaging.Exe.Installer.Installation.Wizard.Install;
+using DotnetPackaging.Exe.Installer.Installation.Wizard.Location;
+using DotnetPackaging.Exe.Installer.Installation.Wizard.Welcome;
 using Zafiro.ProgressReporting;
 using Zafiro.UI.Commands;
 using Zafiro.UI.Wizards.Slim;
 using Zafiro.UI.Wizards.Slim.Builder;
 
-namespace DotnetPackaging.Exe.Installer.Core;
+namespace DotnetPackaging.Exe.Installer.Installation.Wizard;
 
 public class InstallWizard
 {
@@ -52,7 +53,7 @@ public class InstallWizard
     {
         return Task.Run(() =>
             PayloadExtractor.CopyContentTo(payload, installDir, progressObserver)
-                .Bind(() => Installer.Install(installDir, payload.Metadata))
+                .Bind(() => Core.Installer.Install(installDir, payload.Metadata))
                 .Map(exePath => new InstallationResult(payload.Metadata, installDir, exePath)));
     }
     

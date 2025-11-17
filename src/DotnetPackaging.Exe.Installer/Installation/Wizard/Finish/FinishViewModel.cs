@@ -1,12 +1,11 @@
 using System.Diagnostics;
 using System.Reactive;
-using CFE = CSharpFunctionalExtensions;
+using DotnetPackaging.Exe.Installer.Core;
 using ReactiveUI;
 using Zafiro.UI.Commands;
-using System.Threading.Tasks;
-using DotnetPackaging.Exe.Installer.Core;
+using CFE = CSharpFunctionalExtensions;
 
-namespace DotnetPackaging.Exe.Installer.Steps.Finish;
+namespace DotnetPackaging.Exe.Installer.Installation.Wizard.Finish;
 
 public class FinishViewModel
 {

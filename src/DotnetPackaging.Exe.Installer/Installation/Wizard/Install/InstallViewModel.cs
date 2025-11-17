@@ -6,7 +6,7 @@ using ReactiveUI;
 using Zafiro.ProgressReporting;
 using Zafiro.UI.Commands;
 
-namespace DotnetPackaging.Exe.Installer.Steps.Install;
+namespace DotnetPackaging.Exe.Installer.Installation.Wizard.Install;
 
 public class InstallViewModel 
 {

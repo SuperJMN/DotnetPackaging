@@ -1,14 +1,12 @@
-using System.Reactive;
+using DotnetPackaging.Exe.Installer.Core;
 using ReactiveUI;
 using ReactiveUI.SourceGenerators;
 using ReactiveUI.Validation.Extensions;
 using ReactiveUI.Validation.Helpers;
 using Zafiro.UI;
-using DotnetPackaging.Exe.Installer;
-using DotnetPackaging.Exe.Installer.Core;
 using Zafiro.UI.Commands;
 
-namespace DotnetPackaging.Exe.Installer.Steps.Location;
+namespace DotnetPackaging.Exe.Installer.Installation.Wizard.Location;
 
 public partial class LocationViewModel : ReactiveValidationObject, IValidatable, ILocationViewModel
 {

@@ -7,7 +7,7 @@ using ReactiveUI.Validation.Helpers;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.UI;
 
-namespace DotnetPackaging.Exe.Installer.Steps.Welcome;
+namespace DotnetPackaging.Exe.Installer.Installation.Wizard.Welcome;
 
 public sealed class WelcomeViewModel : ReactiveValidationObject, IWelcomeViewModel, IValidatable
 {
