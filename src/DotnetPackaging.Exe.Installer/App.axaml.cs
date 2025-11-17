@@ -7,9 +7,6 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using DotnetPackaging.Exe.Installer.Core;
 using DotnetPackaging.Exe.Installer.Uninstallation;
-using Projektanker.Icons.Avalonia;
-using Projektanker.Icons.Avalonia.FontAwesome;
-using Projektanker.Icons.Avalonia.MaterialDesign;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Exe.Installer;
@@ -23,8 +20,6 @@ public sealed class App : Application
 
     public override async void OnFrameworkInitializationCompleted()
     {
-        RegisterIcons();
-
         if (TryHandleMetadataDump())
         {
             (ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
@@ -44,13 +39,6 @@ public sealed class App : Application
         }
 
         await Installation.Installation.Launch();
-    }
-
-    private static void RegisterIcons()
-    {
-        IconProvider.Current
-            .Register<FontAwesomeIconProvider>()
-            .Register<MaterialDesignIconProvider>();
     }
 
     private static bool TryHandleMetadataDump()
