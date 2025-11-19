@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Reflection;
 using CSharpFunctionalExtensions;
+using DotnetPackaging;
 using DotnetPackaging.Publish;
 using Serilog;
 using RuntimeArchitecture = System.Runtime.InteropServices.Architecture;
@@ -55,7 +56,8 @@ public sealed class ExePackagingService
             ToMaybe(vendor),
             ToMaybe(runtimeIdentifier),
             ToMaybe(stubFile),
-            Maybe<string>.None);
+            Maybe<string>.None,
+            Maybe<ProjectMetadata>.None);
 
         return Build(request);
     }
@@ -87,6 +89,8 @@ public sealed class ExePackagingService
             return Result.Failure<FileInfo>(publishResult.Error);
         }
 
+        var projectMetadata = ReadProjectMetadata(projectFile);
+
         var request = new ExePackagingRequest(
             new DirectoryInfo(publishResult.Value.OutputDirectory),
             outputFile,
@@ -94,15 +98,37 @@ public sealed class ExePackagingService
             ToMaybe(vendor),
             ToMaybe(runtimeIdentifier),
             ToMaybe(stubFile),
-            publishResult.Value.Name);
+            publishResult.Value.Name,
+            projectMetadata);
 
         return await Build(request);
+    }
+
+    private Maybe<ProjectMetadata> ReadProjectMetadata(FileInfo projectFile)
+    {
+        var metadataResult = ProjectMetadataReader.Read(projectFile);
+        if (metadataResult.IsFailure)
+        {
+            logger.Warning(
+                "Unable to read project metadata from {ProjectFile}: {Error}",
+                projectFile.FullName,
+                metadataResult.Error);
+            return Maybe<ProjectMetadata>.None;
+        }
+
+        return Maybe<ProjectMetadata>.From(metadataResult.Value);
     }
 
     private async Task<Result<FileInfo>> Build(ExePackagingRequest request)
     {
         var inferredExecutable = InferExecutableName(request.PublishDirectory, request.ProjectName);
-        var metadata = BuildInstallerMetadata(request.Options, request.PublishDirectory, request.Vendor, inferredExecutable, request.ProjectName);
+        var metadata = BuildInstallerMetadata(
+            request.Options,
+            request.PublishDirectory,
+            request.Vendor,
+            inferredExecutable,
+            request.ProjectName,
+            request.ProjectMetadata);
 
         if (request.Stub.HasValue)
         {
@@ -186,10 +212,17 @@ public sealed class ExePackagingService
         DirectoryInfo contextDir,
         Maybe<string> vendor,
         Maybe<string> inferredExecutable,
-        Maybe<string> projectName)
+        Maybe<string> projectName,
+        Maybe<ProjectMetadata> projectMetadata)
     {
-        // Prefer explicit --application-name, then project name (when packaging from-project), then publish directory name
+        var metadataProduct = projectMetadata
+            .Bind(meta => meta.Product
+                .Or(() => meta.AssemblyName)
+                .Or(() => meta.AssemblyTitle));
+
+        // Prefer explicit --application-name, then project metadata, then project name (from publish), then publish directory name
         var appName = options.Name
+            .Or(() => metadataProduct)
             .Or(() => projectName)
             .GetValueOrDefault(contextDir.Name);
         var packageName = appName.ToLowerInvariant().Replace(" ", string.Empty).Replace("-", string.Empty);
@@ -199,7 +232,15 @@ public sealed class ExePackagingService
             .Or(() => inferredExecutable)
             .Map(NormalizeExecutableRelativePath)
             .Match(value => value, () => (string?)null);
-        var effectiveVendor = vendor.Match(value => value, () => "Unknown");
+        var vendorFromProject = projectMetadata
+            .Bind(meta => meta.Company
+                .Or(() => meta.Product)
+                .Or(() => meta.AssemblyName)
+                .Or(() => meta.AssemblyTitle));
+
+        var effectiveVendor = vendor
+            .Or(() => vendorFromProject)
+            .GetValueOrDefault("Unknown");
         var description = options.Comment.Match(value => value, () => (string?)null);
 
         return new InstallerMetadata(appId, appName, version, effectiveVendor, description, executable);
@@ -747,5 +788,6 @@ public sealed class ExePackagingService
         Maybe<string> Vendor,
         Maybe<string> RuntimeIdentifier,
         Maybe<FileInfo> Stub,
-        Maybe<string> ProjectName);
+        Maybe<string> ProjectName,
+        Maybe<ProjectMetadata> ProjectMetadata);
 }
