@@ -20,49 +20,51 @@ internal static class Uninstallation
             return;
         }
 
+        if (desktopLifetime.MainWindow is null)
+        {
+            Serilog.Log.Error("MainWindow not set");
+            return;
+        }
+
         try
         {
-            var logPath = Path.Combine(Path.GetTempPath(), "dp-uninstaller-debug.txt");
-            File.WriteAllText(logPath, "Uninstallation launched.\n");
-
-            var root = CreateRootWindow();
-            desktopLifetime.MainWindow = root;
-            root.Show();
-            File.AppendAllText(logPath, "Root window shown.\n");
+            Serilog.Log.Information("Uninstallation launched");
 
             var dialog = new DesktopDialog();
-            var payload = ResolvePayload(logPath);
+            var payload = ResolvePayload();
             var wizard = new UninstallWizard(payload).CreateWizard();
 
-            File.AppendAllText(logPath, "Wizard created. Resolving title...\n");
+            Serilog.Log.Information("Wizard created, resolving title");
             var title = await ResolveWindowTitle(payload);
-            File.AppendAllText(logPath, $"Title resolved: {title}\n");
+            Serilog.Log.Information("Title resolved: {Title}", title);
             
             await wizard.ShowInDialog(dialog, title);
-            File.AppendAllText(logPath, "Wizard dialog finished.\n");
+            Serilog.Log.Information("Wizard dialog finished");
 
             await TryTriggerSelfDestruct(payload);
-            File.AppendAllText(logPath, "Self-destruct triggered.\n");
-
-            desktopLifetime.Shutdown();
+            Serilog.Log.Information("Self-destruct triggered");
         }
         catch (Exception ex)
         {
+            Serilog.Log.Fatal(ex, "Uninstallation failed");
             TryWriteCrashLog(ex);
             throw;
         }
     }
 
-    private static IInstallerPayload ResolvePayload(string logPath)
+    private static IInstallerPayload ResolvePayload()
     {
         var payloadResult = MetadataFilePayload.FromProcessDirectory();
         if (payloadResult.IsSuccess)
         {
-            TryAppendLog(logPath, "Using metadata.json from installation directory.\n");
+            Serilog.Log.Information("Using metadata.json from installation directory");
             return payloadResult.Value;
         }
 
-        TryAppendLog(logPath, $"Falling back to bundled payload: {payloadResult.Error}\n");
+        Serilog.Log.Warning("metadata.json not found: {Error}. Using fallback payload", payloadResult.Error);
+        // For uninstaller, we create a minimal payload that only provides metadata reading from disk
+        // If that fails, DefaultInstallerPayload will try to load embedded resources which won't exist
+        // but that's OK - the wizard will handle missing metadata gracefully
         return new DefaultInstallerPayload();
     }
 
@@ -91,46 +93,20 @@ internal static class Uninstallation
         }
     }
 
-    private static Window CreateRootWindow()
-        => new()
-        {
-            Width = 1,
-            Height = 1,
-            Opacity = 0,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            CanResize = false,
-            SystemDecorations = SystemDecorations.None,
-            ShowInTaskbar = false
-        };
 
     private static async Task<string> ResolveWindowTitle(IInstallerPayload payload)
     {
         var metaResult = await payload.GetMetadata();
         if (metaResult.IsFailure)
         {
-             try 
-             { 
-                 File.AppendAllText(Path.Combine(Path.GetTempPath(), "dp-uninstaller-debug.txt"), $"Metadata load failed: {metaResult.Error}\n"); 
-             } 
-             catch { }
+            Serilog.Log.Warning("Metadata load failed: {Error}", metaResult.Error);
         }
+        
         var title = metaResult.IsSuccess && !string.IsNullOrWhiteSpace(metaResult.Value.ApplicationName)
             ? $"{metaResult.Value.ApplicationName} Uninstaller"
             : "Uninstaller";
 
         return title;
-    }
-
-    private static void TryAppendLog(string logPath, string message)
-    {
-        try
-        {
-            File.AppendAllText(logPath, message);
-        }
-        catch
-        {
-            // ignored
-        }
     }
 
     private static void TryWriteCrashLog(Exception ex)

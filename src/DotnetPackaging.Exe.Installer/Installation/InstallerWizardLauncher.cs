@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using DotnetPackaging.Exe.Installer.Core;
 using DotnetPackaging.Exe.Installer.Installation.Wizard;
+using Serilog;
 using Zafiro.Avalonia.Dialogs.Implementations;
 using Zafiro.Avalonia.Dialogs.Wizards.Slim;
 using Path = System.IO.Path;
@@ -12,45 +13,42 @@ internal static class Installation
 {
     public static async Task Launch()
     {
-        if (App.Current.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktopLifetime)
+        if (App.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktopLifetime)
         {
+            Log.Warning("Application lifetime is not classic desktop");
+            return;
+        }
+
+        if (desktopLifetime.MainWindow is null)
+        {
+            Log.Error("MainWindow not set");
             return;
         }
 
         try
         {
-            var root = CreateRootWindow();
-            desktopLifetime.MainWindow = root;
-            root.Show();
+            Log.Information("Installation launched");
 
             var dialog = new DesktopDialog();
-            var folderPicker = new AvaloniaFolderPickerService(root.StorageProvider);
+            var folderPicker = new AvaloniaFolderPickerService(desktopLifetime.MainWindow.StorageProvider);
             var payload = new DefaultInstallerPayload();
             var wizard = new InstallWizard(folderPicker, payload).CreateWizard();
 
+            Log.Information("Wizard created, resolving title");
             var title = await ResolveWindowTitle(payload);
+            Log.Information("Title resolved: {Title}", title);
+            
             await wizard.ShowInDialog(dialog, title);
-
-            desktopLifetime.Shutdown();
+            Log.Information("Wizard dialog finished");
         }
         catch (Exception ex)
         {
+            Log.Fatal(ex, "Installation failed");
             TryWriteCrashLog(ex);
             throw;
         }
     }
 
-    private static Window CreateRootWindow()
-        => new()
-        {
-            Width = 1,
-            Height = 1,
-            Opacity = 0,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            CanResize = false,
-            SystemDecorations = SystemDecorations.None,
-            ShowInTaskbar = false
-        };
 
     private static async Task<string> ResolveWindowTitle(DefaultInstallerPayload payload)
     {

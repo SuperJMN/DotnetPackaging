@@ -3,6 +3,7 @@ using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using DotnetPackaging.Exe.Installer.Core;
 using Zafiro.DivineBytes;
 
@@ -15,7 +16,7 @@ public sealed class App : Application
         AvaloniaXamlLoader.Load(this);
     }
 
-    public override async void OnFrameworkInitializationCompleted()
+    public override void OnFrameworkInitializationCompleted()
     {
         if (TryHandleMetadataDump())
         {
@@ -28,14 +29,42 @@ public sealed class App : Application
             return;
         }
 
-        var args = desktopLifetime.Args ?? Array.Empty<string>();
-        if (IsUninstallMode(args))
-        {
-            await Uninstallation.Uninstallation.Launch();
-            return;
-        }
+        base.OnFrameworkInitializationCompleted();
 
-        await Installation.Installation.Launch();
+        // Create and set MainWindow immediately - this keeps the app running
+        var mainWindow = new Avalonia.Controls.Window
+        {
+            Width = 1,
+            Height = 1,
+            Opacity = 0,
+            WindowStartupLocation = Avalonia.Controls.WindowStartupLocation.CenterScreen,
+            CanResize = false,
+            SystemDecorations = Avalonia.Controls.SystemDecorations.None,
+            ShowInTaskbar = false
+        };
+        desktopLifetime.MainWindow = mainWindow;
+
+        // Launch installer/uninstaller after the window is shown
+        mainWindow.Opened += async (sender, eventArgs) =>
+        {
+            try
+            {
+                var args = desktopLifetime.Args ?? Array.Empty<string>();
+                if (IsUninstallMode(args))
+                {
+                    await Uninstallation.Uninstallation.Launch();
+                }
+                else
+                {
+                    await Installation.Installation.Launch();
+                }
+            }
+            finally
+            {
+                // Close the main window when installation/uninstallation is done
+                mainWindow.Close();
+            }
+        };
     }
 
     private static bool TryHandleMetadataDump()

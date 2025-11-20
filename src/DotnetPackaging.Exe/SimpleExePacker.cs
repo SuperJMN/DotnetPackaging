@@ -19,8 +19,7 @@ public static class SimpleExePacker
         string stubPath,
         string publishDir,
         InstallerMetadata metadata,
-        string outputPath,
-        string? uninstallerStubPath = null)
+        string outputPath)
     {
         try
         {
@@ -33,7 +32,7 @@ public static class SimpleExePacker
             Directory.CreateDirectory(tmp);
             var tempZip = Path.Combine(tmp, "payload.zip");
 
-            await CreatePayloadZip(tempZip, publishDir, metadata, uninstallerStubPath);
+            await CreatePayloadZip(tempZip, publishDir, metadata);
 
             using var outFs = File.Create(outputPath);
             using (var stubFs = File.OpenRead(stubPath))
@@ -61,7 +60,7 @@ public static class SimpleExePacker
         }
     }
 
-    private static async Task CreatePayloadZip(string zipPath, string publishDir, InstallerMetadata meta, string? uninstallerStubPath)
+    private static async Task CreatePayloadZip(string zipPath, string publishDir, InstallerMetadata meta)
     {
         using var fs = File.Create(zipPath);
         using var zip = new ZipArchive(fs, ZipArchiveMode.Create, leaveOpen: false);
@@ -75,15 +74,6 @@ public static class SimpleExePacker
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 WriteIndented = false
             });
-        }
-        
-        // Uninstall.exe (if provided)
-        if (!string.IsNullOrWhiteSpace(uninstallerStubPath) && File.Exists(uninstallerStubPath))
-        {
-            var uninstallEntry = zip.CreateEntry("Content/Uninstall.exe", CompressionLevel.Optimal);
-            await using var src = File.OpenRead(uninstallerStubPath);
-            await using var dst = uninstallEntry.Open();
-            await src.CopyToAsync(dst);
         }
 
         // Content/**

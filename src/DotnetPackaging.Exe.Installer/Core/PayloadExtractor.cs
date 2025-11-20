@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Runtime.InteropServices;
+using Serilog;
 using System.Text;
 using System.Text.Json;
 using CSharpFunctionalExtensions;
@@ -24,7 +24,6 @@ internal static class PayloadExtractor
         var attempts = new List<Func<Result<InstallerPayload>>>
         {
             AttemptLoadPayloadFrom(TryExtractFromManagedResource, "Managed payload not found"),
-            AttemptLoadPayloadFrom(TryExtractFromResource, "Win32 resource payload not found"),
             () => TryExtractFromAppendedPayload().Bind(CreatePayload),
             AttemptLoadPayloadFrom(TryExtractFromDisk, "Payload not found on disk (Uninstall mode)")
         };
@@ -132,7 +131,8 @@ internal static class PayloadExtractor
         {
             if (Directory.Exists(targetDirectory))
             {
-                Directory.Delete(targetDirectory, true);
+                Log.Information("Target directory exists, attempting to remove or rename: {Directory}", targetDirectory);
+                TryRemoveOrRenameDirectory(targetDirectory);
             }
 
             Directory.CreateDirectory(targetDirectory);
@@ -143,6 +143,14 @@ internal static class PayloadExtractor
             var contentEntries = archive.Entries
                 .Where(IsContentEntry)
                 .ToList();
+
+            try 
+            { 
+                File.WriteAllText(
+                    System.IO.Path.Combine(targetDirectory, "install_debug.log"), 
+                    $"Found {contentEntries.Count} entries to extract from {archive.Entries.Count} total entries.\nTarget: {targetDirectory}\n"); 
+            } 
+            catch { }
 
             var fileEntries = contentEntries.Where(entry => !IsDirectoryEntry(entry));
             long totalBytes = fileEntries.Sum(entry => entry.Length);
@@ -159,6 +167,10 @@ internal static class PayloadExtractor
 
                 var destinationPath = System.IO.Path.Combine(targetDirectory, relativePath);
                 var destinationFullPath = System.IO.Path.GetFullPath(destinationPath);
+                
+                // Debug log extraction
+                Log.Debug("Extracting: {Entry} -> {Destination}", entry.FullName, destinationFullPath);
+
                 if (!destinationFullPath.StartsWith(targetRoot, StringComparison.OrdinalIgnoreCase))
                 {
                     throw new InvalidOperationException($"Payload entry '{entry.FullName}' is outside of the installation directory");
@@ -255,33 +267,6 @@ internal static class PayloadExtractor
         }
     }
 
-    private static Maybe<PayloadLocation> TryExtractFromResource()
-    {
-        try
-        {
-            var hModule = GetModuleHandle(null);
-            var hResInfo = FindResource(hModule, "PAYLOAD", "RCDATA");
-            if (hResInfo == IntPtr.Zero) return Maybe<PayloadLocation>.None;
-            var size = SizeofResource(hModule, hResInfo);
-            if (size == 0) return Maybe<PayloadLocation>.None;
-            var hResData = LoadResource(hModule, hResInfo);
-            if (hResData == IntPtr.Zero) return Maybe<PayloadLocation>.None;
-            var pData = LockResource(hResData);
-            if (pData == IntPtr.Zero) return Maybe<PayloadLocation>.None;
-
-            var bytes = new byte[size];
-            Marshal.Copy(pData, bytes, 0, (int)size);
-
-            var tempDir = Directory.CreateTempSubdirectory("dp-inst-_").FullName;
-            var zipPath = System.IO.Path.Combine(tempDir, "payload.zip");
-            File.WriteAllBytes(zipPath, bytes);
-            return new PayloadLocation(tempDir, zipPath);
-        }
-        catch
-        {
-            return Maybe<PayloadLocation>.None;
-        }
-    }
 
     private static Result<PayloadLocation> TryExtractFromAppendedPayload()
     {
@@ -381,6 +366,139 @@ internal static class PayloadExtractor
         }
     }
 
+    private static void TryRemoveOrRenameDirectory(string directory)
+    {
+        // First try to delete normally
+        try
+        {
+            Directory.Delete(directory, true);
+            Log.Information("Successfully deleted directory: {Directory}", directory);
+            return;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Cannot delete directory (may be locked): {Error}. Attempting to rename...", ex.Message);
+        }
+
+        // If delete fails, try to rename it
+        for (int attempt = 1; attempt <= 5; attempt++)
+        {
+            try
+            {
+                var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+                var renamed = $"{directory}.old-{timestamp}-{attempt}";
+                Directory.Move(directory, renamed);
+                Log.Information("Directory renamed to: {RenamedDirectory}", renamed);
+                
+                // Schedule deletion on reboot
+                ScheduleDirectoryDeletionOnReboot(renamed);
+                return;
+            }
+            catch (Exception ex) when (attempt < 5)
+            {
+                Log.Warning("Attempt {Attempt}/5 to rename directory failed: {Error}", attempt, ex.Message);
+                Thread.Sleep(200);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to rename directory after 5 attempts");
+                throw new InvalidOperationException(
+                    $"Cannot remove or rename existing installation directory '{directory}'. " +
+                    $"Please close any programs using files in this directory (including Windows Explorer) and try again.", 
+                    ex);
+            }
+        }
+    }
+
+    private static void ScheduleDirectoryDeletionOnReboot(string directory)
+    {
+        try
+        {
+            // Mark for deletion on next reboot using MoveFileEx
+            // This is a best-effort operation
+            Log.Information("Scheduling directory for deletion on reboot: {Directory}", directory);
+            
+            // Recursively mark all files and subdirectories
+            foreach (var file in Directory.GetFiles(directory, "*", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    if (!MoveFileEx(file, null, MoveFileFlags.DelayUntilReboot))
+                    {
+                        Log.Debug("Could not schedule file for deletion: {File}", file);
+                    }
+                }
+                catch { /* best effort */ }
+            }
+            
+            // Mark the directory itself
+            if (!MoveFileEx(directory, null, MoveFileFlags.DelayUntilReboot))
+            {
+                Log.Debug("Could not schedule directory for deletion: {Directory}", directory);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to schedule deletion on reboot for: {Directory}", directory);
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern bool MoveFileEx(string lpExistingFileName, string? lpNewFileName, MoveFileFlags dwFlags);
+
+    [Flags]
+    private enum MoveFileFlags
+    {
+        DelayUntilReboot = 0x4
+    }
+
+    private static void TryDeleteDirectoryWithRetry(string directory, int maxAttempts = 3)
+    {
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                if (!Directory.Exists(directory))
+                {
+                    Log.Information("Directory already deleted: {Directory}", directory);
+                    return;
+                }
+
+                // First try to remove read-only attributes from all files
+                foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        var attrs = File.GetAttributes(file);
+                        if ((attrs & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
+                        {
+                            File.SetAttributes(file, attrs & ~FileAttributes.ReadOnly);
+                        }
+                    }
+                    catch { /* Best effort */ }
+                }
+
+                Directory.Delete(directory, true);
+                Log.Information("Successfully deleted directory: {Directory}", directory);
+                return;
+            }
+            catch (Exception ex) when (attempt < maxAttempts)
+            {
+                Log.Warning("Attempt {Attempt}/{MaxAttempts} to delete directory failed: {Error}. Retrying...", 
+                    attempt, maxAttempts, ex.Message);
+                Thread.Sleep(500 * attempt); // Exponential backoff: 500ms, 1000ms
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to delete directory after {Attempts} attempts: {Directory}", 
+                    maxAttempts, directory);
+                throw new InvalidOperationException(
+                    $"Cannot delete existing installation directory. Please close any programs that may be using files in '{directory}' and try again.", 
+                    ex);
+            }
+        }
+    }
+
     private static void TryDeleteFile(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))
@@ -451,20 +569,6 @@ internal static class PayloadExtractor
         return string.IsNullOrEmpty(entry.Name) || entry.FullName.EndsWith("/", StringComparison.Ordinal);
     }
 
-    [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern IntPtr FindResource(IntPtr hModule, string lpName, string lpType);
-
-    [DllImport("kernel32", SetLastError = true)]
-    private static extern IntPtr LoadResource(IntPtr hModule, IntPtr hResInfo);
-
-    [DllImport("kernel32", SetLastError = true)]
-    private static extern IntPtr LockResource(IntPtr hResData);
-
-    [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern uint SizeofResource(IntPtr hModule, IntPtr hResInfo);
-
-    [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern IntPtr GetModuleHandle(string? lpModuleName);
 
 #if DEBUG
     private static Result<InstallerPayload> CreateDebugPayload()
