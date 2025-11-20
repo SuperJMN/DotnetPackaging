@@ -10,6 +10,9 @@
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <IsPackable>false</IsPackable>
         <ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
+        <AssemblyVersion>2.0.0.0</AssemblyVersion>
+        <FileVersion>2.0.0.0</FileVersion>
+        <Deterministic>false</Deterministic>
     </PropertyGroup>
 
     <ItemGroup>
@@ -20,6 +23,13 @@
     <ItemGroup Condition="'$(InstallerPayload)' != '' and Exists('$(InstallerPayload)')">
         <EmbeddedResource Include="$(InstallerPayload)">
             <LogicalName>PAYLOAD</LogicalName>
+        </EmbeddedResource>
+    </ItemGroup>
+    
+    <!-- Embed UninstallLauncher -->
+    <ItemGroup>
+        <EmbeddedResource Include="Resources\UninstallLauncher.exe">
+            <LogicalName>UninstallLauncher.exe</LogicalName>
         </EmbeddedResource>
     </ItemGroup>
     
@@ -35,6 +45,8 @@
         <PackageReference Include="ByteSize" />
         <PackageReference Include="ReactiveProperty" />
         <PackageReference Include="ReactiveUI.Avalonia" />
+        <PackageReference Include="Serilog" />
+        <PackageReference Include="Serilog.Sinks.File" />
         <PackageReference Include="Zafiro.Avalonia" />
         <PackageReference Include="Zafiro" />
         <PackageReference Include="Zafiro.Avalonia.Dialogs" />

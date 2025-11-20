@@ -1,4 +1,6 @@
 using CSharpFunctionalExtensions;
+using System.Text.Json;
+using Serilog;
 
 namespace DotnetPackaging.Exe.Installer.Core;
 
@@ -7,7 +9,107 @@ internal static class Installer
     public static Result<string> Install(string targetDir, InstallerMetadata meta)
     {
         return ResolveMainExe(targetDir, meta)
-            .Tap(exePath => ShortcutService.TryCreateStartMenuShortcut(meta.ApplicationName, exePath));
+            .Tap(exePath => ShortcutService.TryCreateStartMenuShortcut(meta.ApplicationName, exePath))
+            .Tap(exePath => RegisterUninstaller(targetDir, meta, exePath));
+    }
+
+    private static void RegisterUninstaller(string targetDir, InstallerMetadata meta, string mainExePath)
+    {
+        if (Environment.ProcessPath is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var metadataPath = Path.Combine(targetDir, "metadata.json");
+            var json = JsonSerializer.Serialize(meta);
+            File.WriteAllText(metadataPath, json);
+        }
+        catch
+        {
+            // Best effort
+        }
+
+        // Use launcher strategy to avoid .NET single-file extraction issues:
+        // 1. Copy full installer as Uninstall.exe to installation directory
+        // 2. Copy launcher as UninstallLauncher.exe to installation directory
+        // 3. Registry points to UninstallLauncher.exe
+        // 4. Launcher copies Uninstall.exe to %TEMP% and runs it from there
+        
+        try
+        {
+            // Copy full installer as uninstaller to installation directory
+            var uninstallerPath = Path.Combine(targetDir, "Uninstall.exe");
+            File.Copy(Environment.ProcessPath, uninstallerPath, overwrite: true);
+            Log.Information("Uninstaller copied to installation directory: {Path}", uninstallerPath);
+            
+            // Extract launcher from embedded resource and save to installation directory
+            var launcherPath = Path.Combine(targetDir, "UninstallLauncher.exe");
+            var launcherExtracted = TryExtractLauncher(launcherPath);
+            
+            if (!launcherExtracted)
+            {
+                Log.Warning("Launcher not found in resources, registry will point directly to uninstaller");
+                // Fallback: point directly to uninstaller (may have extraction issues)
+                WindowsRegistryService.Register(
+                    meta.AppId, 
+                    meta.ApplicationName, 
+                    meta.Version, 
+                    meta.Vendor, 
+                    targetDir, 
+                    $"\"{uninstallerPath}\" --uninstall", 
+                    mainExePath);
+            }
+            else
+            {
+                Log.Information("Launcher copied to installation directory: {Path}", launcherPath);
+                // Point registry to launcher
+                WindowsRegistryService.Register(
+                    meta.AppId, 
+                    meta.ApplicationName, 
+                    meta.Version, 
+                    meta.Vendor, 
+                    targetDir, 
+                    $"\"{launcherPath}\"", 
+                    mainExePath);
+            }
+        }
+        catch (Exception ex)
+        {
+             Log.Error(ex, "RegisterUninstaller failed");
+        }
+    }
+    
+    private static bool TryExtractLauncher(string targetPath)
+    {
+        try
+        {
+            // Try to find launcher in embedded resources
+            var assembly = typeof(Installer).Assembly;
+            var resourceName = assembly.GetManifestResourceNames()
+                .FirstOrDefault(name => name.Contains("UninstallLauncher.exe"));
+            
+            if (resourceName is null)
+            {
+                return false;
+            }
+            
+            using var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream is null)
+            {
+                return false;
+            }
+            
+            using var fileStream = File.Create(targetPath);
+            stream.CopyTo(fileStream);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to extract launcher");
+            return false;
+        }
     }
 
     private static Result<string> ResolveMainExe(string targetDir, InstallerMetadata meta)

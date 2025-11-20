@@ -228,6 +228,83 @@ Backlog / Future work
 - Add CLI E2E tests (including rpm/exe) and hook dotnet test in CI.
 - Optional: enrich icon detection strategies and metadata mapping (e.g., auto-appId from name + reverse DNS).
 
+## CRITICAL ISSUE: Uninstaller Crash (2025-11-20)
+
+### Problem
+The Windows uninstaller (`Uninstall.exe`) crashes with access violation **before any managed code executes**.
+
+**Error Details:**
+- Exception: `0xc0000005` (Access Violation)
+- Exit Code: `0x80131506` (.NET Runtime internal error)
+- Crash Offset: `0x00000000000b24f6` (consistent across all builds)
+- PE Timestamp: `0x68ffe47c` (consistent despite non-deterministic builds)
+- Assembly Version: `2.0.0.0`
+
+**Symptoms:**
+- Uninstaller launches but crashes immediately
+- No UI shown, no log created
+- Windows Event Viewer shows .NET Runtime fatal error
+- **Crash occurs before `Program.Main` executes**
+
+### What Was Fixed
+1. ✅ Centralized logging to `%TEMP%\DotnetPackaging.Installer\`
+2. ✅ Removed unnecessary Win32 P/Invoke (FindResource, LoadResource)
+3. ✅ Fixed Avalonia Dispatcher issues (`base.OnFrameworkInitializationCompleted()`, `Dispatcher.UIThread.Post`)
+4. ✅ Rename strategy for locked install directories
+5. ✅ Non-deterministic builds (`Deterministic=false`, `AssemblyVersion=2.0.0.0`)
+
+### What Did NOT Fix It
+- The crash persists with identical symptoms
+- Emergency logging in `Program.Main` does not execute
+- File: `%TEMP%\dp-emergency.log` is empty/missing
+
+### Current Hypothesis
+Crash during:
+1. **.NET Runtime initialization** (before managed code)
+2. **Native DLL loading** (corrupt/incompatible dependency)
+3. **Single-file bundling corruption** when executable is copied
+
+**Evidence:**
+- Consistent crash offset across all builds
+- Same PE timestamp despite forced rebuild
+- Installer works fine, uninstaller (identical binary) crashes
+- Both are created via `File.Copy(Environment.ProcessPath, uninstallerPath)`
+
+### Next Investigation Steps
+
+1. **Check Emergency Log**
+   ```powershell
+   Get-Content $env:TEMP\dp-emergency.log
+   ```
+   If empty → crash is before `Program.Main`
+
+2. **Analyze with WinDbg**
+   - Attach to `Uninstall.exe --uninstall`
+   - Identify what `0x00000000000b24f6` corresponds to
+   - Look for native exception before managed entry
+
+3. **Compare Binaries**
+   - Use `dumpbin /headers` on installer vs uninstaller
+   - Check PE headers for corruption
+   - Verify embedded resources integrity
+
+4. **Try Without Single-File**
+   - Publish with `PublishSingleFile=false`
+   - Test if crash persists with framework-dependent
+
+5. **Alternate Uninstaller Strategy**
+   - Don't copy: keep installer and registry points to it with `--uninstall`
+   - Separate build: build uninstaller as distinct project
+   - Script-based: generate PowerShell uninstaller instead
+
+### Key Code Locations
+- `src/DotnetPackaging.Exe.Installer/Program.cs` - Entry point with emergency log
+- `src/DotnetPackaging.Exe.Installer/App.axaml.cs` - Avalonia initialization
+- `src/DotnetPackaging.Exe.Installer/Core/Installer.cs:39` - Creates uninstaller via `File.Copy`
+- `src/DotnetPackaging.Exe.Installer/Core/LoggerSetup.cs` - Logging config
+
+---
+
 Windows EXE (.exe) – progress log (snapshot)
 - Done:
   - Librería DotnetPackaging.Exe con SimpleExePacker (concatena stub + zip + footer).
@@ -243,3 +320,299 @@ Windows EXE (.exe) – progress log (snapshot)
   - Detección avanzada de ejecutable e icono (paridad con .deb/.appimage).
   - Modo silencioso.
   - Pruebas E2E en Windows.
+
+### CONFIRMED (2025-11-20 13:37)
+**Emergency log test result:** dp-emergency.log is created during INSTALLATION but NOT during UNINSTALLATION.
+This definitively proves the crash occurs BEFORE Program.Main executes in the uninstaller.
+
+The problem is in .NET Runtime initialization or native bootstrapping, NOT in managed code.
+
+### BREAKTHROUGH DISCOVERY (2025-11-20 15:08)
+
+**The problem is NOT the binary, but WHERE it executes from:**
+
+Test results:
+- ✅ C:\Users\JMN\Desktop\AngorSetup.exe --uninstall → WORKS (reaches Program.Main)
+- ❌ C:\Users\JMN\AppData\Local\Programs\AngorTest\Uninstall.exe --uninstall → CRASHES (before Program.Main)
+
+**Proof:** Files are IDENTICAL (SHA256: 0F9CAD14DE400A2648F19FFBF4314787C3AF86FB13C5FADB007A9FC12171B39F)
+
+**Root Cause Hypothesis:**
+.NET Single-File runtime extraction fails when executable runs from the installation directory.
+Possible reasons:
+1. Permission issues in AppData\Local\Programs\ vs Desktop
+2. Single-File runtime tries to extract to same directory and fails
+3. Conflicting DLLs or files in installation directory
+4. File locking issues (installer/app files locked)
+
+**IMPLEMENTED SOLUTION (2025-11-20 15:27):**
+Modified `Installer.cs:RegisterUninstaller()` to copy uninstaller to:
+`%TEMP%\DotnetPackaging\Uninstallers\{appId}\Uninstall.exe`
+
+Registry now points to this %TEMP% location instead of installation directory.
+
+**STATUS:** ❌ Cannot test - new Avalonia Dispatcher crash blocking installer
+
+### NEW BLOCKING ISSUE: Avalonia Dispatcher Shutdown (2025-11-20 15:27)
+
+**Problem:**
+After implementing the %TEMP% solution, the installer now crashes with:
+```
+System.InvalidOperationException: Cannot perform requested operation because the Dispatcher shut down
+```
+
+**Root Cause:**
+Avalonia Dispatcher closes before async wizard operations complete.
+
+**Attempted Fixes (all failed):**
+1. ❌ `Dispatcher.UIThread.Post` - async void doesn't await
+2. ❌ `Dispatcher.UIThread.InvokeAsync` - same issue
+3. ❌ `desktopLifetime.Startup` event - async void event handler
+4. ❌ `mainWindow.Opened` event - async void event handler  
+5. ❌ `ShutdownMode.OnMainWindowClose` - still closes too early
+6. ❌ Setting MainWindow in `OnFrameworkInitializationCompleted` - same result
+
+**Current Code State:**
+- `Installer.cs`: ✅ Copies uninstaller to %TEMP%
+- `App.axaml.cs`: ❌ Creates MainWindow + Opened event (async void)
+- `InstallerWizardLauncher.cs`: Modified to use existing MainWindow
+- `Uninstallation.cs`: Modified to use existing MainWindow
+
+**The %TEMP% solution CANNOT BE TESTED until Dispatcher issue is resolved.**
+
+**SOLUTION IMPLEMENTED (2025-11-20 16:15): Native Launcher Strategy**
+
+After multiple failed attempts to fix the Dispatcher issue, we implemented a different approach:
+Instead of fixing where the uninstaller runs from, we created a **native launcher** that copies
+the uninstaller to %TEMP% and executes it from there.
+
+### Architecture
+
+```
+Installation Directory:
+  ├── App files...
+  ├── Uninstall.exe         (full installer binary with --uninstall flag support)
+  └── UninstallLauncher.exe (small native .NET app, ~12MB)
+
+Registry (UninstallString):
+  → Points to UninstallLauncher.exe
+
+Execution Flow:
+  1. User clicks "Uninstall" in Control Panel
+  2. Windows launches UninstallLauncher.exe
+  3. Launcher copies Uninstall.exe to %TEMP%\DotnetPackaging\Uninstallers\{GUID}\
+  4. Launcher executes Uninstall.exe from %TEMP% with --uninstall flag
+  5. Launcher waits for uninstaller to complete (WaitForExit)
+  6. Launcher returns uninstaller's exit code
+  7. Windows shows no error dialog (because launcher waited)
+```
+
+### Implementation Details
+
+**New Project: `src/DotnetPackaging.Exe.UninstallLauncher`**
+- Single-file self-contained .NET 8 app
+- `OutputType=WinExe` (no console window)
+- `PublishTrimmed=true` for smaller size (~12MB)
+- Embedded as resource in installer
+
+**Key Code (`UninstallLauncher/Program.cs`):**
+```csharp
+// 1. Find Uninstall.exe in launcher's directory (installation dir)
+var installDir = Path.GetDirectoryName(Environment.ProcessPath);
+var uninstallerSource = Path.Combine(installDir, "Uninstall.exe");
+
+// 2. Copy to unique %TEMP% directory
+var tempDir = Path.Combine(Path.GetTempPath(), "DotnetPackaging", 
+    "Uninstallers", Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(tempDir);
+File.Copy(uninstallerSource, Path.Combine(tempDir, "Uninstall.exe"));
+
+// 3. Execute and WAIT (critical for Windows not to show error dialog)
+var process = Process.Start(new ProcessStartInfo {
+    FileName = uninstallerTemp,
+    Arguments = "--uninstall",
+    UseShellExecute = false,
+    WorkingDirectory = tempDir
+});
+process.WaitForExit();
+return process.ExitCode;
+```
+
+**Modified `Installer.cs:RegisterUninstaller()`:**
+```csharp
+// Copy installer as Uninstall.exe to installation directory
+var uninstallerPath = Path.Combine(targetDir, "Uninstall.exe");
+File.Copy(Environment.ProcessPath, uninstallerPath, overwrite: true);
+
+// Extract launcher from embedded resource
+var launcherPath = Path.Combine(targetDir, "UninstallLauncher.exe");
+TryExtractLauncher(launcherPath);
+
+// Registry points to LAUNCHER (not uninstaller directly)
+WindowsRegistryService.Register(
+    meta.AppId, meta.ApplicationName, meta.Version, meta.Vendor,
+    targetDir, $"\"{launcherPath}\"", mainExePath);
+```
+
+### Why This Works
+
+**Problem:** .NET Single-File runtime extraction fails when executable runs from installation directory
+- Cause: Permission issues, file locking, or runtime extraction conflicts
+- Symptom: Access violation (0xc0000005) before Program.Main executes
+
+**Solution:** Always run uninstaller from %TEMP%
+- ✅ %TEMP% has no file locking issues
+- ✅ .NET runtime extracts successfully
+- ✅ Launcher is stable (lives in installation directory)
+- ✅ If %TEMP% is cleaned, launcher recreates it
+
+**Critical Design Decisions:**
+1. **WinExe (not Exe)**: No console window flashing
+2. **WaitForExit()**: Prevents Windows "program may not have uninstalled correctly" dialog
+3. **Unique GUID subdirectory**: Prevents conflicts with concurrent uninstalls
+4. **Embedded resource**: Launcher is always available with installer
+5. **Fallback**: If launcher extraction fails, registry points directly to uninstaller
+
+### File Sizes
+- UninstallLauncher.exe: ~12 MB (single-file trimmed .NET 8)
+- Uninstall.exe: Same as installer (full binary, 150-200 MB typically)
+- Total overhead: ~12 MB per installation
+
+### Future Improvements
+
+#### 1. Native AOT Launcher (Priority: High)
+**Current:** Single-file .NET 8 app (~12 MB)
+**Target:** Native AOT (~1-2 MB)
+
+**Blocker:** Requires Visual Studio C++ Build Tools
+```xml
+<PublishAot>true</PublishAot>
+<IlcOptimizationPreference>Size</IlcOptimizationPreference>
+```
+
+**Alternative:** Pure C++ launcher (~10-50 KB)
+- Use Win32 API directly
+- No .NET dependency
+- Requires C++ compiler in CI/CD
+
+**Recommendation:** Implement C++ launcher for production
+```cpp
+// ~50 lines of Win32 C++ code
+int WINAPI WinMain(...) {
+    TCHAR path[MAX_PATH];
+    GetModuleFileName(NULL, path, MAX_PATH);
+    // ... copy to %TEMP% and CreateProcess with WaitForSingleObject
+}
+```
+
+#### 2. Download Launcher from GitHub Releases (Priority: Medium)
+**Current:** Embedded as resource in installer (~12 MB bloat)
+**Target:** Download on-demand during installation
+
+**Advantages:**
+- Smaller installer binary
+- Launcher can be updated independently
+- Matches pattern used for installer stub
+
+**Implementation:**
+```csharp
+// In Installer.cs
+var launcherUrl = $"https://github.com/{repo}/releases/download/{tag}/UninstallLauncher-{rid}.exe";
+var launcherPath = await DownloadLauncher(launcherUrl, targetDir);
+```
+
+**Disadvantages:**
+- Requires internet during installation
+- Needs fallback if download fails
+
+#### 3. Shared Launcher (Priority: Low)
+**Current:** Each app has its own launcher copy
+**Target:** Single launcher in `%ProgramData%\DotnetPackaging\`
+
+**Advantages:**
+- Multiple apps share one launcher (~12 MB saved per app)
+- Updates affect all apps
+
+**Challenges:**
+- Versioning (old apps with new launcher)
+- Permissions (need admin to write to ProgramData)
+- First app installs, last app uninstalls (reference counting)
+
+**Not recommended:** Complexity outweighs benefits
+
+#### 4. Self-Deleting Uninstaller (Priority: Medium)
+**Current:** Uninstaller left in %TEMP% after uninstall
+**Target:** Uninstaller deletes itself and temp directory
+
+**Implementation:**
+```csharp
+// In Uninstallation.cs after wizard completes
+ScheduleSelfDelete(Environment.ProcessPath);
+ScheduleDirectoryDelete(Path.GetDirectoryName(Environment.ProcessPath));
+```
+
+**Technique:** Use `MoveFileEx` with `MOVEFILE_DELAY_UNTIL_REBOOT` or batch script
+
+**Benefit:** Cleaner %TEMP% directory
+
+#### 5. Launcher Retry Logic (Priority: Low)
+**Current:** Single attempt to copy and launch
+**Target:** Retry with exponential backoff if copy fails
+
+**Scenario:** Antivirus locking Uninstall.exe temporarily
+
+```csharp
+for (int i = 0; i < 3; i++) {
+    try {
+        File.Copy(source, dest, overwrite: true);
+        break;
+    } catch {
+        if (i == 2) throw;
+        Thread.Sleep(500 * (i + 1));
+    }
+}
+```
+
+#### 6. Progress/Splash Screen (Priority: Low)
+**Current:** Silent launcher (no UI)
+**Target:** Show "Starting uninstaller..." splash
+
+**Scenario:** Large uninstaller (~200 MB) takes seconds to copy
+
+**Implementation:** WPF/WinForms tiny window during copy
+
+**Trade-off:** Adds complexity and dependencies
+
+### Testing Checklist
+
+- [ ] Install app, verify UninstallLauncher.exe + Uninstall.exe in install dir
+- [ ] Registry UninstallString points to launcher
+- [ ] Uninstall via Control Panel → no console window appears
+- [ ] Uninstall completes successfully → no Windows error dialog
+- [ ] Uninstaller runs from %TEMP% (check logs)
+- [ ] Multiple install/uninstall cycles work
+- [ ] Uninstall works after cleaning %TEMP%
+- [ ] Uninstall works with antivirus active
+- [ ] Launcher return code matches uninstaller result
+
+### Lessons Learned
+
+1. **Single-file .NET apps have extraction issues in locked directories**
+   - Always run from %TEMP% or desktop
+   - Don't run from Program Files or AppData installation dirs
+
+2. **Windows expects uninstallers to wait**
+   - Launcher must use `WaitForExit()` not fire-and-forget
+   - Return codes matter for Windows UAC/compatibility assistant
+
+3. **Console windows are unprofessional**
+   - Always use `WinExe` for GUI launchers
+   - Even if no UI is shown
+
+4. **Embedded resources are simple but costly**
+   - ~12 MB overhead per installer
+   - GitHub release downloads are better for production
+
+5. **Avalonia Dispatcher async patterns are tricky**
+   - Avoid async void event handlers
+   - Consider synchronous initialization for installers

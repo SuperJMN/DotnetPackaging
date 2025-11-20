@@ -343,9 +343,11 @@ public sealed class ExePackagingService
         var projectPath = FindLocalStubProject();
         if (projectPath.HasNoValue)
         {
+            try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "dp-pack-service.txt"), "Local stub project NOT found.\n"); } catch { }
             return Result.Success(Maybe<string>.None);
         }
 
+        try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "dp-pack-service.txt"), $"Local stub project found at {projectPath.Value}. Publishing for {rid}...\n"); } catch { }
         logger.Information("Building installer stub locally from {ProjectPath} for {RID}.", projectPath.Value, rid);
         var publishRequest = new ProjectPublishRequest(projectPath.Value)
         {
@@ -359,22 +361,45 @@ public sealed class ExePackagingService
                 ["IncludeNativeLibrariesForSelfExtract"] = "true",
                 ["IncludeAllContentForSelfExtract"] = "true",
                 ["PublishTrimmed"] = "false",
-                ["DebugType"] = "embedded"
+                ["DebugType"] = "embedded",
+                ["EnableCompressionInSingleFile"] = "false"
             }
         };
 
+        // We need a separate publish for the uninstaller stub which must NOT be SingleFile to avoid 
+        // the "AppHost with embedded payload corrupted" issue when used as a raw binary.
+        // BUT, we actually want the SingleFile stub to be the installer itself.
+        // The problem is we are using the SAME file for both the "Installer Stub" (wrapper) and the "Uninstaller Stub" (embedded).
+        
+        // If we use the SingleFile output as the embedded uninstaller, it seems to crash when extracted.
+        // This might be because SingleFile apps rely on the bundle signature at the end of the file.
+        // When we embed it in a zip, and then extract it, it should be identical.
+        
+        // However, maybe we should publish it WITHOUT SingleFile for the purpose of embedding?
+        // But we want a single Uninstall.exe.
+        
+        // The issue is likely that the SingleFile host has issues when it was previously part of a larger bundle? No.
+        
+        // Let's try publishing it as a non-SingleFile app? No, then it's a folder.
+        
+        // What if we publish it as SingleFile but disable compression?
+        // MsBuildProperties["EnableCompressionInSingleFile"] = "false";
+        
         var publishResult = await publisher.Publish(publishRequest);
         if (publishResult.IsFailure)
         {
+            try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "dp-pack-service.txt"), $"Publish failed: {publishResult.Error}\n"); } catch { }
             return Result.Failure<Maybe<string>>($"Failed to publish installer stub from {projectPath.Value}: {publishResult.Error}");
         }
 
         var stubPath = ResolveStubOutputPath(projectPath.Value, publishResult.Value.OutputDirectory);
         if (stubPath.HasNoValue)
         {
+            try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "dp-pack-service.txt"), $"Stub output not found in {publishResult.Value.OutputDirectory}\n"); } catch { }
             return Result.Failure<Maybe<string>>($"Installer stub was published but no executable was located under {publishResult.Value.OutputDirectory}.");
         }
 
+        try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "dp-pack-service.txt"), $"Stub published to {stubPath.Value}\n"); } catch { }
         logger.Information("Using locally built installer stub at {StubPath}", stubPath.Value);
         return Result.Success(Maybe<string>.From(stubPath.Value));
     }

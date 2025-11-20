@@ -14,7 +14,8 @@ internal static class Uninstaller
                 ShortcutService.TryDeleteStartMenuShortcut(metadata.ApplicationName, installation.ExecutablePath);
                 return new UninstallationResult(metadata, installation.InstallDirectory);
             }, ex => $"Failed to uninstall application: {ex.Message}")
-            .Bind(result => InstallationRegistry.Remove(metadata.AppId).Map(() => result));
+            .Bind(result => InstallationRegistry.Remove(metadata.AppId).Map(() => result))
+            .Tap(() => WindowsRegistryService.Remove(metadata.AppId));
     }
 
     private static void RemoveInstallationDirectory(string path)

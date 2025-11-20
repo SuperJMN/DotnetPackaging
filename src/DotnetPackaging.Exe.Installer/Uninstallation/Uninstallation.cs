@@ -20,43 +20,88 @@ internal static class Uninstallation
             return;
         }
 
+        if (desktopLifetime.MainWindow is null)
+        {
+            Serilog.Log.Error("MainWindow not set");
+            return;
+        }
+
         try
         {
-            var root = CreateRootWindow();
-            desktopLifetime.MainWindow = root;
-            root.Show();
+            Serilog.Log.Information("Uninstallation launched");
 
             var dialog = new DesktopDialog();
-            var payload = new DefaultInstallerPayload();
+            var payload = ResolvePayload();
             var wizard = new UninstallWizard(payload).CreateWizard();
 
+            Serilog.Log.Information("Wizard created, resolving title");
             var title = await ResolveWindowTitle(payload);
+            Serilog.Log.Information("Title resolved: {Title}", title);
+            
             await wizard.ShowInDialog(dialog, title);
+            Serilog.Log.Information("Wizard dialog finished");
 
-            desktopLifetime.Shutdown();
+            await TryTriggerSelfDestruct(payload);
+            Serilog.Log.Information("Self-destruct triggered");
         }
         catch (Exception ex)
         {
+            Serilog.Log.Fatal(ex, "Uninstallation failed");
             TryWriteCrashLog(ex);
             throw;
         }
     }
 
-    private static Window CreateRootWindow()
-        => new()
+    private static IInstallerPayload ResolvePayload()
+    {
+        var payloadResult = MetadataFilePayload.FromProcessDirectory();
+        if (payloadResult.IsSuccess)
         {
-            Width = 1,
-            Height = 1,
-            Opacity = 0,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            CanResize = false,
-            SystemDecorations = SystemDecorations.None,
-            ShowInTaskbar = false
-        };
+            Serilog.Log.Information("Using metadata.json from installation directory");
+            return payloadResult.Value;
+        }
 
-    private static async Task<string> ResolveWindowTitle(DefaultInstallerPayload payload)
+        Serilog.Log.Warning("metadata.json not found: {Error}. Using fallback payload", payloadResult.Error);
+        // For uninstaller, we create a minimal payload that only provides metadata reading from disk
+        // If that fails, DefaultInstallerPayload will try to load embedded resources which won't exist
+        // but that's OK - the wizard will handle missing metadata gracefully
+        return new DefaultInstallerPayload();
+    }
+
+    private static async Task TryTriggerSelfDestruct(IInstallerPayload payload)
+    {
+        var meta = await payload.GetMetadata();
+        if (meta.IsFailure)
+        {
+            return;
+        }
+
+        var appId = meta.Value.AppId;
+        var installation = InstallationRegistry.Get(appId);
+        
+        // If installation is missing, it means it was successfully removed (or never existed)
+        // Check if we are running from the typical install location to decide if we should self-destruct
+        if (installation.IsFailure && Environment.ProcessPath is { } path)
+        {
+            var directory = Path.GetDirectoryName(path);
+            if (directory != null)
+            {
+                // We schedule self-destruct for the directory where the uninstaller resides
+                // This assumes the uninstaller is in the application directory
+                SelfDestruct.Schedule(path, directory);
+            }
+        }
+    }
+
+
+    private static async Task<string> ResolveWindowTitle(IInstallerPayload payload)
     {
         var metaResult = await payload.GetMetadata();
+        if (metaResult.IsFailure)
+        {
+            Serilog.Log.Warning("Metadata load failed: {Error}", metaResult.Error);
+        }
+        
         var title = metaResult.IsSuccess && !string.IsNullOrWhiteSpace(metaResult.Value.ApplicationName)
             ? $"{metaResult.Value.ApplicationName} Uninstaller"
             : "Uninstaller";

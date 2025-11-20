@@ -3,6 +3,7 @@ using System.Reactive.Subjects;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Exe.Installer.Core;
 using ReactiveUI;
+using Serilog;
 using Zafiro.ProgressReporting;
 using Zafiro.UI.Commands;
 
@@ -26,15 +27,31 @@ public class InstallViewModel
     {
         return Task.Run(async () =>
         {
+            Log.Information("Starting installation to {InstallDirectory}", installDirectory);
+            
             var copyRes = await payload.CopyContents(installDirectory, progress).ConfigureAwait(false);
             if (copyRes.IsFailure)
             {
+                Log.Error("Failed to copy contents: {Error}", copyRes.Error);
                 return Result.Failure<InstallationResult>(copyRes.Error);
             }
 
-            return Core.Installer.Install(installDirectory, installerMetadata)
+            Log.Information("Contents copied successfully, registering installation");
+
+            var installResult = Core.Installer.Install(installDirectory, installerMetadata)
                 .Map(exePath => new InstallationResult(installerMetadata, installDirectory, exePath))
                 .Bind(result => InstallationRegistry.Register(result).Map(() => result));
+
+            if (installResult.IsFailure)
+            {
+                Log.Error("Installation failed: {Error}", installResult.Error);
+            }
+            else
+            {
+                Log.Information("Installation completed successfully");
+            }
+
+            return installResult;
         });
     }
 

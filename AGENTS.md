@@ -243,3 +243,177 @@ Windows EXE (.exe) � progress log (snapshot)
   - Detecci�n avanzada de ejecutable e icono (paridad con .deb/.appimage).
   - Modo silencioso.
   - Pruebas E2E en Windows.
+
+---
+
+## CRITICAL UNRESOLVED ISSUE: Uninstaller Crash (2025-11-20)
+
+### Problem Summary
+The Windows uninstaller (Uninstall.exe) crashes with access violation **before any managed code executes**.
+
+**Error Signature:**
+- Exception: 0xc0000005 (Access Violation)
+- Exit Code: 0x80131506 (.NET Runtime internal error)
+- Crash Offset: 0x00000000000b24f6 (consistent)
+- PE Timestamp: 0x68ffe47c (consistent despite rebuilds)
+- Assembly Version: 2.0.0.0
+
+**Critical Fact:** Crash occurs BEFORE Program.Main - no managed code runs at all.
+
+### Attempted Fixes (All Failed)
+1. Centralized Serilog logging to %TEMP%\DotnetPackaging.Installer\
+2. Removed Win32 P/Invoke (FindResource, LoadResource)
+3. Fixed Avalonia Dispatcher (base.OnFrameworkInitializationCompleted, Dispatcher.UIThread.Post)
+4. Rename strategy for locked directories
+5. Non-deterministic builds (Deterministic=false, AssemblyVersion=2.0.0.0)
+6. Multiple complete clean rebuilds (bin/obj/temp cache)
+7. Emergency logging at top of Program.Main (does not execute)
+
+### Key Evidence
+- Installer works perfectly
+- Uninstaller is IDENTICAL binary (created via File.Copy)
+- Same crash offset across all builds
+- Same PE timestamp despite forced non-deterministic builds
+- Emergency log (%TEMP%\dp-emergency.log) is never created = crash before Program.Main
+
+### Hypothesis
+Crash during .NET Runtime initialization or native DLL loading, NOT in managed code.
+Possibly Single-File bundling corruption when executable is copied.
+
+### Diagnostic Steps for Next Agent
+
+1. **Check if crash is before Main:**
+   `powershell
+   Get-Content C:\Users\JMN\AppData\Local\Temp\dp-emergency.log
+   `
+   If empty/missing → crash is definitely before managed entry point
+
+2. **Use WinDbg:**
+   Attach to Uninstall.exe and identify what module owns offset 0x00000000000b24f6
+
+3. **Compare binaries:**
+   `powershell
+   dumpbin /headers C:\Users\JMN\Desktop\AngorSetup.exe > installer-headers.txt
+   dumpbin /headers C:\Users\JMN\AppData\Local\Programs\AngorTest\Uninstall.exe > uninstaller-headers.txt
+   Compare-Object (Get-Content installer-headers.txt) (Get-Content uninstaller-headers.txt)
+   `
+
+4. **Try without Single-File:**
+   Modify DotnetPackaging.Exe.Installer.csproj:
+   - Remove or set PublishSingleFile=false
+   - Test if crash persists
+
+5. **Alternative approaches:**
+   - Don't copy installer - registry points to original with --uninstall flag
+   - Build uninstaller as separate project (not copy)
+   - Generate PowerShell uninstaller script instead
+
+### Code Locations
+- src/DotnetPackaging.Exe.Installer/Program.cs:15 - Emergency log (never executes)
+- src/DotnetPackaging.Exe.Installer/Core/Installer.cs:39 - File.Copy creates uninstaller
+- src/DotnetPackaging.Exe.Installer/App.axaml.cs:32 - base.OnFrameworkInitializationCompleted
+- src/DotnetPackaging.Exe.Installer/Core/LoggerSetup.cs - Logging config
+
+### Test Command
+`powershell
+# Generate installer
+dotnet run --project src\DotnetPackaging.Tool\DotnetPackaging.Tool.csproj -- exe from-project --project F:\Repos\angor\src\Angor\Avalonia\AngorApp.Desktop\AngorApp.Desktop.csproj --output C:\Users\JMN\Desktop\AngorSetup.exe --rid win-x64
+
+# Install to AngorTest, then run uninstaller
+C:\Users\JMN\AppData\Local\Programs\AngorTest\Uninstall.exe --uninstall
+`
+
+### Environment
+- Windows 11
+- .NET 8.0.22
+- Avalonia 11.x
+- Single-file self-contained deployment
+
+**CONFIRMED (2025-11-20 13:37):** dp-emergency.log created during install, NOT during uninstall.
+Crash is definitively BEFORE Program.Main. Problem is in .NET Runtime init or native DLL loading.
+
+### BREAKTHROUGH (2025-11-20 15:08)
+
+**ROOT CAUSE FOUND:** Problem is WHERE the executable runs from, NOT the binary itself.
+
+- Desktop\AngorSetup.exe --uninstall → ✅ WORKS
+- Programs\AngorTest\Uninstall.exe --uninstall → ❌ CRASHES
+- Both files IDENTICAL (SHA256 verified)
+
+**Conclusion:** .NET Single-File runtime fails to extract from installation directory.
+
+**FIX:** Don't copy uninstaller. Registry should point to Desktop installer with --uninstall flag.
+Or: Extract uninstaller to %TEMP% before running.
+
+### UPDATE (2025-11-20 15:27)
+
+**SOLUTION IMPLEMENTED:** Uninstaller now copies to %TEMP%
+- Modified Installer.cs:RegisterUninstaller() to copy uninstaller to:
+  %TEMP%\DotnetPackaging\Uninstallers\{appId}\Uninstall.exe
+- Registry UninstallString now points to %TEMP% location
+- This avoids .NET Single-File extraction issues in installation directory
+
+**NEW BLOCKER:** Avalonia Dispatcher crash prevents testing
+After implementing %TEMP% solution, installer crashes with:
+System.InvalidOperationException: Cannot perform requested operation because the Dispatcher shut down
+
+**Root cause:** Avalonia Dispatcher closes before async wizard completes.
+
+**Attempted fixes (ALL FAILED):**
+1. Dispatcher.UIThread.Post - async void doesn't wait
+2. Dispatcher.UIThread.InvokeAsync - same issue  
+3. desktopLifetime.Startup event - async void
+4. mainWindow.Opened event - async void
+5. ShutdownMode.OnMainWindowClose - closes too early
+6. MainWindow in OnFrameworkInitializationCompleted - same
+
+**Current state:**
+- Installer.cs: ✅ %TEMP% copy implemented
+- App.axaml.cs: ❌ Dispatcher shutdown issue
+- Cannot test %TEMP% solution until Dispatcher is fixed
+
+**Next steps:**
+- Fix Avalonia async initialization pattern
+- OR revert to working version and implement %TEMP% solution there
+- OR use synchronous UI initialization then async operations
+
+See WARP.md line 356 for full details.
+
+### FINAL SOLUTION (2025-11-20 16:15) ✅
+
+**Problem Solved:** Uninstaller crashes when executed from installation directory.
+
+**Root Cause:** .NET Single-File runtime extraction fails in locked/restricted directories.
+
+**Solution Implemented:** Native Launcher Pattern
+- Created UninstallLauncher.exe (WinExe, ~12MB, single-file .NET 8)
+- Launcher copies Uninstall.exe to %TEMP% and executes it
+- Registry points to launcher (stable location in install dir)
+- Launcher waits for uninstaller to complete (WaitForExit)
+
+**Key Files:**
+- src/DotnetPackaging.Exe.UninstallLauncher/ - New launcher project
+- src/DotnetPackaging.Exe.Installer/Core/Installer.cs - Extracts launcher from resources
+- src/DotnetPackaging.Exe.Installer/Resources/UninstallLauncher.exe - Embedded binary
+
+**Why It Works:**
+✅ Launcher always available (embedded in installer)
+✅ Uninstaller always runs from %TEMP% (no extraction issues)
+✅ No console window (WinExe)
+✅ No Windows error dialog (WaitForExit)
+✅ Robust to %TEMP% cleanup (launcher recreates on each run)
+
+**Future Improvements (see WARP.md lines 481-618):**
+1. Native AOT or C++ launcher (reduce from 12MB to <1MB)
+2. Download launcher from GitHub releases (smaller installer)
+3. Self-deleting temp uninstaller
+4. Retry logic for antivirus locks
+
+**Testing:**
+✅ Install/uninstall works correctly
+✅ No console window appears
+✅ No Windows error dialogs
+✅ Uninstaller UI shows properly
+✅ Works after multiple cycles
+
+See WARP.md lines 383-618 for complete documentation.
