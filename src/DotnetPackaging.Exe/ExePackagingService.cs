@@ -335,7 +335,7 @@ public sealed class ExePackagingService
             return Result.Success(RuntimeInformation.OSArchitecture == RuntimeArchitecture.Arm64 ? "win-arm64" : "win-x64");
         }
 
-        return Result.Failure<string>("--rid is required when building EXE on non-Windows hosts (e.g., win-x64/win-arm64).");
+        return Result.Failure<string>("--arch is required when building EXE on non-Windows hosts (x64/arm64).");
     }
 
     private async Task<Result<Maybe<string>>> TryResolveLocalStub(string rid)
