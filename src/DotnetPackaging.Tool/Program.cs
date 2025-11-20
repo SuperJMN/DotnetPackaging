@@ -22,6 +22,7 @@ using Zafiro.DivineBytes.System.IO;
 using Zafiro.FileSystem.Core;
 using DotnetPackaging.Exe;
 using System.Threading;
+using RuntimeArchitecture = System.Runtime.InteropServices.Architecture;
 
 namespace DotnetPackaging.Tool;
 
@@ -171,9 +172,9 @@ static class Program
         {
             Description = "Path to the prebuilt stub (WinExe) to concatenate (optional if repo layout is present)"
         };
-        var exRidTop = new Option<string?>("--rid")
+        var exArchTop = new Option<string?>("--arch")
         {
-            Description = "Runtime identifier for the stub (win-x64, win-arm64)"
+            Description = "Target architecture for the stub (x64, arm64)"
         };
 
         // Reuse metadata options
@@ -247,7 +248,7 @@ static class Program
         exeCommand.Add(exAppId);
         exeCommand.Add(exVendor);
         exeCommand.Add(exExecutableName);
-        exeCommand.Add(exRidTop);
+        exeCommand.Add(exArchTop);
 
         exeCommand.SetAction(async parseResult =>
         {
@@ -256,11 +257,18 @@ static class Program
             var stub = parseResult.GetValue(stubPath);
             var opt = optionsBinder.Bind(parseResult);
             var vendorOpt = parseResult.GetValue(exVendor);
-            var ridOpt = parseResult.GetValue(exRidTop);
+            var archOpt = parseResult.GetValue(exArchTop);
+            var ridResult = ResolveWindowsRid(archOpt, "EXE packaging");
+            if (ridResult.IsFailure)
+            {
+                Console.Error.WriteLine(ridResult.Error);
+                Environment.ExitCode = 1;
+                return;
+            }
             await ExecuteWithLogging("exe", outFile.FullName, async logger =>
             {
                 var exeService = new ExePackagingService(logger);
-                var result = await exeService.BuildFromDirectory(inDir, outFile, opt, vendorOpt, ridOpt, stub);
+                var result = await exeService.BuildFromDirectory(inDir, outFile, opt, vendorOpt, ridResult.Value, stub);
                 if (result.IsFailure)
                 {
                     logger.Error("EXE packaging failed: {Error}", result.Error);
@@ -279,9 +287,9 @@ static class Program
             Description = "Path to the .csproj file",
             Required = true
         };
-        var exRid = new Option<string?>("--rid")
+        var exArch = new Option<string?>("--arch")
         {
-            Description = "Runtime identifier (e.g. win-x64, win-arm64)"
+            Description = "Target architecture (x64, arm64)"
         };
         var exSelfContained = new Option<bool>("--self-contained")
         {
@@ -313,7 +321,7 @@ static class Program
 
         var exFromProject = new Command("from-project") { Description = "Publish a .NET project and build a Windows self-extracting installer (.exe). If --stub is not provided, the tool downloads the appropriate stub from GitHub Releases." };
         exFromProject.Add(exProject);
-        exFromProject.Add(exRid);
+        exFromProject.Add(exArch);
         exFromProject.Add(exSelfContained);
         exFromProject.Add(exConfiguration);
         exFromProject.Add(exSingleFile);
@@ -324,7 +332,14 @@ static class Program
         exFromProject.SetAction(async parseResult =>
         {
             var prj = parseResult.GetValue(exProject)!;
-            var ridVal = parseResult.GetValue(exRid);
+            var archVal = parseResult.GetValue(exArch);
+            var ridResult = ResolveWindowsRid(archVal, "EXE packaging");
+            if (ridResult.IsFailure)
+            {
+                Console.Error.WriteLine(ridResult.Error);
+                Environment.ExitCode = 1;
+                return;
+            }
             var sc = parseResult.GetValue(exSelfContained);
             var cfg = parseResult.GetValue(exConfiguration)!;
             var sf = parseResult.GetValue(exSingleFile);
@@ -336,7 +351,7 @@ static class Program
             await ExecuteWithLogging("exe-from-project", extrasOutput.FullName, async logger =>
             {
                 var exeService = new ExePackagingService(logger);
-                var result = await exeService.BuildFromProject(prj, ridVal, sc, cfg, sf, tr, extrasOutput, opt, vendorOpt, extrasStub);
+                var result = await exeService.BuildFromProject(prj, ridResult.Value, sc, cfg, sf, tr, extrasOutput, opt, vendorOpt, extrasStub);
                 if (result.IsFailure)
                 {
                     logger.Error("EXE from project packaging failed: {Error}", result.Error);
@@ -1493,13 +1508,13 @@ static class Program
         fromProject.SetAction(async parseResult =>
         {
             var prj = parseResult.GetValue(project)!;
-            var ridVal = parseResult.GetValue(rid);
             var sc = parseResult.GetValue(selfContained);
             var cfg = parseResult.GetValue(configuration)!;
             var sf = parseResult.GetValue(singleFile);
             var tr = parseResult.GetValue(trimmed);
             var outFile = parseResult.GetValue(output)!;
             var opt = optionsBinder.Bind(parseResult);
+            var ridVal = parseResult.GetValue(rid);
 
             if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -1606,13 +1621,13 @@ static class Program
         fromProject.SetAction(async parseResult =>
         {
             var prj = parseResult.GetValue(project)!;
-            var ridVal = parseResult.GetValue(rid);
             var sc = parseResult.GetValue(selfContained);
             var cfg = parseResult.GetValue(configuration)!;
             var sf = parseResult.GetValue(singleFile);
             var tr = parseResult.GetValue(trimmed);
             var outFile = parseResult.GetValue(output)!;
             var opt = optionsBinder.Bind(parseResult);
+            var ridVal = parseResult.GetValue(rid);
 
             if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -1701,12 +1716,12 @@ static class Program
         fromProject.SetAction(async parseResult =>
         {
             var prj = parseResult.GetValue(project)!;
-            var ridVal = parseResult.GetValue(rid);
             var sc = parseResult.GetValue(selfContained);
             var cfg = parseResult.GetValue(configuration)!;
             var sf = parseResult.GetValue(singleFile);
             var tr = parseResult.GetValue(trimmed);
             var outFile = parseResult.GetValue(outMsix)!;
+            var ridVal = parseResult.GetValue(rid);
 
             if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -1798,13 +1813,13 @@ static class Program
         fromProject.SetAction(async parseResult =>
         {
             var prj = parseResult.GetValue(project)!;
-            var ridVal = parseResult.GetValue(rid);
             var sc = parseResult.GetValue(selfContained);
             var cfg = parseResult.GetValue(configuration)!;
             var sf = parseResult.GetValue(singleFile);
             var tr = parseResult.GetValue(trimmed);
             var outFile = parseResult.GetValue(output)!;
             var opt = optionsBinder.Bind(parseResult);
+            var ridVal = parseResult.GetValue(rid);
 
             if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -1874,10 +1889,78 @@ static class Program
         return DotnetPackaging.Dmg.DmgIsoBuilder.Create(inputDir.FullName, outputFile.FullName, name);
     }
 
+    private static Result<string> ResolveWindowsRid(string? architecture, string context)
+    {
+        return ResolveRidForPlatform(architecture, OSPlatform.Windows, "Windows", "win", context);
+    }
+
+    private static Result<string> ResolveMacRid(string? architecture)
+    {
+        return ResolveRidForPlatform(architecture, OSPlatform.OSX, "macOS", "osx", "DMG packaging");
+    }
+
+    private static Result<string> ResolveRidForPlatform(string? architecture, OSPlatform targetPlatform, string targetName, string ridPrefix, string context)
+    {
+        var architectureResult = DetermineArchitecture(architecture, targetPlatform, targetName, context);
+        if (architectureResult.IsFailure)
+        {
+            return Result.Failure<string>(architectureResult.Error);
+        }
+
+        return MapArchitectureToRid(architectureResult.Value, ridPrefix, context);
+    }
+
+    private static Result<RuntimeArchitecture> DetermineArchitecture(string? requested, OSPlatform targetPlatform, string targetName, string context)
+    {
+        if (!string.IsNullOrWhiteSpace(requested))
+        {
+            var parsed = ParseRuntimeArchitecture(requested);
+            if (parsed is RuntimeArchitecture.X64 or RuntimeArchitecture.Arm64)
+            {
+                return Result.Success(parsed.Value);
+            }
+
+            return Result.Failure<RuntimeArchitecture>($"Unsupported architecture '{requested}'. Use x64 or arm64.");
+        }
+
+        if (RuntimeInformation.IsOSPlatform(targetPlatform))
+        {
+            if (RuntimeInformation.OSArchitecture is RuntimeArchitecture.X64 or RuntimeArchitecture.Arm64)
+            {
+                return Result.Success(RuntimeInformation.OSArchitecture);
+            }
+
+            return Result.Failure<RuntimeArchitecture>($"{context} supports x64 or arm64. Detected architecture '{RuntimeInformation.OSArchitecture}' is not supported.");
+        }
+
+        return Result.Failure<RuntimeArchitecture>($"--arch is required when building {context} on non-{targetName} hosts (x64/arm64).");
+    }
+
+    private static Result<string> MapArchitectureToRid(RuntimeArchitecture architecture, string ridPrefix, string context)
+    {
+        return architecture switch
+        {
+            RuntimeArchitecture.X64 => Result.Success($"{ridPrefix}-x64"),
+            RuntimeArchitecture.Arm64 => Result.Success($"{ridPrefix}-arm64"),
+            _ => Result.Failure<string>($"{context} supports x64 or arm64 architectures only.")
+        };
+    }
+
+    private static RuntimeArchitecture? ParseRuntimeArchitecture(string value)
+    {
+        var v = value.Trim().ToLowerInvariant();
+        return v switch
+        {
+            "x86_64" or "amd64" or "x64" => RuntimeArchitecture.X64,
+            "aarch64" or "arm64" => RuntimeArchitecture.Arm64,
+            _ => null
+        };
+    }
+
     private static void AddDmgFromProjectSubcommand(Command dmgCommand)
     {
         var project = new Option<FileInfo>("--project") { Description = "Path to the .csproj file", Required = true };
-        var rid = new Option<string?>("--rid") { Description = "Runtime identifier (e.g. osx-x64, osx-arm64)", Required = true };
+        var arch = new Option<string?>("--arch") { Description = "Target architecture (x64, arm64)" };
         var selfContained = new Option<bool>("--self-contained") { Description = "Publish self-contained" };
         selfContained.DefaultValueFactory = _ => true;
         var configuration = new Option<string>("--configuration") { Description = "Build configuration" };
@@ -1909,7 +1992,7 @@ static class Program
 
         var fromProject = new Command("from-project") { Description = "Publish a .NET project and build a .dmg from the published output (.app bundle auto-generated if missing). Experimental." };
         fromProject.Add(project);
-        fromProject.Add(rid);
+        fromProject.Add(arch);
         fromProject.Add(selfContained);
         fromProject.Add(configuration);
         fromProject.Add(singleFile);
@@ -1920,18 +2003,24 @@ static class Program
         fromProject.SetAction(async parseResult =>
         {
             var prj = parseResult.GetValue(project)!;
-            var ridVal = parseResult.GetValue(rid);
             var sc = parseResult.GetValue(selfContained);
             var cfg = parseResult.GetValue(configuration)!;
             var sf = parseResult.GetValue(singleFile);
             var tr = parseResult.GetValue(trimmed);
             var outFile = parseResult.GetValue(output)!;
             var opt = optionsBinder.Bind(parseResult);
+            var ridResult = ResolveMacRid(parseResult.GetValue(arch));
+            if (ridResult.IsFailure)
+            {
+                Console.Error.WriteLine(ridResult.Error);
+                Environment.ExitCode = 1;
+                return;
+            }
 
             var publisher = new DotnetPackaging.Publish.DotnetPublisher();
             var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
             {
-                Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
+                Rid = Maybe<string>.From(ridResult.Value),
                 SelfContained = sc,
                 Configuration = cfg,
                 SingleFile = sf,

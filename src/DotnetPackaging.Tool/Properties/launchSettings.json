@@ -10,7 +10,7 @@
     },
     "Exe": {
       "commandName": "Project",
-      "commandLineArgs": "exe from-project --project --rid win-x64 \"F:\\Repos\\Zafiro.Avalonia\\samples\\TestApp\\TestApp.Desktop\\TestApp.Desktop.csproj\" --output C:\\Users\\JMN\\Desktop\\Setup.exe"
+      "commandLineArgs": "exe from-project --project --arch x64 \"F:\\Repos\\Zafiro.Avalonia\\samples\\TestApp\\TestApp.Desktop\\TestApp.Desktop.csproj\" --output C:\\Users\\JMN\\Desktop\\Setup.exe"
     }
   }
 }
