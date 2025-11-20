@@ -20,16 +20,7 @@ internal static class Installer
             return;
         }
 
-        try
-        {
-            var metadataPath = Path.Combine(targetDir, "metadata.json");
-            var json = JsonSerializer.Serialize(meta);
-            File.WriteAllText(metadataPath, json);
-        }
-        catch
-        {
-            // Best effort
-        }
+        PersistMetadata(targetDir, meta);
 
         // Strategy:
         // 1. Copy full installer as Uninstall.exe to "Uninstall" subdirectory to avoid DLL locks/conflicts with main app
@@ -39,14 +30,20 @@ internal static class Installer
         {
             var uninstallDir = Path.Combine(targetDir, "Uninstall");
             Directory.CreateDirectory(uninstallDir);
+            PersistMetadata(uninstallDir, meta);
 
             var uninstallerPath = Path.Combine(uninstallDir, "Uninstall.exe");
-            File.Copy(Environment.ProcessPath, uninstallerPath, overwrite: true);
+            var slimUninstallerResult = UninstallerBuilder.CreateSlimCopy(Environment.ProcessPath, uninstallerPath);
+            if (slimUninstallerResult.IsFailure)
+            {
+                Log.Warning("Slim uninstaller creation failed: {Error}. Using full installer copy instead.", slimUninstallerResult.Error);
+                File.Copy(Environment.ProcessPath, uninstallerPath, overwrite: true);
+            }
             Log.Information("Uninstaller copied to: {Path}", uninstallerPath);
-            
+
             WindowsRegistryService.Register(
-                meta.AppId, 
-                meta.ApplicationName, 
+                meta.AppId,
+                meta.ApplicationName,
                 meta.Version, 
                 meta.Vendor, 
                 targetDir, 
@@ -56,6 +53,20 @@ internal static class Installer
         catch (Exception ex)
         {
              Log.Error(ex, "RegisterUninstaller failed");
+        }
+    }
+
+    private static void PersistMetadata(string directory, InstallerMetadata meta)
+    {
+        try
+        {
+            var metadataPath = Path.Combine(directory, "metadata.json");
+            var json = JsonSerializer.Serialize(meta);
+            File.WriteAllText(metadataPath, json);
+        }
+        catch
+        {
+            // Best effort
         }
     }
 
