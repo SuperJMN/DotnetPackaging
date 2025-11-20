@@ -9,11 +9,22 @@ internal static class Uninstaller
     {
         return Result.Try(() =>
             {
+                RemoveInstallationDirectory(installation.InstallDirectory);
                 ShortcutService.TryDeleteDesktopShortcut(metadata.ApplicationName, installation.ExecutablePath);
                 ShortcutService.TryDeleteStartMenuShortcut(metadata.ApplicationName, installation.ExecutablePath);
                 return new UninstallationResult(metadata, installation.InstallDirectory);
             }, ex => $"Failed to uninstall application: {ex.Message}")
             .Bind(result => InstallationRegistry.Remove(metadata.AppId).Map(() => result))
             .Tap(() => WindowsRegistryService.Remove(metadata.AppId));
+    }
+
+    private static void RemoveInstallationDirectory(string path)
+    {
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
+        Directory.Delete(path, true);
     }
 }
