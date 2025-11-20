@@ -7,13 +7,12 @@ using DotnetPackaging.Exe;
 using DotnetPackaging.Exe.Installer.Core;
 using FluentAssertions;
 using Xunit;
-using Xunit.Sdk;
 
 namespace DotnetPackaging.Exe.Tests;
 
 public class SimpleExePackerTests
 {
-    [Fact]
+    [SkippableFact]
     public async Task Should_Create_Valid_Uninstaller_By_Stripping_Payload()
     {
         Skip.IfNot(OperatingSystem.IsWindows(), "Installer stub is Windows-only.");
@@ -77,7 +76,7 @@ public class SimpleExePackerTests
         try { Directory.Delete(tempDir.FullName, true); } catch { }
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task Should_Extract_Payload_Correctly_From_Installer()
     {
         Skip.IfNot(OperatingSystem.IsWindows(), "Installer stub is Windows-only.");
@@ -140,7 +139,7 @@ public class SimpleExePackerTests
         try { Directory.Delete(tempDir.FullName, true); } catch { }
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task Installer_build_should_produce_bootable_executable()
     {
         Skip.IfNot(OperatingSystem.IsWindows(), "Installer stub is Windows-only.");
@@ -181,7 +180,7 @@ public class SimpleExePackerTests
         try { Directory.Delete(tempDir.FullName, true); } catch { }
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task Uninstaller_should_be_stripped_and_bootable()
     {
         Skip.IfNot(OperatingSystem.IsWindows(), "Installer stub is Windows-only.");
@@ -235,7 +234,7 @@ public class SimpleExePackerTests
         try { Directory.Delete(tempDir.FullName, true); } catch { }
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task Dispatcher_failures_should_be_logged()
     {
         Skip.IfNot(OperatingSystem.IsWindows(), "Installer stub is Windows-only.");

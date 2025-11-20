@@ -58,5 +58,6 @@
     <PackageVersion Include="Zafiro.FileSystem.Local" Version="41.2.1" />
     <PackageVersion Include="Zafiro.DivineBytes" Version="41.2.4" />
     <PackageVersion Include="DiscUtils" Version="0.16.13" />
+    <PackageVersion Include="Xunit.SkippableFact" Version="1.5.23" />
   </ItemGroup>
 </Project>
