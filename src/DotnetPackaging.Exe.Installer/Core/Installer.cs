@@ -20,16 +20,7 @@ internal static class Installer
             return;
         }
 
-        try
-        {
-            var metadataPath = Path.Combine(targetDir, "metadata.json");
-            var json = JsonSerializer.Serialize(meta);
-            File.WriteAllText(metadataPath, json);
-        }
-        catch
-        {
-            // Best effort
-        }
+        PersistMetadata(targetDir, meta);
 
         // Use launcher strategy to avoid .NET single-file extraction issues:
         // 1. Copy full installer as Uninstall.exe to installation directory
@@ -39,10 +30,18 @@ internal static class Installer
         
         try
         {
-            // Copy full installer as uninstaller to installation directory
+            // Copy installer as uninstaller but remove embedded payload to keep it lean
             var uninstallerPath = Path.Combine(targetDir, "Uninstall.exe");
-            File.Copy(Environment.ProcessPath, uninstallerPath, overwrite: true);
-            Log.Information("Uninstaller copied to installation directory: {Path}", uninstallerPath);
+            var uninstallerResult = UninstallerBuilder.CreatePayloadlessUninstaller(Environment.ProcessPath, uninstallerPath);
+            if (uninstallerResult.IsFailure)
+            {
+                Log.Warning("{Message}. Falling back to raw copy.", uninstallerResult.Error);
+                File.Copy(Environment.ProcessPath, uninstallerPath, overwrite: true);
+            }
+            else
+            {
+                Log.Information("Payload removed from uninstaller at: {Path}", uninstallerResult.Value);
+            }
             
             // Extract launcher from embedded resource and save to installation directory
             var launcherPath = Path.Combine(targetDir, "UninstallLauncher.exe");
@@ -78,6 +77,21 @@ internal static class Installer
         catch (Exception ex)
         {
              Log.Error(ex, "RegisterUninstaller failed");
+        }
+    }
+
+    private static void PersistMetadata(string targetDir, InstallerMetadata meta)
+    {
+        try
+        {
+            var metadataPath = Path.Combine(targetDir, "metadata.json");
+            var json = JsonSerializer.Serialize(meta);
+            File.WriteAllText(metadataPath, json);
+            Log.Information("Installer metadata persisted for uninstaller at {Path}", metadataPath);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to persist installer metadata for uninstaller");
         }
     }
     

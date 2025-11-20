@@ -356,13 +356,13 @@ public sealed class ExePackagingService
             Configuration = "Release",
             SingleFile = true,
             Trimmed = false,
-            MsBuildProperties = new Dictionary<string, string>
+                MsBuildProperties = new Dictionary<string, string>
             {
                 ["IncludeNativeLibrariesForSelfExtract"] = "true",
                 ["IncludeAllContentForSelfExtract"] = "true",
                 ["PublishTrimmed"] = "false",
                 ["DebugType"] = "embedded",
-                ["EnableCompressionInSingleFile"] = "false"
+                ["EnableCompressionInSingleFile"] = "true"
             }
         };
 
