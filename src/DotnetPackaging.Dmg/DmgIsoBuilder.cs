@@ -1,4 +1,5 @@
 using System.Text;
+using System.Linq;
 using DiscUtils.Iso9660;
 
 namespace DotnetPackaging.Dmg;
@@ -32,9 +33,18 @@ public static class DmgIsoBuilder
             builder.AddDirectory(bundle);
             builder.AddDirectory($"{bundle}/Contents");
             builder.AddDirectory($"{bundle}/Contents/MacOS");
+            builder.AddDirectory($"{bundle}/Contents/Resources");
 
             // Copy application payload under Contents/MacOS
             AddDirectoryRecursive(builder, sourceFolder, ".", prefix: $"{bundle}/Contents/MacOS");
+
+            var appIcon = FindIcnsIcon(sourceFolder);
+            if (appIcon != null)
+            {
+                var iconName = Path.GetFileName(appIcon);
+                var iconBytes = File.ReadAllBytes(appIcon);
+                builder.AddFile($"{bundle}/Contents/Resources/{iconName}", new MemoryStream(iconBytes, writable: false));
+            }
 
             // Hoist DMG adornments (if present) at image root for macOS Finder niceties
             var volIcon = Path.Combine(sourceFolder, ".VolumeIcon.icns");
@@ -51,18 +61,8 @@ public static class DmgIsoBuilder
 
             // Add a minimal Info.plist
             var exeName = GuessExecutableName(sourceFolder, volumeName);
-            var plist = GenerateMinimalPlist(volumeName, exeName);
+            var plist = GenerateMinimalPlist(volumeName, exeName, appIcon == null ? null : Path.GetFileNameWithoutExtension(appIcon));
             builder.AddFile($"{bundle}/Contents/Info.plist", new MemoryStream(Encoding.UTF8.GetBytes(plist), writable: false));
-
-            // Also place top-level files at the image root (convenience), excluding already-hoisted adornments
-            foreach (var file in Directory.EnumerateFiles(sourceFolder))
-            {
-                var name = Path.GetFileName(file);
-                if (name is null) continue;
-                if (name.Equals(".VolumeIcon.icns", StringComparison.OrdinalIgnoreCase)) continue;
-                var bytes = File.ReadAllBytes(file);
-                builder.AddFile(name, new MemoryStream(bytes, writable: false));
-            }
         }
 
         builder.Build(fs);
@@ -112,8 +112,17 @@ public static class DmgIsoBuilder
         return match;
     }
 
-    private static string GenerateMinimalPlist(string displayName, string executable)
+    private static string? FindIcnsIcon(string sourceFolder)
     {
+        var icons = Directory.EnumerateFiles(sourceFolder, "*.icns", SearchOption.TopDirectoryOnly)
+            .Where(path => !Path.GetFileName(path)!.Equals(".VolumeIcon.icns", StringComparison.OrdinalIgnoreCase));
+
+        return icons.FirstOrDefault();
+    }
+
+    private static string GenerateMinimalPlist(string displayName, string executable, string? iconName)
+    {
+        var identifier = $"com.{SanitizeBundleName(displayName).Trim('-').Trim('_').ToLowerInvariant()}";
         return $"""
 <?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <!DOCTYPE plist PUBLIC \"-//Apple Computer//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
@@ -122,7 +131,7 @@ public static class DmgIsoBuilder
     <key>CFBundleName</key>
     <string>{System.Security.SecurityElement.Escape(displayName)}</string>
     <key>CFBundleIdentifier</key>
-    <string>com.example.{System.Security.SecurityElement.Escape(displayName).Replace(" ", "")}</string>
+    <string>{System.Security.SecurityElement.Escape(identifier)}</string>
     <key>CFBundleVersion</key>
     <string>1.0</string>
     <key>CFBundleShortVersionString</key>
@@ -131,6 +140,7 @@ public static class DmgIsoBuilder
     <string>APPL</string>
     <key>CFBundleExecutable</key>
     <string>{System.Security.SecurityElement.Escape(executable)}</string>
+{(iconName == null ? string.Empty : $"    <key>CFBundleIconFile</key>\n    <string>{System.Security.SecurityElement.Escape(iconName)}</string>\n")}
   </dict>
 </plist>
 """;
