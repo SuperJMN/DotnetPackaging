@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -86,11 +87,52 @@ internal static class Uninstallation
             var directory = Path.GetDirectoryName(path);
             if (directory != null)
             {
-                // We schedule self-destruct for the directory where the uninstaller resides
-                // This assumes the uninstaller is in the application directory
+                // We schedule self-destruct.
+                // If we are in "Uninstall" subdirectory, we want to remove the parent (root) as well.
+                if (Path.GetFileName(directory).Equals("Uninstall", StringComparison.OrdinalIgnoreCase))
+                {
+                    var parent = Directory.GetParent(directory);
+                    if (parent != null && IsDefaultInstallRoot(meta.Value, parent.FullName))
+                    {
+                        // Delete the parent (Installation Root) which contains the Uninstall folder
+                        SelfDestruct.Schedule(path, parent.FullName);
+                        return;
+                    }
+                }
+
+                // Fallback: just delete the directory we are in
                 SelfDestruct.Schedule(path, directory);
             }
         }
+    }
+
+    private static bool IsDefaultInstallRoot(InstallerMetadata metadata, string directory)
+    {
+        var baseDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Programs");
+        var vendorPart = SanitizePathPart(metadata.Vendor);
+        var appPart = SanitizePathPart(metadata.ApplicationName);
+
+        var expectedRoot = string.Equals(vendorPart, appPart, StringComparison.OrdinalIgnoreCase) ||
+                           string.IsNullOrWhiteSpace(vendorPart)
+            ? Path.Combine(baseDir, appPart)
+            : Path.Combine(baseDir, vendorPart, appPart);
+
+        return string.Equals(directory, expectedRoot, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string SanitizePathPart(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return "App";
+        }
+
+        var invalid = Path.GetInvalidFileNameChars();
+        var sanitized = new string(text.Where(c => !invalid.Contains(c)).ToArray());
+
+        return string.IsNullOrWhiteSpace(sanitized) ? "App" : sanitized;
     }
 
 

@@ -1,19 +1,19 @@
-# Guía de estilo y operaciones generales
+# Guï¿½a de estilo y operaciones generales
 
-Guía operativa y de estilo para trabajar con este repositorio usando agentes.
+Guï¿½a operativa y de estilo para trabajar con este repositorio usando agentes.
 
 Precedencia de reglas
-- Las reglas se aplican en orden de precedencia creciente: las que aparecen más tarde prevalecen sobre las anteriores.
+- Las reglas se aplican en orden de precedencia creciente: las que aparecen mï¿½s tarde prevalecen sobre las anteriores.
 - Las reglas de proyecto (asociadas a rutas concretas) tienen prioridad sobre reglas personales.
 - Entre reglas de proyecto, las de subdirectorios prevalecen sobre las del directorio padre.
 
-## Comunicación y formato
-- Conversaciones y asistencia: en español.
-- Código, mensajes de commit, comentarios de código y resúmenes de PR: en inglés.
+## Comunicaciï¿½n y formato
+- Conversaciones y asistencia: en espaï¿½ol.
+- Cï¿½digo, mensajes de commit, comentarios de cï¿½digo y resï¿½menes de PR: en inglï¿½s.
 - PR: usar texto sin escapar en asunto y cuerpo.
 
-## Terminal y ejecución
-- No cerrar la terminal ni ejecutar comandos que finalicen la sesión.
+## Terminal y ejecuciï¿½n
+- No cerrar la terminal ni ejecutar comandos que finalicen la sesiï¿½n.
 - Evitar comandos interactivos salvo que sea estrictamente necesario.
 - Extremar cuidado con comillas simples y dobles en los comandos.
 
@@ -22,17 +22,17 @@ Precedencia de reglas
 - Se realiza mediante azure-pipelines.yml.
 - La build debe pasar correctamente antes de fusionar una PR.
 
-## Lineamientos de diseño y estilo (C# / Reactive)
+## Lineamientos de diseï¿½o y estilo (C# / Reactive)
 
-- Preferir programación funcional y reactiva cuando no complique en exceso.
-- Validación: preferir ReactiveUI.Validations.
+- Preferir programaciï¿½n funcional y reactiva cuando no complique en exceso.
+- Validaciï¿½n: preferir ReactiveUI.Validations.
 - Result handling: usar CSharpFunctionalExtensions cuando sea posible.
 - Convenciones:
-    - No usar sufijo “Async” en métodos que devuelven Task.
+    - No usar sufijo ï¿½Asyncï¿½ en mï¿½todos que devuelven Task.
     - No usar guiones bajos para campos privados.
-    - Evitar eventos (salvo indicación explícita).
+    - Evitar eventos (salvo indicaciï¿½n explï¿½cita).
     - Favorecer inmutabilidad; mutar solo lo estrictamente necesario.
-    - Evitar poner lógica en Observable.Subscribe; preferir encadenar operadores y proyecciones.
+    - Evitar poner lï¿½gica en Observable.Subscribe; preferir encadenar operadores y proyecciones.
 
 # Errores y notificaciones
 
@@ -41,21 +41,21 @@ Precedencia de reglas
 
 # Toolkit Zafiro
 
-Es mi propio toolkit. Disponible en https://github.com/SuperJMN/Zafiro. Muchos de los métodos que no conozcas pueden formar parte de este toolkit. Tenlo en consideración.
+Es mi propio toolkit. Disponible en https://github.com/SuperJMN/Zafiro. Muchos de los mï¿½todos que no conozcas pueden formar parte de este toolkit. Tenlo en consideraciï¿½n.
 
 # Manejo de bytes (sin Streams imperativos)
 
 - Usar Zafiro.DivineBytes para flujos de bytes evitables con Stream.
-- ByteSource es la abstracción observable y componible equivalente a un stream de lectura.
+- ByteSource es la abstracciï¿½n observable y componible equivalente a un stream de lectura.
 
-# Refactorización guiada por responsabilidades
+# Refactorizaciï¿½n guiada por responsabilidades
 
-1. Leer el código y describir primero sus responsabilidades.
+1. Leer el cï¿½digo y describir primero sus responsabilidades.
 2. Enumerar cada responsabilidad como una frase nominal clara.
-3. Para cada responsabilidad, crear una clase o método con nombre específico y semántico.
-4. Extraer campos y dependencias según cada responsabilidad.
-5. Evitar variables compartidas entre responsabilidades; si aparecen, replantear los límites.
-6. No introducir patrones arbitrarios; mantener la interfaz pública estable.
+3. Para cada responsabilidad, crear una clase o mï¿½todo con nombre especï¿½fico y semï¿½ntico.
+4. Extraer campos y dependencias segï¿½n cada responsabilidad.
+5. Evitar variables compartidas entre responsabilidades; si aparecen, replantear los lï¿½mites.
+6. No introducir patrones arbitrarios; mantener la interfaz pï¿½blica estable.
 7. No eliminar logs ni validaciones existentes.
 
 
@@ -137,11 +137,11 @@ Packaging formats: status and details
   - Status: experimental cross-platform builder. Library: src/DotnetPackaging.Dmg.
   - How it works: emits an ISO9660/Joliet image (UDTO) with optional .app scaffolding if none exists. Special adornments like .VolumeIcon.icns and .background are hoisted to the image root when present.
   - Notes: intended for simple drag-and-drop installs. Not a full UDIF/UDZO implementation; signing and advanced Finder layouts are out of scope for now.
-- Windows EXE (.exe) — preview
+- Windows EXE (.exe) ï¿½ preview
   - Status: preview. Dotnet-only SFX builder. Library: src/DotnetPackaging.Exe. Stub Avalonia: src/DotnetPackaging.Exe.Installer (esqueleto WIP).
-  - How it works: produces a self-extracting installer by concatenating [stub.exe][payload.zip][Int64 length]["DPACKEXE1"]. The payload contains metadata.json and Content/ (publish output). The stub leerá metadata y realizará la instalación.
-  - CLI: exe (desde carpeta publish) y exe from-project (publica y empaqueta). Si omites --stub, el packer descargará automáticamente el stub que corresponda desde GitHub Releases; puedes pasar --stub para forzar uno concreto.
-  - Cross-platform build: el empaquetado (concatenación) funciona desde cualquier SO. El stub se publica por RID (win-x64/win-arm64).
+  - How it works: produces a self-extracting installer by concatenating [stub.exe][payload.zip][Int64 length]["DPACKEXE1"]. The payload contains metadata.json and Content/ (publish output). The stub leerï¿½ metadata y realizarï¿½ la instalaciï¿½n.
+  - CLI: exe (desde carpeta publish) y exe from-project (publica y empaqueta). Si omites --stub, el packer descargarï¿½ automï¿½ticamente el stub que corresponda desde GitHub Releases; puedes pasar --stub para forzar uno concreto.
+  - Cross-platform build: el empaquetado (concatenaciï¿½n) funciona desde cualquier SO. El stub se publica por RID (win-x64/win-arm64).
   - Defaults: self-contained=true al generar desde proyecto; en hosts no Windows, especifica --rid (win-x64/win-arm64) para elegir el stub/target correcto.
 
 CLI tool (dotnet tool)
@@ -157,7 +157,7 @@ CLI tool (dotnet tool)
   - flatpak from-project: publish a .NET project and build a .flatpak bundle.
   - msix (experimental): msix pack (from directory) and msix from-project.
   - dmg (experimental): dmg (from directory) and dmg from-project (publishes then builds a .dmg).
-  - exe (preview): Windows self-extracting installer (.exe) from directory; and exe from-project (publica y empaqueta). Si omites --stub, se descargará el stub apropiado automáticamente.
+  - exe (preview): Windows self-extracting installer (.exe) from directory; and exe from-project (publica y empaqueta). Si omites --stub, se descargarï¿½ el stub apropiado automï¿½ticamente.
 - Common options (all commands share a metadata set):
   - --directory <dir> (required): input directory to package from.
   - --output <file> (required): output file (.AppImage, .deb, .rpm, .msix, .flatpak, .dmg).
@@ -228,19 +228,19 @@ Backlog / Future work
 - Add CLI E2E tests (including rpm/exe) and hook dotnet test in CI.
 - Optional: enrich icon detection strategies and metadata mapping (e.g., auto-appId from name + reverse DNS).
 
-Windows EXE (.exe) – progress log (snapshot)
+Windows EXE (.exe) ï¿½ progress log (snapshot)
 - Done:
-  - Librería DotnetPackaging.Exe con SimpleExePacker (concatena stub + zip + footer).
+  - Librerï¿½a DotnetPackaging.Exe con SimpleExePacker (concatena stub + zip + footer).
   - Comandos CLI: exe (desde carpeta) y exe from-project (publica y empaqueta). --stub es opcional; si se omite, el packer descarga el stub que corresponda desde GitHub Releases.
   - Stub Avalonia creado (esqueleto) en src/DotnetPackaging.Exe.Installer con lector de payload.
-  - Instalador: opción de crear acceso directo en Escritorio en el paso Finish; acceso directo en Start Menu se mantiene.
+  - Instalador: opciï¿½n de crear acceso directo en Escritorio en el paso Finish; acceso directo en Start Menu se mantiene.
   - CI: publica stubs win-x64 y win-arm64 como single-file self-extract con hashes y los sube a un GitHub Release (tag v{SemVer}).
   - Packer: logging antes de descargar el stub para informar del tiempo de espera.
 - Next:
-  - UI: Integrar SlimWizard de Zafiro en el stub (ahora hay UI mínima). Navegación con WizardNavigator y páginas.
-  - Lógica: Elevación UAC y carpeta por defecto en Program Files según arquitectura.
-  - Packer: caché local de stubs y reintentos/validación de hashes.
-  - Detección avanzada de ejecutable e icono (paridad con .deb/.appimage).
+  - UI: Integrar SlimWizard de Zafiro en el stub (ahora hay UI mï¿½nima). Navegaciï¿½n con WizardNavigator y pï¿½ginas.
+  - Lï¿½gica: Elevaciï¿½n UAC y carpeta por defecto en Program Files segï¿½n arquitectura.
+  - Packer: cachï¿½ local de stubs y reintentos/validaciï¿½n de hashes.
+  - Detecciï¿½n avanzada de ejecutable e icono (paridad con .deb/.appimage).
   - Modo silencioso.
   - Pruebas E2E en Windows.
 
@@ -417,3 +417,34 @@ See WARP.md line 356 for full details.
 âœ… Works after multiple cycles
 
 See WARP.md lines 383-618 for complete documentation.
+
+### Revised Solution (2025-11-20 16:30): Subdirectory Isolation
+
+**Strategy: Subdirectory Isolation**
+
+Instead of a separate Launcher, we adopted a simpler and more robust approach:
+1.  **Isolation:** The installer now places Uninstall.exe in a subdirectory: [InstallDir]\Uninstall\Uninstall.exe.
+    *   **Why?** This solves the 'DLL Hell' / Side-loading crash where the uninstaller was loading conflicting DLLs from the main application directory before starting its own runtime.
+2.  **Cleanup:**
+    *   The uninstaller running from ...\Uninstall\ deletes all files in the parent [InstallDir] *except* the Uninstall folder.
+    *   It then schedules a SelfDestruct (via cmd.exe /c timeout ... & del ... & rmdir ...) to delete itself and the parent directory after exit.
+
+**Status:**
+*   DotnetPackaging.Exe.UninstallLauncher project has been **REMOVED**.
+*   Installer logic updated to use Uninstall subdirectory.
+*   Registry points to .../Uninstall/Uninstall.exe.
+*   Uninstaller logic updated to spare its own directory during initial cleanup and target the root for final self-destruction.
+
+### RESOLVED ISSUE: Windows EXE Uninstaller Crash (Nov 2025)
+
+**Problem:**
+The 'Uninstall.exe' (Single-File) crashed immediately with Access Violation (0xc0000005) when executed from the installation directory.
+**Root Cause:**
+**DLL Hell / Side-loading**. The uninstaller's native bootstrapper was loading conflicting native DLLs from the main application directory *before* loading its own bundled dependencies.
+**Solution: Subdirectory Isolation**
+1.  **Isolation:** The uninstaller is now placed in a subdirectory: '[InstallDir]\Uninstall\Uninstall.exe'. This prevents it from seeing the main application's DLLs.
+2.  **Cleanup Logic:**
+    *   Uninstall.exe deletes everything in '[InstallDir]' *except* the 'Uninstall' folder.
+    *   It then uses 'SelfDestruct.cs' to delete the 'Uninstall' folder and the empty '[InstallDir]' after exit.
+**Status:**
+âœ… **VERIFIED**. The uninstaller runs successfully and removes the application completely. The 'DotnetPackaging.Exe.UninstallLauncher' project was removed as it is no longer needed.

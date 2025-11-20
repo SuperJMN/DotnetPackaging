@@ -25,14 +25,6 @@
             <LogicalName>PAYLOAD</LogicalName>
         </EmbeddedResource>
     </ItemGroup>
-    
-    <!-- Embed UninstallLauncher -->
-    <ItemGroup>
-        <EmbeddedResource Include="Resources\UninstallLauncher.exe">
-            <LogicalName>UninstallLauncher.exe</LogicalName>
-        </EmbeddedResource>
-    </ItemGroup>
-    
     <ItemGroup>
         <Content Include="Assets\Icon.ico" />
     </ItemGroup>
