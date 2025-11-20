@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DotnetPackaging.Exe\DotnetPackaging.Exe.csproj" />
+    <ProjectReference Include="..\DotnetPackaging.Exe.Installer\DotnetPackaging.Exe.Installer.csproj" />
   </ItemGroup>
 
 </Project>
