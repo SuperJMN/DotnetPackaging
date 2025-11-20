@@ -1,10 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <!-- Tests exercise the Windows-only installer stub (WinExe + Registry), so they must target Windows. -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DotnetPackaging.Exe\DotnetPackaging.Exe.csproj" />
+    <ProjectReference Include="..\DotnetPackaging.Exe.Installer\DotnetPackaging.Exe.Installer.csproj" />
   </ItemGroup>
 
 </Project>

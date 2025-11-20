@@ -3,8 +3,8 @@ using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using Avalonia.Threading;
 using DotnetPackaging.Exe.Installer.Core;
+using Serilog;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Exe.Installer;
@@ -45,26 +45,37 @@ public sealed class App : Application
         desktopLifetime.MainWindow = mainWindow;
 
         // Launch installer/uninstaller after the window is shown
-        mainWindow.Opened += async (sender, eventArgs) =>
+        mainWindow.Opened += async (_, _) => await LaunchFlow(desktopLifetime.Args ?? Array.Empty<string>(), mainWindow);
+    }
+
+    private static async Task LaunchFlow(IEnumerable<string> args, Avalonia.Controls.Window mainWindow)
+    {
+        try
         {
-            try
+            if (Environment.GetEnvironmentVariable("DP_FORCE_DISPATCHER_FAILURE") == "1")
             {
-                var args = desktopLifetime.Args ?? Array.Empty<string>();
-                if (IsUninstallMode(args))
-                {
-                    await Uninstallation.Uninstallation.Launch();
-                }
-                else
-                {
-                    await Installation.Installation.Launch();
-                }
+                throw new InvalidOperationException("Dispatcher initialization failed by request.");
             }
-            finally
+
+            if (IsUninstallMode(args))
             {
-                // Close the main window when installation/uninstallation is done
-                mainWindow.Close();
+                await Uninstallation.Uninstallation.Launch();
             }
-        };
+            else
+            {
+                await Installation.Installation.Launch();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Failed to start installer dispatcher");
+            throw;
+        }
+        finally
+        {
+            // Close the main window when installation/uninstallation is done
+            mainWindow.Close();
+        }
     }
 
     private static bool TryHandleMetadataDump()
