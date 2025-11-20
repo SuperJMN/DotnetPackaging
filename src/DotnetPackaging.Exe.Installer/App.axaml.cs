@@ -1,12 +1,9 @@
-using System.Collections.Generic;
 using System.IO.Compression;
-using System.Linq;
 using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using DotnetPackaging.Exe.Installer.Core;
-using DotnetPackaging.Exe.Installer.Uninstallation;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Exe.Installer;

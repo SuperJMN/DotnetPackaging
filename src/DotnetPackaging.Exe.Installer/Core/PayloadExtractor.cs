@@ -25,7 +25,8 @@ internal static class PayloadExtractor
         {
             AttemptLoadPayloadFrom(TryExtractFromManagedResource, "Managed payload not found"),
             AttemptLoadPayloadFrom(TryExtractFromResource, "Win32 resource payload not found"),
-            () => TryExtractFromAppendedPayload().Bind(CreatePayload)
+            () => TryExtractFromAppendedPayload().Bind(CreatePayload),
+            AttemptLoadPayloadFrom(TryExtractFromDisk, "Payload not found on disk (Uninstall mode)")
         };
 
         var errors = new List<string>();
@@ -40,7 +41,6 @@ internal static class PayloadExtractor
 
             errors.Add(result.Error);
         }
-
 #if DEBUG
         var debugPayload = CreateDebugPayload();
         if (debugPayload.IsSuccess)
@@ -52,6 +52,78 @@ internal static class PayloadExtractor
 #endif
 
         return Result.Failure<InstallerPayload>(string.Join(Environment.NewLine, errors.Distinct()));
+    }
+
+    public static Maybe<long> GetAppendedPayloadStart(string filePath)
+    {
+        try
+        {
+            using var fs = File.OpenRead(filePath);
+            var searchWindow = 4096;
+            if (fs.Length < searchWindow) searchWindow = (int)fs.Length;
+
+            var buffer = new byte[searchWindow];
+            fs.Seek(-searchWindow, SeekOrigin.End);
+            var bytesRead = fs.Read(buffer, 0, searchWindow);
+
+            var magicBytes = Encoding.ASCII.GetBytes(Magic);
+            var magicPos = FindPattern(buffer, magicBytes);
+
+            if (magicPos == -1)
+            {
+                return Maybe<long>.None;
+            }
+
+            var footerStartInFile = fs.Length - searchWindow + magicPos;
+            var lengthPos = footerStartInFile - 8;
+
+            fs.Seek(lengthPos, SeekOrigin.Begin);
+            Span<byte> lenBytes = stackalloc byte[8];
+            _ = fs.Read(lenBytes);
+            long payloadLen = BitConverter.ToInt64(lenBytes);
+
+            long payloadStart = lengthPos - payloadLen;
+            if (payloadStart < 0)
+            {
+                return Maybe<long>.None;
+            }
+
+            return payloadStart;
+        }
+        catch
+        {
+            return Maybe<long>.None;
+        }
+    }
+
+    private static Maybe<PayloadLocation> TryExtractFromDisk()
+    {
+        var dir = System.IO.Path.GetDirectoryName(Environment.ProcessPath);
+        if (dir == null) return Maybe<PayloadLocation>.None;
+
+        var metadataPath = System.IO.Path.Combine(dir, "metadata.json");
+        if (!File.Exists(metadataPath)) return Maybe<PayloadLocation>.None;
+
+        try
+        {
+            var tempDir = Directory.CreateTempSubdirectory("dp-inst-uninstall-").FullName;
+            var zipPath = System.IO.Path.Combine(tempDir, "payload.zip");
+
+            using (var fs = File.Create(zipPath))
+            using (var archive = new ZipArchive(fs, ZipArchiveMode.Create, leaveOpen: false))
+            {
+                var entry = archive.CreateEntry("metadata.json");
+                using var es = entry.Open();
+                using var input = File.OpenRead(metadataPath);
+                input.CopyTo(es);
+            }
+
+            return new PayloadLocation(tempDir, zipPath);
+        }
+        catch
+        {
+            return Maybe<PayloadLocation>.None;
+        }
     }
 
     public static Result CopyContentTo(InstallerPayload payload, string targetDirectory, IObserver<Progress>? progressObserver)
@@ -216,26 +288,52 @@ internal static class PayloadExtractor
         return Result.Try(() =>
         {
             var self = Environment.ProcessPath!;
+            try { File.AppendAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-payload-debug.txt"), $"Reading payload from: {self}\n"); } catch { }
+            
             using var fs = File.OpenRead(self);
+            try { File.AppendAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-payload-debug.txt"), $"File length: {fs.Length}\n"); } catch { }
+
+            // Search for magic bytes in the last 1KB of the file to account for potential signing or other padding
+            // The magic footer is "DPACKEXE1" (9 bytes) + Length (8 bytes) = 17 bytes minimum
+            
+            var searchWindow = 4096;
+            if (fs.Length < searchWindow) searchWindow = (int)fs.Length;
+            
+            var buffer = new byte[searchWindow];
+            fs.Seek(-searchWindow, SeekOrigin.End);
+            var bytesRead = fs.Read(buffer, 0, searchWindow);
+            
             var magicBytes = Encoding.ASCII.GetBytes(Magic);
-
-            fs.Seek(-magicBytes.Length, SeekOrigin.End);
-            var bufMagic = new byte[magicBytes.Length];
-            _ = fs.Read(bufMagic, 0, bufMagic.Length);
-            if (!bufMagic.SequenceEqual(magicBytes))
+            var magicPos = FindPattern(buffer, magicBytes);
+            
+            try { File.AppendAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-payload-debug.txt"), $"Magic bytes found at offset: {magicPos}\n"); } catch { }
+            
+            if (magicPos == -1)
             {
-                throw new InvalidOperationException("Installer payload not found");
+                throw new InvalidOperationException("Installer payload not found (Magic footer missing)");
             }
-
-            fs.Seek(-(magicBytes.Length + 8), SeekOrigin.End);
+            
+            // magicPos is the index in the buffer where "DPACKEXE1" starts.
+            // The length (8 bytes) precedes the magic.
+            // Layout: [Payload] [Length (8 bytes)] [Magic (9 bytes)]
+            
+            var footerStartInFile = fs.Length - searchWindow + magicPos;
+            var lengthPos = footerStartInFile - 8;
+            
+            fs.Seek(lengthPos, SeekOrigin.Begin);
             Span<byte> lenBytes = stackalloc byte[8];
             _ = fs.Read(lenBytes);
             long payloadLen = BitConverter.ToInt64(lenBytes);
+            
+            long payloadStart = lengthPos - payloadLen;
+            if (payloadStart < 0)
+            {
+                 throw new InvalidOperationException($"Invalid payload length/offset calculated (Len: {payloadLen}, Start: {payloadStart})");
+            }
 
-            long payloadStart = fs.Length - payloadLen - magicBytes.Length - 8;
             fs.Position = payloadStart;
 
-            var tempDir = Directory.CreateTempSubdirectory("dp-inst-_").FullName;
+            var tempDir = Directory.CreateTempSubdirectory("dp-inst-").FullName;
             var zipPath = System.IO.Path.Combine(tempDir, "payload.zip");
             using (var z = File.Create(zipPath))
             {
@@ -244,6 +342,24 @@ internal static class PayloadExtractor
 
             return new PayloadLocation(tempDir, zipPath);
         }, ex => ex.Message);
+    }
+    
+    private static int FindPattern(byte[] data, byte[] pattern)
+    {
+        for (int i = data.Length - pattern.Length; i >= 0; i--)
+        {
+            bool match = true;
+            for (int j = 0; j < pattern.Length; j++)
+            {
+                if (data[i + j] != pattern[j])
+                {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) return i;
+        }
+        return -1;
     }
 
     private sealed record PayloadLocation(string TempDir, string ZipPath);

@@ -1,4 +1,5 @@
 using CSharpFunctionalExtensions;
+using System.Text.Json;
 
 namespace DotnetPackaging.Exe.Installer.Core;
 
@@ -7,7 +8,49 @@ internal static class Installer
     public static Result<string> Install(string targetDir, InstallerMetadata meta)
     {
         return ResolveMainExe(targetDir, meta)
-            .Tap(exePath => ShortcutService.TryCreateStartMenuShortcut(meta.ApplicationName, exePath));
+            .Tap(exePath => ShortcutService.TryCreateStartMenuShortcut(meta.ApplicationName, exePath))
+            .Tap(exePath => RegisterUninstaller(targetDir, meta, exePath));
+    }
+
+    private static void RegisterUninstaller(string targetDir, InstallerMetadata meta, string mainExePath)
+    {
+        if (Environment.ProcessPath is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var metadataPath = Path.Combine(targetDir, "metadata.json");
+            var json = JsonSerializer.Serialize(meta);
+            File.WriteAllText(metadataPath, json);
+        }
+        catch
+        {
+            // Best effort
+        }
+
+        var uninstallerPath = Path.Combine(targetDir, "Uninstall.exe");
+        try
+        {
+            if (!File.Exists(uninstallerPath))
+            {
+                File.Copy(Environment.ProcessPath, uninstallerPath, overwrite: true);
+            }
+            
+            WindowsRegistryService.Register(
+                meta.AppId, 
+                meta.ApplicationName, 
+                meta.Version, 
+                meta.Vendor, 
+                targetDir, 
+                $"\"{uninstallerPath}\" --uninstall", 
+                mainExePath);
+        }
+        catch
+        {
+            // Best effort
+        }
     }
 
     private static Result<string> ResolveMainExe(string targetDir, InstallerMetadata meta)

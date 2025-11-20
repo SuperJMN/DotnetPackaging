@@ -133,7 +133,7 @@ public sealed class ExePackagingService
         if (request.Stub.HasValue)
         {
             var stubPath = request.Stub.Value.FullName;
-            var packResult = await SimpleExePacker.Build(stubPath, request.PublishDirectory.FullName, metadata, request.Output.FullName);
+            var packResult = await SimpleExePacker.Build(stubPath, request.PublishDirectory.FullName, metadata, request.Output.FullName, stubPath);
             if (packResult.IsFailure)
             {
                 return Result.Failure<FileInfo>(packResult.Error);
@@ -166,7 +166,7 @@ public sealed class ExePackagingService
             var localStub = localStubResult.Value;
             if (localStub.HasValue)
             {
-                var localPackResult = await SimpleExePacker.Build(localStub.Value, request.PublishDirectory.FullName, metadata, request.Output.FullName);
+                var localPackResult = await SimpleExePacker.Build(localStub.Value, request.PublishDirectory.FullName, metadata, request.Output.FullName, localStub.Value);
                 if (localPackResult.IsFailure)
                 {
                     return Result.Failure<FileInfo>(localPackResult.Error);
@@ -183,7 +183,7 @@ public sealed class ExePackagingService
                 return Result.Failure<FileInfo>(stubPathResult.Error);
             }
 
-            var packResult = await SimpleExePacker.Build(stubPathResult.Value, request.PublishDirectory.FullName, metadata, request.Output.FullName);
+            var packResult = await SimpleExePacker.Build(stubPathResult.Value, request.PublishDirectory.FullName, metadata, request.Output.FullName, stubPathResult.Value);
             if (packResult.IsFailure)
             {
                 return Result.Failure<FileInfo>(packResult.Error);
