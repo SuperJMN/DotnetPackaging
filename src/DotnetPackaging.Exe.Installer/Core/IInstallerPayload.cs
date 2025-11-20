@@ -7,6 +7,8 @@ public interface IInstallerPayload
 {
     Task<Result<InstallerMetadata>> GetMetadata(CancellationToken ct = default);
 
+    Task<Result<long>> GetContentSize(CancellationToken ct = default);
+
     Task<Result> CopyContents(
         string targetDirectory,
         IObserver<Progress>? progressObserver = null,

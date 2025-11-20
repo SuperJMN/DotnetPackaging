@@ -49,6 +49,11 @@ internal sealed class MetadataFilePayload : IInstallerPayload
         }, ex => $"Failed to read metadata: {ex.Message}"));
     }
 
+    public Task<Result<long>> GetContentSize(CancellationToken ct = default)
+    {
+        return Task.FromResult(Result.Failure<long>("Disk-only payload does not provide installation content."));
+    }
+
     public Task<Result> CopyContents(string targetDirectory, IObserver<Progress>? progressObserver = null, CancellationToken ct = default)
     {
         return Task.FromResult(Result.Failure("Disk-only payload does not provide installation content."));

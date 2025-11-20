@@ -10,7 +10,7 @@ internal static class WindowsRegistryService
 {
     private const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall";
 
-    public static Result Register(string appId, string applicationName, string version, string publisher, string installLocation, string uninstallString, string displayIcon)
+    public static Result Register(string appId, string applicationName, string version, string publisher, string installLocation, string uninstallString, string displayIcon, long estimatedSizeBytes)
     {
         return Result.Try(() =>
         {
@@ -23,6 +23,12 @@ internal static class WindowsRegistryService
             key.SetValue("DisplayIcon", displayIcon);
             key.SetValue("NoModify", 1);
             key.SetValue("NoRepair", 1);
+
+            if (estimatedSizeBytes > 0)
+            {
+                var estimatedSizeKb = (int)Math.Clamp((estimatedSizeBytes + 1023) / 1024, 1, int.MaxValue);
+                key.SetValue("EstimatedSize", estimatedSizeKb, RegistryValueKind.DWord);
+            }
         }, ex => $"Failed to create registry keys: {ex.Message}");
     }
 
