@@ -22,6 +22,7 @@ using Zafiro.DivineBytes.System.IO;
 using Zafiro.FileSystem.Core;
 using DotnetPackaging.Exe;
 using System.Threading;
+using RuntimeArchitecture = System.Runtime.InteropServices.Architecture;
 
 namespace DotnetPackaging.Tool;
 
@@ -1513,6 +1514,7 @@ static class Program
             var tr = parseResult.GetValue(trimmed);
             var outFile = parseResult.GetValue(output)!;
             var opt = optionsBinder.Bind(parseResult);
+            var ridVal = parseResult.GetValue(rid);
 
             if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -1625,6 +1627,7 @@ static class Program
             var tr = parseResult.GetValue(trimmed);
             var outFile = parseResult.GetValue(output)!;
             var opt = optionsBinder.Bind(parseResult);
+            var ridVal = parseResult.GetValue(rid);
 
             if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -1718,6 +1721,7 @@ static class Program
             var sf = parseResult.GetValue(singleFile);
             var tr = parseResult.GetValue(trimmed);
             var outFile = parseResult.GetValue(outMsix)!;
+            var ridVal = parseResult.GetValue(rid);
 
             if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -1815,6 +1819,7 @@ static class Program
             var tr = parseResult.GetValue(trimmed);
             var outFile = parseResult.GetValue(output)!;
             var opt = optionsBinder.Bind(parseResult);
+            var ridVal = parseResult.GetValue(rid);
 
             if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -1905,39 +1910,50 @@ static class Program
         return MapArchitectureToRid(architectureResult.Value, ridPrefix, context);
     }
 
-    private static Result<Architecture> DetermineArchitecture(string? requested, OSPlatform targetPlatform, string targetName, string context)
+    private static Result<RuntimeArchitecture> DetermineArchitecture(string? requested, OSPlatform targetPlatform, string targetName, string context)
     {
         if (!string.IsNullOrWhiteSpace(requested))
         {
-            var parsed = ParseArchitecture(requested);
-            if (parsed is Architecture.X64 or Architecture.Arm64)
+            var parsed = ParseRuntimeArchitecture(requested);
+            if (parsed is RuntimeArchitecture.X64 or RuntimeArchitecture.Arm64)
             {
                 return Result.Success(parsed.Value);
             }
 
-            return Result.Failure<Architecture>($"Unsupported architecture '{requested}'. Use x64 or arm64.");
+            return Result.Failure<RuntimeArchitecture>($"Unsupported architecture '{requested}'. Use x64 or arm64.");
         }
 
         if (RuntimeInformation.IsOSPlatform(targetPlatform))
         {
-            if (RuntimeInformation.OSArchitecture is Architecture.X64 or Architecture.Arm64)
+            if (RuntimeInformation.OSArchitecture is RuntimeArchitecture.X64 or RuntimeArchitecture.Arm64)
             {
                 return Result.Success(RuntimeInformation.OSArchitecture);
             }
 
-            return Result.Failure<Architecture>($"{context} supports x64 or arm64. Detected architecture '{RuntimeInformation.OSArchitecture}' is not supported.");
+            return Result.Failure<RuntimeArchitecture>($"{context} supports x64 or arm64. Detected architecture '{RuntimeInformation.OSArchitecture}' is not supported.");
         }
 
-        return Result.Failure<Architecture>($"--arch is required when building {context} on non-{targetName} hosts (x64/arm64).");
+        return Result.Failure<RuntimeArchitecture>($"--arch is required when building {context} on non-{targetName} hosts (x64/arm64).");
     }
 
-    private static Result<string> MapArchitectureToRid(Architecture architecture, string ridPrefix, string context)
+    private static Result<string> MapArchitectureToRid(RuntimeArchitecture architecture, string ridPrefix, string context)
     {
         return architecture switch
         {
-            Architecture.X64 => Result.Success($"{ridPrefix}-x64"),
-            Architecture.Arm64 => Result.Success($"{ridPrefix}-arm64"),
+            RuntimeArchitecture.X64 => Result.Success($"{ridPrefix}-x64"),
+            RuntimeArchitecture.Arm64 => Result.Success($"{ridPrefix}-arm64"),
             _ => Result.Failure<string>($"{context} supports x64 or arm64 architectures only.")
+        };
+    }
+
+    private static RuntimeArchitecture? ParseRuntimeArchitecture(string value)
+    {
+        var v = value.Trim().ToLowerInvariant();
+        return v switch
+        {
+            "x86_64" or "amd64" or "x64" => RuntimeArchitecture.X64,
+            "aarch64" or "arm64" => RuntimeArchitecture.Arm64,
+            _ => null
         };
     }
 
