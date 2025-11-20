@@ -20,16 +20,7 @@ internal static class Installer
             return;
         }
 
-        try
-        {
-            var metadataPath = Path.Combine(targetDir, "metadata.json");
-            var json = JsonSerializer.Serialize(meta);
-            File.WriteAllText(metadataPath, json);
-        }
-        catch
-        {
-            // Best effort
-        }
+        PersistMetadata(targetDir, meta);
 
         // Strategy:
         // 1. Copy full installer as Uninstall.exe to "Uninstall" subdirectory to avoid DLL locks/conflicts with main app
@@ -39,6 +30,7 @@ internal static class Installer
         {
             var uninstallDir = Path.Combine(targetDir, "Uninstall");
             Directory.CreateDirectory(uninstallDir);
+            PersistMetadata(uninstallDir, meta);
 
             var uninstallerPath = Path.Combine(uninstallDir, "Uninstall.exe");
             var slimUninstallerResult = UninstallerBuilder.CreateSlimCopy(Environment.ProcessPath, uninstallerPath);
@@ -61,6 +53,20 @@ internal static class Installer
         catch (Exception ex)
         {
              Log.Error(ex, "RegisterUninstaller failed");
+        }
+    }
+
+    private static void PersistMetadata(string directory, InstallerMetadata meta)
+    {
+        try
+        {
+            var metadataPath = Path.Combine(directory, "metadata.json");
+            var json = JsonSerializer.Serialize(meta);
+            File.WriteAllText(metadataPath, json);
+        }
+        catch
+        {
+            // Best effort
         }
     }
 
