@@ -41,12 +41,17 @@ internal static class Installer
             Directory.CreateDirectory(uninstallDir);
 
             var uninstallerPath = Path.Combine(uninstallDir, "Uninstall.exe");
-            File.Copy(Environment.ProcessPath, uninstallerPath, overwrite: true);
+            var slimUninstallerResult = UninstallerBuilder.CreateSlimCopy(Environment.ProcessPath, uninstallerPath);
+            if (slimUninstallerResult.IsFailure)
+            {
+                Log.Warning("Slim uninstaller creation failed: {Error}. Using full installer copy instead.", slimUninstallerResult.Error);
+                File.Copy(Environment.ProcessPath, uninstallerPath, overwrite: true);
+            }
             Log.Information("Uninstaller copied to: {Path}", uninstallerPath);
-            
+
             WindowsRegistryService.Register(
-                meta.AppId, 
-                meta.ApplicationName, 
+                meta.AppId,
+                meta.ApplicationName,
                 meta.Version, 
                 meta.Vendor, 
                 targetDir, 
