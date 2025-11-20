@@ -327,38 +327,16 @@ This definitively proves the crash occurs BEFORE Program.Main executes in the un
 
 The problem is in .NET Runtime initialization or native bootstrapping, NOT in managed code.
 
-### BREAKTHROUGH DISCOVERY (2025-11-20 15:08)
-
-**The problem is NOT the binary, but WHERE it executes from:**
-
-Test results:
-- ✅ C:\Users\JMN\Desktop\AngorSetup.exe --uninstall → WORKS (reaches Program.Main)
-- ❌ C:\Users\JMN\AppData\Local\Programs\AngorTest\Uninstall.exe --uninstall → CRASHES (before Program.Main)
-
-**Proof:** Files are IDENTICAL (SHA256: 0F9CAD14DE400A2648F19FFBF4314787C3AF86FB13C5FADB007A9FC12171B39F)
-
-**Root Cause Hypothesis:**
-.NET Single-File runtime extraction fails when executable runs from the installation directory.
-Possible reasons:
-1. Permission issues in AppData\Local\Programs\ vs Desktop
-2. Single-File runtime tries to extract to same directory and fails
-3. Conflicting DLLs or files in installation directory
-4. File locking issues (installer/app files locked)
-
-**IMPLEMENTED SOLUTION (2025-11-20 15:27):**
-Modified `Installer.cs:RegisterUninstaller()` to copy uninstaller to:
-`%TEMP%\DotnetPackaging\Uninstallers\{appId}\Uninstall.exe`
-
-Registry now points to this %TEMP% location instead of installation directory.
-
-**STATUS:** ❌ Cannot test - new Avalonia Dispatcher crash blocking installer
-
-### NEW BLOCKING ISSUE: Avalonia Dispatcher Shutdown (2025-11-20 15:27)
+### RESOLVED: Windows EXE Uninstaller Crash (Nov 2025)
 
 **Problem:**
-After implementing the %TEMP% solution, the installer now crashes with:
-```
-System.InvalidOperationException: Cannot perform requested operation because the Dispatcher shut down
+Single-File uninstaller crashed (Access Violation) when running from the installation directory.
+**Root Cause:**
+**DLL Side-loading**. The uninstaller loaded conflicting DLLs from the application folder before its own runtime initialized.
+**Solution:**
+**Subdirectory Isolation**. The uninstaller is placed in `[InstallDir]\Uninstall\Uninstall.exe`. This isolation ensures a clean environment for the .NET bootstrapper.
+**Verification:**
+Confirmed to work reliably. The separate launcher project was discarded.
 ```
 
 **Root Cause:**
@@ -616,3 +594,16 @@ for (int i = 0; i < 3; i++) {
 5. **Avalonia Dispatcher async patterns are tricky**
    - Avoid async void event handlers
    - Consider synchronous initialization for installers
+
+### Revised Solution (2025-11-20 16:30): Subdirectory Isolation
+
+**Diagnosis Correction:**
+The crash was caused by **DLL Hell (Side-loading)**. The Single-File uninstaller was picking up incompatible native DLLs from the application directory (e.g. hostfxr.dll or others) before loading its own bundled runtime.
+
+**Implementation:**
+*   **Removed** DotnetPackaging.Exe.UninstallLauncher project.
+*   **Modified** Installer.cs: Now installs Uninstall.exe to [InstallDir]\Uninstall\Uninstall.exe.
+*   **Modified** Uninstaller.cs: Logic updated to clean [InstallDir] but preserve the Uninstall subdirectory while running.
+*   **Modified** SelfDestruct.cs/Uninstallation.cs: Logic updated to target the parent [InstallDir] for final removal via cmd.exe after the uninstaller exits.
+
+This approach is cleaner (no extra project) and robust (no dependency on %TEMP%).

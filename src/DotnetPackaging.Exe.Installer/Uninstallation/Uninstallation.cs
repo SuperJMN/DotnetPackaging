@@ -86,8 +86,20 @@ internal static class Uninstallation
             var directory = Path.GetDirectoryName(path);
             if (directory != null)
             {
-                // We schedule self-destruct for the directory where the uninstaller resides
-                // This assumes the uninstaller is in the application directory
+                // We schedule self-destruct.
+                // If we are in "Uninstall" subdirectory, we want to remove the parent (root) as well.
+                if (Path.GetFileName(directory).Equals("Uninstall", StringComparison.OrdinalIgnoreCase))
+                {
+                    var parent = Directory.GetParent(directory);
+                    if (parent != null)
+                    {
+                        // Delete the parent (Installation Root) which contains the Uninstall folder
+                        SelfDestruct.Schedule(path, parent.FullName);
+                        return;
+                    }
+                }
+                
+                // Fallback: just delete the directory we are in
                 SelfDestruct.Schedule(path, directory);
             }
         }
