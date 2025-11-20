@@ -38,6 +38,36 @@ public class DmgIsoBuilderTests
     }
 
     [Fact]
+    public async Task Wraps_publish_output_into_app_bundle_when_missing()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+
+        await File.WriteAllTextAsync(Path.Combine(publish, "Angor"), "exe");
+        await File.WriteAllTextAsync(Path.Combine(publish, "Angor.deps.json"), "deps");
+        await File.WriteAllTextAsync(Path.Combine(publish, "AppIcon.icns"), "icon");
+
+        var outDmg = Path.Combine(tempRoot.Path, "Angor.dmg");
+        await DotnetPackaging.Dmg.DmgIsoBuilder.Create(publish, outDmg, "Angor Avalonia");
+
+        using var fs = File.OpenRead(outDmg);
+        using var iso = new CDReader(fs, true);
+
+        FileExistsAny(iso, new[]{"AngorAvalonia.app/Contents/MacOS/Angor","/AngorAvalonia.app/Contents/MacOS/Angor"}).Should().BeTrue();
+        FileExistsAny(iso, new[]{"AngorAvalonia.app/Contents/Resources/AppIcon.icns","/AngorAvalonia.app/Contents/Resources/AppIcon.icns"}).Should().BeTrue();
+        FileExistsAny(iso, new[]{"Angor","/Angor","\\Angor"}).Should().BeFalse("payload files must live inside the .app bundle only");
+
+        var plistPath = FirstExistingPath(iso, new[]{"AngorAvalonia.app/Contents/Info.plist", "/AngorAvalonia.app/Contents/Info.plist", "\\AngorAvalonia.app\\Contents\\Info.plist"});
+        plistPath.Should().NotBeNull();
+
+        using var plistStream = iso.OpenFile(plistPath!, FileMode.Open);
+        using var reader = new StreamReader(plistStream);
+        var plistText = reader.ReadToEnd();
+        plistText.Should().Contain("CFBundleIconFile");
+    }
+
+    [Fact]
     public async Task Volume_name_is_sanitized_reasonably()
     {
         using var tempRoot = new TempDir();
@@ -50,14 +80,19 @@ public class DmgIsoBuilderTests
 
         using var fs = File.OpenRead(outDmg);
         using var iso = new CDReader(fs, true);
-        // We cannot query volume label on this DiscUtils version; just ensure a file can be read
-        FileExistsAny(iso, new[]{"file.txt","/file.txt","\\file.txt"}).Should().BeTrue();
+        var bundle = "myappwithspacesunicodetest.app";
+        FileExistsAny(iso, new[]{
+            $"{bundle}/Contents/MacOS/file.txt",
+            $"/{bundle}/Contents/MacOS/file.txt",
+            $"\\{bundle}\\Contents\\MacOS\\file.txt"}).Should().BeTrue();
     }
 
     private static bool FileExistsAny(CDReader iso, IEnumerable<string> candidates)
         => candidates.Any(p => iso.FileExists(p));
     private static bool DirExistsAny(CDReader iso, IEnumerable<string> candidates)
         => candidates.Any(p => iso.DirectoryExists(p));
+    private static string? FirstExistingPath(CDReader iso, IEnumerable<string> candidates)
+        => candidates.FirstOrDefault(iso.FileExists);
 }
 
 file sealed class TempDir : IDisposable
