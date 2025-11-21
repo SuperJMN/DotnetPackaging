@@ -21,11 +21,22 @@ public static class DmgIsoBuilder
             VolumeIdentifier = SanitizeVolumeName(volumeName),
         };
 
-        var hasApp = Directory.EnumerateDirectories(sourceFolder, "*.app", SearchOption.TopDirectoryOnly).Any();
-        if (hasApp)
+        var appBundles = Directory.EnumerateDirectories(sourceFolder, "*.app", SearchOption.TopDirectoryOnly).ToList();
+        if (appBundles.Any())
         {
-            // If a pre-built .app exists, copy the directory tree as-is to the image root
-            AddDirectoryRecursive(builder, sourceFolder, ".", prefix: null);
+            // If pre-built .app bundles exist, copy only those (plus DMG adornments) to the image root
+            foreach (var bundle in appBundles)
+            {
+                var name = Path.GetFileName(bundle);
+                if (name == null)
+                {
+                    continue;
+                }
+
+                AddDirectoryRecursive(builder, sourceFolder, name, prefix: null);
+            }
+
+            AddDmgAdornments(builder, sourceFolder);
         }
         else
         {
@@ -46,18 +57,7 @@ public static class DmgIsoBuilder
                 builder.AddFile($"{bundle}/Contents/Resources/{iconName}", new MemoryStream(iconBytes, writable: false));
             }
 
-            // Hoist DMG adornments (if present) at image root for macOS Finder niceties
-            var volIcon = Path.Combine(sourceFolder, ".VolumeIcon.icns");
-            if (File.Exists(volIcon))
-            {
-                var bytes = File.ReadAllBytes(volIcon);
-                builder.AddFile(".VolumeIcon.icns", new MemoryStream(bytes, writable: false));
-            }
-            var backgroundDir = Path.Combine(sourceFolder, ".background");
-            if (Directory.Exists(backgroundDir))
-            {
-                AddDirectoryRecursive(builder, sourceFolder, ".background", prefix: null);
-            }
+            AddDmgAdornments(builder, sourceFolder);
 
             // Add a minimal Info.plist
             var exeName = GuessExecutableName(sourceFolder, volumeName);
@@ -94,6 +94,23 @@ public static class DmgIsoBuilder
             var finalPath = prefix == null ? relPath : Path.Combine(prefix, relPath);
             var bytes = File.ReadAllBytes(file);
             builder.AddFile(finalPath.Replace('\\','/'), new MemoryStream(bytes, writable: false));
+        }
+    }
+
+    private static void AddDmgAdornments(CDBuilder builder, string sourceFolder)
+    {
+        // Hoist DMG adornments (if present) at image root for macOS Finder niceties
+        var volIcon = Path.Combine(sourceFolder, ".VolumeIcon.icns");
+        if (File.Exists(volIcon))
+        {
+            var bytes = File.ReadAllBytes(volIcon);
+            builder.AddFile(".VolumeIcon.icns", new MemoryStream(bytes, writable: false));
+        }
+
+        var backgroundDir = Path.Combine(sourceFolder, ".background");
+        if (Directory.Exists(backgroundDir))
+        {
+            AddDirectoryRecursive(builder, sourceFolder, ".background", prefix: null);
         }
     }
 
