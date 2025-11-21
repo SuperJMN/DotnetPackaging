@@ -27,7 +27,7 @@ public class ExeSfxEndToEndTests
 
         // Act: build the SFX installer from the project
         var service = new ExePackagingService();
-        var result = await service.BuildFromProject(new FileInfo(projectPath), "win-x64", true, "Release", true, false, new FileInfo(outputExe), new Options(), vendor: null, stubFile: null);
+        var result = await service.BuildFromProject(new FileInfo(projectPath), "win-x64", true, "Release", true, false, new FileInfo(outputExe), new Options(), vendor: null, stubFile: null, setupLogo: null);
         result.IsSuccess.Should().BeTrue(result.IsFailure ? result.Error : string.Empty);
 
         // Run the produced installer with the env hook to dump metadata and exit

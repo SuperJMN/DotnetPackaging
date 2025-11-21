@@ -2,6 +2,7 @@ using System.Text.Json;
 using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
 using Zafiro.ProgressReporting;
+using Path = System.IO.Path;
 
 namespace DotnetPackaging.Exe.Installer.Core;
 
