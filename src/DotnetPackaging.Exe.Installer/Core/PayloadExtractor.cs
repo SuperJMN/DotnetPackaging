@@ -152,8 +152,12 @@ internal static class PayloadExtractor
             } 
             catch { }
 
-            var fileEntries = contentEntries.Where(entry => !IsDirectoryEntry(entry));
-            long totalBytes = fileEntries.Sum(entry => entry.Length);
+            var fileEntries = contentEntries.Where(entry => !IsDirectoryEntry(entry)).ToList();
+            long totalBytes = payload.ContentSizeBytes;
+            if (totalBytes <= 0)
+            {
+                totalBytes = fileEntries.Sum(entry => entry.Length);
+            }
             long safeTotal = totalBytes == 0 ? 1 : totalBytes;
             long copiedBytes = 0;
             var targetRoot = System.IO.Path.GetFullPath(targetDirectory);
@@ -212,10 +216,11 @@ internal static class PayloadExtractor
 
         var result = bytesResult
             .Bind(bytes => ReadMetadata(bytes)
-                .Map(metadata => new InstallerPayload(
-                    metadata,
+                .Map(payloadMetadata => new InstallerPayload(
+                    payloadMetadata.Metadata,
                     ByteSource.FromBytes(bytes),
-                    location.TempDir)));
+                    location.TempDir,
+                    payloadMetadata.ContentSizeBytes)));
 
         TryDeleteFile(location.ZipPath);
 
@@ -227,7 +232,7 @@ internal static class PayloadExtractor
         return result;
     }
 
-    private static Result<InstallerMetadata> ReadMetadata(byte[] zipBytes)
+    private static Result<PayloadMetadata> ReadMetadata(byte[] zipBytes)
     {
         return Result.Try(() =>
         {
@@ -236,9 +241,17 @@ internal static class PayloadExtractor
             var metaEntry = archive.GetEntry("metadata.json") ?? throw new InvalidOperationException("metadata.json missing");
             using var entryStream = metaEntry.Open();
             var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            return JsonSerializer.Deserialize<InstallerMetadata>(entryStream, opts)!;
+            var metadata = JsonSerializer.Deserialize<InstallerMetadata>(entryStream, opts)!;
+            var contentSizeBytes = archive.Entries
+                .Where(IsContentEntry)
+                .Where(entry => !IsDirectoryEntry(entry))
+                .Sum(entry => entry.Length);
+
+            return new PayloadMetadata(metadata, contentSizeBytes);
         }, ex => $"Error reading payload metadata: {ex.Message}");
     }
+
+    private sealed record PayloadMetadata(InstallerMetadata Metadata, long ContentSizeBytes);
 
     private static Maybe<PayloadLocation> TryExtractFromManagedResource()
     {
@@ -591,10 +604,19 @@ internal static class PayloadExtractor
             }
 
             var tempDir = Directory.CreateTempSubdirectory("dp-inst-debug-").FullName;
-            return new InstallerPayload(metadata, ByteSource.FromBytes(ms.ToArray()), tempDir);
+            var payloadBytes = ms.ToArray();
+            var payloadMetadataResult = ReadMetadata(payloadBytes);
+            if (payloadMetadataResult.IsFailure)
+            {
+                throw new InvalidOperationException($"Failed to prepare debug payload: {payloadMetadataResult.Error}");
+            }
+
+            var payloadMetadata = payloadMetadataResult.Value;
+
+            return new InstallerPayload(metadata, ByteSource.FromBytes(payloadBytes), tempDir, payloadMetadata.ContentSizeBytes);
         }, ex => $"Failed to create debug payload: {ex.Message}");
     }
 #endif
 }
 
-public sealed record InstallerPayload(InstallerMetadata Metadata, IByteSource Content, string WorkingDirectory);
+public sealed record InstallerPayload(InstallerMetadata Metadata, IByteSource Content, string WorkingDirectory, long ContentSizeBytes);

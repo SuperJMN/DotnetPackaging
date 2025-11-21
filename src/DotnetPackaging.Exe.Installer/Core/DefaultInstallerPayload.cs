@@ -11,6 +11,9 @@ public sealed class DefaultInstallerPayload : IInstallerPayload
     public Task<Result<InstallerMetadata>> GetMetadata(CancellationToken ct = default)
         => EnsureLoaded(ct).Map(p => p.Metadata);
 
+    public Task<Result<long>> GetContentSize(CancellationToken ct = default)
+        => EnsureLoaded(ct).Map(p => p.ContentSizeBytes);
+
     public Task<Result> CopyContents(string targetDirectory, IObserver<Progress>? progressObserver = null, CancellationToken ct = default)
         => EnsureLoaded(ct).Bind(p => Task.Run(() =>
             PayloadExtractor.CopyContentTo(p, targetDirectory, progressObserver), ct));

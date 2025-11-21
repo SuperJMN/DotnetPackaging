@@ -6,14 +6,14 @@ namespace DotnetPackaging.Exe.Installer.Core;
 
 internal static class Installer
 {
-    public static Result<string> Install(string targetDir, InstallerMetadata meta)
+    public static Result<string> Install(string targetDir, InstallerMetadata meta, long payloadSizeBytes)
     {
         return ResolveMainExe(targetDir, meta)
             .Tap(exePath => ShortcutService.TryCreateStartMenuShortcut(meta.ApplicationName, exePath))
-            .Tap(exePath => RegisterUninstaller(targetDir, meta, exePath));
+            .Tap(exePath => RegisterUninstaller(targetDir, meta, exePath, payloadSizeBytes));
     }
 
-    private static void RegisterUninstaller(string targetDir, InstallerMetadata meta, string mainExePath)
+    private static void RegisterUninstaller(string targetDir, InstallerMetadata meta, string mainExePath, long payloadSizeBytes)
     {
         if (Environment.ProcessPath is null)
         {
@@ -44,11 +44,12 @@ internal static class Installer
             WindowsRegistryService.Register(
                 meta.AppId,
                 meta.ApplicationName,
-                meta.Version, 
-                meta.Vendor, 
-                targetDir, 
-                $"\"{uninstallerPath}\" --uninstall", 
-                mainExePath);
+                meta.Version,
+                meta.Vendor,
+                targetDir,
+                $"\"{uninstallerPath}\" --uninstall",
+                mainExePath,
+                payloadSizeBytes);
         }
         catch (Exception ex)
         {

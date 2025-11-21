@@ -53,7 +53,7 @@ public class InstallWizard
     {
         return Task.Run(() =>
             PayloadExtractor.CopyContentTo(payload, installDir, progressObserver)
-                .Bind(() => Core.Installer.Install(installDir, payload.Metadata))
+                .Bind(() => Core.Installer.Install(installDir, payload.Metadata, payload.ContentSizeBytes))
                 .Map(exePath => new InstallationResult(payload.Metadata, installDir, exePath)));
     }
     

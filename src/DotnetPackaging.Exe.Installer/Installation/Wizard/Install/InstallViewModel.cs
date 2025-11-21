@@ -28,7 +28,14 @@ public class InstallViewModel
         return Task.Run(async () =>
         {
             Log.Information("Starting installation to {InstallDirectory}", installDirectory);
-            
+
+            var payloadSizeResult = await payload.GetContentSize().ConfigureAwait(false);
+            if (payloadSizeResult.IsFailure)
+            {
+                Log.Warning("Failed to determine payload size: {Error}", payloadSizeResult.Error);
+            }
+            var payloadSize = payloadSizeResult.IsSuccess ? payloadSizeResult.Value : 0;
+
             var copyRes = await payload.CopyContents(installDirectory, progress).ConfigureAwait(false);
             if (copyRes.IsFailure)
             {
@@ -38,7 +45,7 @@ public class InstallViewModel
 
             Log.Information("Contents copied successfully, registering installation");
 
-            var installResult = Core.Installer.Install(installDirectory, installerMetadata)
+            var installResult = Core.Installer.Install(installDirectory, installerMetadata, payloadSize)
                 .Map(exePath => new InstallationResult(installerMetadata, installDirectory, exePath))
                 .Bind(result => InstallationRegistry.Register(result).Map(() => result));
 
