@@ -1,5 +1,6 @@
 using System.Reactive;
 using System.Reactive.Linq;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Exe.Installer.Core;
@@ -21,25 +22,25 @@ public sealed class UninstallWelcomeViewModel : ReactiveValidationObject, IValid
     public UninstallWelcomeViewModel(IInstallerPayload payload)
     {
         this.payload = payload;
-        LoadMetadata = ReactiveCommand.CreateFromTask(() => this.payload.GetMetadata());
-        Metadata = new ReactiveProperty<InstallerMetadata?>(LoadMetadata.Successes());
+        LoadMetadata = ReactiveUI.ReactiveCommand.CreateFromTask(() => this.payload.GetMetadata());
+        Metadata = new Reactive.Bindings.ReactiveProperty<InstallerMetadata?>(LoadMetadata.Successes());
         this.ValidationRule(model => model.Metadata.Value, m => m is not null, "Metadata is required");
 
-        LoadLogo = ReactiveCommand.CreateFromTask(() => payload.GetLogo());
+        LoadLogo = ReactiveUI.ReactiveCommand.CreateFromTask(() => payload.GetLogo());
 
         Logo = LoadLogo
             .Successes()
-            .Select(logoBytes => logoBytes.Match(BrandingLogoFactory.FromBytes, () => (IBitmap?)null))
+            .Select(logoBytes => logoBytes.Match(BrandingLogoFactory.FromBytes, () => (IImage?)null))
             .ToReadOnlyReactivePropertySlim();
     }
 
-    public ReactiveProperty<InstallerMetadata?> Metadata { get; }
+    public Reactive.Bindings.ReactiveProperty<InstallerMetadata?> Metadata { get; }
 
-    public ReactiveCommand<Unit, Result<InstallerMetadata>> LoadMetadata { get; }
+    public ReactiveUI.ReactiveCommand<Unit, Result<InstallerMetadata>> LoadMetadata { get; }
 
-    public ReactiveCommand<Unit, Result<Maybe<IByteSource>>> LoadLogo { get; }
+    public ReactiveUI.ReactiveCommand<Unit, Result<Maybe<IByteSource>>> LoadLogo { get; }
 
-    public ReadOnlyReactivePropertySlim<IBitmap?> Logo { get; }
+    public ReadOnlyReactivePropertySlim<IImage?> Logo { get; }
 
     public IObservable<bool> IsValid => this.IsValid();
 }

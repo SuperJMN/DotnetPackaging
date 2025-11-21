@@ -579,12 +579,14 @@ public sealed class ExePackagingService
                 await src.CopyToAsync(dst);
             }
 
-            foreach (var bytes in logoBytes)
-            {
-                var logoEntry = zip.CreateEntry(BrandingLogoEntry, CompressionLevel.NoCompression);
-                await using var logoStream = logoEntry.Open();
-                await logoStream.WriteAsync(bytes, 0, bytes.Length);
-            }
+            await logoBytes.Match(
+                async bytes =>
+                {
+                    var logoEntry = zip.CreateEntry(BrandingLogoEntry, CompressionLevel.NoCompression);
+                    await using var logoStream = logoEntry.Open();
+                    await logoStream.WriteAsync(bytes, 0, bytes.Length);
+                },
+                () => Task.CompletedTask);
 
             return Result.Success(zipPath);
         }

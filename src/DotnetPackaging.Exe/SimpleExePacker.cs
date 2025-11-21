@@ -88,11 +88,13 @@ public static class SimpleExePacker
             await src.CopyToAsync(dst);
         }
 
-        foreach (var bytes in logoBytes)
-        {
-            var logoEntry = zip.CreateEntry(BrandingLogoEntry, CompressionLevel.NoCompression);
-            await using var stream = logoEntry.Open();
-            await stream.WriteAsync(bytes, 0, bytes.Length);
-        }
+        await logoBytes.Match(
+            async bytes =>
+            {
+                var logoEntry = zip.CreateEntry(BrandingLogoEntry, CompressionLevel.NoCompression);
+                await using var stream = logoEntry.Open();
+                await stream.WriteAsync(bytes, 0, bytes.Length);
+            },
+            () => Task.CompletedTask);
     }
 }
