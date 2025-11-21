@@ -6,4 +6,5 @@ public sealed record InstallerMetadata(
     string Version,
     string Vendor,
     string? Description = null,
-    string? ExecutableName = null);
+    string? ExecutableName = null,
+    bool HasLogo = false);

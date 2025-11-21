@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CSharpFunctionalExtensions;
+using Zafiro.DivineBytes;
 using Zafiro.ProgressReporting;
 
 namespace DotnetPackaging.Exe.Installer.Core;
@@ -52,6 +53,11 @@ internal sealed class MetadataFilePayload : IInstallerPayload
     public Task<Result<long>> GetContentSize(CancellationToken ct = default)
     {
         return Task.FromResult(Result.Failure<long>("Disk-only payload does not provide installation content."));
+    }
+
+    public Task<Result<Maybe<IByteSource>>> GetLogo(CancellationToken ct = default)
+    {
+        return Task.FromResult(Result.Success(Maybe<IByteSource>.None));
     }
 
     public Task<Result> CopyContents(string targetDirectory, IObserver<Progress>? progressObserver = null, CancellationToken ct = default)

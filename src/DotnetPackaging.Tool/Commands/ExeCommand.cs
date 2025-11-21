@@ -24,6 +24,10 @@ public static class ExeCommand
         {
             Description = "Path to the prebuilt stub (WinExe) to concatenate (optional if repo layout is present)"
         };
+        var setupLogo = new Option<FileInfo?>("--setup-logo")
+        {
+            Description = "Path to a logo image displayed by the installer and uninstaller wizards"
+        };
         var exArchTop = new Option<string?>("--arch")
         {
             Description = "Target architecture for the stub (x64, arm64)"
@@ -87,6 +91,7 @@ public static class ExeCommand
         exeCommand.Add(exeInputDir);
         exeCommand.Add(exeOutput);
         exeCommand.Add(stubPath);
+        exeCommand.Add(setupLogo);
         // Make metadata options global so subcommands can use them without re-adding
         exAppName.Recursive = true;
         exComment.Recursive = true;
@@ -94,6 +99,7 @@ public static class ExeCommand
         exAppId.Recursive = true;
         exVendor.Recursive = true;
         exExecutableName.Recursive = true;
+        setupLogo.Recursive = true;
         exeCommand.Add(exAppName);
         exeCommand.Add(exComment);
         exeCommand.Add(exVersion);
@@ -107,10 +113,11 @@ public static class ExeCommand
             var inDir = parseResult.GetValue(exeInputDir)!;
             var outFile = parseResult.GetValue(exeOutput)!;
             var stub = parseResult.GetValue(stubPath);
+            var logo = parseResult.GetValue(setupLogo);
             var opt = optionsBinder.Bind(parseResult);
             var vendorOpt = parseResult.GetValue(exVendor);
             var archOpt = parseResult.GetValue(exArchTop);
-            
+
             await ExecutionWrapper.ExecuteWithLogging("exe", outFile.FullName, async logger =>
             {
                 var ridResult = RidUtils.ResolveWindowsRid(archOpt, "EXE packaging");
@@ -122,7 +129,7 @@ public static class ExeCommand
                 }
 
                 var exeService = new ExePackagingService(logger);
-                var result = await exeService.BuildFromDirectory(inDir, outFile, opt, vendorOpt, ridResult.Value, stub);
+                var result = await exeService.BuildFromDirectory(inDir, outFile, opt, vendorOpt, ridResult.Value, stub, logo);
                 if (result.IsFailure)
                 {
                     logger.Error("EXE packaging failed: {Error}", result.Error);
@@ -171,6 +178,10 @@ public static class ExeCommand
         {
             Description = "Path to the prebuilt stub (WinExe) to concatenate (optional if repo layout is present)"
         };
+        var exSetupLogo = new Option<FileInfo?>("--setup-logo")
+        {
+            Description = "Path to a logo image displayed by the installer and uninstaller wizards"
+        };
 
         var exFromProject = new Command("from-project") { Description = "Publish a .NET project and build a Windows self-extracting installer (.exe). If --stub is not provided, the tool downloads the appropriate stub from GitHub Releases." };
         exFromProject.Add(exProject);
@@ -181,6 +192,7 @@ public static class ExeCommand
         exFromProject.Add(exTrimmed);
         exFromProject.Add(exOut);
         exFromProject.Add(exStub);
+        exFromProject.Add(exSetupLogo);
 
         exFromProject.SetAction(async parseResult =>
         {
@@ -192,6 +204,7 @@ public static class ExeCommand
             var tr = parseResult.GetValue(exTrimmed);
             var extrasOutput = parseResult.GetValue(exOut)!;
             var extrasStub = parseResult.GetValue(exStub);
+            var extrasLogo = parseResult.GetValue(exSetupLogo);
             var vendorOpt = parseResult.GetValue(exVendor);
             var opt = optionsBinder.Bind(parseResult);
 
@@ -206,7 +219,7 @@ public static class ExeCommand
                 }
 
                 var exeService = new ExePackagingService(logger);
-                var result = await exeService.BuildFromProject(prj, ridResult.Value, sc, cfg, sf, tr, extrasOutput, opt, vendorOpt, extrasStub);
+                var result = await exeService.BuildFromProject(prj, ridResult.Value, sc, cfg, sf, tr, extrasOutput, opt, vendorOpt, extrasStub, extrasLogo);
                 if (result.IsFailure)
                 {
                     logger.Error("EXE from project packaging failed: {Error}", result.Error);

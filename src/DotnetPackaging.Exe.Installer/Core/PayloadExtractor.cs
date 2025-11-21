@@ -12,6 +12,7 @@ namespace DotnetPackaging.Exe.Installer.Core;
 internal static class PayloadExtractor
 {
     private const string Magic = "DPACKEXE1"; // legacy footer (concat mode)
+    private const string BrandingLogoEntry = "Branding/logo";
 
     public static Result<InstallerPayload> LoadPayload()
     {
@@ -220,7 +221,8 @@ internal static class PayloadExtractor
                     payloadMetadata.Metadata,
                     ByteSource.FromBytes(bytes),
                     location.TempDir,
-                    payloadMetadata.ContentSizeBytes)));
+                    payloadMetadata.ContentSizeBytes,
+                    ExtractLogo(bytes))));
 
         TryDeleteFile(location.ZipPath);
 
@@ -249,6 +251,29 @@ internal static class PayloadExtractor
 
             return new PayloadMetadata(metadata, contentSizeBytes);
         }, ex => $"Error reading payload metadata: {ex.Message}");
+    }
+
+    private static Maybe<IByteSource> ExtractLogo(byte[] zipBytes)
+    {
+        try
+        {
+            using var stream = new MemoryStream(zipBytes, writable: false);
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
+            var entry = archive.GetEntry(BrandingLogoEntry);
+            if (entry is null)
+            {
+                return Maybe<IByteSource>.None;
+            }
+
+            using var entryStream = entry.Open();
+            using var buffer = new MemoryStream();
+            entryStream.CopyTo(buffer);
+            return Maybe<IByteSource>.From(ByteSource.FromBytes(buffer.ToArray()));
+        }
+        catch
+        {
+            return Maybe<IByteSource>.None;
+        }
     }
 
     private sealed record PayloadMetadata(InstallerMetadata Metadata, long ContentSizeBytes);
@@ -613,10 +638,10 @@ internal static class PayloadExtractor
 
             var payloadMetadata = payloadMetadataResult.Value;
 
-            return new InstallerPayload(metadata, ByteSource.FromBytes(payloadBytes), tempDir, payloadMetadata.ContentSizeBytes);
+            return new InstallerPayload(metadata, ByteSource.FromBytes(payloadBytes), tempDir, payloadMetadata.ContentSizeBytes, Maybe<IByteSource>.None);
         }, ex => $"Failed to create debug payload: {ex.Message}");
     }
 #endif
 }
 
-public sealed record InstallerPayload(InstallerMetadata Metadata, IByteSource Content, string WorkingDirectory, long ContentSizeBytes);
+public sealed record InstallerPayload(InstallerMetadata Metadata, IByteSource Content, string WorkingDirectory, long ContentSizeBytes, Maybe<IByteSource> Logo);
