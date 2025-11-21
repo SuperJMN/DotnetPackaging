@@ -3,6 +3,7 @@ using System.IO.Compression;
 using Serilog;
 using System.Text;
 using System.Text.Json;
+using Avalonia.Platform;
 using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
 using Zafiro.ProgressReporting;
@@ -638,7 +639,7 @@ internal static class PayloadExtractor
 
             var payloadMetadata = payloadMetadataResult.Value;
 
-            return new InstallerPayload(metadata, ByteSource.FromBytes(payloadBytes), tempDir, payloadMetadata.ContentSizeBytes, Maybe<IByteSource>.None);
+            return new InstallerPayload(metadata, ByteSource.FromBytes(payloadBytes), tempDir, payloadMetadata.ContentSizeBytes, SampleData.Logo().AsMaybe());
         }, ex => $"Failed to create debug payload: {ex.Message}");
     }
 #endif
