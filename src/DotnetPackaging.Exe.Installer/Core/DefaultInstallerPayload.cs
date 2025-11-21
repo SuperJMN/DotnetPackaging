@@ -1,4 +1,5 @@
 using CSharpFunctionalExtensions;
+using Zafiro.DivineBytes;
 using Zafiro.ProgressReporting;
 
 namespace DotnetPackaging.Exe.Installer.Core;
@@ -13,6 +14,9 @@ public sealed class DefaultInstallerPayload : IInstallerPayload
 
     public Task<Result<long>> GetContentSize(CancellationToken ct = default)
         => EnsureLoaded(ct).Map(p => p.ContentSizeBytes);
+
+    public Task<Result<Maybe<IByteSource>>> GetLogo(CancellationToken ct = default)
+        => EnsureLoaded(ct).Map(p => p.Logo);
 
     public Task<Result> CopyContents(string targetDirectory, IObserver<Progress>? progressObserver = null, CancellationToken ct = default)
         => EnsureLoaded(ct).Bind(p => Task.Run(() =>

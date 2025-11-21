@@ -7,6 +7,7 @@ namespace DotnetPackaging.Exe;
 
 public static class SimpleExePacker
 {
+    private const string BrandingLogoEntry = "Branding/logo";
     /// <summary>
     /// Builds a self-extracting Windows installer by concatenating:
     ///   [stub.exe][payload.zip][Int64 payloadLength (LE)]["DPACKEXE1"]
@@ -19,6 +20,7 @@ public static class SimpleExePacker
         string stubPath,
         string publishDir,
         InstallerMetadata metadata,
+        Maybe<byte[]> logoBytes,
         string outputPath)
     {
         try
@@ -32,7 +34,7 @@ public static class SimpleExePacker
             Directory.CreateDirectory(tmp);
             var tempZip = Path.Combine(tmp, "payload.zip");
 
-            await CreatePayloadZip(tempZip, publishDir, metadata);
+            await CreatePayloadZip(tempZip, publishDir, metadata, logoBytes);
 
             using var outFs = File.Create(outputPath);
             using (var stubFs = File.OpenRead(stubPath))
@@ -60,7 +62,7 @@ public static class SimpleExePacker
         }
     }
 
-    private static async Task CreatePayloadZip(string zipPath, string publishDir, InstallerMetadata meta)
+    private static async Task CreatePayloadZip(string zipPath, string publishDir, InstallerMetadata meta, Maybe<byte[]> logoBytes)
     {
         using var fs = File.Create(zipPath);
         using var zip = new ZipArchive(fs, ZipArchiveMode.Create, leaveOpen: false);
@@ -84,6 +86,13 @@ public static class SimpleExePacker
             await using var src = File.OpenRead(file);
             await using var dst = entry.Open();
             await src.CopyToAsync(dst);
+        }
+
+        foreach (var bytes in logoBytes)
+        {
+            var logoEntry = zip.CreateEntry(BrandingLogoEntry, CompressionLevel.NoCompression);
+            await using var stream = logoEntry.Open();
+            await stream.WriteAsync(bytes, 0, bytes.Length);
         }
     }
 }

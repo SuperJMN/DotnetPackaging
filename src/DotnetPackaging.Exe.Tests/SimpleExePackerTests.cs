@@ -29,7 +29,7 @@ public class SimpleExePackerTests
         var metadata = new InstallerMetadata("com.test.strip", "Test Strip", "1.0.0", "Test Vendor", "Desc", "App.exe");
 
         // Act 1: Build Installer (Stub + Payload)
-        await SimpleExePacker.Build(stubPath, publishDir.FullName, metadata, outputInstaller);
+        await SimpleExePacker.Build(stubPath, publishDir.FullName, metadata, Maybe<byte[]>.None, outputInstaller);
 
         // Act 2: Strip Payload to create Uninstaller
         using (var src = File.OpenRead(outputInstaller))
@@ -94,7 +94,7 @@ public class SimpleExePackerTests
         var metadata = new InstallerMetadata("com.test.extract", "Test Extract", "1.0.0", "Test Vendor", "Desc", "App.exe");
 
         // Act 1: Build Installer
-        await SimpleExePacker.Build(originalStubPath, publishDir.FullName, metadata, outputInstaller);
+        await SimpleExePacker.Build(originalStubPath, publishDir.FullName, metadata, Maybe<byte[]>.None, outputInstaller);
 
         // Act 2: Try to extract payload using the SAME logic as the installer uses
         // We need to invoke PayloadExtractor logic. Since it's internal in another assembly, we'll duplicate the logic or use reflection?
@@ -152,7 +152,7 @@ public class SimpleExePackerTests
         File.WriteAllText(Path.Combine(publishDir.FullName, "App.exe"), "Dummy App");
 
         var metadata = new InstallerMetadata("com.test.boot", "Test Boot", "1.0.0", "Test Vendor", "Desc", "App.exe");
-        await SimpleExePacker.Build(ResolveStubPath(), publishDir.FullName, metadata, outputInstaller);
+        await SimpleExePacker.Build(ResolveStubPath(), publishDir.FullName, metadata, Maybe<byte[]>.None, outputInstaller);
 
         var psi = new ProcessStartInfo(outputInstaller)
         {
@@ -195,7 +195,7 @@ public class SimpleExePackerTests
         File.WriteAllText(Path.Combine(publishDir.FullName, "App.exe"), "Dummy App");
 
         var metadata = new InstallerMetadata("com.test.uninstall", "Test Uninstall", "1.0.0", "Test Vendor", "Desc", "App.exe");
-        await SimpleExePacker.Build(ResolveStubPath(), publishDir.FullName, metadata, outputInstaller);
+        await SimpleExePacker.Build(ResolveStubPath(), publishDir.FullName, metadata, Maybe<byte[]>.None, outputInstaller);
 
         PayloadExtractor.GetAppendedPayloadStart(outputInstaller).HasValue.Should().BeTrue();
 
@@ -252,7 +252,7 @@ public class SimpleExePackerTests
         File.WriteAllText(Path.Combine(publishDir.FullName, "App.exe"), "Dummy App");
 
         var metadata = new InstallerMetadata("com.test.dispatcher", "Test Dispatcher", "1.0.0", "Test Vendor", "Desc", "App.exe");
-        await SimpleExePacker.Build(ResolveStubPath(), publishDir.FullName, metadata, outputInstaller);
+        await SimpleExePacker.Build(ResolveStubPath(), publishDir.FullName, metadata, Maybe<byte[]>.None, outputInstaller);
 
         var psi = new ProcessStartInfo(outputInstaller)
         {
