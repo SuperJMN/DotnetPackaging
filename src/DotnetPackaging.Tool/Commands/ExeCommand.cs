@@ -110,21 +110,22 @@ public static class ExeCommand
             var opt = optionsBinder.Bind(parseResult);
             var vendorOpt = parseResult.GetValue(exVendor);
             var archOpt = parseResult.GetValue(exArchTop);
-            var ridResult = RidUtils.ResolveWindowsRid(archOpt, "EXE packaging");
-            if (ridResult.IsFailure)
-            {
-                Console.Error.WriteLine(ridResult.Error);
-                Environment.ExitCode = 1;
-                return;
-            }
+            
             await ExecutionWrapper.ExecuteWithLogging("exe", outFile.FullName, async logger =>
             {
+                var ridResult = RidUtils.ResolveWindowsRid(archOpt, "EXE packaging");
+                if (ridResult.IsFailure)
+                {
+                    logger.Error("Invalid RID: {Error}", ridResult.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
+
                 var exeService = new ExePackagingService(logger);
                 var result = await exeService.BuildFromDirectory(inDir, outFile, opt, vendorOpt, ridResult.Value, stub);
                 if (result.IsFailure)
                 {
                     logger.Error("EXE packaging failed: {Error}", result.Error);
-                    Console.Error.WriteLine(result.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
@@ -185,13 +186,6 @@ public static class ExeCommand
         {
             var prj = parseResult.GetValue(exProject)!;
             var archVal = parseResult.GetValue(exArch);
-            var ridResult = RidUtils.ResolveWindowsRid(archVal, "EXE packaging");
-            if (ridResult.IsFailure)
-            {
-                Console.Error.WriteLine(ridResult.Error);
-                Environment.ExitCode = 1;
-                return;
-            }
             var sc = parseResult.GetValue(exSelfContained);
             var cfg = parseResult.GetValue(exConfiguration)!;
             var sf = parseResult.GetValue(exSingleFile);
@@ -200,14 +194,22 @@ public static class ExeCommand
             var extrasStub = parseResult.GetValue(exStub);
             var vendorOpt = parseResult.GetValue(exVendor);
             var opt = optionsBinder.Bind(parseResult);
+
             await ExecutionWrapper.ExecuteWithLogging("exe-from-project", extrasOutput.FullName, async logger =>
             {
+                var ridResult = RidUtils.ResolveWindowsRid(archVal, "EXE packaging");
+                if (ridResult.IsFailure)
+                {
+                    logger.Error("Invalid RID: {Error}", ridResult.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
+
                 var exeService = new ExePackagingService(logger);
                 var result = await exeService.BuildFromProject(prj, ridResult.Value, sc, cfg, sf, tr, extrasOutput, opt, vendorOpt, extrasStub);
                 if (result.IsFailure)
                 {
                     logger.Error("EXE from project packaging failed: {Error}", result.Error);
-                    Console.Error.WriteLine(result.Error);
                     Environment.ExitCode = 1;
                     return;
                 }

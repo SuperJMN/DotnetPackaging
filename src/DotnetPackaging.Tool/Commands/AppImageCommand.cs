@@ -277,43 +277,51 @@ public static class AppImageCommand
             var opt = optionsBinder.Bind(parseResult);
             var ridVal = parseResult.GetValue(rid);
 
-            if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            await ExecutionWrapper.ExecuteWithLogging("appimage-from-project", outFile.FullName, async logger =>
             {
-                Console.Error.WriteLine("--rid is required when building AppImage from-project on non-Linux hosts (e.g., linux-x64/linux-arm64).");
-                Environment.ExitCode = 1;
-                return;
-            }
+                if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    logger.Error("--rid is required when building AppImage from-project on non-Linux hosts (e.g., linux-x64/linux-arm64).");
+                    Environment.ExitCode = 1;
+                    return;
+                }
 
-            var publisher = new DotnetPackaging.Publish.DotnetPublisher();
-            var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
-            {
-                Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
-                SelfContained = sc,
-                Configuration = cfg,
-                SingleFile = sf,
-                Trimmed = tr
-            };
+                var publisher = new DotnetPackaging.Publish.DotnetPublisher(Maybe<ILogger>.From(logger));
+                var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
+                {
+                    Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
+                    SelfContained = sc,
+                    Configuration = cfg,
+                    SingleFile = sf,
+                    Trimmed = tr
+                };
 
-            var pub = await publisher.Publish(req);
-            if (pub.IsFailure)
-            {
-                Console.Error.WriteLine(pub.Error);
-                Environment.ExitCode = 1;
-                return;
-            }
+                var pub = await publisher.Publish(req);
+                if (pub.IsFailure)
+                {
+                    logger.Error("Publish failed: {Error}", pub.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
 
-            var root = pub.Value.Container;
-            var ctxDir = new DirectoryInfo(pub.Value.OutputDirectory);
-            var metadata = BuildAppImageMetadata(opt, ctxDir);
-            var factory = new AppImageFactory();
-            var res = await factory.Create(root, metadata)
-                .Bind(x => x.ToByteSource())
-                .Bind(bytes => bytes.WriteTo(outFile.FullName));
-            if (res.IsFailure)
-            {
-                Console.Error.WriteLine(res.Error);
-                Environment.ExitCode = 1;
-            }
+                var root = pub.Value.Container;
+                var ctxDir = new DirectoryInfo(pub.Value.OutputDirectory);
+                var metadata = BuildAppImageMetadata(opt, ctxDir);
+                var factory = new AppImageFactory();
+                var res = await factory.Create(root, metadata)
+                    .Bind(x => x.ToByteSource())
+                    .Bind(bytes => bytes.WriteTo(outFile.FullName));
+                
+                if (res.IsFailure)
+                {
+                    logger.Error("AppImage creation failed: {Error}", res.Error);
+                    Environment.ExitCode = 1;
+                }
+                else 
+                {
+                    logger.Information("{OutputFile}", outFile.FullName);
+                }
+            });
         });
 
         appImageCommand.Add(fromProject);

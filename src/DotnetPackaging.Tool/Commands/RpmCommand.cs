@@ -123,48 +123,55 @@ public static class RpmCommand
             var opt = optionsBinder.Bind(parseResult);
             var ridVal = parseResult.GetValue(rid);
 
-            if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            await ExecutionWrapper.ExecuteWithLogging("rpm-from-project", outFile.FullName, async logger =>
             {
-                Console.Error.WriteLine("--rid is required when building RPM from-project on non-Linux hosts (e.g., linux-x64/linux-arm64).");
-                Environment.ExitCode = 1;
-                return;
-            }
+                if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    logger.Error("--rid is required when building RPM from-project on non-Linux hosts (e.g., linux-x64/linux-arm64).");
+                    Environment.ExitCode = 1;
+                    return;
+                }
 
-            var publisher = new DotnetPackaging.Publish.DotnetPublisher();
-            var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
-            {
-                Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
-                SelfContained = sc,
-                Configuration = cfg,
-                SingleFile = sf,
-                Trimmed = tr
-            };
+                var publisher = new DotnetPackaging.Publish.DotnetPublisher();
+                var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
+                {
+                    Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
+                    SelfContained = sc,
+                    Configuration = cfg,
+                    SingleFile = sf,
+                    Trimmed = tr
+                };
 
-            var pub = await publisher.Publish(req);
-            if (pub.IsFailure)
-            {
-                Console.Error.WriteLine(pub.Error);
-                Environment.ExitCode = 1;
-                return;
-            }
+                var pub = await publisher.Publish(req);
+                if (pub.IsFailure)
+                {
+                    logger.Error("Publish failed: {Error}", pub.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
 
-            var container = pub.Value.Container;
-            var name = pub.Value.Name.Match(value => value, () => (string?)null);
-            var builder = RpmFile.From().Container(container, name);
-            var built = await builder.Configure(o => o.From(opt)).Build();
-            if (built.IsFailure)
-            {
-                Console.Error.WriteLine(built.Error);
-                Environment.ExitCode = 1;
-                return;
-            }
+                var container = pub.Value.Container;
+                var name = pub.Value.Name.Match(value => value, () => (string?)null);
+                var builder = RpmFile.From().Container(container, name);
+                var built = await builder.Configure(o => o.From(opt)).Build();
+                if (built.IsFailure)
+                {
+                    logger.Error("Rpm creation failed: {Error}", built.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
 
-            var copy = CopyRpmToOutput(built.Value, outFile);
-            if (copy.IsFailure)
-            {
-                Console.Error.WriteLine(copy.Error);
-                Environment.ExitCode = 1;
-            }
+                var copy = CopyRpmToOutput(built.Value, outFile);
+                if (copy.IsFailure)
+                {
+                    logger.Error("Failed writing Rpm file: {Error}", copy.Error);
+                    Environment.ExitCode = 1;
+                }
+                else
+                {
+                    logger.Information("{OutputFile}", outFile.FullName);
+                }
+            });
         });
 
         rpmCommand.Add(fromProject);

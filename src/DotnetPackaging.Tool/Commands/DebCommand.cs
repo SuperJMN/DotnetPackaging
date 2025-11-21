@@ -111,49 +111,56 @@ public static class DebCommand
             var opt = optionsBinder.Bind(parseResult);
             var ridVal = parseResult.GetValue(rid);
 
-            if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            await ExecutionWrapper.ExecuteWithLogging("deb-from-project", outFile.FullName, async logger =>
             {
-                Console.Error.WriteLine("--rid is required when building DEB from-project on non-Linux hosts (e.g., linux-x64/linux-arm64).");
-                Environment.ExitCode = 1;
-                return;
-            }
+                if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    logger.Error("--rid is required when building DEB from-project on non-Linux hosts (e.g., linux-x64/linux-arm64).");
+                    Environment.ExitCode = 1;
+                    return;
+                }
 
-            var publisher = new DotnetPackaging.Publish.DotnetPublisher();
-            var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
-            {
-                Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
-                SelfContained = sc,
-                Configuration = cfg,
-                SingleFile = sf,
-                Trimmed = tr
-            };
+                var publisher = new DotnetPackaging.Publish.DotnetPublisher();
+                var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
+                {
+                    Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
+                    SelfContained = sc,
+                    Configuration = cfg,
+                    SingleFile = sf,
+                    Trimmed = tr
+                };
 
-            var pub = await publisher.Publish(req);
-            if (pub.IsFailure)
-            {
-                Console.Error.WriteLine(pub.Error);
-                Environment.ExitCode = 1;
-                return;
-            }
+                var pub = await publisher.Publish(req);
+                if (pub.IsFailure)
+                {
+                    logger.Error("Publish failed: {Error}", pub.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
 
-            var container = pub.Value.Container;
-            var name = pub.Value.Name.Match(value => value, () => (string?)null);
-            var built = await DotnetPackaging.Deb.DebFile.From().Container(container, name).Configure(o => o.From(opt)).Build();
-            if (built.IsFailure)
-            {
-                Console.Error.WriteLine(built.Error);
-                Environment.ExitCode = 1;
-                return;
-            }
+                var container = pub.Value.Container;
+                var name = pub.Value.Name.Match(value => value, () => (string?)null);
+                var built = await DotnetPackaging.Deb.DebFile.From().Container(container, name).Configure(o => o.From(opt)).Build();
+                if (built.IsFailure)
+                {
+                    logger.Error("Deb creation failed: {Error}", built.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
 
-            var data = DebMixin.ToData(built.Value);
-            await using var fs = outFile.Open(FileMode.Create);
-            var dumpRes = await data.DumpTo(fs);
-            if (dumpRes.IsFailure)
-            {
-                Console.Error.WriteLine(dumpRes.Error);
-                Environment.ExitCode = 1;
-            }
+                var data = DebMixin.ToData(built.Value);
+                await using var fs = outFile.Open(FileMode.Create);
+                var dumpRes = await data.DumpTo(fs);
+                if (dumpRes.IsFailure)
+                {
+                    logger.Error("Failed writing Deb file: {Error}", dumpRes.Error);
+                    Environment.ExitCode = 1;
+                }
+                else
+                {
+                    logger.Information("{OutputFile}", outFile.FullName);
+                }
+            });
         });
 
         debCommand.Add(fromProject);

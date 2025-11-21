@@ -41,7 +41,6 @@ public static class DmgCommand
                 if (result.IsFailure)
                 {
                     logger.Error("Verification failed: {Error}", result.Error);
-                    Console.Error.WriteLine(result.Error);
                     Environment.ExitCode = 1;
                 }
                 else
@@ -114,35 +113,40 @@ public static class DmgCommand
             var tr = parseResult.GetValue(trimmed);
             var outFile = parseResult.GetValue(output)!;
             var opt = optionsBinder.Bind(parseResult);
-            var ridResult = RidUtils.ResolveMacRid(parseResult.GetValue(arch));
-            if (ridResult.IsFailure)
-            {
-                Console.Error.WriteLine(ridResult.Error);
-                Environment.ExitCode = 1;
-                return;
-            }
+            var ridVal = parseResult.GetValue(arch);
 
-            var publisher = new DotnetPackaging.Publish.DotnetPublisher();
-            var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
+            await ExecutionWrapper.ExecuteWithLogging("dmg-from-project", outFile.FullName, async logger =>
             {
-                Rid = Maybe<string>.From(ridResult.Value),
-                SelfContained = sc,
-                Configuration = cfg,
-                SingleFile = sf,
-                Trimmed = tr
-            };
+                var ridResult = RidUtils.ResolveMacRid(ridVal);
+                if (ridResult.IsFailure)
+                {
+                    logger.Error("Invalid RID: {Error}", ridResult.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
 
-            var pub = await publisher.Publish(req);
-            if (pub.IsFailure)
-            {
-                Console.Error.WriteLine(pub.Error);
-                Environment.ExitCode = 1;
-                return;
-            }
+                var publisher = new DotnetPackaging.Publish.DotnetPublisher();
+                var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
+                {
+                    Rid = Maybe<string>.From(ridResult.Value),
+                    SelfContained = sc,
+                    Configuration = cfg,
+                    SingleFile = sf,
+                    Trimmed = tr
+                };
 
-            var volName = opt.Name.GetValueOrDefault(pub.Value.Name.GetValueOrDefault("App"));
-            await DmgIsoBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName);
-            Log.Information("Success");
+                var pub = await publisher.Publish(req);
+                if (pub.IsFailure)
+                {
+                    logger.Error("Publish failed: {Error}", pub.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
+
+                var volName = opt.Name.GetValueOrDefault(pub.Value.Name.GetValueOrDefault("App"));
+                await DmgIsoBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName);
+                logger.Information("Success");
+            });
         });
 
         dmgCommand.Add(fromProject);

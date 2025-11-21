@@ -30,11 +30,23 @@ public static class MsixCommand
         {
             var inDir = parseResult.GetValue(inputDir)!;
             var outFile = parseResult.GetValue(outputFile)!;
-            var dirInfo = new System.IO.Abstractions.FileSystem().DirectoryInfo.New(inDir.FullName);
-            var container = new DirectoryContainer(dirInfo);
-            await DotnetPackaging.Msix.Msix.FromDirectory(container, Maybe<Serilog.ILogger>.None)
-                .Bind(bytes => bytes.WriteTo(outFile.FullName))
-                .WriteResult();
+            await ExecutionWrapper.ExecuteWithLogging("msix-pack", outFile.FullName, async logger =>
+            {
+                var dirInfo = new System.IO.Abstractions.FileSystem().DirectoryInfo.New(inDir.FullName);
+                var container = new DirectoryContainer(dirInfo);
+                var result = await DotnetPackaging.Msix.Msix.FromDirectory(container, Maybe<Serilog.ILogger>.From(logger))
+                    .Bind(bytes => bytes.WriteTo(outFile.FullName));
+                
+                if (result.IsFailure)
+                {
+                    logger.Error("MSIX packaging failed: {Error}", result.Error);
+                    Environment.ExitCode = 1;
+                }
+                else
+                {
+                    logger.Information("Success");
+                }
+            });
         });
         msixCommand.Add(packCmd);
 
@@ -65,33 +77,45 @@ public static class MsixCommand
             var outFile = parseResult.GetValue(outMsix)!;
             var ridVal = parseResult.GetValue(rid);
 
-            if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            await ExecutionWrapper.ExecuteWithLogging("msix-from-project", outFile.FullName, async logger =>
             {
-                Console.Error.WriteLine("--rid is required when building MSIX from-project on non-Windows hosts (e.g., win-x64/win-arm64).");
-                Environment.ExitCode = 1;
-                return;
-            }
+                if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    logger.Error("--rid is required when building MSIX from-project on non-Windows hosts (e.g., win-x64/win-arm64).");
+                    Environment.ExitCode = 1;
+                    return;
+                }
 
-            var publisher = new DotnetPackaging.Publish.DotnetPublisher();
-            var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
-            {
-                Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
-                SelfContained = sc,
-                Configuration = cfg,
-                SingleFile = sf,
-                Trimmed = tr
-            };
-            var pub = await publisher.Publish(req);
-            if (pub.IsFailure)
-            {
-                Console.Error.WriteLine(pub.Error);
-                Environment.ExitCode = 1;
-                return;
-            }
+                var publisher = new DotnetPackaging.Publish.DotnetPublisher();
+                var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
+                {
+                    Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
+                    SelfContained = sc,
+                    Configuration = cfg,
+                    SingleFile = sf,
+                    Trimmed = tr
+                };
+                var pub = await publisher.Publish(req);
+                if (pub.IsFailure)
+                {
+                    logger.Error("Publish failed: {Error}", pub.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
 
-            await DotnetPackaging.Msix.Msix.FromDirectory(pub.Value.Container, Maybe<Serilog.ILogger>.None)
-                .Bind(bytes => bytes.WriteTo(outFile.FullName))
-                .WriteResult();
+                var result = await DotnetPackaging.Msix.Msix.FromDirectory(pub.Value.Container, Maybe<Serilog.ILogger>.From(logger))
+                    .Bind(bytes => bytes.WriteTo(outFile.FullName));
+                
+                if (result.IsFailure)
+                {
+                    logger.Error("MSIX creation failed: {Error}", result.Error);
+                    Environment.ExitCode = 1;
+                }
+                else
+                {
+                    logger.Information("Success");
+                }
+            });
         });
         msixCommand.Add(fromProject);
     }

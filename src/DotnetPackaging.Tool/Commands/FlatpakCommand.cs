@@ -227,7 +227,6 @@ public static class FlatpakCommand
                 if (pub.IsFailure)
                 {
                     logger.Error("Failed publishing project {Project}: {Error}", prj.FullName, pub.Error);
-                    Console.Error.WriteLine(pub.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
@@ -240,7 +239,6 @@ public static class FlatpakCommand
                 if (execRes.IsFailure)
                 {
                     logger.Error("Executable discovery failed: {Error}", execRes.Error);
-                    Console.Error.WriteLine(execRes.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
@@ -249,7 +247,6 @@ public static class FlatpakCommand
                 if (archRes.IsFailure)
                 {
                     logger.Error("Architecture detection failed: {Error}", archRes.Error);
-                    Console.Error.WriteLine(archRes.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
@@ -259,7 +256,6 @@ public static class FlatpakCommand
                 if (planRes.IsFailure)
                 {
                     logger.Error("Flatpak plan generation failed: {Error}", planRes.Error);
-                    Console.Error.WriteLine(planRes.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
@@ -269,22 +265,20 @@ public static class FlatpakCommand
                 if (!useSystemBundler)
                 {
                     var internalBytes = FlatpakBundle.CreateOstree(plan);
-                    if (internalBytes.IsFailure)
-                    {
-                        logger.Error("Flatpak bundle creation failed: {Error}", internalBytes.Error);
-                        Console.Error.WriteLine(internalBytes.Error);
-                        Environment.ExitCode = 1;
-                        return;
-                    }
+                if (internalBytes.IsFailure)
+                {
+                    logger.Error("Internal bundler failed: {Error}", internalBytes.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
 
-                    var wr = await internalBytes.Value.WriteTo(outFile.FullName);
-                    if (wr.IsFailure)
-                    {
-                        logger.Error("Failed writing bundle: {Error}", wr.Error);
-                        Console.Error.WriteLine(wr.Error);
-                        Environment.ExitCode = 1;
-                        return;
-                    }
+                var wr = await internalBytes.Value.WriteTo(outFile.FullName);
+                if (wr.IsFailure)
+                {
+                    logger.Error("Failed writing bundle: {Error}", wr.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
 
                     logger.Information("{OutputFile}", outFile.FullName);
                     return;
@@ -299,7 +293,6 @@ public static class FlatpakCommand
                 if (write.IsFailure)
                 {
                     logger.Error("Failed materializing Flatpak plan: {Error}", write.Error);
-                    Console.Error.WriteLine(write.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
@@ -314,7 +307,6 @@ public static class FlatpakCommand
                 if (finish.IsFailure)
                 {
                     logger.Error("flatpak build-finish failed: {Error}", finish.Error);
-                    Console.Error.WriteLine(finish.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
@@ -323,7 +315,6 @@ public static class FlatpakCommand
                 if (export.IsFailure)
                 {
                     logger.Error("flatpak build-export failed: {Error}", export.Error);
-                    Console.Error.WriteLine(export.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
@@ -332,7 +323,6 @@ public static class FlatpakCommand
                 if (bundle.IsFailure)
                 {
                     logger.Error("flatpak build-bundle failed: {Error}", bundle.Error);
-                    Console.Error.WriteLine(bundle.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
@@ -402,12 +392,12 @@ public static class FlatpakCommand
                 var setup = new FromDirectoryOptions();
 
                 var execRes = await BuildUtils.GetExecutable(root, setup, logger);
-                if (execRes.IsFailure) { logger.Error("Executable discovery failed: {Error}", execRes.Error); Console.Error.WriteLine(execRes.Error); return; }
+                if (execRes.IsFailure) { logger.Error("Executable discovery failed: {Error}", execRes.Error); Environment.ExitCode = 1; return; }
                 var archRes = await BuildUtils.GetArch(setup, execRes.Value);
-                if (archRes.IsFailure) { logger.Error("Architecture detection failed: {Error}", archRes.Error); Console.Error.WriteLine(archRes.Error); return; }
+                if (archRes.IsFailure) { logger.Error("Architecture detection failed: {Error}", archRes.Error); Environment.ExitCode = 1; return; }
                 var pm = await BuildUtils.CreateMetadata(setup, root, archRes.Value, execRes.Value, setup.IsTerminal, Maybe<string>.From(inDir.Name), logger);
                 var planRes = await new FlatpakFactory().BuildPlan(root, pm, new FlatpakOptions());
-                if (planRes.IsFailure) { logger.Error("Flatpak plan generation failed: {Error}", planRes.Error); Console.Error.WriteLine(planRes.Error); return; }
+                if (planRes.IsFailure) { logger.Error("Flatpak plan generation failed: {Error}", planRes.Error); Environment.ExitCode = 1; return; }
                 var plan = planRes.Value;
 
                 var fileName = $"{plan.AppId}_{plan.Metadata.Version}_{plan.Metadata.Architecture.PackagePrefix}.flatpak";
@@ -461,14 +451,12 @@ public static class FlatpakCommand
                 if (internalBytes.IsFailure)
                 {
                     logger.Error("Internal bundler failed: {Error}", internalBytes.Error);
-                    Console.Error.WriteLine(internalBytes.Error);
                     return;
                 }
                 var writeRes = await internalBytes.Value.WriteTo(outPath);
                 if (writeRes.IsFailure)
                 {
                     logger.Error("Failed writing bundle: {Error}", writeRes.Error);
-                    Console.Error.WriteLine(writeRes.Error);
                 }
                 else
                 {
