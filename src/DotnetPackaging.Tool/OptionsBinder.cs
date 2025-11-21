@@ -1,7 +1,8 @@
-﻿using System.CommandLine;
+using System.CommandLine;
 using System.CommandLine.Parsing;
 using CSharpFunctionalExtensions;
 using Zafiro.CSharpFunctionalExtensions;
+using Zafiro.DataModel;
 
 namespace DotnetPackaging.Tool;
 
@@ -84,5 +85,24 @@ public class OptionsBinder
     {
         var value = parseResult.GetValue(option)?.ToList() ?? [];
         return value.Any() ? value : Maybe.None;
+    }
+
+    public static IIcon? GetIcon(ArgumentResult result)
+    {
+        if (result.Tokens.Count == 0)
+        {
+            return null;
+        }
+
+        var iconPath = result.Tokens[0].Value;
+        var fs = new System.IO.Abstractions.FileSystem();
+        var dataResult = Data.FromFileInfo(fs.FileInfo.New(iconPath));
+        if (dataResult.IsFailure)
+        {
+            result.AddError($"Invalid icon '{iconPath}': {dataResult.Error}");
+        }
+
+        // For now, do not eagerly parse the icon (async). We rely on auto-detection or later stages.
+        return null;
     }
 }
