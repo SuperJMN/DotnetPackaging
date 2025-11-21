@@ -46,11 +46,10 @@ static class Program
             .Enrich.FromLogContext()
             .Enrich.WithProperty("Tool", "DotnetPackaging.Tool")
             .Enrich.WithProperty("Platform", "General")
-            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3} {Tool}] {Message:lj}{NewLine}{Exception}")
+            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3} {Tool}] {Message:lj}{NewLine}{Exception}", standardErrorFromLevel: LogEventLevel.Verbose)
             .CreateLogger();
 
         using var _ = LogContext.PushProperty("ExecutionId", Guid.NewGuid());
-        Log.Information("dotnetpackaging started (verbose={Verbose})", verboseEnabled);
         
         var rootCommand = new RootCommand
         {
@@ -372,7 +371,7 @@ static class Program
         var exitCode = await parseResult.InvokeAsync(parseResult.InvocationConfiguration, CancellationToken.None);
         var finalExitCode = Environment.ExitCode != 0 ? Environment.ExitCode : exitCode;
         Environment.ExitCode = finalExitCode;
-        Log.Information("dotnetpackaging completed with exit code {ExitCode}", finalExitCode);
+
         return finalExitCode;
     }
 
