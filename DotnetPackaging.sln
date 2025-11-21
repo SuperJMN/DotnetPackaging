@@ -23,7 +23,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Other files", "Other files"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{7E0C2A39-1C29-4B5D-9D45-1B6B7E7A77B6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Exe.Tests", "test\DotnetPackaging.Exe.Tests\DotnetPackaging.Exe.Tests.csproj", "{6F3C5C5A-61E4-4D16-BE0D-6A0E9E9B3F9D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Exe.E2E.Tests", "test\DotnetPackaging.Exe.Tests\DotnetPackaging.Exe.Tests.csproj", "{6F3C5C5A-61E4-4D16-BE0D-6A0E9E9B3F9D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Tool", "src\DotnetPackaging.Tool\DotnetPackaging.Tool.csproj", "{C11DE8FE-8C40-44AF-BD71-50F507291E42}"
 EndProject

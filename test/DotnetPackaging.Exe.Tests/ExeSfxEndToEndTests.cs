@@ -7,7 +7,7 @@ using DotnetPackaging.Exe;
 using FluentAssertions;
 using Xunit;
 
-namespace DotnetPackaging.Exe.Tests;
+namespace DotnetPackaging.Exe.E2E.Tests;
 
 public class ExeSfxEndToEndTests
 {
