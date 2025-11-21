@@ -36,7 +36,7 @@
         <PackageReference Include="Avalonia.Desktop" />
         <PackageReference Include="Avalonia.Fonts.Inter" />
         <PackageReference Include="Avalonia.Themes.Fluent" />
-        <PackageReference Include="AvaloniaUI.DiagnosticsSupport" />
+        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="AvaloniaUI.DiagnosticsSupport"/>
         <PackageReference Include="ReactiveProperty" />
         <PackageReference Include="ReactiveUI.Avalonia" />
         <PackageReference Include="Serilog" />
