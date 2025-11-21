@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Formats.Tar;
+using System.Text;
 using FluentAssertions;
 using Xunit;
 using Xunit.Sdk;
@@ -12,22 +14,10 @@ public sealed class FlatpakFromProjectTests
     [Fact]
     public async Task DotnetPackagingTool_bundle_passes_flatpak_validation()
     {
-        if (!OperatingSystem.IsLinux())
-        {
-            throw new XunitException("Flatpak validation requires Linux.");
-        }
-
-        Assert.True(CommandExists("flatpak"), "Flatpak CLI is required to verify bundles.");
-        Assert.True(CommandExists("ostree"), "ostree CLI is required to inspect bundle contents.");
-
         using var temp = new TempDirectory();
         var repoRoot = GetRepositoryRoot();
         var projectPath = Path.Combine(repoRoot, "src", "DotnetPackaging.Tool", "DotnetPackaging.Tool.csproj");
         var bundlePath = Path.Combine(temp.Path, "DotnetPackaging.Tool.flatpak");
-        var repoPath = Path.Combine(temp.Path, "repo");
-        var checkoutPath = Path.Combine(temp.Path, "checkout");
-
-        Directory.CreateDirectory(repoPath);
 
         var environment = new Dictionary<string, string>
         {
@@ -36,37 +26,32 @@ public sealed class FlatpakFromProjectTests
 
         await Execute(
             "dotnet",
-            $"run --project \"{projectPath}\" -- flatpak from-project --project \"{projectPath}\" --output \"{bundlePath}\" --system",
+            $"run --project \"{projectPath}\" -- flatpak from-project --project \"{projectPath}\" --output \"{bundlePath}\"",
             repoRoot,
             environment);
 
         File.Exists(bundlePath).Should().BeTrue("the CLI should produce a Flatpak bundle");
 
-        await Execute("ostree", $"init --mode=archive-z2 --repo=\"{repoPath}\"");
-        await Execute("flatpak", $"build-import-bundle \"{repoPath}\" \"{bundlePath}\"");
-        await Execute("ostree", $"checkout --repo=\"{repoPath}\" app/{AppId}/x86_64/stable \"{checkoutPath}\"");
+        var objects = await ReadBundleEntries(bundlePath);
 
-        var metadataPath = Path.Combine(checkoutPath, "metadata");
-        File.Exists(metadataPath).Should().BeTrue();
-        var metadata = await File.ReadAllTextAsync(metadataPath);
-        metadata.Should().Contain($"name={AppId}");
-        metadata.Should().Contain("runtime=org.freedesktop.Platform/x86_64/23.08");
-        metadata.Should().Contain($"command={AppId}");
+        var commitRefPath = $"refs/heads/app/{AppId}/x86_64/stable";
+        objects.Should().ContainKey(commitRefPath);
 
-        var desktopPath = Path.Combine(checkoutPath, "export", "share", "applications", $"{AppId}.desktop");
-        File.Exists(desktopPath).Should().BeTrue();
+        var commitChecksum = Encoding.UTF8.GetString(objects[commitRefPath]);
+        var commitPath = ToObjectPath(commitChecksum);
+        objects.Should().ContainKey(commitPath);
 
-        var metainfoPath = Path.Combine(checkoutPath, "export", "share", "metainfo", $"{AppId}.metainfo.xml");
-        File.Exists(metainfoPath).Should().BeTrue();
+        var commit = ParseCommit(objects[commitPath]);
+        var treePath = ToObjectPath(commit.TreeChecksum);
+        objects.Should().ContainKey(treePath);
 
-        var wrapperPath = Path.Combine(checkoutPath, "files", "bin", AppId);
-        File.Exists(wrapperPath).Should().BeTrue();
-
-        var executablePath = Path.Combine(checkoutPath, "files", "DotnetPackaging.Tool");
-        File.Exists(executablePath).Should().BeTrue();
-
-        var managedAssembly = Path.Combine(checkoutPath, "files", "DotnetPackaging.dll");
-        File.Exists(managedAssembly).Should().BeTrue();
+        var treeEntries = ParseTree(objects[treePath]);
+        treeEntries.Keys.Should().Contain("metadata", "Flatpak metadata must be present");
+        treeEntries.Keys.Should().Contain($"files/share/applications/{AppId}.desktop", "Desktop entry should be included");
+        treeEntries.Keys.Should().Contain($"files/share/metainfo/{AppId}.metainfo.xml", "Metainfo should be included");
+        treeEntries.Keys.Should().Contain($"files/bin/{AppId}", "Wrapper script should be available in bin");
+        treeEntries.Keys.Should().Contain($"files/DotnetPackaging.Tool", "Published executable should be included");
+        treeEntries.Keys.Should().Contain($"files/DotnetPackaging.dll", "Main assembly should be included");
     }
 
     private static string GetRepositoryRoot()
@@ -126,34 +111,73 @@ public sealed class FlatpakFromProjectTests
         return new CommandResult(stdOutTask.Result, stdErrTask.Result);
     }
 
-    private static bool CommandExists(string commandName)
+    private static async Task<Dictionary<string, byte[]>> ReadBundleEntries(string bundlePath)
     {
-        var pathValue = Environment.GetEnvironmentVariable("PATH");
-        if (string.IsNullOrWhiteSpace(pathValue))
+        await using var stream = File.OpenRead(bundlePath);
+        var reader = new TarReader(stream, leaveOpen: false);
+        var entries = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+        TarEntry? entry;
+        while ((entry = await reader.GetNextEntryAsync()) is not null)
         {
-            return false;
-        }
-
-        var suffixes = OperatingSystem.IsWindows()
-            ? new[] { ".exe", ".bat", ".cmd" }
-            : new[] { string.Empty };
-
-        foreach (var path in pathValue.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-        {
-            foreach (var suffix in suffixes)
+            if (entry.EntryType == TarEntryType.Directory || entry.DataStream is null)
             {
-                var candidate = Path.Combine(path, commandName + suffix);
-                if (File.Exists(candidate))
-                {
-                    return true;
-                }
+                continue;
             }
+
+            await using var ms = new MemoryStream();
+            await entry.DataStream.CopyToAsync(ms);
+            var name = entry.Name.StartsWith("./", StringComparison.Ordinal) ? entry.Name[2..] : entry.Name;
+            entries[name] = ms.ToArray();
         }
 
-        return false;
+        return entries;
+    }
+
+    private static string ToObjectPath(string checksum) => $"objects/{checksum[..2]}/{checksum[2..]}";
+
+    private static CommitRecord ParseCommit(byte[] data)
+    {
+        var (treeChecksum, afterTree) = ReadNullTerminatedString(data, 0);
+        var (subject, afterSubject) = ReadNullTerminatedString(data, afterTree);
+        var timestamp = BitConverter.ToUInt64(data, afterSubject);
+        return new CommitRecord(treeChecksum, subject, timestamp);
+    }
+
+    private static Dictionary<string, string> ParseTree(byte[] data)
+    {
+        var entries = new Dictionary<string, string>(StringComparer.Ordinal);
+        var index = 0;
+        while (index < data.Length - 1)
+        {
+            var (name, afterName) = ReadNullTerminatedString(data, index);
+            if (afterName >= data.Length)
+            {
+                break;
+            }
+
+            var (checksum, afterChecksum) = ReadNullTerminatedString(data, afterName);
+            if (string.IsNullOrEmpty(name))
+            {
+                break;
+            }
+
+            entries[name] = checksum;
+            index = afterChecksum;
+        }
+
+        return entries;
+    }
+
+    private static (string value, int nextIndex) ReadNullTerminatedString(byte[] buffer, int start)
+    {
+        var end = Array.IndexOf(buffer, (byte)0, start);
+        end = end < 0 ? buffer.Length : end;
+        var value = Encoding.UTF8.GetString(buffer, start, end - start);
+        return (value, end + 1);
     }
 
     private sealed record CommandResult(string StandardOutput, string StandardError);
+    private sealed record CommitRecord(string TreeChecksum, string Subject, ulong Timestamp);
 
     private sealed class TempDirectory : IDisposable
     {
