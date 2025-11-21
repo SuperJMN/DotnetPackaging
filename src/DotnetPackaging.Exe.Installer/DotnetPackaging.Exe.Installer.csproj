@@ -26,6 +26,9 @@
         </EmbeddedResource>
     </ItemGroup>
     <ItemGroup>
+        <AvaloniaResource Include="..\..\icon.png">
+          <Link>Assets/icon.png</Link>
+        </AvaloniaResource>
         <Content Include="Assets\Icon.ico" />
     </ItemGroup>
 
@@ -45,8 +48,7 @@
         <PackageReference Include="Zafiro.Avalonia.Generators" />
         <PackageReference Include="Zafiro.DivineBytes" />
     </ItemGroup>
-
-
+    
     <ItemGroup>
       <Compile Update="Steps\Welcome\WelcomeView.axaml.cs">
         <DependentUpon>WelcomeView.axaml</DependentUpon>

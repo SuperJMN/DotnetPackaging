@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:welcome="clr-namespace:DotnetPackaging.Exe.Installer.Flows"
+             mc:Ignorable="d"
+             x:Class="DotnetPackaging.Exe.Installer.Flows.Uninstallation.Wizard.Welcome.UninstallWelcomeView"
+             x:DataType="welcome:IWelcomeViewModel">
+    <Design.DataContext>
+        <welcome:WelcomeViewModelMock />
+    </Design.DataContext>
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </UserControl.Styles>
+
+    <Interaction.Behaviors>
+        <LoadedTrigger>
+            <InvokeCommandAction Command="{Binding LoadMetadata}" />
+            <InvokeCommandAction Command="{Binding LoadLogo}" />
+        </LoadedTrigger>
+    </Interaction.Behaviors>
+
+    <Loading IsLoading="{Binding LoadMetadata.IsExecuting^}">
+        <Grid ColumnDefinitions="Auto *" ColumnSpacing="10" Margin="10 20 20 20">
+            <Image Width="96"
+                   Height="96"
+                   Source="{Binding Logo.Value}" VerticalAlignment="Top"
+                   Stretch="Uniform" />
+            <StackPanel Grid.Column="1" Spacing="15">
+                <TextBlock TextWrapping="Wrap"
+                           Text="{Binding Metadata.Value.ApplicationName, StringFormat='{}{0} Uninstaller'}" FontSize="20" FontWeight="Bold" />
+                <TextBlock DockPanel.Dock="Top">
+                    <TextBlock.Inlines>
+                        <Run>This will uninstall</Run>
+                        <Run FontWeight="Bold" Text="{Binding Metadata.Value.ApplicationName}" />
+                        <Run FontWeight="Bold" Text="{Binding Metadata.Value.Version}" />
+                        <Run>from your computer.</Run>
+                    </TextBlock.Inlines>
+                </TextBlock>
+                <TextBlock>Click Next to continue.</TextBlock>
+            </StackPanel>
+        </Grid>
+    </Loading>
+</UserControl>

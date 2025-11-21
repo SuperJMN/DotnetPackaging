@@ -1,11 +1,13 @@
 using System.IO.Compression;
 using System.Text.Json;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using DotnetPackaging.Exe.Installer.Core;
 using Serilog;
 using Zafiro.DivineBytes;
+using Uninstaller = DotnetPackaging.Exe.Installer.Flows.Uninstallation.Uninstaller;
 
 namespace DotnetPackaging.Exe.Installer;
 
@@ -32,14 +34,14 @@ public sealed class App : Application
         base.OnFrameworkInitializationCompleted();
 
         // Create and set MainWindow immediately - this keeps the app running
-        var mainWindow = new Avalonia.Controls.Window
+        var mainWindow = new Window
         {
             Width = 1,
             Height = 1,
             Opacity = 0,
-            WindowStartupLocation = Avalonia.Controls.WindowStartupLocation.CenterScreen,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
             CanResize = false,
-            SystemDecorations = Avalonia.Controls.SystemDecorations.None,
+            SystemDecorations = SystemDecorations.None,
             ShowInTaskbar = false
         };
         desktopLifetime.MainWindow = mainWindow;
@@ -48,7 +50,7 @@ public sealed class App : Application
         mainWindow.Opened += async (_, _) => await LaunchFlow(desktopLifetime.Args ?? Array.Empty<string>(), mainWindow);
     }
 
-    private static async Task LaunchFlow(IEnumerable<string> args, Avalonia.Controls.Window mainWindow)
+    private static async Task LaunchFlow(IEnumerable<string> args, Window mainWindow)
     {
         try
         {
@@ -59,11 +61,11 @@ public sealed class App : Application
 
             if (IsUninstallMode(args))
             {
-                await Uninstallation.Uninstallation.Launch();
+                await Uninstaller.Launch();
             }
             else
             {
-                await Installation.Installation.Launch();
+                await Flows.Installation.Installer.Launch();
             }
         }
         catch (Exception ex)
@@ -102,7 +104,7 @@ public sealed class App : Application
                 if (!string.IsNullOrWhiteSpace(dumpRawPath))
                 {
                     using var stream = payload.Value.Content.ToStreamSeekable();
-                    using var zip = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
+                    using var zip = new ZipArchive(stream, ZipArchiveMode.Read, false);
                     var entry = zip.GetEntry("metadata.json");
                     if (entry is null)
                     {
@@ -133,5 +135,7 @@ public sealed class App : Application
     }
 
     private static bool IsUninstallMode(IEnumerable<string> args)
-        => args.Any(arg => string.Equals(arg, "--uninstall", StringComparison.OrdinalIgnoreCase));
+    {
+        return args.Any(arg => string.Equals(arg, "--uninstall", StringComparison.OrdinalIgnoreCase));
+    }
 }

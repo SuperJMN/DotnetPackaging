@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:install="clr-namespace:DotnetPackaging.Exe.Installer.Flows.Installation.Wizard.Install"
+             mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="450"
+             x:Class="DotnetPackaging.Exe.Installer.Flows.Installation.Wizard.Install.InstallView"
+             x:DataType="install:InstallViewModel">
+
+    <UserControl.Resources>
+        <BytesToHumanConverter x:Key="BytesToHumanConverter" />
+        <DataTemplate x:Key="DoubleToBytesTemplate" DataType="x:Object">
+            <TextBlock Text="{Binding ., Converter={StaticResource BytesToHumanConverter}}" />
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <StackPanel Spacing="10" VerticalAlignment="Center">
+        <Panel>
+            <TextBlock TextWrapping="Wrap" Margin="14 0" IsVisible="{Binding !Install.IsExecuting^}">We will now install the application. Click Install to proceed with the installation.</TextBlock>
+            <TextBlock HorizontalAlignment="Center" IsVisible="{Binding Install.IsExecuting^}">Installing...</TextBlock>
+        </Panel>
+        <ProgressControl CurrentTemplate="{StaticResource DoubleToBytesTemplate}" TotalTemplate="{StaticResource DoubleToBytesTemplate}" Progress="{Binding Progress^}" IsVisible="{Binding Install.IsExecuting^}" />
+    </StackPanel>
+
+</UserControl>

@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:location1="clr-namespace:DotnetPackaging.Exe.Installer.Flows.Installation.Wizard.Location"
+             mc:Ignorable="d" 
+             x:Class="DotnetPackaging.Exe.Installer.Flows.Installation.Wizard.Location.LocationView"
+             x:DataType="location1:ILocationViewModel">
+    <StackPanel Spacing="8" VerticalAlignment="Center">
+        <TextBlock Text="Select the installation folder" FontWeight="Bold"/>
+        <DockPanel HorizontalSpacing="8" VerticalSpacing="5">
+            <Button  HorizontalAlignment="Right" DockPanel.Dock="Bottom" Content="Browse…" Command="{Binding Browse}"/>
+            <TextBox
+                ToolTip.Tip="{Binding InstallDirectory}"
+                Text="{Binding InstallDirectory, Mode=TwoWay}"  />
+        </DockPanel>
+    </StackPanel>
+</UserControl>
