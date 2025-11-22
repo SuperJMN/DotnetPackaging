@@ -24,7 +24,7 @@
     </Interaction.Behaviors>
 
     <Loading IsLoading="{Binding LoadMetadata.IsExecuting^}">
-        <Grid ColumnDefinitions="Auto *" ColumnSpacing="10" Margin="10 20 20 20">
+        <Grid ColumnDefinitions="Auto *" ColumnSpacing="25" Margin="10 20 20 20">
             <Image Width="96"
                    Height="96"
                    Source="{Binding Logo.Value}" VerticalAlignment="Top"
