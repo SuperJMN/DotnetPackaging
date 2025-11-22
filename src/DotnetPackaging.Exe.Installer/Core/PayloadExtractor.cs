@@ -7,13 +7,15 @@ using Avalonia.Platform;
 using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
 using Zafiro.ProgressReporting;
+using Path = System.IO.Path;
 
 namespace DotnetPackaging.Exe.Installer.Core;
 
 internal static class PayloadExtractor
 {
     private const string Magic = "DPACKEXE1"; // legacy footer (concat mode)
-    private const string BrandingLogoEntry = "Branding/logo";
+    private const string BrandingLogoEntry = "Branding/logo.png";
+    private const string SupportUninstallerEntry = "Support/Uninstaller.exe";
 
     public static Result<InstallerPayload> LoadPayload()
     {
@@ -198,6 +200,28 @@ internal static class PayloadExtractor
                 progressObserver?.OnNext(relativeProgress);
             }
         }, ex => $"Error extracting payload content: {ex.Message}");
+    }
+
+    public static Result<Maybe<string>> CopyUninstallerTo(InstallerPayload payload, string destinationDirectory)
+    {
+        return Result.Try(() =>
+        {
+            Directory.CreateDirectory(destinationDirectory);
+
+            using var stream = payload.Content.ToStreamSeekable();
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
+            var entry = archive.GetEntry(SupportUninstallerEntry);
+            if (entry is null)
+            {
+                return Maybe<string>.None;
+            }
+
+            var outputPath = Path.Combine(destinationDirectory, "Uninstaller.exe");
+            using var entryStream = entry.Open();
+            using var fileStream = File.Create(outputPath);
+            entryStream.CopyTo(fileStream);
+            return Maybe<string>.From(outputPath);
+        }, ex => $"Error extracting uninstaller: {ex.Message}");
     }
 
     private static Func<Result<InstallerPayload>> AttemptLoadPayloadFrom(Func<Maybe<PayloadLocation>> extractor, string missingMessage)

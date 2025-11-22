@@ -52,7 +52,8 @@ public class InstallWizard
     {
         return Task.Run(() =>
             PayloadExtractor.CopyContentTo(payload, installDir, progressObserver)
-                .Bind(() => Core.Installer.Install(installDir, payload.Metadata, payload.ContentSizeBytes, payload.Logo))
+                .Bind(() => PayloadExtractor.CopyUninstallerTo(payload, Path.Combine(installDir, "Uninstall")))
+                .Bind(uninstaller => Core.Installer.Install(installDir, payload.Metadata, payload.ContentSizeBytes, payload.Logo, uninstaller))
                 .Map(exePath => new InstallationResult(payload.Metadata, installDir, exePath)));
     }
     

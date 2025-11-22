@@ -367,3 +367,5 @@ dotnet-install.sh
 
 # Test/runtime artifacts
 squashfs-root/
+src/DotnetPackaging.Msix.Tests/TestFiles/**/Actual.msix
+src/DotnetPackaging.Msix.Tests/TestFiles/**/Expected.msix

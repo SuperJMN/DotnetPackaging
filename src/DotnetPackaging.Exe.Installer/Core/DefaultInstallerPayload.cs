@@ -22,6 +22,10 @@ public sealed class DefaultInstallerPayload : IInstallerPayload
         => EnsureLoaded(ct).Bind(p => Task.Run(() =>
             PayloadExtractor.CopyContentTo(p, targetDirectory, progressObserver), ct));
 
+    public Task<Result<Maybe<string>>> MaterializeUninstaller(string targetDirectory, CancellationToken ct = default)
+        => EnsureLoaded(ct).Bind(payload => Task.Run(
+            () => PayloadExtractor.CopyUninstallerTo(payload, targetDirectory), ct));
+
     private Task<Result<InstallerPayload>> EnsureLoaded(CancellationToken ct)
         => Task.Run(() =>
         {

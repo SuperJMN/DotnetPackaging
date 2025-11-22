@@ -87,4 +87,9 @@ internal sealed class MetadataFilePayload : IInstallerPayload
     {
         return Task.FromResult(Result.Failure("Disk-only payload does not provide installation content."));
     }
+
+    public Task<Result<Maybe<string>>> MaterializeUninstaller(string targetDirectory, CancellationToken ct = default)
+    {
+        return Task.FromResult(Result.Success(Maybe<string>.None));
+    }
 }
