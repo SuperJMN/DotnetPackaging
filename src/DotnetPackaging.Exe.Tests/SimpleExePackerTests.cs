@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using Path = System.IO.Path;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Exe;
 using DotnetPackaging.Exe.Installer.Core;
