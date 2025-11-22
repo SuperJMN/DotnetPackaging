@@ -1,19 +1,21 @@
 using CSharpFunctionalExtensions;
 using System.Text.Json;
 using Serilog;
+using Zafiro.DivineBytes;
+using Path = System.IO.Path;
 
 namespace DotnetPackaging.Exe.Installer.Core;
 
 internal static class Installer
 {
-    public static Result<string> Install(string targetDir, InstallerMetadata meta, long payloadSizeBytes)
+    public static Result<string> Install(string targetDir, InstallerMetadata meta, long payloadSizeBytes, Maybe<IByteSource> logo)
     {
         return ResolveMainExe(targetDir, meta)
             .Tap(exePath => ShortcutService.TryCreateStartMenuShortcut(meta.ApplicationName, exePath))
-            .Tap(exePath => RegisterUninstaller(targetDir, meta, exePath, payloadSizeBytes));
+            .Tap(exePath => RegisterUninstaller(targetDir, meta, exePath, payloadSizeBytes, logo));
     }
 
-    private static void RegisterUninstaller(string targetDir, InstallerMetadata meta, string mainExePath, long payloadSizeBytes)
+    private static void RegisterUninstaller(string targetDir, InstallerMetadata meta, string mainExePath, long payloadSizeBytes, Maybe<IByteSource> logo)
     {
         if (Environment.ProcessPath is null)
         {
@@ -21,6 +23,7 @@ internal static class Installer
         }
 
         PersistMetadata(targetDir, meta);
+        PersistLogo(targetDir, logo);
 
         // Strategy:
         // 1. Copy full installer as Uninstall.exe to "Uninstall" subdirectory to avoid DLL locks/conflicts with main app
@@ -31,6 +34,7 @@ internal static class Installer
             var uninstallDir = Path.Combine(targetDir, "Uninstall");
             Directory.CreateDirectory(uninstallDir);
             PersistMetadata(uninstallDir, meta);
+            PersistLogo(uninstallDir, logo);
 
             var uninstallerPath = Path.Combine(uninstallDir, "Uninstall.exe");
             var slimUninstallerResult = UninstallerBuilder.CreateSlimCopy(Environment.ProcessPath, uninstallerPath);
@@ -68,6 +72,26 @@ internal static class Installer
         catch
         {
             // Best effort
+        }
+    }
+
+    private static void PersistLogo(string directory, Maybe<IByteSource> logo)
+    {
+        if (logo.HasNoValue)
+        {
+            return;
+        }
+
+        try
+        {
+            var logoPath = Path.Combine(directory, "logo.png");
+            using var source = logo.Value.ToStreamSeekable();
+            using var destination = File.Open(logoPath, FileMode.Create, FileAccess.Write, FileShare.None);
+            source.CopyTo(destination);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to persist logo to {Directory}", directory);
         }
     }
 

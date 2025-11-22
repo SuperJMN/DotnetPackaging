@@ -17,6 +17,7 @@
 
         <TextBlock TextWrapping="Wrap"
                    VerticalAlignment="Center"
+                   IsVisible="{Binding InstallationMissing}"
                    TextTrimming="{x:Static TextTrimming.LeadingCharacterEllipsis}"
                    Text="{Binding ErrorMessage, StringFormat='Unable to locate an installation for this package: {0}'}" />
     </StackPanel>
