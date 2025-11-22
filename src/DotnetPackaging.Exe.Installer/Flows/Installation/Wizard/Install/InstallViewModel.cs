@@ -5,6 +5,7 @@ using DotnetPackaging.Exe.Installer.Core;
 using ReactiveUI;
 using Serilog;
 using Zafiro.ProgressReporting;
+using Zafiro.DivineBytes;
 using Zafiro.UI.Commands;
 
 namespace DotnetPackaging.Exe.Installer.Flows.Installation.Wizard.Install;
@@ -36,6 +37,13 @@ public class InstallViewModel
             }
             var payloadSize = payloadSizeResult.IsSuccess ? payloadSizeResult.Value : 0;
 
+            var logoResult = await payload.GetLogo().ConfigureAwait(false);
+            if (logoResult.IsFailure)
+            {
+                Log.Warning("Failed to load logo from payload: {Error}", logoResult.Error);
+            }
+            var logo = logoResult.IsSuccess ? logoResult.Value : Maybe<IByteSource>.None;
+
             var copyRes = await payload.CopyContents(installDirectory, progress).ConfigureAwait(false);
             if (copyRes.IsFailure)
             {
@@ -45,7 +53,7 @@ public class InstallViewModel
 
             Log.Information("Contents copied successfully, registering installation");
 
-            var installResult = Core.Installer.Install(installDirectory, installerMetadata, payloadSize)
+            var installResult = Core.Installer.Install(installDirectory, installerMetadata, payloadSize, logo)
                 .Map(exePath => new InstallationResult(installerMetadata, installDirectory, exePath))
                 .Bind(result => InstallationRegistry.Register(result).Map(() => result));
 

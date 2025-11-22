@@ -7,6 +7,7 @@ using DotnetPackaging.Exe;
 using DotnetPackaging.Exe.Installer.Core;
 using FluentAssertions;
 using Xunit;
+using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Exe.Tests;
 
@@ -272,6 +273,33 @@ public class SimpleExePackerTests
         File.Exists(logPath).Should().BeTrue();
         var logContent = await File.ReadAllTextAsync(logPath);
         logContent.Should().Contain("Failed to start installer dispatcher");
+
+        try { Directory.Delete(tempDir.FullName, true); } catch { }
+    }
+
+    [Fact]
+    public async Task Metadata_payload_should_expose_logo_from_disk()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("dp-meta-logo-");
+        var metadata = new InstallerMetadata("com.test.logo", "Test Logo", "1.0.0", "Test Vendor", HasLogo: true);
+        var metadataPath = Path.Combine(tempDir.FullName, "metadata.json");
+        await File.WriteAllTextAsync(metadataPath, JsonSerializer.Serialize(metadata));
+
+        var logoBytes = new byte[] { 1, 2, 3, 4, 5 };
+        var logoPath = Path.Combine(tempDir.FullName, "logo.png");
+        await File.WriteAllBytesAsync(logoPath, logoBytes);
+
+        var payloadResult = MetadataFilePayload.FromDirectory(tempDir.FullName);
+        payloadResult.IsSuccess.Should().BeTrue(payloadResult.IsFailure ? payloadResult.Error : string.Empty);
+
+        var logoResult = await payloadResult.Value.GetLogo();
+        logoResult.IsSuccess.Should().BeTrue(logoResult.IsFailure ? logoResult.Error : string.Empty);
+        logoResult.Value.HasValue.Should().BeTrue();
+
+        await using var logoStream = logoResult.Value.Value.ToStreamSeekable();
+        await using var buffer = new MemoryStream();
+        await logoStream.CopyToAsync(buffer);
+        buffer.ToArray().Should().Equal(logoBytes);
 
         try { Directory.Delete(tempDir.FullName, true); } catch { }
     }

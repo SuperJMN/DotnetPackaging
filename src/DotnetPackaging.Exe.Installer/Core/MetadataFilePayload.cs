@@ -8,11 +8,13 @@ namespace DotnetPackaging.Exe.Installer.Core;
 
 internal sealed class MetadataFilePayload : IInstallerPayload
 {
+    private readonly string directory;
     private readonly string metadataPath;
 
-    private MetadataFilePayload(string metadataPath)
+    private MetadataFilePayload(string metadataPath, string directory)
     {
         this.metadataPath = metadataPath;
+        this.directory = directory;
     }
 
     public static Result<MetadataFilePayload> FromProcessDirectory()
@@ -28,13 +30,23 @@ internal sealed class MetadataFilePayload : IInstallerPayload
             return Result.Failure<MetadataFilePayload>("Process directory cannot be determined.");
         }
 
+        return FromDirectory(directory);
+    }
+
+    public static Result<MetadataFilePayload> FromDirectory(string directory)
+    {
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return Result.Failure<MetadataFilePayload>("Directory cannot be null or whitespace.");
+        }
+
         var metadataPath = Path.Combine(directory, "metadata.json");
         if (!File.Exists(metadataPath))
         {
             return Result.Failure<MetadataFilePayload>($"metadata.json not found in {directory}");
         }
 
-        return Result.Success(new MetadataFilePayload(metadataPath));
+        return Result.Success(new MetadataFilePayload(metadataPath, directory));
     }
 
     public Task<Result<InstallerMetadata>> GetMetadata(CancellationToken ct = default)
@@ -58,7 +70,17 @@ internal sealed class MetadataFilePayload : IInstallerPayload
 
     public Task<Result<Maybe<IByteSource>>> GetLogo(CancellationToken ct = default)
     {
-        return Task.FromResult(Result.Success(Maybe<IByteSource>.None));
+        return Task.FromResult(Result.Try(() =>
+        {
+            var logoPath = Path.Combine(directory, "logo.png");
+            if (!File.Exists(logoPath))
+            {
+                return Maybe<IByteSource>.None;
+            }
+
+            var bytes = File.ReadAllBytes(logoPath);
+            return Maybe<IByteSource>.From(ByteSource.FromBytes(bytes));
+        }, ex => $"Failed to read logo: {ex.Message}"));
     }
 
     public Task<Result> CopyContents(string targetDirectory, IObserver<Progress>? progressObserver = null, CancellationToken ct = default)
