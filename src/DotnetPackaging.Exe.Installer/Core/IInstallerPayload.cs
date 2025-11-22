@@ -16,4 +16,8 @@ public interface IInstallerPayload
         string targetDirectory,
         IObserver<Progress>? progressObserver = null,
         CancellationToken ct = default);
+
+    Task<Result<Maybe<string>>> MaterializeUninstaller(
+        string targetDirectory,
+        CancellationToken ct = default);
 }

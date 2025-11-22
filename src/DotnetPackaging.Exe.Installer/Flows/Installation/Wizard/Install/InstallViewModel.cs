@@ -51,9 +51,17 @@ public class InstallViewModel
                 return Result.Failure<InstallationResult>(copyRes.Error);
             }
 
+            var uninstallerResult = await payload.MaterializeUninstaller(System.IO.Path.Combine(installDirectory, "Uninstall"))
+                .ConfigureAwait(false);
+            if (uninstallerResult.IsFailure)
+            {
+                Log.Error("Failed to materialize uninstaller: {Error}", uninstallerResult.Error);
+                return Result.Failure<InstallationResult>(uninstallerResult.Error);
+            }
+
             Log.Information("Contents copied successfully, registering installation");
 
-            var installResult = Core.Installer.Install(installDirectory, installerMetadata, payloadSize, logo)
+            var installResult = Core.Installer.Install(installDirectory, installerMetadata, payloadSize, logo, uninstallerResult.Value)
                 .Map(exePath => new InstallationResult(installerMetadata, installDirectory, exePath))
                 .Bind(result => InstallationRegistry.Register(result).Map(() => result));
 

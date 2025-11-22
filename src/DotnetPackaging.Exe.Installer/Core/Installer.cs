@@ -8,14 +8,25 @@ namespace DotnetPackaging.Exe.Installer.Core;
 
 internal static class Installer
 {
-    public static Result<string> Install(string targetDir, InstallerMetadata meta, long payloadSizeBytes, Maybe<IByteSource> logo)
+    public static Result<string> Install(
+        string targetDir,
+        InstallerMetadata meta,
+        long payloadSizeBytes,
+        Maybe<IByteSource> logo,
+        Maybe<string> providedUninstaller)
     {
         return ResolveMainExe(targetDir, meta)
             .Tap(exePath => ShortcutService.TryCreateStartMenuShortcut(meta.ApplicationName, exePath))
-            .Tap(exePath => RegisterUninstaller(targetDir, meta, exePath, payloadSizeBytes, logo));
+            .Tap(exePath => RegisterUninstaller(targetDir, meta, exePath, payloadSizeBytes, logo, providedUninstaller));
     }
 
-    private static void RegisterUninstaller(string targetDir, InstallerMetadata meta, string mainExePath, long payloadSizeBytes, Maybe<IByteSource> logo)
+    private static void RegisterUninstaller(
+        string targetDir,
+        InstallerMetadata meta,
+        string mainExePath,
+        long payloadSizeBytes,
+        Maybe<IByteSource> logo,
+        Maybe<string> providedUninstaller)
     {
         if (Environment.ProcessPath is null)
         {
@@ -36,14 +47,19 @@ internal static class Installer
             PersistMetadata(uninstallDir, meta);
             PersistLogo(uninstallDir, logo);
 
-            var uninstallerPath = Path.Combine(uninstallDir, "Uninstall.exe");
-            var slimUninstallerResult = UninstallerBuilder.CreateSlimCopy(Environment.ProcessPath, uninstallerPath);
-            if (slimUninstallerResult.IsFailure)
+            var uninstallerPath = ResolveUninstallerPath(providedUninstaller, uninstallDir);
+            if (uninstallerPath.HasNoValue)
             {
-                Log.Warning("Slim uninstaller creation failed: {Error}. Using full installer copy instead.", slimUninstallerResult.Error);
-                File.Copy(Environment.ProcessPath, uninstallerPath, overwrite: true);
+                uninstallerPath = Maybe<string>.From(Path.Combine(uninstallDir, "Uninstaller.exe"));
+                var slimUninstallerResult = UninstallerBuilder.CreateSlimCopy(Environment.ProcessPath, uninstallerPath.Value);
+                if (slimUninstallerResult.IsFailure)
+                {
+                    Log.Warning("Slim uninstaller creation failed: {Error}. Using full installer copy instead.", slimUninstallerResult.Error);
+                    File.Copy(Environment.ProcessPath, uninstallerPath.Value, overwrite: true);
+                }
             }
-            Log.Information("Uninstaller copied to: {Path}", uninstallerPath);
+
+            Log.Information("Uninstaller copied to: {Path}", uninstallerPath.Value);
 
             WindowsRegistryService.Register(
                 meta.AppId,
@@ -51,7 +67,7 @@ internal static class Installer
                 meta.Version,
                 meta.Vendor,
                 targetDir,
-                $"\"{uninstallerPath}\" --uninstall",
+                $"\"{uninstallerPath.Value}\" --uninstall",
                 mainExePath,
                 payloadSizeBytes);
         }
@@ -93,6 +109,21 @@ internal static class Installer
         {
             Log.Warning(ex, "Failed to persist logo to {Directory}", directory);
         }
+    }
+
+    private static Maybe<string> ResolveUninstallerPath(Maybe<string> providedUninstaller, string uninstallDir)
+    {
+        return providedUninstaller.Bind(path =>
+        {
+            if (File.Exists(path))
+            {
+                return Maybe<string>.From(path);
+            }
+
+            var fallback = Path.Combine(uninstallDir, "Uninstaller.exe");
+            Log.Warning("Provided uninstaller path {Path} was not found. Will generate fallback at {Fallback}", path, fallback);
+            return Maybe<string>.None;
+        });
     }
 
     private static Result<string> ResolveMainExe(string targetDir, InstallerMetadata meta)

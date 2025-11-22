@@ -15,7 +15,7 @@ namespace DotnetPackaging.Exe.Tests;
 public class SimpleExePackerTests
 {
     [SkippableFact]
-    public async Task Should_Create_Valid_Uninstaller_By_Stripping_Payload()
+    public async Task Should_Create_Valid_Uninstaller_With_Appended_Payload()
     {
         Skip.IfNot(OperatingSystem.IsWindows(), "Installer stub is Windows-only.");
 
@@ -23,7 +23,8 @@ public class SimpleExePackerTests
         var tempDir = Directory.CreateTempSubdirectory("dp-test-strip-");
         var publishDir = tempDir.CreateSubdirectory("publish");
         var outputInstaller = Path.Combine(tempDir.FullName, "Installer.exe");
-        var outputUninstaller = Path.Combine(tempDir.FullName, "Uninstall.exe");
+        var outputUninstaller = Path.Combine(tempDir.FullName, "Uninstaller.exe");
+        var metadataDump = Path.Combine(tempDir.FullName, "metadata.json");
 
         File.WriteAllText(Path.Combine(publishDir.FullName, "App.exe"), "Dummy App");
 
@@ -33,39 +34,15 @@ public class SimpleExePackerTests
         // Act 1: Build Installer (Stub + Payload)
         await SimpleExePacker.Build(stubPath, publishDir.FullName, metadata, Maybe<byte[]>.None, outputInstaller);
 
-        // Act 2: Strip Payload to create Uninstaller
-        using (var src = File.OpenRead(outputInstaller))
-        {
-            var payloadInfo = FindPayloadInfo(src);
-            payloadInfo.HasValue.Should().BeTrue();
-            var (payloadStart, _) = payloadInfo.Value;
-
-            src.Position = 0;
-            using var dst = File.Create(outputUninstaller);
-            var buffer = new byte[81920];
-            long remaining = payloadStart;
-            while (remaining > 0)
-            {
-                var toRead = (int)Math.Min(buffer.Length, remaining);
-                var read = src.Read(buffer, 0, toRead);
-                if (read == 0) break;
-                dst.Write(buffer, 0, read);
-                remaining -= read;
-            }
-        }
-
-        // Assert
-        var originalBytes = await File.ReadAllBytesAsync(stubPath);
-        var strippedBytes = await File.ReadAllBytesAsync(outputUninstaller);
-
-        strippedBytes.Length.Should().Be(originalBytes.Length);
-        strippedBytes.Should().Equal(originalBytes);
+        File.Exists(outputUninstaller).Should().BeTrue();
+        PayloadExtractor.GetAppendedPayloadStart(outputUninstaller).HasValue.Should().BeTrue();
 
         var psi = new ProcessStartInfo(outputUninstaller)
         {
             UseShellExecute = false,
             CreateNoWindow = true,
-            Environment = { ["DP_DUMP_METADATA_JSON"] = "1", ["AVALONIA_HEADLESS"] = "1" }
+            Arguments = "--uninstall",
+            Environment = { ["DP_DUMP_METADATA_JSON"] = metadataDump, ["AVALONIA_HEADLESS"] = "1" }
         };
 
         using var process = Process.Start(psi);
@@ -74,6 +51,8 @@ public class SimpleExePackerTests
         if (!exited) process.Kill();
 
         process.ExitCode.Should().Be(0);
+
+        File.Exists(metadataDump).Should().BeTrue();
 
         try { Directory.Delete(tempDir.FullName, true); } catch { }
     }
@@ -129,7 +108,9 @@ public class SimpleExePackerTests
                 {
                     var entry = zipArchive.GetEntry("Content/App.exe");
                     entry.Should().NotBeNull();
-                    
+
+                    zipArchive.GetEntry("Support/Uninstaller.exe").Should().NotBeNull();
+
                     using var entryStream = entry!.Open();
                     using var reader = new StreamReader(entryStream);
                     var content = await reader.ReadToEndAsync();
@@ -189,10 +170,9 @@ public class SimpleExePackerTests
 
         var tempDir = Directory.CreateTempSubdirectory("dp-uninstall-boot-");
         var publishDir = tempDir.CreateSubdirectory("publish");
-        var uninstallDir = tempDir.CreateSubdirectory("Uninstall");
         var outputInstaller = Path.Combine(tempDir.FullName, "Installer.exe");
-        var outputUninstaller = Path.Combine(uninstallDir.FullName, "Uninstall.exe");
-        var metadataDump = Path.Combine(uninstallDir.FullName, "metadata.json");
+        var outputUninstaller = Path.Combine(tempDir.FullName, "Uninstaller.exe");
+        var metadataDump = Path.Combine(tempDir.FullName, "metadata.json");
 
         File.WriteAllText(Path.Combine(publishDir.FullName, "App.exe"), "Dummy App");
 
@@ -201,13 +181,8 @@ public class SimpleExePackerTests
 
         PayloadExtractor.GetAppendedPayloadStart(outputInstaller).HasValue.Should().BeTrue();
 
-        var slimCopy = UninstallerBuilder.CreateSlimCopy(outputInstaller, outputUninstaller);
-        slimCopy.IsSuccess.Should().BeTrue(slimCopy.IsFailure ? slimCopy.Error : string.Empty);
-
-        PayloadExtractor.GetAppendedPayloadStart(outputUninstaller).HasValue.Should().BeFalse();
-
-        var metadataJson = JsonSerializer.Serialize(metadata);
-        await File.WriteAllTextAsync(Path.Combine(uninstallDir.FullName, "metadata.json"), metadataJson);
+        File.Exists(outputUninstaller).Should().BeTrue();
+        PayloadExtractor.GetAppendedPayloadStart(outputUninstaller).HasValue.Should().BeTrue();
 
         var psi = new ProcessStartInfo(outputUninstaller)
         {

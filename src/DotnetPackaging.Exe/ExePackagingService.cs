@@ -17,7 +17,7 @@ namespace DotnetPackaging.Exe;
 
 public sealed class ExePackagingService
 {
-    private const string BrandingLogoEntry = "Branding/logo";
+    private const string BrandingLogoEntry = "Branding/logo.png";
     private readonly DotnetPublisher publisher;
     private readonly ILogger logger;
 

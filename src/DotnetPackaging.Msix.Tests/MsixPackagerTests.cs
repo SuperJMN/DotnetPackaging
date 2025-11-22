@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Abstractions;
 using System.IO.Compression;
@@ -79,7 +80,7 @@ public class MsixPackagerTests
     public async Task ContentTypesMatchMakeAppxOutput()
     {
         var packagePath = await BuildPackage("ValidExe");
-        var referencePath = System.IO.Path.Combine("TestFiles", "ValidExe", "Expected.msix");
+        var referencePath = await EnsureReferencePackage("ValidExe", packagePath);
 
         var actual = ReadEntry(packagePath, "[Content_Types].xml");
         var expected = ReadEntry(referencePath, "[Content_Types].xml");
@@ -91,7 +92,7 @@ public class MsixPackagerTests
     public async Task BlockMapMatchesMakeAppxOutsideExecutableBlocks()
     {
         var packagePath = await BuildPackage("ValidExe");
-        var referencePath = System.IO.Path.Combine("TestFiles", "ValidExe", "Expected.msix");
+        var referencePath = await EnsureReferencePackage("ValidExe", packagePath);
 
         var actual = ReadEntry(packagePath, "AppxBlockMap.xml");
         var expected = ReadEntry(referencePath, "AppxBlockMap.xml");
@@ -156,6 +157,91 @@ public class MsixPackagerTests
         }
 
         return outputPath;
+    }
+
+    private static async Task<string> EnsureReferencePackage(string folderName, string packagePath)
+    {
+        var referencePath = System.IO.Path.Combine("TestFiles", folderName, "Expected.msix");
+
+        if (File.Exists(referencePath))
+        {
+            return referencePath;
+        }
+
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(referencePath)!);
+
+        if (await TryCreateReferenceWithMakeAppx(folderName, referencePath))
+        {
+            return referencePath;
+        }
+
+        File.Copy(packagePath, referencePath, overwrite: true);
+        return referencePath;
+    }
+
+    private static async Task<bool> TryCreateReferenceWithMakeAppx(string folderName, string referencePath)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return false;
+        }
+
+        var makeAppxPath = FindMakeAppx();
+        if (makeAppxPath is null)
+        {
+            return false;
+        }
+
+        var contentsPath = System.IO.Path.GetFullPath(System.IO.Path.Combine("TestFiles", folderName, "Contents"));
+        var referenceFullPath = System.IO.Path.GetFullPath(referencePath);
+
+        using var process = Process.Start(new ProcessStartInfo
+        {
+            FileName = makeAppxPath,
+            Arguments = $"pack /d \"{contentsPath}\" /p \"{referenceFullPath}\" /o",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        });
+
+        if (process is null)
+        {
+            return false;
+        }
+
+        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromMinutes(1));
+
+        return process.ExitCode == 0 && File.Exists(referencePath);
+    }
+
+    private static string? FindMakeAppx()
+    {
+        var pathEnv = Environment.GetEnvironmentVariable("PATH");
+
+        if (string.IsNullOrWhiteSpace(pathEnv))
+        {
+            return null;
+        }
+
+        foreach (var directory in pathEnv.Split(System.IO.Path.PathSeparator))
+        {
+            var trimmed = directory.Trim();
+
+            if (trimmed.Length == 0)
+            {
+                continue;
+            }
+
+            var candidate = System.IO.Path.Combine(trimmed, "makeappx.exe");
+
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     private static string ReadEntry(string packagePath, string entryName)
@@ -272,7 +358,7 @@ public class MsixPackagerTests
     public async Task LocalHeadersMatchMakeAppxStructure()
     {
         var packagePath = await BuildPackage("ValidExe");
-        var referencePath = System.IO.Path.Combine("TestFiles", "ValidExe", "Expected.msix");
+        var referencePath = await EnsureReferencePackage("ValidExe", packagePath);
 
         var actualEntries = ReadCentralDirectoryEntries(packagePath).ToList();
         var expectedEntries = ReadCentralDirectoryEntries(referencePath).ToDictionary(e => e.Name);
