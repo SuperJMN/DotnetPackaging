@@ -23,7 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\DotnetPackaging.Msix\DotnetPackaging.Msix.csproj"/>
+      <ProjectReference Include="..\..\src\DotnetPackaging.Msix\DotnetPackaging.Msix.csproj" />
     </ItemGroup>
 
 </Project>
