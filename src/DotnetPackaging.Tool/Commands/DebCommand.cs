@@ -3,9 +3,10 @@ using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb.Archives.Deb;
 using Serilog;
-using DotnetPackaging.Tool;
-using Zafiro.FileSystem.Core;
 using Zafiro.DivineBytes;
+using Zafiro.DivineBytes.System.IO;
+using System.IO.Abstractions;
+using Zafiro.FileSystem.Core;
 
 namespace DotnetPackaging.Tool.Commands;
 
@@ -29,19 +30,20 @@ public static class DebCommand
     private static Task CreateDeb(DirectoryInfo inputDir, FileInfo outputFile, Options options, ILogger logger)
     {
         logger.Debug("Packaging Debian artifact from {Directory}", inputDir.FullName);
-        var fs = new System.IO.Abstractions.FileSystem();
-        return new Zafiro.FileSystem.Local.Directory(fs.DirectoryInfo.New(inputDir.FullName))
-            .ToDirectory()
-            .Bind(directory => DotnetPackaging.Deb.DebFile.From()
-                .Directory(directory)
-                .Configure(configuration => configuration.From(options))
-                .Build()
-                .Map(DebMixin.ToData)
-                .Bind(async data =>
-                {
-                    await using var fileSystemStream = outputFile.Open(FileMode.Create);
-                    return await data.DumpTo(fileSystemStream);
-                }))
+        var fs = new FileSystem();
+        var container = new DirectoryContainer(new DirectoryInfoWrapper(fs, inputDir)).AsRoot();
+
+        return DotnetPackaging.Deb.DebFile.From()
+            .Container(container)
+            .Configure(configuration => configuration.From(options))
+            .Build()
+            .Map(DebMixin.ToData)
+            .Bind(async data =>
+            {
+                await using var fileSystemStream = outputFile.Open(FileMode.Create);
+                await ByteSource.FromByteObservable(data.Bytes).ToStream().CopyToAsync(fileSystemStream);
+                return Result.Success();
+            })
             .WriteResult();
     }
 
@@ -150,16 +152,8 @@ public static class DebCommand
 
                 var data = DebMixin.ToData(built.Value);
                 await using var fs = outFile.Open(FileMode.Create);
-                var dumpRes = await data.DumpTo(fs);
-                if (dumpRes.IsFailure)
-                {
-                    logger.Error("Failed writing Deb file: {Error}", dumpRes.Error);
-                    Environment.ExitCode = 1;
-                }
-                else
-                {
-                    logger.Information("{OutputFile}", outFile.FullName);
-                }
+                await ByteSource.FromByteObservable(data.Bytes).ToStream().CopyToAsync(fs);
+                logger.Information("{OutputFile}", outFile.FullName);
             });
         });
 

@@ -8,6 +8,8 @@
   <Import Project="..\Common.props" />
   <ItemGroup>
     <PackageReference Include="Serilog" />
+    <PackageReference Include="System.IO.Abstractions" />
+    <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />

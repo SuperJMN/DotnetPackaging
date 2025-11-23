@@ -2,7 +2,6 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using CSharpFunctionalExtensions;
 using Zafiro.CSharpFunctionalExtensions;
-using Zafiro.DataModel;
 
 namespace DotnetPackaging.Tool;
 
@@ -96,10 +95,10 @@ public class OptionsBinder
 
         var iconPath = result.Tokens[0].Value;
         var fs = new System.IO.Abstractions.FileSystem();
-        var dataResult = Data.FromFileInfo(fs.FileInfo.New(iconPath));
-        if (dataResult.IsFailure)
+        var fileInfo = fs.FileInfo.New(iconPath);
+        if (!fileInfo.Exists)
         {
-            result.AddError($"Invalid icon '{iconPath}': {dataResult.Error}");
+            result.AddError($"Invalid icon '{iconPath}': File not found");
         }
 
         // For now, do not eagerly parse the icon (async). We rely on auto-detection or later stages.

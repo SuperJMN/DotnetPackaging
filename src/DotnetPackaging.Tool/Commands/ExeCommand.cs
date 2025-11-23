@@ -1,9 +1,14 @@
+using System.IO;
 using System.CommandLine;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Exe;
 using Serilog;
 using Zafiro.DivineBytes;
-
+using Zafiro.DivineBytes.System.IO;
+using Directory = System.IO.Directory;
+using File = System.IO.File;
+using DotnetPackaging.Tool;
+using System.IO.Abstractions;
 namespace DotnetPackaging.Tool.Commands;
 
 public static class ExeCommand
@@ -130,7 +135,18 @@ public static class ExeCommand
                 }
 
                 var exeService = new ExePackagingService(logger);
-                var result = await exeService.BuildFromDirectory(inDir, outFile, opt, vendorOpt, ridResult.Value, stub, logo);
+
+                var containerResult = new DirectoryContainer(new DirectoryInfoWrapper(new FileSystem(), inDir)).AsRoot();
+
+                var stubBytes = stub != null 
+                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(stub.FullName)) 
+                    : null;
+
+                var logoBytes = logo != null 
+                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(logo.FullName)) 
+                    : null;
+
+                var result = await exeService.BuildFromDirectory(containerResult, outFile.Name, opt, vendorOpt, ridResult.Value, stubBytes, logoBytes);
                 if (result.IsFailure)
                 {
                     logger.Error("EXE packaging failed: {Error}", result.Error);
@@ -221,7 +237,16 @@ public static class ExeCommand
                 }
 
                 var exeService = new ExePackagingService(logger);
-                var result = await exeService.BuildFromProject(prj, ridResult.Value, sc, cfg, sf, tr, extrasOutput, opt, vendorOpt, extrasStub, extrasLogo);
+                
+                var stubBytes = extrasStub != null 
+                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasStub.FullName)) 
+                    : null;
+
+                var logoBytes = extrasLogo != null 
+                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasLogo.FullName)) 
+                    : null;
+
+                var result = await exeService.BuildFromProject(prj, ridResult.Value, sc, cfg, sf, tr, extrasOutput.Name, opt, vendorOpt, stubBytes, logoBytes);
                 if (result.IsFailure)
                 {
                     logger.Error("EXE from project packaging failed: {Error}", result.Error);

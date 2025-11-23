@@ -1,10 +1,9 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
-using Zafiro.DataModel;
 using Zafiro.DivineBytes;
 using Zafiro.Mixins;
 using Zafiro.Reactive;
@@ -36,7 +35,7 @@ public static class BuildUtils
             var pngResource = iconPlan.Png.Value;
             log.Information("Found icon in resource {Resource}", RelativePath(pngResource));
 
-            var iconResult = await Icon.FromData(Data.FromByteArray(pngResource.Array()));
+            var iconResult = await Icon.FromByteSource(pngResource);
             if (iconResult.IsSuccess)
             {
                 discoveredIcon = Maybe<IIcon>.From(iconResult.Value);

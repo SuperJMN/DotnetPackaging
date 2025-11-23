@@ -1,6 +1,5 @@
-﻿using System.Reactive.Linq;
+using System.Reactive.Linq;
 using Zafiro.DivineBytes;
-using Zafiro.FileSystem.Readonly;
 using Zafiro.Reactive;
 
 namespace DotnetPackaging;
@@ -10,11 +9,6 @@ public static class LinuxElfInspector
     private const int EtExec = 2;
     private const int EtDyn = 3;
     private const int HeaderLength = 20; // Mayor longitud necesaria para verificar ELF32 y ELF64
-
-    public static IObservable<Result<Architecture>> GetArchitecture(this IFile file)
-    {
-        return GetArchitecture(file.Bytes);
-    }
 
     public static async Task<Result<Architecture>> GetArchitecture(this IByteSource file)
     {
@@ -69,11 +63,6 @@ public static class LinuxElfInspector
             0xB7 => Architecture.Arm64,
             _ => Result.Failure<Architecture>("Unknown architecture")
         };
-    }
-
-    public static IObservable<Result<bool>> IsElf(this IFile file)
-    {
-        return IsElf(file.Bytes);
     }
 
     public static IObservable<Result<bool>> IsElf(this IByteSource file)

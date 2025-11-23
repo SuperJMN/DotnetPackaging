@@ -1,17 +1,17 @@
-﻿using SixLabors.ImageSharp;
+using System.Reactive.Linq;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
-using Zafiro.DataModel;
-using Zafiro.FileSystem.Core;
+using Zafiro.DivineBytes;
 
 namespace DotnetPackaging;
 
 public class Icon : IIcon
 {
-    private readonly IData data;
+    private readonly IByteSource source;
 
-    private Icon(IData data, int size)
+    private Icon(IByteSource source, int size)
     {
-        this.data = data;
+        this.source = source;
         Size = size;
     }
 
@@ -22,17 +22,24 @@ public class Icon : IIcon
             await using var memoryStream = new MemoryStream();
             var icon = image.Iconize();
             await icon.SaveAsync(memoryStream, PngFormat.Instance);
-            return (IIcon)new Icon(Data.FromByteArray(memoryStream.ToArray()), icon.Width);
+            var bytes = memoryStream.ToArray();
+            return (IIcon)new Icon(ByteSource.FromStreamFactory(() => new MemoryStream(bytes)), icon.Width);
         });
     }
 
-    public IObservable<byte[]> Bytes => data.Bytes;
-    public long Length => data.Length;
+    public IObservable<byte[]> Bytes => source.Bytes;
 
+    public IDisposable Subscribe(IObserver<byte[]> observer)
+    {
+        return source.Subscribe(observer);
+    }
+    
     public int Size { get; }
 
-    public static Task<Result<IIcon>> FromData(IData data)
+    public static async Task<Result<IIcon>> FromByteSource(IByteSource data)
     {
-        return FromImage(Image.Load(data.Bytes()));
+        var chunks = await data.Bytes.ToList();
+        var bytes = chunks.SelectMany(x => x).ToArray();
+        return await FromImage(Image.Load(bytes));
     }
 }

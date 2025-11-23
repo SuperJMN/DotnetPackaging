@@ -11,6 +11,8 @@ using DotnetPackaging;
 using DotnetPackaging.Publish;
 using Serilog;
 using Zafiro.DivineBytes;
+using Zafiro.DivineBytes.System.IO;
+using System.IO.Abstractions;
 using RuntimeArchitecture = System.Runtime.InteropServices.Architecture;
 using Path = System.IO.Path;
 
@@ -44,17 +46,17 @@ public sealed class ExePackagingService
     }
 
     public Task<Result<IContainer>> BuildFromDirectory(
-        DirectoryInfo publishDirectory,
-        FileInfo outputFile,
+        IContainer publishDirectory,
+        string outputName,
         Options options,
         string? vendor,
         string? runtimeIdentifier,
-        FileInfo? stubFile,
-        FileInfo? setupLogo)
+        IByteSource? stubFile,
+        IByteSource? setupLogo)
     {
         var request = new ExePackagingRequest(
             publishDirectory,
-            outputFile,
+            outputName,
             options,
             ToMaybe(vendor),
             ToMaybe(runtimeIdentifier),
@@ -73,11 +75,11 @@ public sealed class ExePackagingService
         string configuration,
         bool singleFile,
         bool trimmed,
-        FileInfo outputFile,
+        string outputName,
         Options options,
         string? vendor,
-        FileInfo? stubFile,
-        FileInfo? setupLogo)
+        IByteSource? stubFile,
+        IByteSource? setupLogo)
     {
         var publishRequest = new ProjectPublishRequest(projectFile.FullName)
         {
@@ -96,9 +98,16 @@ public sealed class ExePackagingService
 
         var projectMetadata = ReadProjectMetadata(projectFile);
 
+        var publishDir = new DirectoryInfo(publishResult.Value.OutputDirectory);
+        var containerResult = BuildContainer(publishDir);
+        if (containerResult.IsFailure)
+        {
+            return Result.Failure<IContainer>(containerResult.Error);
+        }
+
         var request = new ExePackagingRequest(
-            new DirectoryInfo(publishResult.Value.OutputDirectory),
-            outputFile,
+            containerResult.Value,
+            outputName,
             options,
             ToMaybe(vendor),
             ToMaybe(runtimeIdentifier),
@@ -128,12 +137,7 @@ public sealed class ExePackagingService
     private async Task<Result<IContainer>> Build(ExePackagingRequest request)
     {
         var inferredExecutable = InferExecutableName(request.PublishDirectory, request.ProjectName);
-        var logoResult = ReadSetupLogo(request.SetupLogo);
-        if (logoResult.IsFailure)
-        {
-            return Result.Failure<IContainer>(logoResult.Error);
-        }
-
+        
         var metadata = BuildInstallerMetadata(
             request.Options,
             request.PublishDirectory,
@@ -141,18 +145,11 @@ public sealed class ExePackagingService
             inferredExecutable,
             request.ProjectName,
             request.ProjectMetadata,
-            logoResult.Value);
+            request.SetupLogo);
 
-        var containerResult = BuildContainer(request.PublishDirectory);
-        if (containerResult.IsFailure)
+        async Task<Result<IContainer>> BuildWithStub(IByteSource stubBytes)
         {
-            return Result.Failure<IContainer>(containerResult.Error);
-        }
-
-        async Task<Result<IContainer>> BuildWithStub(string stubPath)
-        {
-            var stubBytes = ByteSource.FromStreamFactory(() => File.OpenRead(stubPath));
-            var buildResult = await SimpleExePacker.Build(stubBytes, containerResult.Value, metadata, logoResult.Value);
+            var buildResult = await SimpleExePacker.Build(stubBytes, request.PublishDirectory, metadata, request.SetupLogo);
             if (buildResult.IsFailure)
             {
                 return Result.Failure<IContainer>(buildResult.Error);
@@ -160,7 +157,7 @@ public sealed class ExePackagingService
 
             var resources = new List<INamedByteSource>
             {
-                new Resource(request.Output.Name, buildResult.Value.Installer),
+                new Resource(request.OutputName, buildResult.Value.Installer),
             };
             
             return Result.Success<IContainer>(new RootContainer(resources, Enumerable.Empty<INamedContainer>()));
@@ -168,7 +165,7 @@ public sealed class ExePackagingService
 
         if (request.Stub.HasValue)
         {
-            return await BuildWithStub(request.Stub.Value.FullName);
+            return await BuildWithStub(request.Stub.Value);
         }
 
         var ridResult = DetermineRuntimeIdentifier(request.RuntimeIdentifier);
@@ -186,13 +183,13 @@ public sealed class ExePackagingService
         var localStub = localStubResult.Value;
         if (localStub.HasValue)
         {
-            return await BuildWithStub(localStub.Value);
+            return await BuildWithStub(ByteSource.FromStreamFactory(() => File.OpenRead(localStub.Value)));
         }
 
         var version = GetToolVersion();
         var stubPathResult = await GetOrDownloadStub(ridResult.Value, version);
         return stubPathResult.IsSuccess
-            ? await BuildWithStub(stubPathResult.Value)
+            ? await BuildWithStub(ByteSource.FromStreamFactory(() => File.OpenRead(stubPathResult.Value)))
             : Result.Failure<IContainer>(stubPathResult.Error);
     }
 
@@ -206,52 +203,24 @@ public sealed class ExePackagingService
         return string.IsNullOrWhiteSpace(value) ? Maybe<string>.None : Maybe<string>.From(value);
     }
 
-    private static Result<RootContainer> BuildContainer(DirectoryInfo publishDirectory)
+    private static Result<IContainer> BuildContainer(DirectoryInfo publishDirectory)
     {
-        return Result.Try(() =>
+        return Result.Try<IContainer>(() =>
         {
             if (!publishDirectory.Exists)
             {
                 throw new DirectoryNotFoundException($"Publish directory not found: {publishDirectory.FullName}");
             }
 
-            var files = Directory
-                .EnumerateFiles(publishDirectory.FullName, "*", SearchOption.AllDirectories)
-                .ToDictionary(
-                    file => Path.GetRelativePath(publishDirectory.FullName, file).Replace('\\', '/'),
-                    file => (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(file)),
-                    StringComparer.Ordinal);
-
-            var containerResult = files.ToRootContainer();
-            if (containerResult.IsFailure)
-            {
-                throw new InvalidOperationException(containerResult.Error);
-            }
-
-            return containerResult.Value;
+            return new DirectoryContainer(new DirectoryInfoWrapper(new FileSystem(), publishDirectory)).AsRoot();
         }, ex => ex.Message);
     }
 
 
-    private static Result<Maybe<IByteSource>> ReadSetupLogo(Maybe<FileInfo> setupLogo)
-    {
-        return setupLogo.Match(
-            file => Result.Try(() =>
-            {
-                if (!file.Exists)
-                {
-                    throw new FileNotFoundException($"Logo not found: {file.FullName}");
-                }
-
-                var bytes = File.ReadAllBytes(file.FullName);
-                return Maybe<IByteSource>.From(ByteSource.FromBytes(bytes));
-            }, ex => $"Failed to read setup logo: {ex.Message}"),
-            () => Result.Success(Maybe<IByteSource>.None));
-    }
 
     private static InstallerMetadata BuildInstallerMetadata(
         Options options,
-        DirectoryInfo contextDir,
+        IContainer contextDir,
         Maybe<string> vendor,
         Maybe<string> inferredExecutable,
         Maybe<string> projectName,
@@ -267,7 +236,7 @@ public sealed class ExePackagingService
         var appName = options.Name
             .Or(() => metadataProduct)
             .Or(() => projectName)
-            .GetValueOrDefault(contextDir.Name);
+            .GetValueOrDefault("Application"); // We can't easily get directory name from IContainer
         var packageName = appName.ToLowerInvariant().Replace(" ", string.Empty).Replace("-", string.Empty);
         var appId = options.Id.GetValueOrDefault($"com.{packageName}");
         var version = options.Version.GetValueOrDefault("1.0.0");
@@ -289,24 +258,25 @@ public sealed class ExePackagingService
         return new InstallerMetadata(appId, appName, version, effectiveVendor, description, executable, logoBytes.HasValue);
     }
 
-    private Maybe<string> InferExecutableName(DirectoryInfo contextDir, Maybe<string> projectName)
+    private Maybe<string> InferExecutableName(IContainer contextDir, Maybe<string> projectName)
     {
         try
         {
-            var candidates = Directory
-                .EnumerateFiles(contextDir.FullName, "*.exe", SearchOption.AllDirectories)
+            var candidates = contextDir
+                .ResourcesWithPathsRecursive()
+                .Where(r => r.Path.Value.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                 .Select(path => new
                 {
-                    Relative = Path.GetRelativePath(contextDir.FullName, path),
-                    Name = Path.GetFileName(path),
-                    Stem = Path.GetFileNameWithoutExtension(path)
+                    Relative = path.FullPath(),
+                    Name = path.Name,
+                    Stem = Path.GetFileNameWithoutExtension(path.Name)
                 })
                 .Where(candidate => !string.Equals(candidate.Name, "createdump.exe", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             if (!candidates.Any())
             {
-                logger.Warning("No executables were found under {Directory} when trying to infer the main executable.", contextDir.FullName);
+                logger.Warning("No executables were found in container when trying to infer the main executable.");
                 return Maybe<string>.None;
             }
 
@@ -341,7 +311,7 @@ public sealed class ExePackagingService
                 {
                     candidate.Relative,
                     Normalized = NormalizeExecutableRelativePath(candidate.Relative),
-                    Depth = candidate.Relative.Count(ch => ch == Path.DirectorySeparatorChar || ch == Path.AltDirectorySeparatorChar)
+                    Depth = candidate.Relative.RouteFragments.Count()
                 })
                 .OrderBy(candidate => candidate.Depth)
                 .ThenBy(candidate => candidate.Normalized.Length)
@@ -352,7 +322,7 @@ public sealed class ExePackagingService
         }
         catch (Exception ex)
         {
-            logger.Warning(ex, "Unable to infer the executable under {Directory}.", contextDir.FullName);
+            logger.Warning(ex, "Unable to infer the executable from container.");
             return Maybe<string>.None;
         }
     }
@@ -804,13 +774,13 @@ public sealed class ExePackagingService
     }
 
     private sealed record ExePackagingRequest(
-        DirectoryInfo PublishDirectory,
-        FileInfo Output,
+        IContainer PublishDirectory,
+        string OutputName,
         Options Options,
         Maybe<string> Vendor,
         Maybe<string> RuntimeIdentifier,
-        Maybe<FileInfo> Stub,
+        Maybe<IByteSource> Stub,
         Maybe<string> ProjectName,
         Maybe<ProjectMetadata> ProjectMetadata,
-        Maybe<FileInfo> SetupLogo);
+        Maybe<IByteSource> SetupLogo);
 }

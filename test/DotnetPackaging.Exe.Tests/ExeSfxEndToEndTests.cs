@@ -4,9 +4,11 @@ using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using DotnetPackaging.Exe;
+using System.Reactive.Linq;
 using FluentAssertions;
 using Xunit;
-using Zafiro.DivineBytes;
+using Zafiro.DivineBytes.System.IO;
+using Path = System.IO.Path;
 
 namespace DotnetPackaging.Exe.E2E.Tests;
 
@@ -28,7 +30,7 @@ public class ExeSfxEndToEndTests
 
         // Act: build the SFX installer from the project
         var service = new ExePackagingService();
-        var result = await service.BuildFromProject(new FileInfo(projectPath), "win-x64", true, "Release", true, false, new FileInfo(outputExe), new Options(), vendor: null, stubFile: null, setupLogo: null);
+        var result = await service.BuildFromProject(new FileInfo(projectPath), "win-x64", true, "Release", true, false, outputExe, new Options(), vendor: null, stubFile: null, setupLogo: null);
         result.IsSuccess.Should().BeTrue(result.IsFailure ? result.Error : string.Empty);
 
         await result.Value.WriteTo(tmpDir);

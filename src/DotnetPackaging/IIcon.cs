@@ -1,8 +1,8 @@
-﻿using Zafiro.DataModel;
+using Zafiro.DivineBytes;
 
 namespace DotnetPackaging;
 
-public interface IIcon : IData
+public interface IIcon : IByteSource
 {
     public int Size { get; }
 }
