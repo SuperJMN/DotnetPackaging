@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
+using IOPath = System.IO.Path;
 using Zafiro.FileSystem.Core;
 
 namespace DotnetPackaging.Exe;
@@ -27,7 +28,7 @@ public static class SimpleExePacker
             return Result.Failure($"Publish directory not found: {publishDir}");
         }
 
-        var outputDirectory = Path.GetDirectoryName(outputPath);
+        var outputDirectory = IOPath.GetDirectoryName(outputPath);
         if (string.IsNullOrWhiteSpace(outputDirectory))
         {
             return Result.Failure("Output directory cannot be determined.");
@@ -48,7 +49,7 @@ public static class SimpleExePacker
         }
 
         Directory.CreateDirectory(outputDirectory);
-        var uninstallerPath = Path.Combine(outputDirectory, "Uninstaller.exe");
+        var uninstallerPath = IOPath.Combine(outputDirectory, "Uninstaller.exe");
         await Persist(bundleResult.Value.Installer, outputPath);
         await Persist(bundleResult.Value.Uninstaller, uninstallerPath);
 
@@ -83,7 +84,7 @@ public static class SimpleExePacker
 
     private static async Task Persist(INamedByteSource artifact, string path)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        Directory.CreateDirectory(IOPath.GetDirectoryName(path)!);
         await using var input = artifact.ToStreamSeekable();
         await using var output = File.Create(path);
         await input.CopyToAsync(output);
@@ -153,7 +154,7 @@ public static class SimpleExePacker
             var files = Directory
                 .EnumerateFiles(root, "*", SearchOption.AllDirectories)
                 .ToDictionary(
-                    file => Path.GetRelativePath(root, file).Replace("\\", "/"),
+                    file => IOPath.GetRelativePath(root, file).Replace("\\", "/"),
                     file => (IByteSource)ByteSource.FromAsyncStreamFactory(() => Task.FromResult<Stream>(File.OpenRead(file))),
                     StringComparer.Ordinal);
 
