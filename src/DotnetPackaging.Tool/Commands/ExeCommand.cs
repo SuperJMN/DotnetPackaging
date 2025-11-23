@@ -2,6 +2,7 @@ using System.CommandLine;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Exe;
 using Serilog;
+using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Tool.Commands;
 
@@ -137,7 +138,8 @@ public static class ExeCommand
                     return;
                 }
 
-                logger.Information("{OutputFile}", result.Value.FullName);
+                await result.Value.WriteTo(outFile.DirectoryName ?? Directory.GetCurrentDirectory());
+                logger.Information("{OutputFile}", outFile.FullName);
             });
         });
 
@@ -227,7 +229,8 @@ public static class ExeCommand
                     return;
                 }
 
-                logger.Information("{OutputFile}", result.Value.FullName);
+                await result.Value.WriteTo(extrasOutput.DirectoryName ?? Directory.GetCurrentDirectory());
+                logger.Information("{OutputFile}", extrasOutput.FullName);
             });
         });
 

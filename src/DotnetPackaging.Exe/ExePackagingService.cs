@@ -43,7 +43,7 @@ public sealed class ExePackagingService
         this.logger = logger ?? Log.Logger;
     }
 
-    public Task<Result<FileInfo>> BuildFromDirectory(
+    public Task<Result<IContainer>> BuildFromDirectory(
         DirectoryInfo publishDirectory,
         FileInfo outputFile,
         Options options,
@@ -66,7 +66,7 @@ public sealed class ExePackagingService
         return Build(request);
     }
 
-    public async Task<Result<FileInfo>> BuildFromProject(
+    public async Task<Result<IContainer>> BuildFromProject(
         FileInfo projectFile,
         string? runtimeIdentifier,
         bool selfContained,
@@ -91,7 +91,7 @@ public sealed class ExePackagingService
         var publishResult = await publisher.Publish(publishRequest);
         if (publishResult.IsFailure)
         {
-            return Result.Failure<FileInfo>(publishResult.Error);
+            return Result.Failure<IContainer>(publishResult.Error);
         }
 
         var projectMetadata = ReadProjectMetadata(projectFile);
@@ -125,13 +125,13 @@ public sealed class ExePackagingService
         return Maybe<ProjectMetadata>.From(metadataResult.Value);
     }
 
-    private async Task<Result<FileInfo>> Build(ExePackagingRequest request)
+    private async Task<Result<IContainer>> Build(ExePackagingRequest request)
     {
         var inferredExecutable = InferExecutableName(request.PublishDirectory, request.ProjectName);
         var logoResult = ReadSetupLogo(request.SetupLogo);
         if (logoResult.IsFailure)
         {
-            return Result.Failure<FileInfo>(logoResult.Error);
+            return Result.Failure<IContainer>(logoResult.Error);
         }
 
         var metadata = BuildInstallerMetadata(
@@ -146,22 +146,24 @@ public sealed class ExePackagingService
         var containerResult = BuildContainer(request.PublishDirectory);
         if (containerResult.IsFailure)
         {
-            return Result.Failure<FileInfo>(containerResult.Error);
+            return Result.Failure<IContainer>(containerResult.Error);
         }
 
-        async Task<Result<FileInfo>> BuildWithStub(string stubPath)
+        async Task<Result<IContainer>> BuildWithStub(string stubPath)
         {
             var stubBytes = ByteSource.FromStreamFactory(() => File.OpenRead(stubPath));
             var buildResult = await SimpleExePacker.Build(stubBytes, containerResult.Value, metadata, logoResult.Value);
             if (buildResult.IsFailure)
             {
-                return Result.Failure<FileInfo>(buildResult.Error);
+                return Result.Failure<IContainer>(buildResult.Error);
             }
 
-            var writeResult = await WriteArtifacts(request.Output, buildResult.Value);
-            return writeResult.IsSuccess
-                ? Result.Success(request.Output)
-                : Result.Failure<FileInfo>(writeResult.Error);
+            var resources = new List<INamedByteSource>
+            {
+                new Resource(request.Output.Name, buildResult.Value.Installer),
+            };
+            
+            return Result.Success<IContainer>(new RootContainer(resources, Enumerable.Empty<INamedContainer>()));
         }
 
         if (request.Stub.HasValue)
@@ -172,13 +174,13 @@ public sealed class ExePackagingService
         var ridResult = DetermineRuntimeIdentifier(request.RuntimeIdentifier);
         if (ridResult.IsFailure)
         {
-            return Result.Failure<FileInfo>(ridResult.Error);
+            return Result.Failure<IContainer>(ridResult.Error);
         }
 
         var localStubResult = await TryResolveLocalStub(ridResult.Value);
         if (localStubResult.IsFailure)
         {
-            return Result.Failure<FileInfo>(localStubResult.Error);
+            return Result.Failure<IContainer>(localStubResult.Error);
         }
 
         var localStub = localStubResult.Value;
@@ -191,7 +193,7 @@ public sealed class ExePackagingService
         var stubPathResult = await GetOrDownloadStub(ridResult.Value, version);
         return stubPathResult.IsSuccess
             ? await BuildWithStub(stubPathResult.Value)
-            : Result.Failure<FileInfo>(stubPathResult.Error);
+            : Result.Failure<IContainer>(stubPathResult.Error);
     }
 
     private static Maybe<T> ToMaybe<T>(T? value) where T : class
@@ -230,18 +232,6 @@ public sealed class ExePackagingService
         }, ex => ex.Message);
     }
 
-    private async Task<Result> WriteArtifacts(FileInfo output, ExeBuildArtifacts artifacts)
-    {
-        var directory = output.DirectoryName;
-        if (string.IsNullOrWhiteSpace(directory))
-        {
-            return Result.Failure("Output directory cannot be determined.");
-        }
-
-        Directory.CreateDirectory(directory);
-        var uninstallerPath = new FileInfo(Path.Combine(directory, "Uninstaller.exe"));
-        return await artifacts.WriteTo(output, uninstallerPath);
-    }
 
     private static Result<Maybe<IByteSource>> ReadSetupLogo(Maybe<FileInfo> setupLogo)
     {

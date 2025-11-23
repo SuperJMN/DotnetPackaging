@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using DotnetPackaging.Exe;
 using FluentAssertions;
 using Xunit;
+using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Exe.E2E.Tests;
 
@@ -30,10 +31,12 @@ public class ExeSfxEndToEndTests
         var result = await service.BuildFromProject(new FileInfo(projectPath), "win-x64", true, "Release", true, false, new FileInfo(outputExe), new Options(), vendor: null, stubFile: null, setupLogo: null);
         result.IsSuccess.Should().BeTrue(result.IsFailure ? result.Error : string.Empty);
 
+        await result.Value.WriteTo(tmpDir);
+
         // Run the produced installer with the env hook to dump metadata and exit
         var psi = new ProcessStartInfo
         {
-            FileName = result.Value.FullName,
+            FileName = outputExe,
             UseShellExecute = false,
             CreateNoWindow = true,
         };
