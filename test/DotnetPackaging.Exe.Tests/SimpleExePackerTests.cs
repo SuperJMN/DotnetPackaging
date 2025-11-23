@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
@@ -28,11 +29,10 @@ public class SimpleExePackerTests
 
         File.WriteAllText(Path.Combine(publishDir.FullName, "App.exe"), "Dummy App");
 
-        var stubPath = ResolveStubPath();
         var metadata = new InstallerMetadata("com.test.strip", "Test Strip", "1.0.0", "Test Vendor", "Desc", "App.exe");
 
-        // Act 1: Build Installer (Stub + Payload)
-        await SimpleExePacker.Build(stubPath, publishDir.FullName, metadata, Maybe<byte[]>.None, outputInstaller);
+        var artifacts = await BuildArtifacts(publishDir, metadata);
+        await WriteArtifacts(artifacts, outputInstaller, outputUninstaller);
 
         File.Exists(outputUninstaller).Should().BeTrue();
         PayloadExtractor.GetAppendedPayloadStart(outputUninstaller).HasValue.Should().BeTrue();
@@ -70,12 +70,10 @@ public class SimpleExePackerTests
         var appContent = "Dummy App Content";
         File.WriteAllText(Path.Combine(publishDir.FullName, "App.exe"), appContent);
 
-        var originalStubPath = ResolveStubPath();
-
         var metadata = new InstallerMetadata("com.test.extract", "Test Extract", "1.0.0", "Test Vendor", "Desc", "App.exe");
 
-        // Act 1: Build Installer
-        await SimpleExePacker.Build(originalStubPath, publishDir.FullName, metadata, Maybe<byte[]>.None, outputInstaller);
+        var artifacts = await BuildArtifacts(publishDir, metadata);
+        await WriteArtifacts(artifacts, outputInstaller, Path.Combine(tempDir.FullName, "Uninstaller.exe"));
 
         // Act 2: Try to extract payload using the SAME logic as the installer uses
         // We need to invoke PayloadExtractor logic. Since it's internal in another assembly, we'll duplicate the logic or use reflection?
@@ -135,7 +133,8 @@ public class SimpleExePackerTests
         File.WriteAllText(Path.Combine(publishDir.FullName, "App.exe"), "Dummy App");
 
         var metadata = new InstallerMetadata("com.test.boot", "Test Boot", "1.0.0", "Test Vendor", "Desc", "App.exe");
-        await SimpleExePacker.Build(ResolveStubPath(), publishDir.FullName, metadata, Maybe<byte[]>.None, outputInstaller);
+        var artifacts = await BuildArtifacts(publishDir, metadata);
+        await WriteArtifacts(artifacts, outputInstaller, Path.Combine(tempDir.FullName, "Uninstaller.exe"));
 
         var psi = new ProcessStartInfo(outputInstaller)
         {
@@ -177,7 +176,8 @@ public class SimpleExePackerTests
         File.WriteAllText(Path.Combine(publishDir.FullName, "App.exe"), "Dummy App");
 
         var metadata = new InstallerMetadata("com.test.uninstall", "Test Uninstall", "1.0.0", "Test Vendor", "Desc", "App.exe");
-        await SimpleExePacker.Build(ResolveStubPath(), publishDir.FullName, metadata, Maybe<byte[]>.None, outputInstaller);
+        var artifacts = await BuildArtifacts(publishDir, metadata);
+        await WriteArtifacts(artifacts, outputInstaller, outputUninstaller);
 
         PayloadExtractor.GetAppendedPayloadStart(outputInstaller).HasValue.Should().BeTrue();
 
@@ -229,7 +229,8 @@ public class SimpleExePackerTests
         File.WriteAllText(Path.Combine(publishDir.FullName, "App.exe"), "Dummy App");
 
         var metadata = new InstallerMetadata("com.test.dispatcher", "Test Dispatcher", "1.0.0", "Test Vendor", "Desc", "App.exe");
-        await SimpleExePacker.Build(ResolveStubPath(), publishDir.FullName, metadata, Maybe<byte[]>.None, outputInstaller);
+        var artifacts = await BuildArtifacts(publishDir, metadata);
+        await WriteArtifacts(artifacts, outputInstaller, Path.Combine(tempDir.FullName, "Uninstaller.exe"));
 
         var psi = new ProcessStartInfo(outputInstaller)
         {
@@ -280,14 +281,85 @@ public class SimpleExePackerTests
         try { Directory.Delete(tempDir.FullName, true); } catch { }
     }
 
-    private Maybe<(long Start, long Length)> FindPayloadInfo(FileStream fs)
+    [Fact]
+    public async Task Payload_should_be_readable_without_disk_intermediates()
+    {
+        var metadata = new InstallerMetadata("com.test.memory", "Memory Test", "1.0.0", "Vendor", ExecutableName: "App.exe");
+        var containerResult = new Dictionary<string, IByteSource>
+        {
+            ["App.exe"] = ByteSource.FromString("App content"),
+            ["data/config.json"] = ByteSource.FromString("{\"enabled\":true}")
+        }.ToRootContainer();
+
+        containerResult.IsSuccess.Should().BeTrue(containerResult.IsFailure ? containerResult.Error : string.Empty);
+
+        var stub = ByteSource.FromBytes(new byte[] { 1, 2, 3, 4 });
+        var buildResult = await SimpleExePacker.Build(stub, containerResult.Value, metadata, Maybe<IByteSource>.None);
+        buildResult.IsSuccess.Should().BeTrue(buildResult.IsFailure ? buildResult.Error : string.Empty);
+
+        await using var stream = buildResult.Value.Installer.ToStreamSeekable();
+        var payloadBytesMaybe = ExtractPayloadBytes(stream);
+        payloadBytesMaybe.HasValue.Should().BeTrue();
+        var payloadBytes = payloadBytesMaybe.Value;
+
+        using var archive = new ZipArchive(new MemoryStream(payloadBytes), ZipArchiveMode.Read, leaveOpen: false);
+        archive.GetEntry("Support/Uninstaller.exe").Should().NotBeNull();
+
+        var appEntry = archive.GetEntry("Content/App.exe");
+        appEntry.Should().NotBeNull();
+        using (var entryStream = appEntry!.Open())
+        using (var reader = new StreamReader(entryStream))
+        {
+            (await reader.ReadToEndAsync()).Should().Be("App content");
+        }
+
+        var metadataEntry = archive.GetEntry("metadata.json");
+        metadataEntry.Should().NotBeNull();
+        using (var entryStream = metadataEntry!.Open())
+        using (var reader = new StreamReader(entryStream))
+        {
+            var serialized = await reader.ReadToEndAsync();
+            serialized.Should().Contain("Memory Test");
+        }
+    }
+
+    private async Task<ExeBuildArtifacts> BuildArtifacts(DirectoryInfo publishDir, InstallerMetadata metadata, Maybe<IByteSource>? logo = null)
+    {
+        var container = BuildContainer(publishDir);
+        var stub = ByteSource.FromStreamFactory(() => File.OpenRead(ResolveStubPath()));
+        var buildResult = await SimpleExePacker.Build(stub, container, metadata, logo ?? Maybe<IByteSource>.None);
+        buildResult.IsSuccess.Should().BeTrue(buildResult.IsFailure ? buildResult.Error : string.Empty);
+        return buildResult.Value;
+    }
+
+    private static RootContainer BuildContainer(DirectoryInfo publishDir)
+    {
+        var files = Directory
+            .EnumerateFiles(publishDir.FullName, "*", SearchOption.AllDirectories)
+            .ToDictionary(
+                file => Path.GetRelativePath(publishDir.FullName, file).Replace('\\', '/'),
+                file => (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(file)),
+                StringComparer.Ordinal);
+
+        var containerResult = files.ToRootContainer();
+        containerResult.IsSuccess.Should().BeTrue(containerResult.IsFailure ? containerResult.Error : string.Empty);
+        return containerResult.Value;
+    }
+
+    private static async Task WriteArtifacts(ExeBuildArtifacts artifacts, string installerPath, string uninstallerPath)
+    {
+        var writeResult = await artifacts.WriteTo(new FileInfo(installerPath), new FileInfo(uninstallerPath));
+        writeResult.IsSuccess.Should().BeTrue(writeResult.IsFailure ? writeResult.Error : string.Empty);
+    }
+
+    private Maybe<(long Start, long Length)> FindPayloadInfo(Stream stream)
     {
         var searchWindow = 4096;
-        if (fs.Length < searchWindow) searchWindow = (int)fs.Length;
-        
+        if (stream.Length < searchWindow) searchWindow = (int)stream.Length;
+
         var buffer = new byte[searchWindow];
-        fs.Seek(-searchWindow, SeekOrigin.End);
-        fs.Read(buffer, 0, searchWindow);
+        stream.Seek(-searchWindow, SeekOrigin.End);
+        var bytesRead = stream.Read(buffer, 0, searchWindow);
         
         var magic = "DPACKEXE1";
         var magicBytes = Encoding.ASCII.GetBytes(magic);
@@ -313,14 +385,41 @@ public class SimpleExePackerTests
 
         if (magicPos == -1) return Maybe<(long, long)>.None;
 
-        var footerStartInFile = fs.Length - searchWindow + magicPos;
+        var footerStartInFile = stream.Length - bytesRead + magicPos;
         var lengthPos = footerStartInFile - 8;
-        
-        fs.Seek(lengthPos, SeekOrigin.Begin);
-        var reader = new BinaryReader(fs, Encoding.UTF8, true);
+
+        stream.Seek(lengthPos, SeekOrigin.Begin);
+        var reader = new BinaryReader(stream, Encoding.UTF8, true);
         var payloadLen = reader.ReadInt64();
 
         return (lengthPos - payloadLen, payloadLen);
+    }
+
+    private Maybe<byte[]> ExtractPayloadBytes(Stream stream)
+    {
+        var info = FindPayloadInfo(stream);
+        if (info.HasNoValue)
+        {
+            return Maybe<byte[]>.None;
+        }
+
+        var (start, length) = info.Value;
+        stream.Seek(start, SeekOrigin.Begin);
+        var buffer = new byte[length];
+        var read = 0;
+
+        while (read < length)
+        {
+            var chunk = stream.Read(buffer, read, (int)(length - read));
+            if (chunk == 0)
+            {
+                break;
+            }
+
+            read += chunk;
+        }
+
+        return Maybe<byte[]>.From(buffer);
     }
 
     private static string ResolveStubPath()
