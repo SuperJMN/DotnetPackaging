@@ -1,6 +1,8 @@
 using System.IO.Compression;
 using System.Text.Json;
 using CSharpFunctionalExtensions;
+using Zafiro.DivineBytes;
+using Zafiro.FileSystem.Core;
 
 namespace DotnetPackaging.Exe;
 
@@ -15,147 +17,183 @@ public static class SimpleExePacker
         Maybe<byte[]> logoBytes,
         string outputPath)
     {
-        var tempRoot = string.Empty;
-        try
+        if (!File.Exists(stubPath))
         {
-            if (!File.Exists(stubPath))
-            {
-                return Result.Failure($"Stub not found: {stubPath}");
-            }
-
-            if (!Directory.Exists(publishDir))
-            {
-                return Result.Failure($"Publish directory not found: {publishDir}");
-            }
-
-            var outputDirectory = Path.GetDirectoryName(outputPath);
-            if (string.IsNullOrWhiteSpace(outputDirectory))
-            {
-                return Result.Failure("Output directory cannot be determined.");
-            }
-
-            Directory.CreateDirectory(outputDirectory);
-
-            tempRoot = Path.Combine(Path.GetTempPath(), "dp-exe-" + Guid.NewGuid());
-            Directory.CreateDirectory(tempRoot);
-
-            var uninstallerPayloadRoot = Path.Combine(tempRoot, "uninstaller_payload");
-            Directory.CreateDirectory(uninstallerPayloadRoot);
-            await WriteMetadata(uninstallerPayloadRoot, metadata);
-            await WriteSupportStub(uninstallerPayloadRoot, stubPath);
-
-            var uninstallerPayloadZip = Path.Combine(outputDirectory, "uninstaller_payload.zip");
-            CreatePayloadZip(uninstallerPayloadRoot, uninstallerPayloadZip);
-
-            var uninstallerOutput = Path.Combine(outputDirectory, "Uninstaller.exe");
-            PayloadAppender.AppendPayload(stubPath, uninstallerPayloadZip, uninstallerOutput);
-
-            var installerPayloadRoot = Path.Combine(tempRoot, "installer_payload");
-            Directory.CreateDirectory(installerPayloadRoot);
-            await WriteMetadata(installerPayloadRoot, metadata);
-            CopyDirectory(publishDir, Path.Combine(installerPayloadRoot, "Content"));
-            CopySupportBinary(uninstallerOutput, Path.Combine(installerPayloadRoot, "Support"));
-            await WriteLogo(installerPayloadRoot, logoBytes);
-
-            var installerPayloadZip = Path.Combine(outputDirectory, "installer_payload.zip");
-            CreatePayloadZip(installerPayloadRoot, installerPayloadZip);
-
-            PayloadAppender.AppendPayload(stubPath, installerPayloadZip, outputPath);
-            return Result.Success();
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure(ex.Message);
-        }
-        finally
-        {
-            TryDeleteTempDirectories();
+            return Result.Failure($"Stub not found: {stubPath}");
         }
 
-        void TryDeleteTempDirectories()
+        if (!Directory.Exists(publishDir))
         {
-            if (string.IsNullOrWhiteSpace(tempRoot))
-            {
-                return;
-            }
-
-            try
-            {
-                Directory.Delete(tempRoot, true);
-            }
-            catch
-            {
-                // best effort cleanup
-            }
+            return Result.Failure($"Publish directory not found: {publishDir}");
         }
+
+        var outputDirectory = Path.GetDirectoryName(outputPath);
+        if (string.IsNullOrWhiteSpace(outputDirectory))
+        {
+            return Result.Failure("Output directory cannot be determined.");
+        }
+
+        var publishContainerResult = BuildContainerFromDirectory(publishDir);
+        if (publishContainerResult.IsFailure)
+        {
+            return Result.Failure(publishContainerResult.Error);
+        }
+
+        var stubSource = ByteSource.FromAsyncStreamFactory(() => Task.FromResult<Stream>(File.OpenRead(stubPath)));
+        var logoSource = logoBytes.Map(bytes => (IByteSource)ByteSource.FromBytes(bytes));
+        var bundleResult = await Build(stubSource, publishContainerResult.Value, metadata, logoSource);
+        if (bundleResult.IsFailure)
+        {
+            return Result.Failure(bundleResult.Error);
+        }
+
+        Directory.CreateDirectory(outputDirectory);
+        var uninstallerPath = Path.Combine(outputDirectory, "Uninstaller.exe");
+        await Persist(bundleResult.Value.Installer, outputPath);
+        await Persist(bundleResult.Value.Uninstaller, uninstallerPath);
+
+        return Result.Success();
     }
 
-    private static void CreatePayloadZip(string sourceDirectory, string destinationZip)
+    public static async Task<Result<SimpleExeBundle>> Build(
+        IByteSource stub,
+        IContainer publishContent,
+        InstallerMetadata metadata,
+        Maybe<IByteSource> logoBytes)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(destinationZip)!);
-        if (File.Exists(destinationZip))
+        var metadataSource = Serialize(metadata);
+        var uninstallerPayloadResult = await BuildUninstallerPayload(stub, metadataSource);
+        if (uninstallerPayloadResult.IsFailure)
         {
-            File.Delete(destinationZip);
+            return Result.Failure<SimpleExeBundle>(uninstallerPayloadResult.Error);
         }
 
-        ZipFile.CreateFromDirectory(sourceDirectory, destinationZip, CompressionLevel.Optimal, includeBaseDirectory: false);
+        var uninstaller = new Resource("Uninstaller.exe", PayloadAppender.AppendPayload(stub, uninstallerPayloadResult.Value));
+
+        var installerPayloadResult = await BuildInstallerPayload(metadataSource, publishContent, logoBytes, uninstaller);
+        if (installerPayloadResult.IsFailure)
+        {
+            return Result.Failure<SimpleExeBundle>(installerPayloadResult.Error);
+        }
+
+        var installer = new Resource("Installer.exe", PayloadAppender.AppendPayload(stub, installerPayloadResult.Value));
+
+        return Result.Success(new SimpleExeBundle(installer, uninstaller));
     }
 
-    private static async Task WriteMetadata(string destinationDirectory, InstallerMetadata meta)
+    private static async Task Persist(INamedByteSource artifact, string path)
     {
-        Directory.CreateDirectory(destinationDirectory);
-        var metadataPath = Path.Combine(destinationDirectory, "metadata.json");
-        await using var stream = File.Create(metadataPath);
-        await JsonSerializer.SerializeAsync(stream, meta, new JsonSerializerOptions
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await using var input = artifact.ToStreamSeekable();
+        await using var output = File.Create(path);
+        await input.CopyToAsync(output);
+    }
+
+    private static IByteSource Serialize(InstallerMetadata metadata)
+    {
+        var json = JsonSerializer.Serialize(metadata, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             WriteIndented = false
         });
+
+        return ByteSource.FromString(json);
     }
 
-    private static async Task WriteLogo(string payloadRoot, Maybe<byte[]> logoBytes)
+    private static async Task<Result<IByteSource>> BuildUninstallerPayload(IByteSource stub, IByteSource metadataSource)
     {
-        await logoBytes.Match(
-            async bytes =>
+        var entries = new Dictionary<string, IByteSource>(StringComparer.Ordinal)
+        {
+            ["metadata.json"] = metadataSource,
+            [$"Support/{"Uninstaller.exe"}"] = stub
+        };
+
+        var containerResult = entries.ToRootContainer();
+        if (containerResult.IsFailure)
+        {
+            return Result.Failure<IByteSource>(containerResult.Error);
+        }
+
+        return await CreatePayloadZip(containerResult.Value);
+    }
+
+    private static async Task<Result<IByteSource>> BuildInstallerPayload(
+        IByteSource metadataSource,
+        IContainer publishContent,
+        Maybe<IByteSource> logoBytes,
+        INamedByteSource uninstaller)
+    {
+        var entries = new Dictionary<string, IByteSource>(StringComparer.Ordinal)
+        {
+            ["metadata.json"] = metadataSource,
+            [$"Support/{uninstaller.Name}"] = uninstaller
+        };
+
+        foreach (var file in publishContent.ResourcesWithPathsRecursive())
+        {
+            var entryPath = $"Content/{file.FullPath().ToString().Replace('\\', '/')}";
+            entries[entryPath] = file;
+        }
+
+        logoBytes.Execute(bytes => entries[BrandingLogoEntry] = bytes);
+
+        var containerResult = entries.ToRootContainer();
+        if (containerResult.IsFailure)
+        {
+            return Result.Failure<IByteSource>(containerResult.Error);
+        }
+
+        return await CreatePayloadZip(containerResult.Value);
+    }
+
+    private static Result<RootContainer> BuildContainerFromDirectory(string root)
+    {
+        try
+        {
+            var files = Directory
+                .EnumerateFiles(root, "*", SearchOption.AllDirectories)
+                .ToDictionary(
+                    file => Path.GetRelativePath(root, file).Replace("\\", "/"),
+                    file => (IByteSource)ByteSource.FromAsyncStreamFactory(() => Task.FromResult<Stream>(File.OpenRead(file))),
+                    StringComparer.Ordinal);
+
+            return files.ToRootContainer();
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure<RootContainer>($"Failed to read directory '{root}': {ex.Message}");
+        }
+    }
+
+    private static Task<Result<IByteSource>> CreatePayloadZip(IContainer container)
+    {
+        return Task.FromResult(Result.Success(CreateZipSource(container)));
+    }
+
+    private static IByteSource CreateZipSource(IContainer container)
+    {
+        return ByteSource.FromAsyncStreamFactory(async () =>
+        {
+            var zipStream = new MemoryStream();
+
+            await using (var zip = new ZipArchive(zipStream, ZipArchiveMode.Create, leaveOpen: true))
             {
-                var brandingDir = Path.Combine(payloadRoot, "Branding");
-                Directory.CreateDirectory(brandingDir);
-                var logoPath = Path.Combine(brandingDir, Path.GetFileName(BrandingLogoEntry));
-                await File.WriteAllBytesAsync(logoPath, bytes);
-            },
-            () => Task.CompletedTask);
-    }
+                foreach (var resource in container.ResourcesWithPathsRecursive())
+                {
+                    var entry = zip.CreateEntry(resource.FullPath().ToString().Replace('\\', '/'), CompressionLevel.Optimal);
+                    await using var entryStream = entry.Open();
+                    await using var resourceStream = resource.ToStreamSeekable();
+                    await resourceStream.CopyToAsync(entryStream);
+                }
+            }
 
-    private static async Task WriteSupportStub(string payloadRoot, string stubPath)
-    {
-        var supportDir = Path.Combine(payloadRoot, "Support");
-        Directory.CreateDirectory(supportDir);
-        await using var input = File.OpenRead(stubPath);
-        await using var output = File.Create(Path.Combine(supportDir, "Uninstaller.exe"));
-        await input.CopyToAsync(output);
-    }
-
-    private static void CopySupportBinary(string uninstallerPath, string supportRoot)
-    {
-        Directory.CreateDirectory(supportRoot);
-        var destination = Path.Combine(supportRoot, "Uninstaller.exe");
-        File.Copy(uninstallerPath, destination, overwrite: true);
-    }
-
-    private static void CopyDirectory(string sourceDir, string destinationDir)
-    {
-        foreach (var directory in Directory.EnumerateDirectories(sourceDir, "*", SearchOption.AllDirectories))
-        {
-            var relative = Path.GetRelativePath(sourceDir, directory);
-            Directory.CreateDirectory(Path.Combine(destinationDir, relative));
-        }
-
-        foreach (var file in Directory.EnumerateFiles(sourceDir, "*", SearchOption.AllDirectories))
-        {
-            var relative = Path.GetRelativePath(sourceDir, file);
-            var destination = Path.Combine(destinationDir, relative);
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            File.Copy(file, destination, overwrite: true);
-        }
+            zipStream.Position = 0;
+            var final = new MemoryStream();
+            await zipStream.CopyToAsync(final);
+            final.Position = 0;
+            return final;
+        });
     }
 }
+
+public sealed record SimpleExeBundle(INamedByteSource Installer, INamedByteSource Uninstaller);

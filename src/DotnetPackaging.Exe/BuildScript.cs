@@ -1,14 +1,25 @@
+using Zafiro.DivineBytes;
+
 namespace DotnetPackaging.Exe;
 
 public static class BuildScript
 {
-    public static void Build()
+    public static async Task Build()
     {
-        var stub = "build/Stub.exe"; // firmado
-        var installerPayload = "build/installer_payload.zip";
-        var uninstallerPayload = "build/uninstaller_payload.zip";
+        var stub = ByteSource.FromAsyncStreamFactory(() => Task.FromResult<Stream>(File.OpenRead("build/Stub.exe")));
+        var installerPayload = ByteSource.FromAsyncStreamFactory(() => Task.FromResult<Stream>(File.OpenRead("build/installer_payload.zip")));
+        var uninstallerPayload = ByteSource.FromAsyncStreamFactory(() => Task.FromResult<Stream>(File.OpenRead("build/uninstaller_payload.zip")));
 
-        PayloadAppender.AppendPayload(stub, uninstallerPayload, "artifacts/Uninstaller.exe");
-        PayloadAppender.AppendPayload(stub, installerPayload, "artifacts/Installer.exe");
+        Directory.CreateDirectory("artifacts");
+
+        await Persist("artifacts/Uninstaller.exe", PayloadAppender.AppendPayload(stub, uninstallerPayload));
+        await Persist("artifacts/Installer.exe", PayloadAppender.AppendPayload(stub, installerPayload));
+    }
+
+    private static async Task Persist(string path, IByteSource source)
+    {
+        await using var input = source.ToStreamSeekable();
+        await using var output = File.Create(path);
+        await input.CopyToAsync(output);
     }
 }
