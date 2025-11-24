@@ -8,7 +8,6 @@ using Serilog;
 using Zafiro.DivineBytes.System.IO;
 using DotnetPackaging.Tool;
 using Zafiro.DivineBytes;
-using Zafiro.FileSystem.Core;
 
 namespace DotnetPackaging.Tool.Commands;
 

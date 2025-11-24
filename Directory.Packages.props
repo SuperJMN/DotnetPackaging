@@ -52,10 +52,7 @@
     <PackageVersion Include="DeflateBlockCompressor" Version="0.0.13" />
     <PackageVersion Include="NuGet.Versioning" Version="7.0.0" />
     <PackageVersion Include="Zafiro.Avalonia.Generators" Version="42.0.6" />
-    <PackageVersion Include="Zafiro.FileSystem" Version="41.2.11" />
     <PackageVersion Include="Zafiro" Version="41.2.11" />
-    <PackageVersion Include="Zafiro.FileSystem.Unix" Version="41.2.11" />
-    <PackageVersion Include="Zafiro.FileSystem.Local" Version="41.2.11" />
     <PackageVersion Include="Zafiro.DivineBytes" Version="41.2.10" />
     <PackageVersion Include="DiscUtils" Version="0.16.13" />
     <PackageVersion Include="Xunit.SkippableFact" Version="1.5.23" />
