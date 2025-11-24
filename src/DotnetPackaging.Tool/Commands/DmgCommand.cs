@@ -120,7 +120,7 @@ public static class DmgCommand
                 var ridResult = RidUtils.ResolveMacRid(ridVal);
                 if (ridResult.IsFailure)
                 {
-                    logger.Error("Invalid RID: {Error}", ridResult.Error);
+                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
                     Environment.ExitCode = 1;
                     return;
                 }

@@ -1,5 +1,4 @@
 using System.CommandLine;
-using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Rpm;
 using Serilog;
@@ -61,7 +60,7 @@ public static class RpmCommand
     private static void AddFromProjectSubcommand(Command rpmCommand)
     {
         var project = new Option<FileInfo>("--project") { Description = "Path to the .csproj file", Required = true };
-        var rid = new Option<string?>("--rid") { Description = "Runtime identifier (e.g. linux-x64, linux-arm64)" };
+        var arch = new Option<string?>("--arch") { Description = "Target architecture (x64, arm64)" };
         var selfContained = new Option<bool>("--self-contained") { Description = "Publish self-contained" };
         selfContained.DefaultValueFactory = _ => true;
         var configuration = new Option<string>("--configuration") { Description = "Build configuration" };
@@ -91,7 +90,7 @@ public static class RpmCommand
 
         var fromProject = new Command("from-project") { Description = "Publish a .NET project and build an RPM from the published output (no code duplication; library drives the pipeline)." };
         fromProject.Add(project);
-        fromProject.Add(rid);
+        fromProject.Add(arch);
         fromProject.Add(selfContained);
         fromProject.Add(configuration);
         fromProject.Add(singleFile);
@@ -122,13 +121,14 @@ public static class RpmCommand
             var tr = parseResult.GetValue(trimmed);
             var outFile = parseResult.GetValue(output)!;
             var opt = optionsBinder.Bind(parseResult);
-            var ridVal = parseResult.GetValue(rid);
+            var archVal = parseResult.GetValue(arch);
 
             await ExecutionWrapper.ExecuteWithLogging("rpm-from-project", outFile.FullName, async logger =>
             {
-                if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                var ridResult = RidUtils.ResolveLinuxRid(archVal, "RPM packaging");
+                if (ridResult.IsFailure)
                 {
-                    logger.Error("--rid is required when building RPM from-project on non-Linux hosts (e.g., linux-x64/linux-arm64).");
+                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
@@ -136,7 +136,7 @@ public static class RpmCommand
                 var publisher = new DotnetPackaging.Publish.DotnetPublisher();
                 var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
                 {
-                    Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
+                    Rid = string.IsNullOrWhiteSpace(archVal) ? Maybe<string>.None : Maybe<string>.From(ridResult.Value),
                     SelfContained = sc,
                     Configuration = cfg,
                     SingleFile = sf,

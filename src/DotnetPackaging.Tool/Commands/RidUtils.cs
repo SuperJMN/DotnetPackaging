@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using RuntimeArchitecture = System.Runtime.InteropServices.Architecture;
@@ -9,6 +10,11 @@ public static class RidUtils
     public static Result<string> ResolveWindowsRid(string? architecture, string context)
     {
         return ResolveRidForPlatform(architecture, OSPlatform.Windows, "Windows", "win", context);
+    }
+
+    public static Result<string> ResolveLinuxRid(string? architecture, string context)
+    {
+        return ResolveRidForPlatform(architecture, OSPlatform.Linux, "Linux", "linux", context);
     }
 
     public static Result<string> ResolveMacRid(string? architecture)
@@ -65,9 +71,12 @@ public static class RidUtils
 
     private static RuntimeArchitecture? ParseRuntimeArchitecture(string architecture)
     {
-        return architecture.ToLowerInvariant() switch
+        var normalized = architecture.ToLowerInvariant();
+        var archPart = normalized.Split('-').Last();
+
+        return archPart switch
         {
-            "x64" => RuntimeArchitecture.X64,
+            "x64" or "amd64" => RuntimeArchitecture.X64,
             "arm64" => RuntimeArchitecture.Arm64,
             _ => null
         };

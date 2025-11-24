@@ -1,19 +1,19 @@
-# Gu�a de estilo y operaciones generales
+# Guía de estilo y operaciones generales
 
-Gu�a operativa y de estilo para trabajar con este repositorio usando agentes.
+Guía operativa y de estilo para trabajar con este repositorio usando agentes.
 
 Precedencia de reglas
-- Las reglas se aplican en orden de precedencia creciente: las que aparecen m�s tarde prevalecen sobre las anteriores.
+- Las reglas se aplican en orden de precedencia creciente: las que aparecen más tarde prevalecen sobre las anteriores.
 - Las reglas de proyecto (asociadas a rutas concretas) tienen prioridad sobre reglas personales.
 - Entre reglas de proyecto, las de subdirectorios prevalecen sobre las del directorio padre.
 
-## Comunicaci�n y formato
-- Conversaciones y asistencia: en espa�ol.
-- C�digo, mensajes de commit, comentarios de c�digo y res�menes de PR: en ingl�s.
+## Comunicación y formato
+- Conversaciones y asistencia: en español.
+- Código, mensajes de commit, comentarios de código y resúmenes de PR: en inglés.
 - PR: usar texto sin escapar en asunto y cuerpo.
 
-## Terminal y ejecuci�n
-- No cerrar la terminal ni ejecutar comandos que finalicen la sesi�n.
+## Terminal y ejecución
+- No cerrar la terminal ni ejecutar comandos que finalicen la sesión.
 - Evitar comandos interactivos salvo que sea estrictamente necesario.
 - Extremar cuidado con comillas simples y dobles en los comandos.
 
@@ -22,17 +22,17 @@ Precedencia de reglas
 - Se realiza mediante azure-pipelines.yml.
 - La build debe pasar correctamente antes de fusionar una PR.
 
-## Lineamientos de dise�o y estilo (C# / Reactive)
+## Lineamientos de diseño y estilo (C# / Reactive)
 
-- Preferir programaci�n funcional y reactiva cuando no complique en exceso.
-- Validaci�n: preferir ReactiveUI.Validations.
+- Preferir programación funcional y reactiva cuando no complique en exceso.
+- Validación: preferir ReactiveUI.Validations.
 - Result handling: usar CSharpFunctionalExtensions cuando sea posible.
 - Convenciones:
-    - No usar sufijo �Async� en m�todos que devuelven Task.
-    - No usar guiones bajos para campos privados.
-    - Evitar eventos (salvo indicaci�n expl�cita).
-    - Favorecer inmutabilidad; mutar solo lo estrictamente necesario.
-    - Evitar poner l�gica en Observable.Subscribe; preferir encadenar operadores y proyecciones.
+  - No usar sufijo “Async” en métodos que devuelven Task.
+  - No usar guiones bajos para campos privados.
+  - Evitar eventos (salvo indicación explícita).
+  - Favorecer inmutabilidad; mutar solo lo estrictamente necesario.
+  - Evitar poner lógica en Observable.Subscribe; preferir encadenar operadores y proyecciones.
 
 # Errores y notificaciones
 
@@ -41,21 +41,21 @@ Precedencia de reglas
 
 # Toolkit Zafiro
 
-Es mi propio toolkit. Disponible en https://github.com/SuperJMN/Zafiro. Muchos de los m�todos que no conozcas pueden formar parte de este toolkit. Tenlo en consideraci�n.
+Es mi propio toolkit. Disponible en https://github.com/SuperJMN/Zafiro. Muchos de los métodos que no conozcas pueden formar parte de este toolkit. Tenlo en consideración.
 
 # Manejo de bytes (sin Streams imperativos)
 
 - Usar Zafiro.DivineBytes para flujos de bytes evitables con Stream.
-- ByteSource es la abstracci�n observable y componible equivalente a un stream de lectura.
+- ByteSource es la abstracción observable y componible equivalente a un stream de lectura.
 
-# Refactorizaci�n guiada por responsabilidades
+# Refactorización guiada por responsabilidades
 
-1. Leer el c�digo y describir primero sus responsabilidades.
+1. Leer el código y describir primero sus responsabilidades.
 2. Enumerar cada responsabilidad como una frase nominal clara.
-3. Para cada responsabilidad, crear una clase o m�todo con nombre espec�fico y sem�ntico.
-4. Extraer campos y dependencias seg�n cada responsabilidad.
-5. Evitar variables compartidas entre responsabilidades; si aparecen, replantear los l�mites.
-6. No introducir patrones arbitrarios; mantener la interfaz p�blica estable.
+3. Para cada responsabilidad, crear una clase o método con nombre específico y semántico.
+4. Extraer campos y dependencias según cada responsabilidad.
+5. Evitar variables compartidas entre responsabilidades; si aparecen, replantear los límites.
+6. No introducir patrones arbitrarios; mantener la interfaz pública estable.
 7. No eliminar logs ni validaciones existentes.
 
 
@@ -137,12 +137,12 @@ Packaging formats: status and details
   - Status: experimental cross-platform builder. Library: src/DotnetPackaging.Dmg.
   - How it works: emits an ISO9660/Joliet image (UDTO) with optional .app scaffolding if none exists. Special adornments like .VolumeIcon.icns and .background are hoisted to the image root when present.
   - Notes: intended for simple drag-and-drop installs. Not a full UDIF/UDZO implementation; signing and advanced Finder layouts are out of scope for now.
-- Windows EXE (.exe) � preview
+- Windows EXE (.exe) — preview
   - Status: preview. Dotnet-only SFX builder. Library: src/DotnetPackaging.Exe. Stub Avalonia: src/DotnetPackaging.Exe.Installer (esqueleto WIP).
-  - How it works: produces a self-extracting installer by concatenating [stub.exe][payload.zip][Int64 length]["DPACKEXE1"]. The payload contains metadata.json and Content/ (publish output). The stub leer� metadata y realizar� la instalaci�n.
-  - CLI: exe (desde carpeta publish) y exe from-project (publica y empaqueta). Si omites --stub, el packer descargar� autom�ticamente el stub que corresponda desde GitHub Releases; puedes pasar --stub para forzar uno concreto.
-  - Cross-platform build: el empaquetado (concatenaci�n) funciona desde cualquier SO. El stub se publica por RID (win-x64/win-arm64).
-  - Defaults: self-contained=true al generar desde proyecto; en hosts no Windows, especifica --rid (win-x64/win-arm64) para elegir el stub/target correcto.
+  - How it works: produces a self-extracting installer by concatenating [stub.exe][payload.zip][Int64 length]["DPACKEXE1"]. The payload contains metadata.json and Content/ (publish output). The stub leerá metadata y realizará la instalación.
+  - CLI: exe (desde carpeta publish) y exe from-project (publica y empaqueta). Si omites --stub, el packer descargará automáticamente el stub que corresponda desde GitHub Releases; puedes pasar --stub para forzar uno concreto.
+  - Cross-platform build: el empaquetado (concatenación) funciona desde cualquier SO. El stub se publica por RID (win-x64/win-arm64).
+  - Defaults: self-contained=true al generar desde proyecto; en hosts no Windows, especifica --arch (x64/arm64) para elegir el stub/target correcto.
 
 CLI tool (dotnet tool)
 - Project: src/DotnetPackaging.Tool (PackAsTool=true, ToolCommandName=dotnetpackaging).
@@ -157,7 +157,7 @@ CLI tool (dotnet tool)
   - flatpak from-project: publish a .NET project and build a .flatpak bundle.
   - msix (experimental): msix pack (from directory) and msix from-project.
   - dmg (experimental): dmg (from directory) and dmg from-project (publishes then builds a .dmg).
-  - exe (preview): Windows self-extracting installer (.exe) from directory; and exe from-project (publica y empaqueta). Si omites --stub, se descargar� el stub apropiado autom�ticamente.
+  - exe (preview): Windows self-extracting installer (.exe) from directory; and exe from-project (publica y empaqueta). Si omites --stub, se descargará el stub apropiado automáticamente.
 - Common options (all commands share a metadata set):
   - --directory <dir> (required): input directory to package from.
   - --output <file> (required): output file (.AppImage, .deb, .rpm, .msix, .flatpak, .dmg).
@@ -177,8 +177,8 @@ CLI tool (dotnet tool)
   - MSIX (project, experimental): dotnetpackaging msix from-project --project /path/to/MyApp.csproj --output /path/out/MyApp.msix
   - DMG (dir, experimental): dotnetpackaging dmg --directory /path/to/publish --output /path/out/MyApp.dmg --application-name "MyApp"
   - DMG (project, experimental): dotnetpackaging dmg from-project --project /path/to/MyApp.csproj --output /path/out/MyApp.dmg --application-name "MyApp"
-  - EXE (preview, dir): dotnetpackaging exe --directory /path/to/win-x64/publish --output /path/out/Setup.exe --rid win-x64 --application-name "MyApp" --appId com.example.myapp --version 1.0.0 --vendor "Vendor"
-  - EXE (preview, project): dotnetpackaging exe from-project --project /path/to/MyApp.csproj --rid win-x64 --output /path/out/Setup.exe --application-name "MyApp" --appId com.example.myapp --version 1.0.0 --vendor "Vendor"
+  - EXE (preview, dir): dotnetpackaging exe --directory /path/to/win-x64/publish --output /path/out/Setup.exe --arch x64 --application-name "MyApp" --appId com.example.myapp --version 1.0.0 --vendor "Vendor"
+  - EXE (preview, project): dotnetpackaging exe from-project --project /path/to/MyApp.csproj --arch x64 --output /path/out/Setup.exe --application-name "MyApp" --appId com.example.myapp --version 1.0.0 --vendor "Vendor"
 
 Tests
 - AppImage tests (test/DotnetPackaging.AppImage.Tests):
@@ -201,10 +201,10 @@ Developer workflow tips
   - For AppImage, ensure an ELF executable is present (self-contained single-file publish is acceptable). If not specified, the first eligible ELF is chosen.
 - RID/self-contained
   - from-project defaults:
-    - rpm/deb/appimage: self-contained=true by default. RID is optional; if you need to cross-publish (target a different OS/arch than the host), pass --rid (e.g., linux-x64/linux-arm64).
-    - msix: self-contained=false by default. RID is optional; pass --rid when cross-publishing (e.g., win-x64/win-arm64).
-    - dmg: requires --rid (osx-x64 or osx-arm64). Host RID inference is intentionally not used to avoid producing non-mac binaries when running on Linux/Windows.
-    - flatpak: framework-dependent by default; uses its own runtime. You can still publish self-contained by passing --self-contained and --rid if needed.
+    - rpm/deb/appimage: self-contained=true by default. Architecture is optional; if necesitas cross-publish, pasa --arch (x64/arm64) y se mapeara al RID correspondiente.
+    - msix: self-contained=false by default. Architecture is optional; pasa --arch cuando cross-publishing (x64/arm64).
+    - dmg: requires --arch (x64 o arm64). Host RID inference is intentionally not used to avoid producing non-mac binaries when running on Linux/Windows.
+    - flatpak: framework-dependent by default; uses its own runtime. You can still publish self-contained by passing --self-contained and --arch if needed.
 - RPM prerequisites
   - Install rpmbuild tooling: dnf install -y rpm-build (or the equivalent on your distro).
   - The RPM builder excludes auto-deps/provides under /opt/<package> to keep self-contained .NET apps portable and avoid liblttng-ust.so.N issues across distros.
@@ -227,224 +227,3 @@ Repository map (relevant)
 Backlog / Future work
 - Add CLI E2E tests (including rpm/exe) and hook dotnet test in CI.
 - Optional: enrich icon detection strategies and metadata mapping (e.g., auto-appId from name + reverse DNS).
-
-Windows EXE (.exe) � progress log (snapshot)
-- Done:
-  - Librer�a DotnetPackaging.Exe con SimpleExePacker (concatena stub + zip + footer).
-  - Comandos CLI: exe (desde carpeta) y exe from-project (publica y empaqueta). --stub es opcional; si se omite, el packer descarga el stub que corresponda desde GitHub Releases.
-  - Stub Avalonia creado (esqueleto) en src/DotnetPackaging.Exe.Installer con lector de payload.
-  - Instalador: opci�n de crear acceso directo en Escritorio en el paso Finish; acceso directo en Start Menu se mantiene.
-  - CI: publica stubs win-x64 y win-arm64 como single-file self-extract con hashes y los sube a un GitHub Release (tag v{SemVer}).
-  - Packer: logging antes de descargar el stub para informar del tiempo de espera.
-- Next:
-  - UI: Integrar SlimWizard de Zafiro en el stub (ahora hay UI m�nima). Navegaci�n con WizardNavigator y p�ginas.
-  - L�gica: Elevaci�n UAC y carpeta por defecto en Program Files seg�n arquitectura.
-  - Packer: cach� local de stubs y reintentos/validaci�n de hashes.
-  - Detecci�n avanzada de ejecutable e icono (paridad con .deb/.appimage).
-  - Modo silencioso.
-  - Pruebas E2E en Windows.
-
----
-
-## CRITICAL UNRESOLVED ISSUE: Uninstaller Crash (2025-11-20)
-
-### Problem Summary
-The Windows uninstaller (Uninstall.exe) crashes with access violation **before any managed code executes**.
-
-**Error Signature:**
-- Exception: 0xc0000005 (Access Violation)
-- Exit Code: 0x80131506 (.NET Runtime internal error)
-- Crash Offset: 0x00000000000b24f6 (consistent)
-- PE Timestamp: 0x68ffe47c (consistent despite rebuilds)
-- Assembly Version: 2.0.0.0
-
-**Critical Fact:** Crash occurs BEFORE Program.Main - no managed code runs at all.
-
-### Attempted Fixes (All Failed)
-1. Centralized Serilog logging to %TEMP%\DotnetPackaging.Installer\
-2. Removed Win32 P/Invoke (FindResource, LoadResource)
-3. Fixed Avalonia Dispatcher (base.OnFrameworkInitializationCompleted, Dispatcher.UIThread.Post)
-4. Rename strategy for locked directories
-5. Non-deterministic builds (Deterministic=false, AssemblyVersion=2.0.0.0)
-6. Multiple complete clean rebuilds (bin/obj/temp cache)
-7. Emergency logging at top of Program.Main (does not execute)
-
-### Key Evidence
-- Installer works perfectly
-- Uninstaller is IDENTICAL binary (created via File.Copy)
-- Same crash offset across all builds
-- Same PE timestamp despite forced non-deterministic builds
-- Emergency log (%TEMP%\dp-emergency.log) is never created = crash before Program.Main
-
-### Hypothesis
-Crash during .NET Runtime initialization or native DLL loading, NOT in managed code.
-Possibly Single-File bundling corruption when executable is copied.
-
-### Diagnostic Steps for Next Agent
-
-1. **Check if crash is before Main:**
-   `powershell
-   Get-Content C:\Users\JMN\AppData\Local\Temp\dp-emergency.log
-   `
-   If empty/missing → crash is definitely before managed entry point
-
-2. **Use WinDbg:**
-   Attach to Uninstall.exe and identify what module owns offset 0x00000000000b24f6
-
-3. **Compare binaries:**
-   `powershell
-   dumpbin /headers C:\Users\JMN\Desktop\AngorSetup.exe > installer-headers.txt
-   dumpbin /headers C:\Users\JMN\AppData\Local\Programs\AngorTest\Uninstall.exe > uninstaller-headers.txt
-   Compare-Object (Get-Content installer-headers.txt) (Get-Content uninstaller-headers.txt)
-   `
-
-4. **Try without Single-File:**
-   Modify DotnetPackaging.Exe.Installer.csproj:
-   - Remove or set PublishSingleFile=false
-   - Test if crash persists
-
-5. **Alternative approaches:**
-   - Don't copy installer - registry points to original with --uninstall flag
-   - Build uninstaller as separate project (not copy)
-   - Generate PowerShell uninstaller script instead
-
-### Code Locations
-- src/DotnetPackaging.Exe.Installer/Program.cs:15 - Emergency log (never executes)
-- src/DotnetPackaging.Exe.Installer/Core/Installer.cs:39 - File.Copy creates uninstaller
-- src/DotnetPackaging.Exe.Installer/App.axaml.cs:32 - base.OnFrameworkInitializationCompleted
-- src/DotnetPackaging.Exe.Installer/Core/LoggerSetup.cs - Logging config
-
-### Test Command
-`powershell
-# Generate installer
-dotnet run --project src\DotnetPackaging.Tool\DotnetPackaging.Tool.csproj -- exe from-project --project F:\Repos\angor\src\Angor\Avalonia\AngorApp.Desktop\AngorApp.Desktop.csproj --output C:\Users\JMN\Desktop\AngorSetup.exe --rid win-x64
-
-# Install to AngorTest, then run uninstaller
-C:\Users\JMN\AppData\Local\Programs\AngorTest\Uninstall.exe --uninstall
-`
-
-### Environment
-- Windows 11
-- .NET 8.0.22
-- Avalonia 11.x
-- Single-file self-contained deployment
-
-**CONFIRMED (2025-11-20 13:37):** dp-emergency.log created during install, NOT during uninstall.
-Crash is definitively BEFORE Program.Main. Problem is in .NET Runtime init or native DLL loading.
-
-### BREAKTHROUGH (2025-11-20 15:08)
-
-**ROOT CAUSE FOUND:** Problem is WHERE the executable runs from, NOT the binary itself.
-
-- Desktop\AngorSetup.exe --uninstall → ✅ WORKS
-- Programs\AngorTest\Uninstall.exe --uninstall → ❌ CRASHES
-- Both files IDENTICAL (SHA256 verified)
-
-**Conclusion:** .NET Single-File runtime fails to extract from installation directory.
-
-**FIX:** Don't copy uninstaller. Registry should point to Desktop installer with --uninstall flag.
-Or: Extract uninstaller to %TEMP% before running.
-
-### UPDATE (2025-11-20 15:27)
-
-**SOLUTION IMPLEMENTED:** Uninstaller now copies to %TEMP%
-- Modified Installer.cs:RegisterUninstaller() to copy uninstaller to:
-  %TEMP%\DotnetPackaging\Uninstallers\{appId}\Uninstall.exe
-- Registry UninstallString now points to %TEMP% location
-- This avoids .NET Single-File extraction issues in installation directory
-
-**NEW BLOCKER:** Avalonia Dispatcher crash prevents testing
-After implementing %TEMP% solution, installer crashes with:
-System.InvalidOperationException: Cannot perform requested operation because the Dispatcher shut down
-
-**Root cause:** Avalonia Dispatcher closes before async wizard completes.
-
-**Attempted fixes (ALL FAILED):**
-1. Dispatcher.UIThread.Post - async void doesn't wait
-2. Dispatcher.UIThread.InvokeAsync - same issue  
-3. desktopLifetime.Startup event - async void
-4. mainWindow.Opened event - async void
-5. ShutdownMode.OnMainWindowClose - closes too early
-6. MainWindow in OnFrameworkInitializationCompleted - same
-
-**Current state:**
-- Installer.cs: ✅ %TEMP% copy implemented
-- App.axaml.cs: ❌ Dispatcher shutdown issue
-- Cannot test %TEMP% solution until Dispatcher is fixed
-
-**Next steps:**
-- Fix Avalonia async initialization pattern
-- OR revert to working version and implement %TEMP% solution there
-- OR use synchronous UI initialization then async operations
-
-See WARP.md line 356 for full details.
-
-### FINAL SOLUTION (2025-11-20 16:15) ✅
-
-**Problem Solved:** Uninstaller crashes when executed from installation directory.
-
-**Root Cause:** .NET Single-File runtime extraction fails in locked/restricted directories.
-
-**Solution Implemented:** Native Launcher Pattern
-- Created UninstallLauncher.exe (WinExe, ~12MB, single-file .NET 8)
-- Launcher copies Uninstall.exe to %TEMP% and executes it
-- Registry points to launcher (stable location in install dir)
-- Launcher waits for uninstaller to complete (WaitForExit)
-
-**Key Files:**
-- src/DotnetPackaging.Exe.UninstallLauncher/ - New launcher project
-- src/DotnetPackaging.Exe.Installer/Core/Installer.cs - Extracts launcher from resources
-- src/DotnetPackaging.Exe.Installer/Resources/UninstallLauncher.exe - Embedded binary
-
-**Why It Works:**
-✅ Launcher always available (embedded in installer)
-✅ Uninstaller always runs from %TEMP% (no extraction issues)
-✅ No console window (WinExe)
-✅ No Windows error dialog (WaitForExit)
-✅ Robust to %TEMP% cleanup (launcher recreates on each run)
-
-**Future Improvements (see WARP.md lines 481-618):**
-1. Native AOT or C++ launcher (reduce from 12MB to <1MB)
-2. Download launcher from GitHub releases (smaller installer)
-3. Self-deleting temp uninstaller
-4. Retry logic for antivirus locks
-
-**Testing:**
-✅ Install/uninstall works correctly
-✅ No console window appears
-✅ No Windows error dialogs
-✅ Uninstaller UI shows properly
-✅ Works after multiple cycles
-
-See WARP.md lines 383-618 for complete documentation.
-
-### Revised Solution (2025-11-20 16:30): Subdirectory Isolation
-
-**Strategy: Subdirectory Isolation**
-
-Instead of a separate Launcher, we adopted a simpler and more robust approach:
-1.  **Isolation:** The installer now places Uninstall.exe in a subdirectory: [InstallDir]\Uninstall\Uninstall.exe.
-    *   **Why?** This solves the 'DLL Hell' / Side-loading crash where the uninstaller was loading conflicting DLLs from the main application directory before starting its own runtime.
-2.  **Cleanup:**
-    *   The uninstaller running from ...\Uninstall\ deletes all files in the parent [InstallDir] *except* the Uninstall folder.
-    *   It then schedules a SelfDestruct (via cmd.exe /c timeout ... & del ... & rmdir ...) to delete itself and the parent directory after exit.
-
-**Status:**
-*   DotnetPackaging.Exe.UninstallLauncher project has been **REMOVED**.
-*   Installer logic updated to use Uninstall subdirectory.
-*   Registry points to .../Uninstall/Uninstall.exe.
-*   Uninstaller logic updated to spare its own directory during initial cleanup and target the root for final self-destruction.
-
-### RESOLVED ISSUE: Windows EXE Uninstaller Crash (Nov 2025)
-
-**Problem:**
-The 'Uninstall.exe' (Single-File) crashed immediately with Access Violation (0xc0000005) when executed from the installation directory.
-**Root Cause:**
-**DLL Hell / Side-loading**. The uninstaller's native bootstrapper was loading conflicting native DLLs from the main application directory *before* loading its own bundled dependencies.
-**Solution: Subdirectory Isolation**
-1.  **Isolation:** The uninstaller is now placed in a subdirectory: '[InstallDir]\Uninstall\Uninstall.exe'. This prevents it from seeing the main application's DLLs.
-2.  **Cleanup Logic:**
-    *   Uninstall.exe deletes everything in '[InstallDir]' *except* the 'Uninstall' folder.
-    *   It then uses 'SelfDestruct.cs' to delete the 'Uninstall' folder and the empty '[InstallDir]' after exit.
-**Status:**
-✅ **VERIFIED**. The uninstaller runs successfully and removes the application completely. The 'DotnetPackaging.Exe.UninstallLauncher' project was removed as it is no longer needed.

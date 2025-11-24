@@ -1,5 +1,4 @@
 using System.CommandLine;
-using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Msix;
 using Serilog;
@@ -50,7 +49,7 @@ public static class MsixCommand
         msixCommand.Add(packCmd);
 
         var project = new Option<FileInfo>("--project") { Description = "Path to the .csproj file", Required = true };
-        var rid = new Option<string?>("--rid") { Description = "Runtime identifier (e.g. win-x64)" };
+        var arch = new Option<string?>("--arch") { Description = "Target architecture (x64, arm64)" };
         var selfContained = new Option<bool>("--self-contained") { Description = "Publish self-contained" };
         selfContained.DefaultValueFactory = _ => false;
         var configuration = new Option<string>("--configuration") { Description = "Build configuration" };
@@ -60,7 +59,7 @@ public static class MsixCommand
         var outMsix = new Option<FileInfo>("--output") { Description = "Output .msix file", Required = true };
         var fromProject = new Command("from-project") { Description = "Publish a .NET project and build an MSIX from the published output (expects manifest/assets)." };
         fromProject.Add(project);
-        fromProject.Add(rid);
+        fromProject.Add(arch);
         fromProject.Add(selfContained);
         fromProject.Add(configuration);
         fromProject.Add(singleFile);
@@ -74,13 +73,14 @@ public static class MsixCommand
             var sf = parseResult.GetValue(singleFile);
             var tr = parseResult.GetValue(trimmed);
             var outFile = parseResult.GetValue(outMsix)!;
-            var ridVal = parseResult.GetValue(rid);
+            var archVal = parseResult.GetValue(arch);
 
             await ExecutionWrapper.ExecuteWithLogging("msix-from-project", outFile.FullName, async logger =>
             {
-                if (string.IsNullOrWhiteSpace(ridVal) && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                var ridResult = RidUtils.ResolveWindowsRid(archVal, "MSIX packaging");
+                if (ridResult.IsFailure)
                 {
-                    logger.Error("--rid is required when building MSIX from-project on non-Windows hosts (e.g., win-x64/win-arm64).");
+                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
@@ -88,7 +88,7 @@ public static class MsixCommand
                 var publisher = new DotnetPackaging.Publish.DotnetPublisher();
                 var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
                 {
-                    Rid = string.IsNullOrWhiteSpace(ridVal) ? Maybe<string>.None : Maybe<string>.From(ridVal!),
+                    Rid = string.IsNullOrWhiteSpace(archVal) ? Maybe<string>.None : Maybe<string>.From(ridResult.Value),
                     SelfContained = sc,
                     Configuration = cfg,
                     SingleFile = sf,

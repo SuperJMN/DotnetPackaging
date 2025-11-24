@@ -129,7 +129,7 @@ public static class ExeCommand
                 var ridResult = RidUtils.ResolveWindowsRid(archOpt, "EXE packaging");
                 if (ridResult.IsFailure)
                 {
-                    logger.Error("Invalid RID: {Error}", ridResult.Error);
+                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
@@ -231,7 +231,7 @@ public static class ExeCommand
                 var ridResult = RidUtils.ResolveWindowsRid(archVal, "EXE packaging");
                 if (ridResult.IsFailure)
                 {
-                    logger.Error("Invalid RID: {Error}", ridResult.Error);
+                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
