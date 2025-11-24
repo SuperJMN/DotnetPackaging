@@ -1,11 +1,12 @@
 using CSharpFunctionalExtensions;
+using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.Unix;
 
 namespace DotnetPackaging.Deb.Archives.Ar;
 
 public record ArFile(params ArEntry[] Entries);
 
-public record ArEntry(string Name, byte[] Content, ArEntryProperties Properties);
+public record ArEntry(string Name, IByteSource Content, long Length, ArEntryProperties Properties);
 
 public record ArEntryProperties
 {

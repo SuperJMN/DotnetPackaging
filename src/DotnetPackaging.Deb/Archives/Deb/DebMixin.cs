@@ -22,23 +22,24 @@ public static class DebMixin
     {
         var dataTarFile = new TarFile(debFile.Entries);
         var properties = DefaultProperties(debFile.Metadata.ModificationTime);
-        var content = dataTarFile.ToByteSource().Array();
-        return new ArEntry("data.tar", content, properties);
+        var content = dataTarFile.ToByteSource();
+        return new ArEntry("data.tar", content, dataTarFile.Size(), properties);
     }
 
     private static ArEntry Signature(DebFile debFile)
     {
         var properties = DefaultProperties(debFile.Metadata.ModificationTime);
         var signature = "2.0\n";
-        return new ArEntry("debian-binary", Encoding.ASCII.GetBytes(signature), properties);
+        var signatureBytes = Encoding.ASCII.GetBytes(signature);
+        return new ArEntry("debian-binary", ByteSource.FromBytes(signatureBytes), signatureBytes.Length, properties);
     }
 
     private static ArEntry ControlTar(DebFile debFile)
     {
         var properties = DefaultProperties(debFile.Metadata.ModificationTime);
         var controlTarFile = ControlTarFile(debFile);
-        var content = controlTarFile.ToByteSource().Array();
-        return new ArEntry("control.tar", content, properties);
+        var content = controlTarFile.ToByteSource();
+        return new ArEntry("control.tar", content, controlTarFile.Size(), properties);
     }
 
     private static TarFile ControlTarFile(DebFile deb)

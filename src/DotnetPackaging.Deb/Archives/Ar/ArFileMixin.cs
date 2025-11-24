@@ -1,5 +1,6 @@
-using System.Text;
+using System.Linq;
 using System.Reactive.Linq;
+using System.Text;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Deb.Archives.Ar;
@@ -8,12 +9,10 @@ public static class ArFileMixin
 {
     public static IByteSource ToByteSource(this ArFile arFile)
     {
-        var chunks = new List<byte[]> { Encoding.ASCII.GetBytes("!<arch>\n") };
-        foreach (var entry in arFile.Entries)
-        {
-            chunks.AddRange(entry.ToChunks());
-        }
+        var chunks = arFile.Entries
+            .Select(entry => entry.ToObservable())
+            .Aggregate(Observable.Return(Encoding.ASCII.GetBytes("!<arch>\n")), (current, next) => current.Concat(next));
 
-        return ByteSource.FromByteChunks(chunks.ToObservable());
+        return ByteSource.FromByteObservable(chunks);
     }
 }

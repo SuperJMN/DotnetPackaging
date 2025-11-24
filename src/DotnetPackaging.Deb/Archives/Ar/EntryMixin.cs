@@ -1,4 +1,6 @@
+using System.Reactive.Linq;
 using System.Text;
+using Zafiro.DivineBytes;
 using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes.Unix;
 
@@ -6,15 +8,13 @@ namespace DotnetPackaging.Deb.Archives.Ar;
 
 public static class EntryMixin
 {
-    public static IEnumerable<byte[]> ToChunks(this ArEntry entry)
+    public static IObservable<byte[]> ToObservable(this ArEntry entry)
     {
-        yield return entry.ToHeader();
-        yield return entry.Content;
+        var padding = entry.Length % 2 != 0 ? Observable.Return(new[] { (byte)'\n' }) : Observable.Empty<byte[]>();
 
-        if (entry.Content.Length % 2 != 0)
-        {
-            yield return new[] { (byte)'\n' };
-        }
+        return Observable.Return(entry.ToHeader())
+            .Concat(entry.Content.Bytes)
+            .Concat(padding);
     }
 
     private static byte[] ToHeader(this ArEntry entry)
@@ -25,7 +25,7 @@ public static class EntryMixin
         WriteField(header, 28, 6, entry.Properties.OwnerId.Match(id => id, () => 0).ToString().PadRight(6));
         WriteField(header, 34, 6, entry.Properties.GroupId.Match(id => id, () => 0).ToString().PadRight(6));
         WriteField(header, 40, 8, FormatFileMode(entry.Properties.Permissions).PadRight(8));
-        WriteField(header, 48, 10, entry.Content.LongLength.ToString().PadRight(10));
+        WriteField(header, 48, 10, entry.Length.ToString().PadRight(10));
         WriteField(header, 58, 2, "`\n");
         return header;
     }
