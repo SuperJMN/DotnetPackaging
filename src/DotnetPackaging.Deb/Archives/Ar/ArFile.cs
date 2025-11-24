@@ -1,8 +1,8 @@
-﻿
-using Zafiro.FileSystem.Readonly;
+﻿using DotnetPackaging.Deb.Archives.Tar;
+using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Deb.Archives.Ar;
 
-public record ArFile(params Entry[] Entries);
+public record ArFile(params ArEntry[] Entries);
 
-public record Entry(IFile File, Properties Properties);
+public record ArEntry(string Name, IByteSource Content, UnixFileProperties Properties);

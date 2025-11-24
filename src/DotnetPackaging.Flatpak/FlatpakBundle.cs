@@ -1,8 +1,6 @@
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb.Archives.Tar;
-using Zafiro.DataModel;
 using Zafiro.DivineBytes;
-using Zafiro.FileSystem.Unix;
 
 namespace DotnetPackaging.Flatpak;
 
@@ -13,8 +11,8 @@ public static class FlatpakBundle
     {
         var entries = ToTarEntries(plan);
         var tar = new TarFile(entries.ToArray());
-        var data = tar.ToData();
-        return Result.Success(ByteSource.FromByteObservable(data.Bytes));
+        var data = tar.ToByteSource();
+        return Result.Success(data);
     }
 
     // Experimental: create an OSTree repo and bundle it (still unsigned)
@@ -28,11 +26,11 @@ public static class FlatpakBundle
         {
             var p = $"./{((INamedWithPath)res).FullPath()}";
             var props = DotnetPackaging.Deb.Archives.Tar.Misc.RegularFileProperties();
-            tarEntries.Add(new DotnetPackaging.Deb.Archives.Tar.FileTarEntry(p, Zafiro.DataModel.Data.FromByteArray(res.Array()), props));
+            tarEntries.Add(new DotnetPackaging.Deb.Archives.Tar.FileTarEntry(p, ByteSource.FromBytes(res.Array()), props));
         }
         var tar = new DotnetPackaging.Deb.Archives.Tar.TarFile(tarEntries.ToArray());
-        var data = tar.ToData();
-        return Result.Success(ByteSource.FromByteObservable(data.Bytes));
+        var data = tar.ToByteSource();
+        return Result.Success(data);
     }
 
     private static IEnumerable<TarEntry> ToTarEntries(FlatpakBuildPlan plan)
@@ -43,7 +41,7 @@ public static class FlatpakBundle
             var path = NormalizeTarPath($"./{((INamedWithPath)res).FullPath()}");
             var baseProps = IsExecutable(plan, res) ? Misc.ExecutableFileProperties() : Misc.RegularFileProperties();
             var props = baseProps with { OwnerId = 0, GroupId = 0, OwnerUsername = "root", GroupName = "root" };
-            files.Add(new FileTarEntry(path, Data.FromByteArray(res.Array()), props));
+            files.Add(new FileTarEntry(path, ByteSource.FromBytes(res.Array()), props));
         }
 
         var dirs = CreateDirectoryEntries(files.Select(f => (TarEntry)f));
@@ -61,7 +59,7 @@ public static class FlatpakBundle
     {
         var directoryProperties = new TarDirectoryProperties
         {
-            FileMode = "755".ToFileMode(),
+            Mode = UnixPermissions.Parse("755"),
             GroupId = 0,
             OwnerId = 0,
             GroupName = "root",

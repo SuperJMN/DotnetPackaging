@@ -6,7 +6,6 @@ using Serilog;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
 using System.IO.Abstractions;
-using Zafiro.FileSystem.Core;
 
 namespace DotnetPackaging.Tool.Commands;
 
@@ -37,12 +36,11 @@ public static class DebCommand
             .Container(container)
             .Configure(configuration => configuration.From(options))
             .Build()
-            .Map(DebMixin.ToData)
-            .Bind(async data =>
+            .Bind(async deb =>
             {
+                var data = DebMixin.ToByteSource(deb);
                 await using var fileSystemStream = outputFile.Open(FileMode.Create);
-                await ByteSource.FromByteObservable(data.Bytes).ToStream().CopyToAsync(fileSystemStream);
-                return Result.Success();
+                return await data.WriteTo(fileSystemStream);
             })
             .WriteResult();
     }
@@ -150,9 +148,15 @@ public static class DebCommand
                     return;
                 }
 
-                var data = DebMixin.ToData(built.Value);
+                var data = DebMixin.ToByteSource(built.Value);
                 await using var fs = outFile.Open(FileMode.Create);
-                await ByteSource.FromByteObservable(data.Bytes).ToStream().CopyToAsync(fs);
+                var write = await data.WriteTo(fs);
+                if (write.IsFailure)
+                {
+                    logger.Error("Could not write deb file: {Error}", write.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
                 logger.Information("{OutputFile}", outFile.FullName);
             });
         });

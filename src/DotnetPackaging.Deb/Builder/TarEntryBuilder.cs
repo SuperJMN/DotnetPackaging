@@ -1,9 +1,6 @@
 ﻿using System.Text;
 using DotnetPackaging.Deb.Archives.Tar;
-using Zafiro.DataModel;
 using Zafiro.DivineBytes;
-using Zafiro.FileSystem.Unix;
-using Zafiro.Mixins;
 using DivinePath = Zafiro.DivineBytes.Path;
 
 namespace DotnetPackaging.Deb.Builder;
@@ -15,21 +12,19 @@ public static class TarEntryBuilder
         var appDir = $"/opt/{metadata.Package}";
         var executableRelativePath = executable.Path == DivinePath.Empty ? executable.Name : executable.FullPath().ToString();
         var execAbsolutePath = $"{appDir}/{executableRelativePath}".Replace("\\", "/", StringComparison.Ordinal);
-        var executablePath = NormalizeTarPath(execAbsolutePath);
         var tarEntriesFromImplicitFiles = ImplicitFileEntries(metadata, execAbsolutePath);
         var tarEntriesFromFiles = TarEntriesFromFiles(container, metadata, executable);
         var allFiles = tarEntriesFromFiles.Concat(tarEntriesFromImplicitFiles).ToList();
         var directoryEntries = CreateDirectoryEntries(allFiles);
-        var tarEntries = directoryEntries.Concat(allFiles);
-        return tarEntries;
+        return directoryEntries.Concat(allFiles);
     }
 
     private static IEnumerable<FileTarEntry> ImplicitFileEntries(PackageMetadata metadata, string executablePath)
     {
         return new FileTarEntry[]
         {
-            new($"./usr/share/applications/{metadata.Package.ToLowerInvariant()}.desktop", Data.FromString(TextTemplates.DesktopFileContents(executablePath, metadata), Encoding.ASCII), Misc.RegularFileProperties()),
-            new($"./usr/bin/{metadata.Package.ToLowerInvariant()}", Data.FromString(TextTemplates.RunScript(executablePath), Encoding.ASCII), Misc.ExecutableFileProperties())
+            new($"./usr/share/applications/{metadata.Package.ToLowerInvariant()}.desktop", ByteSource.FromString(TextTemplates.DesktopFileContents(executablePath, metadata), Encoding.ASCII), Misc.RegularFileProperties()),
+            new($"./usr/bin/{metadata.Package.ToLowerInvariant()}", ByteSource.FromString(TextTemplates.RunScript(executablePath), Encoding.ASCII), Misc.ExecutableFileProperties())
         }.Concat(GetIconEntries(metadata));
     }
 
@@ -37,7 +32,7 @@ public static class TarEntryBuilder
     {
         return metadata.IconFiles.Select(icon => new FileTarEntry(
             NormalizeTarPath($"./{icon.Key}"),
-            Data.FromByteArray(icon.Value.Array()),
+            icon.Value,
             Misc.RegularFileProperties()));
     }
 
@@ -47,13 +42,8 @@ public static class TarEntryBuilder
         return container.ResourcesWithPathsRecursive()
             .Select(resource => new FileTarEntry(
                 NormalizeTarPath($"{prefix}/{RelativePath(resource)}"),
-                ToData(resource),
+                resource,
                 GetFileProperties(resource, executable)));
-    }
-
-    private static IData ToData(INamedByteSource source)
-    {
-        return Data.FromByteArray(source.Array());
     }
 
     private static string RelativePath(INamedByteSourceWithPath resource)
@@ -82,19 +72,14 @@ public static class TarEntryBuilder
         var isExecutable = string.Equals(file.Name, executable.Name, StringComparison.Ordinal)
                            && file.Path.Value == executable.Path.Value;
 
-        if (isExecutable)
-        {
-            return Misc.ExecutableFileProperties();
-        }
-
-        return Misc.RegularFileProperties();
+        return isExecutable ? Misc.ExecutableFileProperties() : Misc.RegularFileProperties();
     }
 
     private static IEnumerable<TarEntry> CreateDirectoryEntries(IEnumerable<TarEntry> allFiles)
     {
         var directoryProperties = new TarDirectoryProperties
         {
-            FileMode = "755".ToFileMode(),
+            Mode = UnixPermissions.Parse("755"),
             GroupId = 1000,
             OwnerId = 1000,
             GroupName = "root",
