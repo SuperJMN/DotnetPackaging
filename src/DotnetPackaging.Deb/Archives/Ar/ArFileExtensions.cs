@@ -1,5 +1,8 @@
+using System.Linq;
+using System.Reactive.Linq;
 using System.Text;
 using Zafiro.DivineBytes;
+using Zafiro.Mixins;
 
 namespace DotnetPackaging.Deb.Archives.Ar;
 
@@ -9,24 +12,23 @@ public static class ArFileExtensions
 
     public static IByteSource ToByteSource(this ArFile arFile)
     {
-        using var stream = new MemoryStream();
-        WriteAscii(stream, Signature);
+        var parts = new List<IObservable<byte[]>> { ByteSource.FromString(Signature, Encoding.ASCII).Bytes };
 
         foreach (var entry in arFile.Entries)
         {
-            var contentBytes = entry.Content.Array();
-            var header = BuildHeader(entry, contentBytes.LongLength);
-            WriteAscii(stream, header);
-            stream.Write(contentBytes, 0, contentBytes.Length);
+            var size = entry.Content.GetSize().GetAwaiter().GetResult();
+            var header = BuildHeader(entry, size);
 
-            if (contentBytes.LongLength % 2 != 0)
+            parts.Add(ByteSource.FromString(header, Encoding.ASCII).Bytes);
+            parts.Add(entry.Content.Bytes);
+
+            if (size % 2 != 0)
             {
-                stream.WriteByte((byte)'\n');
+                parts.Add(ByteSource.FromBytes(new[] { (byte)'\n' }).Bytes);
             }
         }
 
-        stream.Position = 0;
-        return ByteSource.FromBytes(stream.ToArray());
+        return ByteSource.FromByteObservable(parts.Aggregate(Observable.Concat));
     }
 
     private static string BuildHeader(ArEntry entry, long size)
@@ -51,11 +53,5 @@ public static class ArFileExtensions
         }
 
         return value.PadRight(width);
-    }
-
-    private static void WriteAscii(Stream stream, string text)
-    {
-        var bytes = Encoding.ASCII.GetBytes(text);
-        stream.Write(bytes, 0, bytes.Length);
     }
 }
