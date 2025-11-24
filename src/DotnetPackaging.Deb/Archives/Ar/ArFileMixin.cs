@@ -1,17 +1,18 @@
-﻿using System.Text;
-using Zafiro.DataModel;
+using System.Text;
+using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Deb.Archives.Ar;
 
 public static class ArFileMixin
 {
-    public static IData ToData(this ArFile arFile)
+    public static IByteSource ToByteSource(this ArFile arFile)
     {
-        return new CompositeData(Signature(), new CompositeData(arFile.Entries.Select(x => x.ToData()).ToArray()));
-    }
+        var chunks = new List<byte[]> { Encoding.ASCII.GetBytes("!<arch>\n") };
+        foreach (var entry in arFile.Entries)
+        {
+            chunks.AddRange(entry.ToChunks());
+        }
 
-    private static IData Signature()
-    {
-        return Data.FromString("!<arch>\n", Encoding.ASCII);
+        return ByteSource.FromByteChunks(chunks);
     }
 }

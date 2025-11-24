@@ -37,7 +37,7 @@ public static class DebCommand
             .Container(container)
             .Configure(configuration => configuration.From(options))
             .Build()
-            .Map(DebMixin.ToData)
+            .Map(DebMixin.ToByteSource)
             .Bind(async data =>
             {
                 await using var fileSystemStream = outputFile.Open(FileMode.Create);
@@ -150,7 +150,7 @@ public static class DebCommand
                     return;
                 }
 
-                var data = DebMixin.ToData(built.Value);
+                var data = DebMixin.ToByteSource(built.Value);
                 await using var fs = outFile.Open(FileMode.Create);
                 await ByteSource.FromByteObservable(data.Bytes).ToStream().CopyToAsync(fs);
                 logger.Information("{OutputFile}", outFile.FullName);

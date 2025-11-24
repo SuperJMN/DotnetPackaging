@@ -10,7 +10,7 @@
     <PackageReference Include="SharpCompress" />
     <PackageReference Include="SharpZipLib" />
     <PackageReference Include="SixLabors.ImageSharp" />
-    <PackageReference Include="Zafiro.FileSystem.Unix" />
+    <PackageReference Include="Zafiro.DivineBytes" />
   </ItemGroup>
 
   <ItemGroup>

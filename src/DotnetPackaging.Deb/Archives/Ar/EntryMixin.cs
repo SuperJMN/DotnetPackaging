@@ -1,37 +1,57 @@
-﻿using System.Text;
-using Zafiro.DataModel;
-using Zafiro.FileSystem.Unix;
+using System.Text;
+using CSharpFunctionalExtensions;
+using Zafiro.DivineBytes.Unix;
 
 namespace DotnetPackaging.Deb.Archives.Ar;
 
 public static class EntryMixin
 {
-    public static IData ToData(this Entry entry)
+    public static IEnumerable<byte[]> ToChunks(this ArEntry entry)
     {
-        return new CompositeData
-        (
-            entry.FileIdentifier(),
-            entry.FileModificationTimestamp(),
-            entry.OwnerId(),
-            entry.GroupId(),
-            entry.FileMode(),
-            entry.FileSize(),
-            entry.Ending(),
-            entry.File
-        );
+        yield return entry.ToHeader();
+        yield return entry.Content;
+
+        if (entry.Content.Length % 2 != 0)
+        {
+            yield return new[] { (byte)'\n' };
+        }
     }
-    // 0   16  File identifier ASCII
-    private static IData FileIdentifier(this Entry entry) => Data.FromString(entry.File.Name.PadRight(16), Encoding.ASCII);
-    // 16  12  File modification timestamp (in seconds) Decimal
-    private static IData FileModificationTimestamp(this Entry entry) => Data.FromString(entry.Properties.LastModification.ToUnixTimeSeconds().ToString().PadRight(12), Encoding.ASCII);
-    // 28  6   Owner ID Decimal
-    private static IData OwnerId(this Entry entry) => Data.FromString(entry.Properties.OwnerId.GetValueOrDefault().ToString().PadRight(6), Encoding.ASCII);
-    // 34  6   Group ID Decimal
-    private static IData GroupId(this Entry entry) => Data.FromString(entry.Properties.GroupId.GetValueOrDefault().ToString().PadRight(6), Encoding.ASCII);
-    // 40  8   File mode (type and permission) Octal
-    private static IData FileMode(this Entry entry) => Data.FromString(("100" + entry.Properties.FileMode.ToFileModeString()).PadRight(8), Encoding.ASCII);
-    // 48  10  File size in bytes Decimal
-    private static IData FileSize(this Entry entry) => Data.FromString(entry.File.Length.ToString().PadRight(10), Encoding.ASCII);
-    // 58  2   Ending characters 0x60 0x0A
-    private static IData Ending(this Entry entry) => Data.FromString("`\n", Encoding.ASCII);
+
+    private static byte[] ToHeader(this ArEntry entry)
+    {
+        var header = new byte[60];
+        WriteField(header, 0, 16, TrimName(entry.Name));
+        WriteField(header, 16, 12, Seconds(entry.Properties.LastModification).ToString().PadRight(12));
+        WriteField(header, 28, 6, entry.Properties.OwnerId.Match(id => id, () => 0).ToString().PadRight(6));
+        WriteField(header, 34, 6, entry.Properties.GroupId.Match(id => id, () => 0).ToString().PadRight(6));
+        WriteField(header, 40, 8, FormatFileMode(entry.Properties.Permissions).PadRight(8));
+        WriteField(header, 48, 10, entry.Content.LongLength.ToString().PadRight(10));
+        WriteField(header, 58, 2, "`\n");
+        return header;
+    }
+
+    private static void WriteField(byte[] header, int offset, int length, string value)
+    {
+        var bytes = Encoding.ASCII.GetBytes(value);
+        Array.Copy(bytes, 0, header, offset, Math.Min(length, bytes.Length));
+    }
+
+    private static string TrimName(string name)
+    {
+        return name.Length <= 16 ? name.PadRight(16) : name[..16];
+    }
+
+    private static long Seconds(DateTimeOffset dateTime) => dateTime.ToUnixTimeSeconds();
+
+    private static string FormatFileMode(UnixPermissions permissions) => $"100{ToOctal(permissions)}";
+
+    private static string ToOctal(UnixPermissions permissions)
+    {
+        var owner = PermissionDigit(permissions.OwnerRead, permissions.OwnerWrite, permissions.OwnerExec);
+        var group = PermissionDigit(permissions.GroupRead, permissions.GroupWrite, permissions.GroupExec);
+        var other = PermissionDigit(permissions.OtherRead, permissions.OtherWrite, permissions.OtherExec);
+        return $"{owner}{group}{other}";
+    }
+
+    private static int PermissionDigit(bool read, bool write, bool execute) => (read ? 4 : 0) + (write ? 2 : 0) + (execute ? 1 : 0);
 }

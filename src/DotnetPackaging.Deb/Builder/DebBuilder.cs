@@ -1,7 +1,6 @@
-﻿using CSharpFunctionalExtensions;
+using System.IO;
+using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
-using Zafiro.FileSystem.Core;
-using Zafiro.FileSystem.Readonly;
 
 namespace DotnetPackaging.Deb.Builder;
 
@@ -12,25 +11,44 @@ public class DebBuilder
         return new FromContainerOptions(root, Maybe<string>.From(name));
     }
 
-    public FromContainerOptions Directory(IDirectory root)
+    public FromContainerOptions Directory(string rootPath)
     {
-        var containerResult = BuildContainer(root);
-        if (containerResult.IsFailure)
+        if (string.IsNullOrWhiteSpace(rootPath))
         {
-            throw new InvalidOperationException($"Unable to convert directory '{root.Name}' into container: {containerResult.Error}");
+            throw new ArgumentException("Path cannot be null or empty", nameof(rootPath));
         }
 
-        return new FromContainerOptions(containerResult.Value, Maybe<string>.From(root.Name));
+        var containerResult = BuildContainer(rootPath);
+        if (containerResult.IsFailure)
+        {
+            throw new InvalidOperationException($"Unable to convert directory '{rootPath}' into container: {containerResult.Error}");
+        }
+
+        var directoryName = Path.GetFileName(Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        return new FromContainerOptions(containerResult.Value, Maybe<string>.From(directoryName));
     }
 
-    private static Result<RootContainer> BuildContainer(IDirectory root)
+    private static Result<RootContainer> BuildContainer(string root)
     {
-        var files = root.RootedFiles()
-            .ToDictionary(
-                file => file.Path == ZafiroPath.Empty ? file.Name : file.Path.Combine(file.Name).ToString(),
-                file => (IByteSource)ByteSource.FromByteObservable(file.Value.Bytes),
-                StringComparer.Ordinal);
+        try
+        {
+            var files = System.IO.Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+                .ToDictionary(
+                    file => NormalizeRelativePath(root, file),
+                    file => (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(file)),
+                    StringComparer.Ordinal);
 
-        return files.ToRootContainer();
+            return files.ToRootContainer();
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure<RootContainer>(ex.Message);
+        }
+    }
+
+    private static string NormalizeRelativePath(string root, string file)
+    {
+        var relativePath = Path.GetRelativePath(root, file);
+        return relativePath.Replace('\\', '/');
     }
 }

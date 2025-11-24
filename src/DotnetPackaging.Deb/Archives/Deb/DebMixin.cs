@@ -1,70 +1,51 @@
-﻿using CSharpFunctionalExtensions;
+using System.Text;
+using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb.Archives.Ar;
 using DotnetPackaging.Deb.Archives.Tar;
-using Zafiro.DataModel;
-using Zafiro.FileSystem.Unix;
-using File = Zafiro.FileSystem.Readonly.File;
+using Zafiro.DivineBytes;
+using Zafiro.DivineBytes.Unix;
+using Zafiro.Mixins;
 
 namespace DotnetPackaging.Deb.Archives.Deb;
 
 public static class DebMixin
 {
-    public static IData ToData(this DebFile debFile)
+    public static IByteSource ToData(this DebFile debFile) => debFile.ToByteSource();
+
+    public static IByteSource ToByteSource(this DebFile debFile)
     {
-        ArFile arFile = new ArFile(Signature(debFile), ControlTar(debFile), DataTar(debFile));
-        return arFile.ToData();
+        var arFile = new ArFile(Signature(debFile), ControlTar(debFile), DataTar(debFile));
+        return arFile.ToByteSource();
     }
 
-    private static Entry DataTar(DebFile debFile)
+    private static ArEntry DataTar(DebFile debFile)
     {
-        TarFile dataTarFile = new TarFile(debFile.Entries);
-        var properties = new Properties()
-        {
-            FileMode = "644".ToFileMode(),
-            GroupId = 0,
-            LastModification = debFile.Metadata.ModificationTime,
-            OwnerId = 0,
-        };
-        return new Entry(new File("data.tar", dataTarFile.ToData()), properties);
+        var dataTarFile = new TarFile(debFile.Entries);
+        var properties = DefaultProperties(debFile.Metadata.ModificationTime);
+        var content = dataTarFile.ToByteSource().Array();
+        return new ArEntry("data.tar", content, properties);
     }
 
-    private static Entry Signature(DebFile debFile)
+    private static ArEntry Signature(DebFile debFile)
     {
-        var properties = new Properties()
-        {
-            FileMode = "644".ToFileMode(),
-            GroupId = 0,
-            LastModification = debFile.Metadata.ModificationTime,
-            OwnerId = 0,
-        };
-
-        var signature = """
-                        2.0
-
-                        """.FromCrLfToLf();
-
-        return new Entry(new File("debian-binary", Data.FromString(signature)), properties);
+        var properties = DefaultProperties(debFile.Metadata.ModificationTime);
+        var signature = "2.0\n";
+        return new ArEntry("debian-binary", Encoding.ASCII.GetBytes(signature), properties);
     }
 
-    private static Entry ControlTar(DebFile debFile)
+    private static ArEntry ControlTar(DebFile debFile)
     {
-        var properties = new Properties()
-        {
-            FileMode = "644".ToFileMode(),
-            GroupId = 0,
-            LastModification = debFile.Metadata.ModificationTime,
-            OwnerId = 0,
-        };
-
+        var properties = DefaultProperties(debFile.Metadata.ModificationTime);
         var controlTarFile = ControlTarFile(debFile);
-        return new Entry(new File("control.tar", controlTarFile.ToData()), properties);
+        var content = controlTarFile.ToByteSource().Array();
+        return new ArEntry("control.tar", content, properties);
     }
 
     private static TarFile ControlTarFile(DebFile deb)
     {
-        var fileProperties = new TarFileProperties()
+        var fileProperties = new TarFileProperties
         {
-            FileMode = "644".ToFileMode(),
+            Permissions = UnixPermissionHelper.FromOctal("644"),
             GroupId = 0,
             GroupName = "root",
             OwnerId = 0,
@@ -72,9 +53,9 @@ public static class DebMixin
             LastModification = deb.Metadata.ModificationTime,
         };
 
-        var dirProperties = new TarDirectoryProperties()
+        var dirProperties = new TarDirectoryProperties
         {
-            FileMode = "755".ToFileMode(),
+            Permissions = UnixPermissionHelper.FromOctal("755"),
             GroupId = 0,
             GroupName = "root",
             OwnerId = 0,
@@ -94,24 +75,26 @@ public static class DebMixin
         };
 
         var content = items.Compose() + "\n";
-
-        var file = new File("control", Data.FromString(content));
+        var controlBytes = Encoding.ASCII.GetBytes(content);
 
         var entries = new TarEntry[]
         {
             new DirectoryTarEntry("./", dirProperties),
-            new FileTarEntry("./control", file, fileProperties)
+            new FileTarEntry("./control", controlBytes, fileProperties)
         };
-
-        // TODO: Add other properties, too
-        //Homepage: {deb.ControlMetadata.Homepage}
-        //Vcs-Git: {deb.ControlMetadata.VcsGit}
-        //Vcs-Browser: {deb.ControlMetadata.VcsBrowser}
-        //License: {deb.ControlMetadata.License}
-        //Installed-Size: {deb.ControlMetadata.InstalledSize}
-        //Recommends: {deb.ControlMetadata.Recommends}
 
         var controlTarFile = new TarFile(entries.ToArray());
         return controlTarFile;
+    }
+
+    private static ArEntryProperties DefaultProperties(DateTimeOffset modificationTime)
+    {
+        return new ArEntryProperties
+        {
+            Permissions = UnixPermissionHelper.FromOctal("644"),
+            GroupId = 0,
+            OwnerId = 0,
+            LastModification = modificationTime,
+        };
     }
 }

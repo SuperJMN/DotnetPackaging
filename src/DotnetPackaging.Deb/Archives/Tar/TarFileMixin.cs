@@ -1,22 +1,13 @@
-﻿using Zafiro.DataModel;
+using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Deb.Archives.Tar;
 
 public static class TarFileMixin
 {
-    public static IData ToData(this TarFile tarFile)
+    public static IByteSource ToByteSource(this TarFile tarFile)
     {
-        var entries = tarFile.Entries.Select(tarEntry =>
-        {
-            return tarEntry switch
-            {
-                DirectoryTarEntry dirTarEntry => dirTarEntry.ToData(),
-                FileTarEntry fileTarEntry => fileTarEntry.ToData(),
-                _ => throw new NotSupportedException()
-            };
-        });
-
-        var endOfFileMarker = Data.FromByteArray(new byte[2 * 512]);
-        return new CompositeData(new CompositeData(entries.ToArray()), endOfFileMarker);
+        var chunks = tarFile.Entries.SelectMany(entry => entry.ToChunks()).ToList();
+        chunks.Add(new byte[1024]);
+        return ByteSource.FromByteChunks(chunks);
     }
 }

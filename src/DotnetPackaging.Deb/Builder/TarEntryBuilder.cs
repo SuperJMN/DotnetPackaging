@@ -1,8 +1,7 @@
-﻿using System.Text;
+using System.Text;
 using DotnetPackaging.Deb.Archives.Tar;
-using Zafiro.DataModel;
 using Zafiro.DivineBytes;
-using Zafiro.FileSystem.Unix;
+using Zafiro.DivineBytes.Unix;
 using Zafiro.Mixins;
 using DivinePath = Zafiro.DivineBytes.Path;
 
@@ -28,8 +27,8 @@ public static class TarEntryBuilder
     {
         return new FileTarEntry[]
         {
-            new($"./usr/share/applications/{metadata.Package.ToLowerInvariant()}.desktop", Data.FromString(TextTemplates.DesktopFileContents(executablePath, metadata), Encoding.ASCII), Misc.RegularFileProperties()),
-            new($"./usr/bin/{metadata.Package.ToLowerInvariant()}", Data.FromString(TextTemplates.RunScript(executablePath), Encoding.ASCII), Misc.ExecutableFileProperties())
+            new($"./usr/share/applications/{metadata.Package.ToLowerInvariant()}.desktop", Encoding.ASCII.GetBytes(TextTemplates.DesktopFileContents(executablePath, metadata)), Misc.RegularFileProperties()),
+            new($"./usr/bin/{metadata.Package.ToLowerInvariant()}", Encoding.ASCII.GetBytes(TextTemplates.RunScript(executablePath)), Misc.ExecutableFileProperties())
         }.Concat(GetIconEntries(metadata));
     }
 
@@ -37,7 +36,7 @@ public static class TarEntryBuilder
     {
         return metadata.IconFiles.Select(icon => new FileTarEntry(
             NormalizeTarPath($"./{icon.Key}"),
-            Data.FromByteArray(icon.Value.Array()),
+            icon.Value.Array(),
             Misc.RegularFileProperties()));
     }
 
@@ -47,13 +46,13 @@ public static class TarEntryBuilder
         return container.ResourcesWithPathsRecursive()
             .Select(resource => new FileTarEntry(
                 NormalizeTarPath($"{prefix}/{RelativePath(resource)}"),
-                ToData(resource),
+                ToBytes(resource),
                 GetFileProperties(resource, executable)));
     }
 
-    private static IData ToData(INamedByteSource source)
+    private static byte[] ToBytes(INamedByteSource source)
     {
-        return Data.FromByteArray(source.Array());
+        return source.Array();
     }
 
     private static string RelativePath(INamedByteSourceWithPath resource)
@@ -94,7 +93,7 @@ public static class TarEntryBuilder
     {
         var directoryProperties = new TarDirectoryProperties
         {
-            FileMode = "755".ToFileMode(),
+            Permissions = UnixPermissionHelper.FromOctal("755"),
             GroupId = 1000,
             OwnerId = 1000,
             GroupName = "root",
@@ -133,4 +132,5 @@ public static class TarEntryBuilder
             .ThenBy(path => path, StringComparer.Ordinal)
             .Select(path => new DirectoryTarEntry(path, directoryProperties));
     }
+
 }

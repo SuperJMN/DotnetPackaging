@@ -1,14 +1,12 @@
-﻿using Zafiro.FileSystem.Unix;
-
 namespace DotnetPackaging.Deb.Archives.Tar;
 
-public record TarDirectoryProperties : UnixFileProperties
+public record TarDirectoryProperties : TarEntryProperties
 {
-    public static TarDirectoryProperties From(UnixFileProperties properties)
+    public static TarDirectoryProperties From(TarEntryProperties properties)
     {
-        return new TarDirectoryProperties()
+        return new TarDirectoryProperties
         {
-            FileMode = properties.FileMode,
+            Permissions = properties.Permissions,
             GroupId = properties.GroupId,
             GroupName = properties.GroupName,
             LastModification = properties.LastModification,

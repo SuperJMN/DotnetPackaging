@@ -1,20 +1,17 @@
-﻿using Zafiro.FileSystem.Unix;
-
 namespace DotnetPackaging.Deb.Archives.Tar;
 
-
-public record TarFileProperties : UnixFileProperties
+public record TarFileProperties : TarEntryProperties
 {
-    public static TarFileProperties From(UnixFileProperties unixFileProperties)
+    public static TarFileProperties From(TarEntryProperties properties)
     {
-        return new TarFileProperties()
+        return new TarFileProperties
         {
-            FileMode = unixFileProperties.FileMode,
-            GroupId = unixFileProperties.GroupId,
-            GroupName = unixFileProperties.GroupName,
-            LastModification = unixFileProperties.LastModification,
-            OwnerId = unixFileProperties.OwnerId,
-            OwnerUsername = unixFileProperties.OwnerUsername,
+            Permissions = properties.Permissions,
+            GroupId = properties.GroupId,
+            GroupName = properties.GroupName,
+            LastModification = properties.LastModification,
+            OwnerId = properties.OwnerId,
+            OwnerUsername = properties.OwnerUsername,
         };
     }
 }
