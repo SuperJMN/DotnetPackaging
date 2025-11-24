@@ -19,12 +19,6 @@
         <AvaloniaResource Include="Assets\**" />
     </ItemGroup>
 
-    <!-- Embed dynamic payload when provided at publish time -->
-    <ItemGroup Condition="'$(InstallerPayload)' != '' and Exists('$(InstallerPayload)')">
-        <EmbeddedResource Include="$(InstallerPayload)">
-            <LogicalName>PAYLOAD</LogicalName>
-        </EmbeddedResource>
-    </ItemGroup>
     <ItemGroup>
         <AvaloniaResource Include="..\..\icon.png">
           <Link>Assets/icon.png</Link>
