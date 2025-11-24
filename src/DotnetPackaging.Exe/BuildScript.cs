@@ -1,14 +1,25 @@
+using System.IO;
+using CSharpFunctionalExtensions;
+using Zafiro.DivineBytes;
+
 namespace DotnetPackaging.Exe;
 
 public static class BuildScript
 {
-    public static void Build()
+    public static async Task<Result> Build(
+        IByteSource stub,
+        IContainer publishDirectory,
+        InstallerMetadata metadata,
+        Maybe<IByteSource> logo,
+        FileInfo installerOutput,
+        FileInfo uninstallerOutput)
     {
-        var stub = "build/Stub.exe"; // firmado
-        var installerPayload = "build/installer_payload.zip";
-        var uninstallerPayload = "build/uninstaller_payload.zip";
+        var buildResult = await SimpleExePacker.Build(stub, publishDirectory, metadata, logo);
+        if (buildResult.IsFailure)
+        {
+            return Result.Failure(buildResult.Error);
+        }
 
-        PayloadAppender.AppendPayload(stub, uninstallerPayload, "artifacts/Uninstaller.exe");
-        PayloadAppender.AppendPayload(stub, installerPayload, "artifacts/Installer.exe");
+        return await buildResult.Value.WriteTo(installerOutput, uninstallerOutput);
     }
 }

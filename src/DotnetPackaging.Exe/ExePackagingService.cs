@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -11,7 +10,11 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging;
 using DotnetPackaging.Publish;
 using Serilog;
+using Zafiro.DivineBytes;
+using Zafiro.DivineBytes.System.IO;
+using System.IO.Abstractions;
 using RuntimeArchitecture = System.Runtime.InteropServices.Architecture;
+using Path = System.IO.Path;
 
 namespace DotnetPackaging.Exe;
 
@@ -42,18 +45,18 @@ public sealed class ExePackagingService
         this.logger = logger ?? Log.Logger;
     }
 
-    public Task<Result<FileInfo>> BuildFromDirectory(
-        DirectoryInfo publishDirectory,
-        FileInfo outputFile,
+    public Task<Result<IContainer>> BuildFromDirectory(
+        IContainer publishDirectory,
+        string outputName,
         Options options,
         string? vendor,
         string? runtimeIdentifier,
-        FileInfo? stubFile,
-        FileInfo? setupLogo)
+        IByteSource? stubFile,
+        IByteSource? setupLogo)
     {
         var request = new ExePackagingRequest(
             publishDirectory,
-            outputFile,
+            outputName,
             options,
             ToMaybe(vendor),
             ToMaybe(runtimeIdentifier),
@@ -65,18 +68,18 @@ public sealed class ExePackagingService
         return Build(request);
     }
 
-    public async Task<Result<FileInfo>> BuildFromProject(
+    public async Task<Result<IContainer>> BuildFromProject(
         FileInfo projectFile,
         string? runtimeIdentifier,
         bool selfContained,
         string configuration,
         bool singleFile,
         bool trimmed,
-        FileInfo outputFile,
+        string outputName,
         Options options,
         string? vendor,
-        FileInfo? stubFile,
-        FileInfo? setupLogo)
+        IByteSource? stubFile,
+        IByteSource? setupLogo)
     {
         var publishRequest = new ProjectPublishRequest(projectFile.FullName)
         {
@@ -90,14 +93,21 @@ public sealed class ExePackagingService
         var publishResult = await publisher.Publish(publishRequest);
         if (publishResult.IsFailure)
         {
-            return Result.Failure<FileInfo>(publishResult.Error);
+            return Result.Failure<IContainer>(publishResult.Error);
         }
 
         var projectMetadata = ReadProjectMetadata(projectFile);
 
+        var publishDir = new DirectoryInfo(publishResult.Value.OutputDirectory);
+        var containerResult = BuildContainer(publishDir);
+        if (containerResult.IsFailure)
+        {
+            return Result.Failure<IContainer>(containerResult.Error);
+        }
+
         var request = new ExePackagingRequest(
-            new DirectoryInfo(publishResult.Value.OutputDirectory),
-            outputFile,
+            containerResult.Value,
+            outputName,
             options,
             ToMaybe(vendor),
             ToMaybe(runtimeIdentifier),
@@ -124,15 +134,10 @@ public sealed class ExePackagingService
         return Maybe<ProjectMetadata>.From(metadataResult.Value);
     }
 
-    private async Task<Result<FileInfo>> Build(ExePackagingRequest request)
+    private async Task<Result<IContainer>> Build(ExePackagingRequest request)
     {
         var inferredExecutable = InferExecutableName(request.PublishDirectory, request.ProjectName);
-        var logoResult = ReadSetupLogo(request.SetupLogo);
-        if (logoResult.IsFailure)
-        {
-            return Result.Failure<FileInfo>(logoResult.Error);
-        }
-
+        
         var metadata = BuildInstallerMetadata(
             request.Options,
             request.PublishDirectory,
@@ -140,73 +145,52 @@ public sealed class ExePackagingService
             inferredExecutable,
             request.ProjectName,
             request.ProjectMetadata,
-            logoResult.Value);
+            request.SetupLogo);
+
+        async Task<Result<IContainer>> BuildWithStub(IByteSource stubBytes)
+        {
+            var buildResult = await SimpleExePacker.Build(stubBytes, request.PublishDirectory, metadata, request.SetupLogo);
+            if (buildResult.IsFailure)
+            {
+                return Result.Failure<IContainer>(buildResult.Error);
+            }
+
+            var resources = new List<INamedByteSource>
+            {
+                new Resource(request.OutputName, buildResult.Value.Installer),
+            };
+            
+            return Result.Success<IContainer>(new RootContainer(resources, Enumerable.Empty<INamedContainer>()));
+        }
 
         if (request.Stub.HasValue)
         {
-            var stubPath = request.Stub.Value.FullName;
-            var packResult = await SimpleExePacker.Build(stubPath, request.PublishDirectory.FullName, metadata, logoResult.Value, request.Output.FullName);
-            if (packResult.IsFailure)
-            {
-                return Result.Failure<FileInfo>(packResult.Error);
-            }
-
-            return Result.Success(request.Output);
+            return await BuildWithStub(request.Stub.Value);
         }
 
-        var payloadResult = await CreateInstallerPayloadZip(request.PublishDirectory.FullName, metadata, logoResult.Value);
-        if (payloadResult.IsFailure)
+        var ridResult = DetermineRuntimeIdentifier(request.RuntimeIdentifier);
+        if (ridResult.IsFailure)
         {
-            return Result.Failure<FileInfo>(payloadResult.Error);
+            return Result.Failure<IContainer>(ridResult.Error);
         }
 
-        var payloadPath = payloadResult.Value;
-        try
+        var localStubResult = await TryResolveLocalStub(ridResult.Value);
+        if (localStubResult.IsFailure)
         {
-            var ridResult = DetermineRuntimeIdentifier(request.RuntimeIdentifier);
-            if (ridResult.IsFailure)
-            {
-                return Result.Failure<FileInfo>(ridResult.Error);
-            }
-
-            var localStubResult = await TryResolveLocalStub(ridResult.Value);
-            if (localStubResult.IsFailure)
-            {
-                return Result.Failure<FileInfo>(localStubResult.Error);
-            }
-
-            var localStub = localStubResult.Value;
-            if (localStub.HasValue)
-            {
-                var localPackResult = await SimpleExePacker.Build(localStub.Value, request.PublishDirectory.FullName, metadata, logoResult.Value, request.Output.FullName);
-                if (localPackResult.IsFailure)
-                {
-                    return Result.Failure<FileInfo>(localPackResult.Error);
-                }
-
-                return Result.Success(request.Output);
-            }
-
-            // Resolve stub from cache or download from GitHub Releases
-            var version = GetToolVersion();
-            var stubPathResult = await GetOrDownloadStub(ridResult.Value, version);
-            if (stubPathResult.IsFailure)
-            {
-                return Result.Failure<FileInfo>(stubPathResult.Error);
-            }
-
-            var packResult = await SimpleExePacker.Build(stubPathResult.Value, request.PublishDirectory.FullName, metadata, logoResult.Value, request.Output.FullName);
-            if (packResult.IsFailure)
-            {
-                return Result.Failure<FileInfo>(packResult.Error);
-            }
-
-            return Result.Success(request.Output);
+            return Result.Failure<IContainer>(localStubResult.Error);
         }
-        finally
+
+        var localStub = localStubResult.Value;
+        if (localStub.HasValue)
         {
-            TryDelete(payloadPath);
+            return await BuildWithStub(ByteSource.FromStreamFactory(() => File.OpenRead(localStub.Value)));
         }
+
+        var version = GetToolVersion();
+        var stubPathResult = await GetOrDownloadStub(ridResult.Value, version);
+        return stubPathResult.IsSuccess
+            ? await BuildWithStub(ByteSource.FromStreamFactory(() => File.OpenRead(stubPathResult.Value)))
+            : Result.Failure<IContainer>(stubPathResult.Error);
     }
 
     private static Maybe<T> ToMaybe<T>(T? value) where T : class
@@ -219,30 +203,29 @@ public sealed class ExePackagingService
         return string.IsNullOrWhiteSpace(value) ? Maybe<string>.None : Maybe<string>.From(value);
     }
 
-    private static Result<Maybe<byte[]>> ReadSetupLogo(Maybe<FileInfo> setupLogo)
+    private static Result<IContainer> BuildContainer(DirectoryInfo publishDirectory)
     {
-        return setupLogo.Match(
-            file => Result.Try(() =>
+        return Result.Try<IContainer>(() =>
+        {
+            if (!publishDirectory.Exists)
             {
-                if (!file.Exists)
-                {
-                    throw new FileNotFoundException($"Logo not found: {file.FullName}");
-                }
+                throw new DirectoryNotFoundException($"Publish directory not found: {publishDirectory.FullName}");
+            }
 
-                var bytes = File.ReadAllBytes(file.FullName);
-                return Maybe<byte[]>.From(bytes);
-            }, ex => $"Failed to read setup logo: {ex.Message}"),
-            () => Result.Success(Maybe<byte[]>.None));
+            return new DirectoryContainer(new DirectoryInfoWrapper(new FileSystem(), publishDirectory)).AsRoot();
+        }, ex => ex.Message);
     }
+
+
 
     private static InstallerMetadata BuildInstallerMetadata(
         Options options,
-        DirectoryInfo contextDir,
+        IContainer contextDir,
         Maybe<string> vendor,
         Maybe<string> inferredExecutable,
         Maybe<string> projectName,
         Maybe<ProjectMetadata> projectMetadata,
-        Maybe<byte[]> logoBytes)
+        Maybe<IByteSource> logoBytes)
     {
         var metadataProduct = projectMetadata
             .Bind(meta => meta.Product
@@ -253,7 +236,7 @@ public sealed class ExePackagingService
         var appName = options.Name
             .Or(() => metadataProduct)
             .Or(() => projectName)
-            .GetValueOrDefault(contextDir.Name);
+            .GetValueOrDefault("Application"); // We can't easily get directory name from IContainer
         var packageName = appName.ToLowerInvariant().Replace(" ", string.Empty).Replace("-", string.Empty);
         var appId = options.Id.GetValueOrDefault($"com.{packageName}");
         var version = options.Version.GetValueOrDefault("1.0.0");
@@ -275,24 +258,25 @@ public sealed class ExePackagingService
         return new InstallerMetadata(appId, appName, version, effectiveVendor, description, executable, logoBytes.HasValue);
     }
 
-    private Maybe<string> InferExecutableName(DirectoryInfo contextDir, Maybe<string> projectName)
+    private Maybe<string> InferExecutableName(IContainer contextDir, Maybe<string> projectName)
     {
         try
         {
-            var candidates = Directory
-                .EnumerateFiles(contextDir.FullName, "*.exe", SearchOption.AllDirectories)
+            var candidates = contextDir
+                .ResourcesWithPathsRecursive()
+                .Where(r => r.Path.Value.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                 .Select(path => new
                 {
-                    Relative = Path.GetRelativePath(contextDir.FullName, path),
-                    Name = Path.GetFileName(path),
-                    Stem = Path.GetFileNameWithoutExtension(path)
+                    Relative = path.FullPath(),
+                    Name = path.Name,
+                    Stem = Path.GetFileNameWithoutExtension(path.Name)
                 })
                 .Where(candidate => !string.Equals(candidate.Name, "createdump.exe", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             if (!candidates.Any())
             {
-                logger.Warning("No executables were found under {Directory} when trying to infer the main executable.", contextDir.FullName);
+                logger.Warning("No executables were found in container when trying to infer the main executable.");
                 return Maybe<string>.None;
             }
 
@@ -327,7 +311,7 @@ public sealed class ExePackagingService
                 {
                     candidate.Relative,
                     Normalized = NormalizeExecutableRelativePath(candidate.Relative),
-                    Depth = candidate.Relative.Count(ch => ch == Path.DirectorySeparatorChar || ch == Path.AltDirectorySeparatorChar)
+                    Depth = candidate.Relative.RouteFragments.Count()
                 })
                 .OrderBy(candidate => candidate.Depth)
                 .ThenBy(candidate => candidate.Normalized.Length)
@@ -338,7 +322,7 @@ public sealed class ExePackagingService
         }
         catch (Exception ex)
         {
-            logger.Warning(ex, "Unable to infer the executable under {Directory}.", contextDir.FullName);
+            logger.Warning(ex, "Unable to infer the executable from container.");
             return Maybe<string>.None;
         }
     }
@@ -372,11 +356,9 @@ public sealed class ExePackagingService
         var projectPath = FindLocalStubProject();
         if (projectPath.HasNoValue)
         {
-            try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "dp-pack-service.txt"), "Local stub project NOT found.\n"); } catch { }
             return Result.Success(Maybe<string>.None);
         }
 
-        try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "dp-pack-service.txt"), $"Local stub project found at {projectPath.Value}. Publishing for {rid}...\n"); } catch { }
         logger.Information("Building installer stub locally from {ProjectPath} for {RID}.", projectPath.Value, rid);
         var publishRequest = new ProjectPublishRequest(projectPath.Value)
         {
@@ -417,18 +399,15 @@ public sealed class ExePackagingService
         var publishResult = await publisher.Publish(publishRequest);
         if (publishResult.IsFailure)
         {
-            try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "dp-pack-service.txt"), $"Publish failed: {publishResult.Error}\n"); } catch { }
             return Result.Failure<Maybe<string>>($"Failed to publish installer stub from {projectPath.Value}: {publishResult.Error}");
         }
 
         var stubPath = ResolveStubOutputPath(projectPath.Value, publishResult.Value.OutputDirectory);
         if (stubPath.HasNoValue)
         {
-            try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "dp-pack-service.txt"), $"Stub output not found in {publishResult.Value.OutputDirectory}\n"); } catch { }
             return Result.Failure<Maybe<string>>($"Installer stub was published but no executable was located under {publishResult.Value.OutputDirectory}.");
         }
 
-        try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "dp-pack-service.txt"), $"Stub published to {stubPath.Value}\n"); } catch { }
         logger.Information("Using locally built installer stub at {StubPath}", stubPath.Value);
         return Result.Success(Maybe<string>.From(stubPath.Value));
     }
@@ -544,56 +523,6 @@ public sealed class ExePackagingService
             .FirstOrDefault(file => !string.Equals(Path.GetFileName(file), "createdump.exe", StringComparison.OrdinalIgnoreCase));
 
         return fallback is null ? Maybe<string>.None : Maybe<string>.From(fallback);
-    }
-
-    // Legacy local-build path removed in favor of downloading prebuilt stub from GitHub Releases.
-    // Kept as private method name preservation intentionally avoided to prevent accidental use.
-
-
-    private static async Task<Result<string>> CreateInstallerPayloadZip(string publishDir, InstallerMetadata meta, Maybe<byte[]> logoBytes)
-    {
-        try
-        {
-            var tmp = Path.Combine(Path.GetTempPath(), "dp-exe-payload-" + Guid.NewGuid());
-            Directory.CreateDirectory(tmp);
-            var zipPath = Path.Combine(tmp, "payload.zip");
-            await using var fs = File.Create(zipPath);
-            using var zip = new ZipArchive(fs, ZipArchiveMode.Create, leaveOpen: false);
-
-            var metaEntry = zip.CreateEntry("metadata.json", CompressionLevel.NoCompression);
-            await using (var stream = metaEntry.Open())
-            {
-                await JsonSerializer.SerializeAsync(stream, meta, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = false
-                });
-            }
-
-            foreach (var file in Directory.EnumerateFiles(publishDir, "*", SearchOption.AllDirectories))
-            {
-                var relative = Path.GetRelativePath(publishDir, file).Replace('\\', '/');
-                var entry = zip.CreateEntry($"Content/{relative}", CompressionLevel.Optimal);
-                await using var src = File.OpenRead(file);
-                await using var dst = entry.Open();
-                await src.CopyToAsync(dst);
-            }
-
-            await logoBytes.Match(
-                async bytes =>
-                {
-                    var logoEntry = zip.CreateEntry(BrandingLogoEntry, CompressionLevel.NoCompression);
-                    await using var logoStream = logoEntry.Open();
-                    await logoStream.WriteAsync(bytes, 0, bytes.Length);
-                },
-                () => Task.CompletedTask);
-
-            return Result.Success(zipPath);
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure<string>(ex.Message);
-        }
     }
 
     private static string GetToolVersion()
@@ -845,13 +774,13 @@ public sealed class ExePackagingService
     }
 
     private sealed record ExePackagingRequest(
-        DirectoryInfo PublishDirectory,
-        FileInfo Output,
+        IContainer PublishDirectory,
+        string OutputName,
         Options Options,
         Maybe<string> Vendor,
         Maybe<string> RuntimeIdentifier,
-        Maybe<FileInfo> Stub,
+        Maybe<IByteSource> Stub,
         Maybe<string> ProjectName,
         Maybe<ProjectMetadata> ProjectMetadata,
-        Maybe<FileInfo> SetupLogo);
+        Maybe<IByteSource> SetupLogo);
 }

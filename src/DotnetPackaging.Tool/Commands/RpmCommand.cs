@@ -4,10 +4,11 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging.Rpm;
 using Serilog;
 using DotnetPackaging.Tool;
-using Zafiro.FileSystem.Core;
+using System.IO.Abstractions;
+using Zafiro.DivineBytes;
+using Zafiro.DivineBytes.System.IO;
 
 namespace DotnetPackaging.Tool.Commands;
-
 public static class RpmCommand
 {
     public static Command GetCommand()
@@ -27,14 +28,14 @@ public static class RpmCommand
     private static Task CreateRpm(DirectoryInfo inputDir, FileInfo outputFile, Options options, ILogger logger)
     {
         logger.Debug("Packaging RPM artifact from {Directory}", inputDir.FullName);
-        var fs = new System.IO.Abstractions.FileSystem();
-        return new Zafiro.FileSystem.Local.Directory(fs.DirectoryInfo.New(inputDir.FullName))
-            .ToDirectory()
-            .Bind(directory => RpmFile.From()
-                .Directory(directory)
-                .Configure(configuration => configuration.From(options))
-                .Build()
-                .Bind(rpmFile => CopyRpmToOutput(rpmFile, outputFile)))
+        var fs = new FileSystem();
+        var container = new DirectoryContainer(new DirectoryInfoWrapper(fs, inputDir)).AsRoot();
+
+        return RpmFile.From()
+            .Container(container)
+            .Configure(configuration => configuration.From(options))
+            .Build()
+            .Bind(rpmFile => CopyRpmToOutput(rpmFile, outputFile))
             .WriteResult();
     }
 

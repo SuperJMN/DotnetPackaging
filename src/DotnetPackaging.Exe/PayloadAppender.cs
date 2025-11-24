@@ -1,20 +1,41 @@
 using System.Text;
+using CSharpFunctionalExtensions;
+using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Exe;
 
 public static class PayloadAppender
 {
-    public static void AppendPayload(string signedStubPath, string payloadZipPath, string outputPath)
-    {
-        var stubBytes = File.ReadAllBytes(signedStubPath);
-        var payloadBytes = File.ReadAllBytes(payloadZipPath);
-        var lengthBytes = BitConverter.GetBytes((long)payloadBytes.Length);
-        var magicBytes = Encoding.ASCII.GetBytes("DPACKEXE1");
+    private const string Magic = "DPACKEXE1";
 
-        using var output = File.Create(outputPath);
-        output.Write(stubBytes);
-        output.Write(payloadBytes);
-        output.Write(lengthBytes);
-        output.Write(magicBytes);
+    public static async Task<Result<IByteSource>> Append(IByteSource stub, IByteSource payload)
+    {
+        try
+        {
+            var stubBytes = await ToBytes(stub);
+            var payloadBytes = await ToBytes(payload);
+            var lengthBytes = BitConverter.GetBytes((long)payloadBytes.Length);
+            var magicBytes = Encoding.ASCII.GetBytes(Magic);
+
+            await using var output = new MemoryStream();
+            await output.WriteAsync(stubBytes);
+            await output.WriteAsync(payloadBytes);
+            await output.WriteAsync(lengthBytes);
+            await output.WriteAsync(magicBytes);
+
+            return Result.Success((IByteSource)ByteSource.FromBytes(output.ToArray()));
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure<IByteSource>(ex.Message);
+        }
+    }
+
+    private static async Task<byte[]> ToBytes(IByteSource source)
+    {
+        await using var stream = source.ToStreamSeekable();
+        await using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer);
+        return buffer.ToArray();
     }
 }

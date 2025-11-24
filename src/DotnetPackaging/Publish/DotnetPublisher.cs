@@ -1,9 +1,9 @@
 using System.IO.Abstractions;
 using System.Runtime.InteropServices;
 using Zafiro.Commands;
-using Zafiro.FileSystem.Core;
+using Zafiro.DivineBytes.System.IO;
 using Zafiro.Mixins;
-using LocalDirectory = Zafiro.FileSystem.Local.Directory;
+using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Publish;
 
@@ -60,25 +60,13 @@ public sealed class DotnetPublisher : IPublisher
             logger.Information("dotnet publish completed for {ProjectPath}", request.ProjectPath);
 
             var fileSystem = new FileSystem();
-            var localDir = new LocalDirectory(fileSystem.DirectoryInfo.New(outputDir));
-            var readOnly = await localDir.ToDirectory();
-            if (readOnly.IsFailure)
-            {
-                logger.Error("Unable to materialize directory {Directory}: {Error}", outputDir, readOnly.Error);
-                return Result.Failure<PublishResult>($"Unable to materialize directory: {readOnly.Error}");
-            }
-
-            var containerResult = ContainerUtils.BuildContainer(readOnly.Value);
-            if (containerResult.IsFailure)
-            {
-                logger.Error("Failed to build container for {Directory}: {Error}", outputDir, containerResult.Error);
-                return Result.Failure<PublishResult>(containerResult.Error);
-            }
-
+            var wrapper = new DirectoryInfoWrapper(fileSystem, new DirectoryInfo(outputDir));
+            var container = new DirectoryContainer(wrapper).AsRoot();
+            
             var name = DeriveName(request.ProjectPath);
             logger.Information("Publish succeeded for {ProjectPath} (Name: {Name})", request.ProjectPath, name.GetValueOrDefault("unknown"));
 
-            return Result.Success(new PublishResult(containerResult.Value, name, outputDir));
+            return Result.Success(new PublishResult(container, name, outputDir));
         }
         catch (Exception ex)
         {
