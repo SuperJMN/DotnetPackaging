@@ -1,4 +1,5 @@
 using System.Text;
+using System.Reactive.Linq;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Deb.Archives.Ar;
@@ -13,6 +14,6 @@ public static class ArFileMixin
             chunks.AddRange(entry.ToChunks());
         }
 
-        return ByteSource.FromByteChunks(chunks);
+        return ByteSource.FromByteChunks(chunks.ToObservable());
     }
 }

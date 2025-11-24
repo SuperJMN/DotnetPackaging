@@ -1,6 +1,7 @@
 using System.IO;
 using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
+using IOPath = System.IO.Path;
 
 namespace DotnetPackaging.Deb.Builder;
 
@@ -24,7 +25,7 @@ public class DebBuilder
             throw new InvalidOperationException($"Unable to convert directory '{rootPath}' into container: {containerResult.Error}");
         }
 
-        var directoryName = Path.GetFileName(Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        var directoryName = IOPath.GetFileName(IOPath.GetFullPath(rootPath).TrimEnd(IOPath.DirectorySeparatorChar, IOPath.AltDirectorySeparatorChar));
         return new FromContainerOptions(containerResult.Value, Maybe<string>.From(directoryName));
     }
 
@@ -48,7 +49,7 @@ public class DebBuilder
 
     private static string NormalizeRelativePath(string root, string file)
     {
-        var relativePath = Path.GetRelativePath(root, file);
+        var relativePath = IOPath.GetRelativePath(root, file);
         return relativePath.Replace('\\', '/');
     }
 }
