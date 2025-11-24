@@ -1,4 +1,4 @@
-﻿using Zafiro.DataModel;
+﻿using DotnetPackaging.Deb.Bytes;
 
 namespace DotnetPackaging.Deb.Archives.Tar;
 

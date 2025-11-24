@@ -1,8 +1,9 @@
 ﻿using System.Text;
 using DotnetPackaging.Deb.Archives.Tar;
-using Zafiro.DataModel;
+using DotnetPackaging.Deb.Bytes;
+using DotnetPackaging.Deb.Unix;
 using Zafiro.DivineBytes;
-using Zafiro.FileSystem.Unix;
+using CSharpFunctionalExtensions;
 using Zafiro.Mixins;
 using DivinePath = Zafiro.DivineBytes.Path;
 
@@ -95,10 +96,10 @@ public static class TarEntryBuilder
         var directoryProperties = new TarDirectoryProperties
         {
             FileMode = "755".ToFileMode(),
-            GroupId = 1000,
-            OwnerId = 1000,
-            GroupName = "root",
-            OwnerUsername = "root",
+            GroupId = Maybe<int>.From(1000),
+            OwnerId = Maybe<int>.From(1000),
+            GroupName = Maybe<string>.From("root"),
+            OwnerUsername = Maybe<string>.From("root"),
             LastModification = DateTimeOffset.Now
         };
 

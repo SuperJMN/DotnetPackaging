@@ -1,8 +1,8 @@
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb.Archives.Tar;
-using Zafiro.DataModel;
 using Zafiro.DivineBytes;
-using Zafiro.FileSystem.Unix;
+using DotnetPackaging.Deb.Bytes;
+using DotnetPackaging.Deb.Unix;
 
 namespace DotnetPackaging.Flatpak;
 
@@ -28,7 +28,7 @@ public static class FlatpakBundle
         {
             var p = $"./{((INamedWithPath)res).FullPath()}";
             var props = DotnetPackaging.Deb.Archives.Tar.Misc.RegularFileProperties();
-            tarEntries.Add(new DotnetPackaging.Deb.Archives.Tar.FileTarEntry(p, Zafiro.DataModel.Data.FromByteArray(res.Array()), props));
+            tarEntries.Add(new DotnetPackaging.Deb.Archives.Tar.FileTarEntry(p, Data.FromByteArray(res.Array()), props));
         }
         var tar = new DotnetPackaging.Deb.Archives.Tar.TarFile(tarEntries.ToArray());
         var data = tar.ToData();

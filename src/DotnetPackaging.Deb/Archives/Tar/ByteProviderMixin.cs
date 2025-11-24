@@ -1,4 +1,5 @@
-﻿using Zafiro.DataModel;
+using DotnetPackaging.Deb.Bytes;
+using Zafiro.Mixins;
 
 namespace DotnetPackaging.Deb.Archives.Tar;
 

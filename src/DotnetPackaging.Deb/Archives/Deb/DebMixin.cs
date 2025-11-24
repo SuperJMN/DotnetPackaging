@@ -1,9 +1,8 @@
 ﻿using CSharpFunctionalExtensions;
 using DotnetPackaging.Deb.Archives.Ar;
 using DotnetPackaging.Deb.Archives.Tar;
-using Zafiro.DataModel;
-using Zafiro.FileSystem.Unix;
-using File = Zafiro.FileSystem.Readonly.File;
+using DotnetPackaging.Deb.Bytes;
+using DotnetPackaging.Deb.Unix;
 
 namespace DotnetPackaging.Deb.Archives.Deb;
 
@@ -21,11 +20,11 @@ public static class DebMixin
         var properties = new Properties()
         {
             FileMode = "644".ToFileMode(),
-            GroupId = 0,
+            GroupId = Maybe<int>.From(0),
             LastModification = debFile.Metadata.ModificationTime,
-            OwnerId = 0,
+            OwnerId = Maybe<int>.From(0),
         };
-        return new Entry(new File("data.tar", dataTarFile.ToData()), properties);
+        return new Entry("data.tar", dataTarFile.ToData(), properties);
     }
 
     private static Entry Signature(DebFile debFile)
@@ -33,9 +32,9 @@ public static class DebMixin
         var properties = new Properties()
         {
             FileMode = "644".ToFileMode(),
-            GroupId = 0,
+            GroupId = Maybe<int>.From(0),
             LastModification = debFile.Metadata.ModificationTime,
-            OwnerId = 0,
+            OwnerId = Maybe<int>.From(0),
         };
 
         var signature = """
@@ -43,7 +42,7 @@ public static class DebMixin
 
                         """.FromCrLfToLf();
 
-        return new Entry(new File("debian-binary", Data.FromString(signature)), properties);
+        return new Entry("debian-binary", Data.FromString(signature), properties);
     }
 
     private static Entry ControlTar(DebFile debFile)
@@ -51,13 +50,13 @@ public static class DebMixin
         var properties = new Properties()
         {
             FileMode = "644".ToFileMode(),
-            GroupId = 0,
+            GroupId = Maybe<int>.From(0),
             LastModification = debFile.Metadata.ModificationTime,
-            OwnerId = 0,
+            OwnerId = Maybe<int>.From(0),
         };
 
         var controlTarFile = ControlTarFile(debFile);
-        return new Entry(new File("control.tar", controlTarFile.ToData()), properties);
+        return new Entry("control.tar", controlTarFile.ToData(), properties);
     }
 
     private static TarFile ControlTarFile(DebFile deb)
@@ -65,20 +64,20 @@ public static class DebMixin
         var fileProperties = new TarFileProperties()
         {
             FileMode = "644".ToFileMode(),
-            GroupId = 0,
-            GroupName = "root",
-            OwnerId = 0,
-            OwnerUsername = "root",
+            GroupId = Maybe<int>.From(0),
+            GroupName = Maybe<string>.From("root"),
+            OwnerId = Maybe<int>.From(0),
+            OwnerUsername = Maybe<string>.From("root"),
             LastModification = deb.Metadata.ModificationTime,
         };
 
         var dirProperties = new TarDirectoryProperties()
         {
             FileMode = "755".ToFileMode(),
-            GroupId = 0,
-            GroupName = "root",
-            OwnerId = 0,
-            OwnerUsername = "root",
+            GroupId = Maybe<int>.From(0),
+            GroupName = Maybe<string>.From("root"),
+            OwnerId = Maybe<int>.From(0),
+            OwnerUsername = Maybe<string>.From("root"),
             LastModification = deb.Metadata.ModificationTime,
         };
 
@@ -95,12 +94,12 @@ public static class DebMixin
 
         var content = items.Compose() + "\n";
 
-        var file = new File("control", Data.FromString(content));
+        var fileContent = Data.FromString(content);
 
         var entries = new TarEntry[]
         {
             new DirectoryTarEntry("./", dirProperties),
-            new FileTarEntry("./control", file, fileProperties)
+            new FileTarEntry("./control", fileContent, fileProperties)
         };
 
         // TODO: Add other properties, too
