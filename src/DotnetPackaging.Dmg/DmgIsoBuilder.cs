@@ -47,7 +47,12 @@ public static class DmgIsoBuilder
             builder.AddDirectory($"{bundle}/Contents/Resources");
 
             // Copy application payload under Contents/MacOS
-            AddDirectoryRecursive(builder, sourceFolder, ".", prefix: $"{bundle}/Contents/MacOS");
+            AddDirectoryRecursive(
+                builder,
+                sourceFolder,
+                ".",
+                prefix: $"{bundle}/Contents/MacOS",
+                shouldSkip: rel => rel.EndsWith(".app", StringComparison.OrdinalIgnoreCase));
 
             var appIcon = FindIcnsIcon(sourceFolder);
             if (appIcon != null)
@@ -69,7 +74,12 @@ public static class DmgIsoBuilder
         return Task.CompletedTask;
     }
 
-    private static void AddDirectoryRecursive(CDBuilder builder, string root, string rel, string? prefix)
+    private static void AddDirectoryRecursive(
+        CDBuilder builder,
+        string root,
+        string rel,
+        string? prefix,
+        Func<string, bool>? shouldSkip = null)
     {
         var abs = Path.Combine(root, rel);
         var targetDir = prefix == null || rel == "." ? rel : Path.Combine(prefix, rel);
@@ -83,6 +93,10 @@ public static class DmgIsoBuilder
             var name = Path.GetFileName(dir);
             if (name == null) continue;
             var nextRel = rel == "." ? name : Path.Combine(rel, name);
+            if (shouldSkip?.Invoke(nextRel) == true)
+            {
+                continue;
+            }
             AddDirectoryRecursive(builder, root, nextRel, prefix);
         }
 

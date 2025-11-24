@@ -68,6 +68,27 @@ public class DmgIsoBuilderTests
     }
 
     [Fact]
+    public async Task Skips_preexisting_app_directories_from_payload()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+
+        await File.WriteAllTextAsync(Path.Combine(publish, "Angor"), "exe");
+        Directory.CreateDirectory(Path.Combine(publish, "AngorAvalonia.app"));
+
+        var outDmg = Path.Combine(tempRoot.Path, "Angor.dmg");
+        await DotnetPackaging.Dmg.DmgIsoBuilder.Create(publish, outDmg, "Angor Avalonia");
+
+        using var fs = File.OpenRead(outDmg);
+        using var iso = new CDReader(fs, true);
+
+        FileExistsAny(iso, new[]{"AngorAvalonia.app/Contents/MacOS/Angor","/AngorAvalonia.app/Contents/MacOS/Angor"}).Should().BeTrue();
+        iso.DirectoryExists("AngorAvalonia.app/Contents/MacOS/AngorAvalonia.app").Should().BeFalse();
+        iso.DirectoryExists("/AngorAvalonia.app/Contents/MacOS/AngorAvalonia.app").Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Volume_name_is_sanitized_reasonably()
     {
         using var tempRoot = new TempDir();
