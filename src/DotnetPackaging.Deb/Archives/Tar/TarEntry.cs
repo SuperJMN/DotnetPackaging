@@ -1,6 +1,4 @@
-﻿using Zafiro.FileSystem.Unix;
-
-namespace DotnetPackaging.Deb.Archives.Tar;
+﻿namespace DotnetPackaging.Deb.Archives.Tar;
 
 public abstract record TarEntry
 {

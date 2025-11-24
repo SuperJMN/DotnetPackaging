@@ -1,12 +1,10 @@
-﻿using Zafiro.FileSystem.Unix;
+﻿namespace DotnetPackaging.Deb.Archives.Tar;
 
-namespace DotnetPackaging.Deb.Archives.Tar;
-
-public class Misc
+public static class Misc
 {
     public static TarFileProperties RegularFileProperties() => new()
     {
-        FileMode = "644".ToFileMode(),
+        Mode = UnixPermissions.Parse("644"),
         GroupId = 1000,
         OwnerId = 1000,
         GroupName = "root",
@@ -14,5 +12,5 @@ public class Misc
         LastModification = DateTimeOffset.Now
     };
 
-    public static TarFileProperties ExecutableFileProperties() => RegularFileProperties() with { FileMode = "755".ToFileMode() };
+    public static TarFileProperties ExecutableFileProperties() => RegularFileProperties() with { Mode = UnixPermissions.Parse("755") };
 }

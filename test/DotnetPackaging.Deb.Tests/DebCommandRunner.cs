@@ -38,9 +38,9 @@ internal static class DebCommandRunner
             return -1;
         }
 
-        var data = DebMixin.ToData(result.Value);
+        var data = DebMixin.ToByteSource(result.Value);
         await using var stream = File.Open(outputFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
-        await ByteSource.FromByteObservable(data.Bytes).ToStream().CopyToAsync(stream);
-        return 0;
+        var write = await data.WriteTo(stream);
+        return write.IsSuccess ? 0 : -1;
     }
 }
