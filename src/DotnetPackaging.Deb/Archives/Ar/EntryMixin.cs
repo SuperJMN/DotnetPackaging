@@ -29,7 +29,13 @@ public static class EntryMixin
     // 34  6   Group ID Decimal
     private static IData GroupId(this Entry entry) => Data.FromString(entry.Properties.GroupId.GetValueOrDefault().ToString().PadRight(6), Encoding.ASCII);
     // 40  8   File mode (type and permission) Octal
-    private static IData FileMode(this Entry entry) => Data.FromString(("100" + entry.Properties.FileMode.ToFileModeString()).PadRight(8), Encoding.ASCII);
+    private static IData FileMode(this Entry entry)
+    {
+        var permissionBits = entry.Properties.FileMode.ToFileModeString().TrimStart('0');
+        var mode = "100" + (permissionBits.Length == 0 ? "0" : permissionBits);
+
+        return Data.FromString(mode.PadRight(8), Encoding.ASCII);
+    }
     // 48  10  File size in bytes Decimal
     private static IData FileSize(this Entry entry) => Data.FromString(entry.Content.Length.ToString().PadRight(10), Encoding.ASCII);
     // 58  2   Ending characters 0x60 0x0A
