@@ -9,7 +9,4 @@
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Zafiro.FileSystem.Unix" />
-  </ItemGroup>
 </Project>

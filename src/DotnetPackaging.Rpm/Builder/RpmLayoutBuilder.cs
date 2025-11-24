@@ -1,7 +1,5 @@
 using System.Text;
-using Zafiro.DataModel;
 using Zafiro.DivineBytes;
-using Zafiro.FileSystem.Unix;
 using DivinePath = Zafiro.DivineBytes.Path;
 
 namespace DotnetPackaging.Rpm.Builder;
@@ -29,7 +27,7 @@ internal static class RpmLayoutBuilder
             {
                 var relative = resource.Path == DivinePath.Empty ? resource.Name : resource.FullPath().ToString();
                 var path = NormalizePath($"{appDir}/{relative}");
-                var data = Data.FromByteArray(resource.Array());
+                var data = ByteSource.FromBytes(resource.Array());
                 var properties = GetFileProperties(resource, executable);
                 return new RpmEntry(path, properties, data, RpmEntryType.File);
             });
@@ -39,17 +37,17 @@ internal static class RpmLayoutBuilder
     {
         var result = new List<RpmEntry>();
         var desktopPath = NormalizePath($"/usr/share/applications/{metadata.Package.ToLowerInvariant()}.desktop");
-        var desktopContent = Data.FromString(TextTemplates.DesktopFileContents(execAbsolutePath, metadata), Encoding.ASCII);
+        var desktopContent = ByteSource.FromString(TextTemplates.DesktopFileContents(execAbsolutePath, metadata), Encoding.ASCII);
         result.Add(new RpmEntry(desktopPath, UnixFileProperties.RegularFileProperties(), desktopContent, RpmEntryType.File));
 
         var launcherPath = NormalizePath($"/usr/bin/{metadata.Package.ToLowerInvariant()}");
-        var launcherContent = Data.FromString(TextTemplates.RunScript(execAbsolutePath), Encoding.ASCII);
+        var launcherContent = ByteSource.FromString(TextTemplates.RunScript(execAbsolutePath), Encoding.ASCII);
         result.Add(new RpmEntry(launcherPath, UnixFileProperties.ExecutableFileProperties(), launcherContent, RpmEntryType.File));
 
         foreach (var icon in metadata.IconFiles)
         {
             var iconPath = NormalizePath($"/{icon.Key}");
-            var iconData = Data.FromByteArray(icon.Value.Array());
+            var iconData = ByteSource.FromBytes(icon.Value.Array());
             result.Add(new RpmEntry(iconPath, UnixFileProperties.RegularFileProperties(), iconData, RpmEntryType.File));
         }
 
@@ -130,7 +128,7 @@ internal static class RpmLayoutBuilder
 
 internal record RpmLayout(IReadOnlyList<RpmEntry> Entries);
 
-internal record RpmEntry(string Path, UnixFileProperties Properties, IData? Content, RpmEntryType Type);
+internal record RpmEntry(string Path, UnixFileProperties Properties, IByteSource? Content, RpmEntryType Type);
 
 internal enum RpmEntryType
 {

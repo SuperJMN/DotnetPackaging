@@ -2,10 +2,9 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using CSharpFunctionalExtensions;
-using Zafiro.DataModel;
-using Zafiro.FileSystem.Core;
-using Zafiro.FileSystem.Unix;
+using Zafiro.DivineBytes;
 using Zafiro.Mixins;
+using PathIO = System.IO.Path;
 
 namespace DotnetPackaging.Rpm.Builder;
 
@@ -21,15 +20,15 @@ internal static class RpmPackager
 
         await using var tempDirectory = new TempDirectory();
         var topDir = tempDirectory.Path;
-        var specsDir = Directory.CreateDirectory(Path.Combine(topDir, "SPECS"));
-        var sourcesDir = Directory.CreateDirectory(Path.Combine(topDir, "SOURCES"));
-        var buildDir = Directory.CreateDirectory(Path.Combine(topDir, "BUILD"));
-        var srpmDir = Directory.CreateDirectory(Path.Combine(topDir, "SRPMS"));
-        var rpmDir = Directory.CreateDirectory(Path.Combine(topDir, "RPMS"));
-        var buildRootDir = Path.Combine(topDir, "BUILDROOT", $"{metadata.Package}-{metadata.Version}");
+        var specsDir = Directory.CreateDirectory(PathIO.Combine(topDir, "SPECS"));
+        var sourcesDir = Directory.CreateDirectory(PathIO.Combine(topDir, "SOURCES"));
+        var buildDir = Directory.CreateDirectory(PathIO.Combine(topDir, "BUILD"));
+        var srpmDir = Directory.CreateDirectory(PathIO.Combine(topDir, "SRPMS"));
+        var rpmDir = Directory.CreateDirectory(PathIO.Combine(topDir, "RPMS"));
+        var buildRootDir = PathIO.Combine(topDir, "BUILDROOT", $"{metadata.Package}-{metadata.Version}");
         Directory.CreateDirectory(buildRootDir);
 
-        var rootFsDir = Directory.CreateDirectory(Path.Combine(sourcesDir.FullName, "rootfs"));
+        var rootFsDir = Directory.CreateDirectory(PathIO.Combine(sourcesDir.FullName, "rootfs"));
         var stageResult = await StageLayout(layout, rootFsDir.FullName);
         if (stageResult.IsFailure)
         {
@@ -37,7 +36,7 @@ internal static class RpmPackager
         }
 
         var specContent = BuildSpec(metadata, layout);
-        var specPath = Path.Combine(specsDir.FullName, $"{metadata.Package}.spec");
+        var specPath = PathIO.Combine(specsDir.FullName, $"{metadata.Package}.spec");
         await File.WriteAllTextAsync(specPath, specContent);
 
         var arguments = new StringBuilder();
@@ -61,7 +60,7 @@ internal static class RpmPackager
             return Result.Failure<FileInfo>("rpmbuild finished successfully but no RPM file was produced.");
         }
 
-        var stableLocation = Path.Combine(Path.GetTempPath(), $"dotnetpackaging-{Guid.NewGuid():N}-{Path.GetFileName(rpmFile)}");
+        var stableLocation = PathIO.Combine(System.IO.Path.GetTempPath(), $"dotnetpackaging-{Guid.NewGuid():N}-{PathIO.GetFileName(rpmFile)}");
         File.Copy(rpmFile, stableLocation, true);
 
         return Result.Success(new FileInfo(stableLocation));
@@ -73,14 +72,14 @@ internal static class RpmPackager
         {
             foreach (var entry in layout.Entries)
             {
-                var targetPath = Path.Combine(rootFsDir, entry.Path.TrimStart('/'));
+                var targetPath = System.IO.Path.Combine(rootFsDir, entry.Path.TrimStart('/'));
                 if (entry.Type == RpmEntryType.Directory)
                 {
                     Directory.CreateDirectory(targetPath);
                     continue;
                 }
 
-                var directory = Path.GetDirectoryName(targetPath);
+                var directory = System.IO.Path.GetDirectoryName(targetPath);
                 if (!string.IsNullOrEmpty(directory))
                 {
                     Directory.CreateDirectory(directory);
@@ -92,7 +91,11 @@ internal static class RpmPackager
                 }
 
                 await using var fileStream = File.Open(targetPath, FileMode.Create, FileAccess.Write, FileShare.None);
-                await entry.Content.DumpTo(fileStream);
+                var write = await entry.Content.WriteTo(fileStream);
+                if (write.IsFailure)
+                {
+                    return Result.Failure(write.Error);
+                }
             }
 
             return Result.Success();
@@ -158,17 +161,17 @@ internal static class RpmPackager
         foreach (var directory in directories)
         {
             var entry = layout.Entries.First(e => e.Path == directory);
-            var mode = entry.Properties.FileMode.ToFileModeString();
-            var owner = entry.Properties.OwnerUsername.GetValueOrDefault("root");
-            var group = entry.Properties.GroupName.GetValueOrDefault("root");
+            var mode = entry.Properties.ToFileModeString();
+            var owner = entry.Properties.OwnerUsername;
+            var group = entry.Properties.GroupName;
             builder.AppendLine($"%dir %attr(0{mode},{owner},{group}) {directory}");
         }
 
         foreach (var file in layout.Entries.Where(entry => entry.Type == RpmEntryType.File))
         {
-            var mode = file.Properties.FileMode.ToFileModeString();
-            var owner = file.Properties.OwnerUsername.GetValueOrDefault("root");
-            var group = file.Properties.GroupName.GetValueOrDefault("root");
+            var mode = file.Properties.ToFileModeString();
+            var owner = file.Properties.OwnerUsername;
+            var group = file.Properties.GroupName;
             builder.AppendLine($"%attr(0{mode},{owner},{group}) {file.Path}");
         }
 
