@@ -1,11 +1,17 @@
 # DotnetPackaging
 
-DotnetPackaging helps you turn the publish output of a .NET application into Linux-friendly deliverables. The repository produces two related artifacts:
+DotnetPackaging helps you turn the publish output of a .NET application into ready-to-ship deliverables for Linux, Windows and macOS. The repository produces two related artifacts:
 
-- **NuGet libraries** (`DotnetPackaging`, `DotnetPackaging.AppImage`, `DotnetPackaging.Deb`) that expose the packaging primitives for tool authors and CI integrations.
+- **NuGet libraries** (`DotnetPackaging`, `DotnetPackaging.AppImage`, `DotnetPackaging.Deb`, `DotnetPackaging.Flatpak`, `DotnetPackaging.Msix`, `DotnetPackaging.Dmg`, `DotnetPackaging.Exe`) that expose packaging primitives for tool authors and CI integrations.
 - **A global `dotnet` tool** (`dotnetpackager`) that wraps those libraries with a scriptable command line experience.
 
-Both flavors share the same code paths, so whatever works in the CLI is also available from your own automation.
+Supported formats today: `.AppImage`, `.deb`, `.rpm`, `.flatpak`, `.msix` (experimental), `.dmg` (experimental) and a Windows self-extracting `.exe` (preview).
+
+Both flavors share the same code paths, so whatever works in the CLI is also available from your own automation. The best part? Everything is pure .NET with zero native dependencies, so you can crank out packages from whatever OS you’re using without hunting for platform-specific toolchains.
+
+## Why DotnetPackaging
+
+Shipping .NET apps shouldn’t require juggling half a dozen platform tools. DotnetPackaging keeps things friendly by giving you one toolbox to generate installers and bundles for the ecosystems your users actually run. No extra daemons, no native SDK rabbit holes—just run the CLI or the libraries, and your bits are ready to share. It’s a laid-back, developer-first way to make sure your app lands everywhere it needs to.
 
 ## Repository layout
 - `src/DotnetPackaging`: core abstractions such as metadata models, ELF inspection, icon discovery and option builders.
@@ -125,14 +131,18 @@ dotnet tool install --global DotnetPackaging.Tool
 ```
 
 ### Commands
-- `dotnetpackager deb` – build a Debian/Ubuntu `.deb` out of a publish directory.
 - `dotnetpackager appimage` – build an `.AppImage` file directly from a publish directory.
 - `dotnetpackager appimage appdir` – generate an AppDir folder structure for inspection/customisation.
 - `dotnetpackager appimage from-appdir` – package an existing AppDir into an AppImage.
+- `dotnetpackager deb` – build a Debian/Ubuntu `.deb` out of a publish directory (and `deb from-project` to publish + package in one step).
+- `dotnetpackager rpm` – build an RPM from a publish directory (`rpm from-project` also available) without owning system dirs.
 - `dotnetpackager flatpak layout` – create a Flatpak layout (metadata + files/) from a publish directory.
 - `dotnetpackager flatpak bundle` – create a `.flatpak` (uses system `flatpak` by default; `--system` to force system; internal fallback).
 - `dotnetpackager flatpak repo` – generate an OSTree repo directory (debug/validation).
 - `dotnetpackager flatpak pack` – minimal UX: only `--directory` and `--output-dir`; auto-named output and sensible defaults.
+- `dotnetpackager msix` – experimental MSIX packing from a directory (`msix from-project` when you want it published for you).
+- `dotnetpackager dmg` – experimental macOS `.dmg` builder from a publish directory (`dmg from-project` to publish + package).
+- `dotnetpackager exe` – preview Windows self-extracting installer builder; supports `exe from-project` and stub auto-download.
 
 Run `dotnetpackager <command> --help` to see the full list of shared options (`--application-name`, `--comment`, `--homepage`, `--keywords`, `--icon`, `--is-terminal`, etc.).
 
