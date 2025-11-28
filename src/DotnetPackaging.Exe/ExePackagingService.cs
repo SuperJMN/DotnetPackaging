@@ -264,7 +264,7 @@ public sealed class ExePackagingService
         {
             var candidates = contextDir
                 .ResourcesWithPathsRecursive()
-                .Where(r => r.Path.Value.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                .Where(resource => resource.FullPath().Extension().Match(ext => string.Equals(ext, "exe", StringComparison.OrdinalIgnoreCase), () => false))
                 .Select(path => new
                 {
                     Relative = path.FullPath(),
