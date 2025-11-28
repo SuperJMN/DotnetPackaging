@@ -14,6 +14,8 @@ public class WelcomeViewModelMock : IWelcomeViewModel
 
     public WelcomeViewModelMock()
     {
+        OperationName = "install";
+        Preposition = "on";
         Metadata = new Reactive.Bindings.ReactiveProperty<InstallerMetadata?>(new InstallerMetadata(
             "com.example.app",
             "Example App",
@@ -21,6 +23,7 @@ public class WelcomeViewModelMock : IWelcomeViewModel
             "Example, Inc.",
             Description: "This is an example app. It does nothing. It's just a demo.",
             HasLogo: true));
+        Title = Metadata.Select(x => x is null ? "" : $"Welcome to {x.ApplicationName}").ToReadOnlyReactivePropertySlim("");
 
         LoadLogo = ReactiveUI.ReactiveCommand.Create(() => Result.Success(Maybe<IByteSource>.From(SampleData.Logo)));
 
@@ -44,4 +47,7 @@ public class WelcomeViewModelMock : IWelcomeViewModel
     public ReactiveUI.ReactiveCommand<Unit, Result<Maybe<IByteSource>>> LoadLogo { get; }
 
     public ReadOnlyReactivePropertySlim<IImage?> Logo { get; }
+    public ReadOnlyReactivePropertySlim<string> Title { get; }
+    public string OperationName { get; }
+    public string Preposition { get; }
 }
