@@ -18,7 +18,7 @@ public class UninstallWizard
 
     public SlimWizard<UninstallationResult> CreateWizard()
     {
-        var welcome = new WelcomeViewModel(payload);
+        var welcome = new WelcomeViewModel(payload, name => $"{name} Uninstaller", "uninstall", "from");
 
         return WizardBuilder
             .StartWith(() => welcome, "").Next(w => w.Metadata.Value!).WhenValid()

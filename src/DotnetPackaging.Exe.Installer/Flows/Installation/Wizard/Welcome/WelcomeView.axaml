@@ -31,13 +31,15 @@
                    Stretch="Uniform" />
             <StackPanel Grid.Column="1" Spacing="15">
                 <TextBlock TextWrapping="Wrap"
-                           Text="{Binding Metadata.Value.ApplicationName, StringFormat='Welcome  to {0}'}" FontSize="20" FontWeight="Bold" />
+                           Text="{Binding Title.Value}" FontSize="20" FontWeight="Bold" />
                 <TextBlock DockPanel.Dock="Top">
                     <TextBlock.Inlines>
-                        <Run>This will install</Run>
+                        <Run Text="This will" />
+                        <Run Text="{Binding OperationName}" />
                         <Run FontWeight="Bold" Text="{Binding Metadata.Value.ApplicationName}" />
                         <Run FontWeight="Bold" Text="{Binding Metadata.Value.Version}" />
-                        <Run>on your computer.</Run>
+                        <Run Text="{Binding Preposition}" />
+                        <Run Text="your computer." />
                     </TextBlock.Inlines>
                 </TextBlock>
                 <TextBlock>Click Next to continue.</TextBlock>

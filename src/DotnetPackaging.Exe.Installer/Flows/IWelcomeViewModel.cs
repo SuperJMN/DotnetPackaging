@@ -13,4 +13,7 @@ public interface IWelcomeViewModel
     ReactiveUI.ReactiveCommand<Unit, Result<InstallerMetadata>> LoadMetadata { get; }
     ReactiveUI.ReactiveCommand<Unit, Result<Maybe<IByteSource>>> LoadLogo { get; }
     ReadOnlyReactivePropertySlim<IImage?> Logo { get; }
+    ReadOnlyReactivePropertySlim<string> Title { get; }
+    string OperationName { get; }
+    string Preposition { get; }
 }
