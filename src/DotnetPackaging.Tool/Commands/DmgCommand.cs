@@ -58,7 +58,7 @@ public static class DmgCommand
     {
         logger.Debug("Packaging DMG artifact from {Directory}", inputDir.FullName);
         var name = options.Name.GetValueOrDefault(inputDir.Name);
-        return DmgIsoBuilder.Create(inputDir.FullName, outputFile.FullName, name);
+        return DmgIsoBuilder.Create(inputDir.FullName, outputFile.FullName, name, compress: true, addApplicationsSymlink: true);
     }
 
     private static void AddDmgFromProjectSubcommand(Command dmgCommand)
@@ -70,8 +70,11 @@ public static class DmgCommand
         var configuration = new Option<string>("--configuration") { Description = "Build configuration" };
         configuration.DefaultValueFactory = _ => "Release";
         var singleFile = new Option<bool>("--single-file") { Description = "Publish single-file" };
+        singleFile.DefaultValueFactory = _ => true;
         var trimmed = new Option<bool>("--trimmed") { Description = "Enable trimming" };
         var output = new Option<FileInfo>("--output") { Description = "Output .dmg file", Required = true };
+        var compress = new Option<bool>("--compress") { Description = "Compress the DMG payload (bzip2/UDZO-like)" };
+        compress.DefaultValueFactory = _ => true;
 
         // Reuse metadata options to get volume name from --application-name if present
         var appName = new Option<string>("--application-name") { Description = "Application name / volume name", Required = false };
@@ -103,6 +106,7 @@ public static class DmgCommand
         fromProject.Add(trimmed);
         fromProject.Add(output);
         fromProject.Add(appName);
+        fromProject.Add(compress);
 
         fromProject.SetAction(async parseResult =>
         {
@@ -114,6 +118,7 @@ public static class DmgCommand
             var outFile = parseResult.GetValue(output)!;
             var opt = optionsBinder.Bind(parseResult);
             var ridVal = parseResult.GetValue(arch);
+            var compressVal = parseResult.GetValue(compress);
 
             await ExecutionWrapper.ExecuteWithLogging("dmg-from-project", outFile.FullName, async logger =>
             {
@@ -144,7 +149,7 @@ public static class DmgCommand
                 }
 
                 var volName = opt.Name.GetValueOrDefault(pub.Value.Name.GetValueOrDefault("App"));
-                await DmgIsoBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName);
+                await DmgIsoBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName, compressVal, addApplicationsSymlink: true);
                 logger.Information("Success");
             });
         });
