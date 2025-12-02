@@ -6,9 +6,10 @@
   </PropertyGroup>
   <Import Project="..\Common.props" />
   <ItemGroup>
-    <PackageReference Include="DiscUtils" />
+    <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
+    <PackageReference Include="DotnetPackaging.Formats.Dmg.Iso" />
+    <PackageReference Include="DotnetPackaging.Formats.Dmg.Udif" />
   </ItemGroup>
 </Project>
