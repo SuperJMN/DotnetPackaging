@@ -6,9 +6,9 @@
   </PropertyGroup>
   <Import Project="..\Common.props" />
   <ItemGroup>
-    <PackageReference Include="DiscUtils" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
+    <ProjectReference Include="..\..\..\Dotnet.Dmg\Dotnet.Dmg.Iso\Dotnet.Dmg.Iso.csproj" />
+    <ProjectReference Include="..\..\..\Dotnet.Dmg\Dotnet.Dmg.Udif\Dotnet.Dmg.Udif.csproj" />
+    <ProjectReference Include="..\..\..\Dotnet.Dmg\Dotnet.Dmg.MachO\Dotnet.Dmg.MachO.csproj" />
   </ItemGroup>
 </Project>
