@@ -7,6 +7,7 @@
   </PropertyGroup>
   <Import Project="..\Common.props" />
   <ItemGroup>
+    <PackageReference Include="NuGet.Versioning" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="System.IO.Abstractions" />
     <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" />
