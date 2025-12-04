@@ -1,3 +1,4 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -6,8 +7,9 @@
   </PropertyGroup>
   <Import Project="..\Common.props" />
   <ItemGroup>
-    <ProjectReference Include="..\DotnetPackaging.Dmg.Hfs\DotnetPackaging.Dmg.Hfs.csproj" />
-    <ProjectReference Include="..\DotnetPackaging.Dmg.Udif\DotnetPackaging.Dmg.Udif.csproj" />
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="DotnetPackaging.Formats.Dmg.Udif" />
   </ItemGroup>
 </Project>
