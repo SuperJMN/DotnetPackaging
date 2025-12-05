@@ -1,10 +1,10 @@
-using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Formats.Dmg.Udif;
 using DotnetPackaging.Hfs.Builder;
 using DotnetPackaging.Hfs.Files;
 using Serilog;

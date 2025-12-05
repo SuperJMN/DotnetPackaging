@@ -3,6 +3,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>DotnetPackaging.Formats.Hfs</RootNamespace>
   </PropertyGroup>
   <Import Project="..\Common.props" />
   <ItemGroup>

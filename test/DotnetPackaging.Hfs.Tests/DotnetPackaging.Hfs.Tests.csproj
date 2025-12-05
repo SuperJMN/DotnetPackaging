@@ -19,6 +19,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\DotnetPackaging.Dmg.Hfs\DotnetPackaging.Dmg.Hfs.csproj" />
     <ProjectReference Include="..\..\src\DotnetPackaging.Hfs\DotnetPackaging.Hfs.csproj" />
   </ItemGroup>
 </Project>

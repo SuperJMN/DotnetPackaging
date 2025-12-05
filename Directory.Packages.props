@@ -13,8 +13,8 @@
     </PackageVersion>
     <PackageVersion Include="CSharpFunctionalExtensions" Version="3.6.0" />
     <PackageVersion Include="CSharpFunctionalExtensions.FluentAssertions" Version="3.6.0" />
-    <PackageVersion Include="DotnetPackaging.Formats.Dmg.Iso" Version="0.0.9" />
-    <PackageVersion Include="DotnetPackaging.Formats.Dmg.Udif" Version="0.0.9" />
+    <PackageVersion Include="DotnetPackaging.Dmg.Iso" Version="0.0.9" />
+    <PackageVersion Include="DotnetPackaging.Dmg.Udif" Version="0.0.9" />
     <PackageVersion Include="FluentAssertions" Version="8.8.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
