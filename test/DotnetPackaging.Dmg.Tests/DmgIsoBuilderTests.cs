@@ -1,7 +1,13 @@
-using System.Text;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text;
+using CSharpFunctionalExtensions;
+using DotnetPackaging;
 using FluentAssertions;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using Zafiro.DivineBytes;
+using Path = System.IO.Path;
 
 namespace DotnetPackaging.Dmg.Tests;
 
@@ -98,6 +104,54 @@ public class DmgIsoBuilderTests
         var signature = new byte[5];
         fs.Read(signature, 0, 5);
         Encoding.ASCII.GetString(signature).Should().Be("CD001", "should have ISO9660 PVD signature");
+    }
+
+    [Fact]
+    public async Task Adds_generated_icon_to_app_bundle()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+        await File.WriteAllTextAsync(Path.Combine(publish, "Angor"), "exe");
+
+        var iconPath = Path.Combine(tempRoot.Path, "icon.png");
+        using (var image = new Image<Rgba32>(64, 64))
+        {
+            image[0, 0] = new Rgba32(255, 0, 0, 255);
+            await image.SaveAsync(iconPath);
+        }
+
+        var icon = await Icon.FromByteSource(ByteSource.FromStreamFactory(() => File.OpenRead(iconPath)));
+        icon.IsSuccess.Should().BeTrue();
+
+        var existingStages = Directory.GetDirectories(Path.GetTempPath(), "dmgstage-*").ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Environment.SetEnvironmentVariable("DOTNETPACKAGING_KEEP_DMG_STAGE", "1");
+
+        string? stage = null;
+        try
+        {
+            var outDmg = Path.Combine(tempRoot.Path, "Angor.dmg");
+            await DotnetPackaging.Dmg.DmgIsoBuilder.Create(publish, outDmg, "Angor Avalonia", compress: false, addApplicationsSymlink: false, includeDefaultLayout: false, icon: Maybe<IIcon>.From(icon.Value));
+
+            var allStages = Directory.GetDirectories(Path.GetTempPath(), "dmgstage-*");
+            stage = allStages.First(dir => !existingStages.Contains(dir));
+
+            var appIconPath = Path.Combine(stage, "AngorAvalonia.app", "Contents", "Resources", "AppIcon.icns");
+            File.Exists(appIconPath).Should().BeTrue();
+
+            var plistPath = Path.Combine(stage, "AngorAvalonia.app", "Contents", "Info.plist");
+            var plistContent = await File.ReadAllTextAsync(plistPath);
+            plistContent.Should().Contain("CFBundleIconFile");
+            plistContent.Should().Contain("AppIcon");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("DOTNETPACKAGING_KEEP_DMG_STAGE", null);
+            if (stage != null && Directory.Exists(stage))
+            {
+                Directory.Delete(stage, true);
+            }
+        }
     }
 
     [Fact]

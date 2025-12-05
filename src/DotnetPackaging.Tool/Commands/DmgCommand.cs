@@ -1,7 +1,11 @@
 using System.CommandLine;
+using System.IO;
 using CSharpFunctionalExtensions;
+using DotnetPackaging;
 using DotnetPackaging.Dmg;
 using Serilog;
+using Zafiro.DivineBytes;
+using Path = System.IO.Path;
 
 namespace DotnetPackaging.Tool.Commands;
 
@@ -66,7 +70,7 @@ public static class DmgCommand
         logger.Debug("Packaging DMG artifact from {Directory}", inputDir.FullName);
         var name = options.Name.GetValueOrDefault(inputDir.Name);
         var useDefaultLayout = options.UseDefaultLayout.GetValueOrDefault(true);
-        return DmgIsoBuilder.Create(inputDir.FullName, outputFile.FullName, name, compress: true, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout);
+        return DmgIsoBuilder.Create(inputDir.FullName, outputFile.FullName, name, compress: true, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: options.Icon);
     }
 
     private static void AddDmgFromProjectSubcommand(Command dmgCommand)
@@ -162,11 +166,105 @@ public static class DmgCommand
                 }
 
                 var volName = opt.Name.GetValueOrDefault(pub.Value.Name.GetValueOrDefault("App"));
-                await DmgIsoBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout);
+                var icon = await ResolveIcon(opt, prj.Directory!, logger);
+                await DmgIsoBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon);
                 logger.Information("Success");
             });
         });
 
         dmgCommand.Add(fromProject);
+    }
+
+    private static async Task<Maybe<IIcon>> ResolveIcon(Options options, DirectoryInfo projectDirectory, ILogger logger)
+    {
+        if (options.Icon.HasValue)
+        {
+            return Maybe<IIcon>.From(options.Icon.Value);
+        }
+
+        var candidate = FindIconCandidate(projectDirectory);
+        if (candidate == null)
+        {
+            return Maybe<IIcon>.None;
+        }
+
+        var iconResult = await DotnetPackaging.Icon.FromByteSource(ByteSource.FromStreamFactory(() => File.OpenRead(candidate)));
+        if (iconResult.IsFailure)
+        {
+            logger.Warning("Icon autodiscovery failed for {IconPath}: {Error}", candidate, iconResult.Error);
+            return Maybe<IIcon>.None;
+        }
+
+        return Maybe<IIcon>.From(iconResult.Value);
+    }
+
+    private static string? FindIconCandidate(DirectoryInfo projectDirectory)
+    {
+        var preferred = new[]
+        {
+            "icon.icns",
+            "app.icns",
+            "AppIcon.icns",
+            "icon.png",
+            "icon-256.png",
+            "app.png"
+        };
+
+        foreach (var name in preferred)
+        {
+            var directMatch = Path.Combine(projectDirectory.FullName, name);
+            if (File.Exists(directMatch))
+            {
+                return directMatch;
+            }
+        }
+
+        var assetsDir = Path.Combine(projectDirectory.FullName, "Assets");
+        if (Directory.Exists(assetsDir))
+        {
+            var assetsIcon = FindIconInDirectory(assetsDir);
+            if (assetsIcon != null)
+            {
+                return assetsIcon;
+            }
+        }
+
+        var icnsFallback = Directory.EnumerateFiles(projectDirectory.FullName, "*.icns", SearchOption.TopDirectoryOnly).FirstOrDefault();
+        if (icnsFallback != null)
+        {
+            return icnsFallback;
+        }
+
+        return Directory.EnumerateFiles(projectDirectory.FullName, "*.png", SearchOption.TopDirectoryOnly).FirstOrDefault();
+    }
+
+    private static string? FindIconInDirectory(string directory)
+    {
+        var preferred = new[]
+        {
+            "icon.icns",
+            "app.icns",
+            "AppIcon.icns",
+            "icon.png",
+            "icon-256.png",
+            "app.png"
+        };
+
+        foreach (var name in preferred)
+        {
+            var candidate = Path.Combine(directory, name);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        var icns = Directory.EnumerateFiles(directory, "*.icns", SearchOption.TopDirectoryOnly).FirstOrDefault();
+        if (icns != null)
+        {
+            return icns;
+        }
+
+        return Directory.EnumerateFiles(directory, "*.png", SearchOption.TopDirectoryOnly).FirstOrDefault();
     }
 }

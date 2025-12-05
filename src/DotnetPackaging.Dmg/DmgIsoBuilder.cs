@@ -1,8 +1,11 @@
-using Zafiro.DivineBytes;
+using System.Buffers.Binary;
+using System.Diagnostics;
+using System.Reactive.Linq;
 using System.Text;
+using CSharpFunctionalExtensions;
 using DotnetPackaging.Formats.Dmg.Iso;
 using DotnetPackaging.Formats.Dmg.Udif;
-using System.Diagnostics;
+using Zafiro.DivineBytes;
 using Path = System.IO.Path;
 
 namespace DotnetPackaging.Dmg;
@@ -13,9 +16,21 @@ namespace DotnetPackaging.Dmg;
 /// </summary>
 public static class DmgIsoBuilder
 {
-    public static Task Create(string sourceFolder, string outputPath, string volumeName, bool compress = false, bool addApplicationsSymlink = false, bool includeDefaultLayout = true)
+    private static readonly IReadOnlyDictionary<int, string> IcnsChunkTypes = new Dictionary<int, string>
     {
-        var stagingRoot = StageContent(sourceFolder, volumeName, includeDefaultLayout, addApplicationsSymlink);
+        [16] = "icp4",
+        [32] = "icp5",
+        [64] = "icp6",
+        [128] = "ic07",
+        [256] = "ic08",
+        [512] = "ic09",
+        [1024] = "ic10"
+    };
+
+    public static async Task Create(string sourceFolder, string outputPath, string volumeName, bool compress = false, bool addApplicationsSymlink = false, bool includeDefaultLayout = true, Maybe<IIcon> icon = default)
+    {
+        var stagingRoot = await StageContent(sourceFolder, volumeName, includeDefaultLayout, addApplicationsSymlink, icon);
+        var keepStage = Environment.GetEnvironmentVariable("DOTNETPACKAGING_KEEP_DMG_STAGE") == "1";
 
         try
         {
@@ -32,10 +47,13 @@ public static class DmgIsoBuilder
         }
         finally
         {
-            TryDeleteDirectory(stagingRoot);
+            if (!keepStage)
+            {
+                TryDeleteDirectory(stagingRoot);
+            }
         }
 
-        return Task.CompletedTask;
+        return;
     }
 
     private static void BuildIso(string stagingRoot, string outputPath, string volumeName, bool compress, bool addApplicationsSymlink)
@@ -125,7 +143,7 @@ public static class DmgIsoBuilder
         }
     }
 
-    private static string StageContent(string sourceFolder, string volumeName, bool includeDefaultLayout, bool addApplicationsSymlink)
+    private static async Task<string> StageContent(string sourceFolder, string volumeName, bool includeDefaultLayout, bool addApplicationsSymlink, Maybe<IIcon> icon)
     {
         var stagingRoot = Path.Combine(Path.GetTempPath(), "dmgstage-" + Guid.NewGuid());
         Directory.CreateDirectory(stagingRoot);
@@ -165,16 +183,14 @@ public static class DmgIsoBuilder
 
             AddDirectoryContents(macOs, sourceFolder, shouldSkip: path => path.EndsWith(".app", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".icns", StringComparison.OrdinalIgnoreCase));
 
-            var appIcon = FindIcnsIcon(sourceFolder);
-            if (appIcon != null)
-            {
-                File.Copy(appIcon, Path.Combine(resources, Path.GetFileName(appIcon)!), overwrite: true);
-            }
+            var appIcon = await PrepareAppIcon(sourceFolder, resources, icon);
 
             AddDmgAdornments(stagingRoot, includeDefaultLayout);
 
             var exeName = GuessExecutableName(sourceFolder, volumeName);
-            var plist = GenerateMinimalPlist(volumeName, exeName, appIcon == null ? null : Path.GetFileNameWithoutExtension(appIcon));
+            var plist = GenerateMinimalPlist(volumeName, exeName, appIcon.Match(
+                value => value,
+                () => null));
             File.WriteAllText(Path.Combine(contents, "Info.plist"), plist, Encoding.UTF8);
             File.WriteAllText(Path.Combine(contents, "PkgInfo"), "APPL????", Encoding.ASCII);
         }
@@ -357,14 +373,6 @@ public static class DmgIsoBuilder
         return match;
     }
 
-    private static string? FindIcnsIcon(string sourceFolder)
-    {
-        var icons = Directory.EnumerateFiles(sourceFolder, "*.icns", SearchOption.TopDirectoryOnly)
-            .Where(path => !Path.GetFileName(path)!.Equals(".VolumeIcon.icns", StringComparison.OrdinalIgnoreCase));
-
-        return icons.FirstOrDefault();
-    }
-
     private static string GenerateMinimalPlist(string displayName, string executable, string? iconName)
     {
         var identifier = $"com.{SanitizeBundleName(displayName).Trim('-').Trim('_').ToLowerInvariant()}";
@@ -404,5 +412,108 @@ public static class DmgIsoBuilder
     {
         var cleaned = new string(name.Where(ch => char.IsLetterOrDigit(ch) || ch=='_' || ch=='-').ToArray());
         return string.IsNullOrWhiteSpace(cleaned) ? "App" : cleaned;
+    }
+
+    private static async Task<Maybe<string>> PrepareAppIcon(string sourceFolder, string resources, Maybe<IIcon> providedIcon)
+    {
+        if (providedIcon.HasValue)
+        {
+            return await CreateIcns(providedIcon.Value, resources);
+        }
+
+        var existingIcns = FindIcnsIcon(sourceFolder);
+        if (existingIcns != null)
+        {
+            var fileName = Path.GetFileName(existingIcns)!;
+            File.Copy(existingIcns, Path.Combine(resources, fileName), overwrite: true);
+            return Path.GetFileNameWithoutExtension(existingIcns);
+        }
+
+        var pngIcon = FindPngIcon(sourceFolder);
+        if (pngIcon != null)
+        {
+            var iconResult = await Icon.FromByteSource(ByteSource.FromStreamFactory(() => File.OpenRead(pngIcon)));
+            if (iconResult.IsSuccess)
+            {
+                return await CreateIcns(iconResult.Value, resources);
+            }
+        }
+
+        return Maybe<string>.None;
+    }
+
+    private static async Task<Maybe<string>> CreateIcns(IIcon icon, string resources)
+    {
+        var iconBytes = await icon.Bytes.ToList();
+        var pngBytes = iconBytes.SelectMany(bytes => bytes).ToArray();
+        var chunkType = SelectChunkType(icon.Size);
+        var icnsBytes = BuildIcns(pngBytes, chunkType);
+        var iconFileName = "AppIcon.icns";
+        var destination = Path.Combine(resources, iconFileName);
+        Directory.CreateDirectory(resources);
+        await File.WriteAllBytesAsync(destination, icnsBytes);
+        return Path.GetFileNameWithoutExtension(iconFileName);
+    }
+
+    private static byte[] BuildIcns(IReadOnlyList<byte> pngBytes, string chunkType)
+    {
+        var iconChunkLength = 8 + pngBytes.Count;
+        var totalLength = 8 + iconChunkLength;
+
+        var buffer = new byte[totalLength];
+        Encoding.ASCII.GetBytes("icns").CopyTo(buffer, 0);
+        BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(4), totalLength);
+        Encoding.ASCII.GetBytes(chunkType).CopyTo(buffer, 8);
+        BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(12), iconChunkLength);
+        for (var i = 0; i < pngBytes.Count; i++)
+        {
+            buffer[16 + i] = pngBytes[i];
+        }
+
+        return buffer;
+    }
+
+    private static string SelectChunkType(int size)
+    {
+        if (IcnsChunkTypes.TryGetValue(size, out var chunkType))
+        {
+            return chunkType;
+        }
+
+        var closest = IcnsChunkTypes
+            .OrderBy(entry => Math.Abs(entry.Key - size))
+            .First();
+
+        return closest.Value;
+    }
+
+    private static string? FindIcnsIcon(string sourceFolder)
+    {
+        var icons = Directory.EnumerateFiles(sourceFolder, "*.icns", SearchOption.TopDirectoryOnly)
+            .Where(path => !Path.GetFileName(path)!.Equals(".VolumeIcon.icns", StringComparison.OrdinalIgnoreCase));
+
+        return icons.FirstOrDefault();
+    }
+
+    private static string? FindPngIcon(string sourceFolder)
+    {
+        var preferredNames = new[]
+        {
+            "icon-512.png",
+            "icon-256.png",
+            "icon.png",
+            "app.png"
+        };
+
+        foreach (var preferred in preferredNames)
+        {
+            var candidate = Path.Combine(sourceFolder, preferred);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return Directory.EnumerateFiles(sourceFolder, "*.png", SearchOption.TopDirectoryOnly).FirstOrDefault();
     }
 }
