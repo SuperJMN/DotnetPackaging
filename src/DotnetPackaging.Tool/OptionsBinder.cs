@@ -22,6 +22,7 @@ public class OptionsBinder
     private readonly Option<string> appIdOption;
     private readonly Option<string> executableName;
     private readonly Option<bool> isTerminal;
+    private readonly Option<bool>? defaultLayout;
 
     public OptionsBinder(
         Option<string> appNameOption,
@@ -38,7 +39,8 @@ public class OptionsBinder
         Option<string> summaryOption,
         Option<string> appIdOption,
         Option<string> executableName,
-        Option<bool> isTerminal)
+        Option<bool> isTerminal,
+        Option<bool>? defaultLayout = null)
     {
         this.appNameOption = appNameOption;
         this.wmClassOption = wmClassOption;
@@ -55,6 +57,7 @@ public class OptionsBinder
         this.appIdOption = appIdOption;
         this.executableName = executableName;
         this.isTerminal = isTerminal;
+        this.defaultLayout = defaultLayout;
     }
 
     public Options Bind(ParseResult parseResult)
@@ -76,7 +79,8 @@ public class OptionsBinder
             Summary = Maybe.From(parseResult.GetValue(summaryOption)!),
             Id = Maybe.From(parseResult.GetValue(appIdOption)!),
             ExecutableName = Maybe.From(parseResult.GetValue(executableName)!),
-            IsTerminal = Maybe.From(parseResult.GetValue(isTerminal))
+            IsTerminal = Maybe.From(parseResult.GetValue(isTerminal)),
+            UseDefaultLayout = defaultLayout == null ? Maybe<bool>.None : Maybe.From(parseResult.GetValue(defaultLayout))
         };
     }
 

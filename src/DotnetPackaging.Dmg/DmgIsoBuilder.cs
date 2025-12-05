@@ -2,6 +2,7 @@ using Zafiro.DivineBytes;
 using System.Text;
 using DotnetPackaging.Formats.Dmg.Iso;
 using DotnetPackaging.Formats.Dmg.Udif;
+using System.Diagnostics;
 using Path = System.IO.Path;
 
 namespace DotnetPackaging.Dmg;
@@ -12,7 +13,32 @@ namespace DotnetPackaging.Dmg;
 /// </summary>
 public static class DmgIsoBuilder
 {
-    public static Task Create(string sourceFolder, string outputPath, string volumeName, bool compress = false, bool addApplicationsSymlink = false)
+    public static Task Create(string sourceFolder, string outputPath, string volumeName, bool compress = false, bool addApplicationsSymlink = false, bool includeDefaultLayout = true)
+    {
+        var stagingRoot = StageContent(sourceFolder, volumeName, includeDefaultLayout, addApplicationsSymlink);
+
+        try
+        {
+            var forceIso = Environment.GetEnvironmentVariable("DOTNETPACKAGING_FORCE_ISO") == "1";
+
+            if (OperatingSystem.IsMacOS() && !forceIso)
+            {
+                BuildWithHdiUtil(stagingRoot, outputPath, volumeName, compress);
+            }
+            else
+            {
+                BuildIso(stagingRoot, outputPath, volumeName, compress, addApplicationsSymlink);
+            }
+        }
+        finally
+        {
+            TryDeleteDirectory(stagingRoot);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static void BuildIso(string stagingRoot, string outputPath, string volumeName, bool compress, bool addApplicationsSymlink)
     {
         var builder = new IsoBuilder(SanitizeVolumeName(volumeName));
 
@@ -21,77 +47,44 @@ public static class DmgIsoBuilder
             builder.Root.AddChild(new IsoSymlink("Applications", "/Applications"));
         }
 
-        var appBundles = Directory.EnumerateDirectories(sourceFolder, "*.app", SearchOption.TopDirectoryOnly).ToList();
-        
-        if (appBundles.Any())
+        foreach (var entry in Directory.EnumerateFileSystemEntries(stagingRoot))
         {
-            // Copy pre-built .app bundles to image root
-            foreach (var bundle in appBundles)
+            var name = Path.GetFileName(entry);
+            if (string.IsNullOrEmpty(name))
             {
-                var bundleName = Path.GetFileName(bundle);
-                if (bundleName == null) continue;
-                
-                var bundleDir = builder.Root.AddDirectory(bundleName);
-                AddDirectoryRecursive(bundleDir, bundle);
+                continue;
             }
 
-            AddDmgAdornments(builder.Root, sourceFolder);
-        }
-        else
-        {
-            // Create .app bundle structure from publish output
-            var bundleName = SanitizeBundleName(volumeName) + ".app";
-            var appBundle = builder.Root.AddDirectory(bundleName);
-            var contents = appBundle.AddDirectory("Contents");
-            var macOs = contents.AddDirectory("MacOS");
-            var resources = contents.AddDirectory("Resources");
-
-            // Copy application payload under Contents/MacOS
-            AddDirectoryContents(
-                macOs,
-                sourceFolder,
-                shouldSkip: path => path.EndsWith(".app", StringComparison.OrdinalIgnoreCase) ||
-                                   path.EndsWith(".icns", StringComparison.OrdinalIgnoreCase));
-
-            // Copy .icns files to Resources
-            var appIcon = FindIcnsIcon(sourceFolder);
-            if (appIcon != null)
+            var attributes = File.GetAttributes(entry);
+            if (attributes.HasFlag(FileAttributes.ReparsePoint))
             {
-                var iconName = Path.GetFileName(appIcon);
-                resources.AddChild(new IsoFile(iconName)
+                // Preserve Applications symlink without following it
+                builder.Root.AddChild(new IsoSymlink(name, "/Applications"));
+                continue;
+            }
+
+            if (Directory.Exists(entry))
+            {
+                var dir = builder.Root.AddDirectory(name);
+                AddDirectoryRecursive(dir, entry);
+            }
+            else
+            {
+                builder.Root.AddChild(new IsoFile(name)
                 {
-                    ContentSource = () => ByteSource.FromStreamFactory(() => File.OpenRead(appIcon)),
-                    SourcePath = appIcon
+                    ContentSource = () => ByteSource.FromStreamFactory(() => File.OpenRead(entry)),
+                    SourcePath = entry
                 });
             }
-
-            AddDmgAdornments(builder.Root, sourceFolder);
-
-            // Generate Info.plist
-            var exeName = GuessExecutableName(sourceFolder, volumeName);
-            var plist = GenerateMinimalPlist(volumeName, exeName, appIcon == null ? null : Path.GetFileNameWithoutExtension(appIcon));
-            contents.AddChild(new IsoFile("Info.plist")
-            {
-                ContentSource = () => ByteSource.FromBytes(Encoding.UTF8.GetBytes(plist))
-            });
-
-            // Add PkgInfo
-            contents.AddChild(new IsoFile("PkgInfo")
-            {
-                ContentSource = () => ByteSource.FromBytes(Encoding.ASCII.GetBytes("APPL????"))
-            });
         }
 
-        // Build ISO
         if (!compress)
         {
-            // For uncompressed, output raw ISO for backward compatibility with tests
             using var dmgStream = File.Create(outputPath);
             builder.Build(dmgStream);
         }
         else
         {
-            // For compressed, wrap in UDIF with Bzip2
             using var isoStream = new MemoryStream();
             builder.Build(isoStream);
             isoStream.Position = 0;
@@ -100,8 +93,93 @@ public static class DmgIsoBuilder
             var writer = new UdifWriter { CompressionType = CompressionType.Bzip2 };
             writer.Create(isoStream, dmgStream);
         }
+    }
 
-        return Task.CompletedTask;
+    private static void BuildWithHdiUtil(string stagingRoot, string outputPath, string volumeName, bool compress)
+    {
+        var format = compress ? "UDBZ" : "UDRO";
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "hdiutil",
+            ArgumentList =
+            {
+                "create",
+                "-ov",
+                "-fs", "HFS+",
+                "-format", format,
+                "-srcfolder", stagingRoot,
+                "-volname", volumeName,
+                outputPath
+            },
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+
+        using var proc = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start hdiutil");
+        proc.WaitForExit();
+        if (proc.ExitCode != 0)
+        {
+            var err = proc.StandardError.ReadToEnd();
+            throw new InvalidOperationException($"hdiutil failed ({proc.ExitCode}): {err}");
+        }
+    }
+
+    private static string StageContent(string sourceFolder, string volumeName, bool includeDefaultLayout, bool addApplicationsSymlink)
+    {
+        var stagingRoot = Path.Combine(Path.GetTempPath(), "dmgstage-" + Guid.NewGuid());
+        Directory.CreateDirectory(stagingRoot);
+
+        var appBundles = Directory.EnumerateDirectories(sourceFolder, "*.app", SearchOption.TopDirectoryOnly).ToList();
+
+        if (addApplicationsSymlink)
+        {
+            var linkPath = Path.Combine(stagingRoot, "Applications");
+            if (!File.Exists(linkPath))
+            {
+                CreateSymlink(linkPath, "/Applications");
+            }
+        }
+
+        if (appBundles.Any())
+        {
+            foreach (var bundle in appBundles)
+            {
+                var bundleName = Path.GetFileName(bundle);
+                if (bundleName == null) continue;
+                var dest = Path.Combine(stagingRoot, bundleName);
+                CopyDirectory(bundle, dest);
+            }
+
+            AddDmgAdornments(stagingRoot, includeDefaultLayout);
+        }
+        else
+        {
+            var bundleName = SanitizeBundleName(volumeName) + ".app";
+            var bundleRoot = Path.Combine(stagingRoot, bundleName);
+            var contents = Path.Combine(bundleRoot, "Contents");
+            var macOs = Path.Combine(contents, "MacOS");
+            var resources = Path.Combine(contents, "Resources");
+            Directory.CreateDirectory(macOs);
+            Directory.CreateDirectory(resources);
+
+            AddDirectoryContents(macOs, sourceFolder, shouldSkip: path => path.EndsWith(".app", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".icns", StringComparison.OrdinalIgnoreCase));
+
+            var appIcon = FindIcnsIcon(sourceFolder);
+            if (appIcon != null)
+            {
+                File.Copy(appIcon, Path.Combine(resources, Path.GetFileName(appIcon)!), overwrite: true);
+            }
+
+            AddDmgAdornments(stagingRoot, includeDefaultLayout);
+
+            var exeName = GuessExecutableName(sourceFolder, volumeName);
+            var plist = GenerateMinimalPlist(volumeName, exeName, appIcon == null ? null : Path.GetFileNameWithoutExtension(appIcon));
+            File.WriteAllText(Path.Combine(contents, "Info.plist"), plist, Encoding.UTF8);
+            File.WriteAllText(Path.Combine(contents, "PkgInfo"), "APPL????", Encoding.ASCII);
+        }
+
+        return stagingRoot;
     }
 
     private static void AddDirectoryRecursive(IsoDirectory target, string sourcePath)
@@ -125,6 +203,90 @@ public static class DmgIsoBuilder
                 ContentSource = () => ByteSource.FromStreamFactory(() => File.OpenRead(file)),
                 SourcePath = file
             });
+        }
+    }
+
+    private static void CreateSymlink(string linkPath, string target)
+    {
+        try
+        {
+            if (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
+            {
+                var psi = new ProcessStartInfo("ln", new[] { "-s", target, linkPath })
+                {
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true
+                };
+                using var proc = Process.Start(psi);
+                proc?.WaitForExit();
+            }
+            else
+            {
+                // Fallback: create a directory as placeholder if symlink unsupported
+                if (!Directory.Exists(linkPath))
+                {
+                    Directory.CreateDirectory(linkPath);
+                }
+            }
+        }
+        catch
+        {
+            // Best-effort; ignore failures
+        }
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, recursive: true);
+            }
+        }
+        catch
+        {
+            // Ignore cleanup errors
+        }
+    }
+
+    private static void AddDirectoryContents(string targetPath, string sourcePath, Func<string, bool>? shouldSkip = null)
+    {
+        foreach (var dir in Directory.EnumerateDirectories(sourcePath))
+        {
+            if (shouldSkip?.Invoke(dir) == true) continue;
+            var dirName = Path.GetFileName(dir);
+            if (dirName == null) continue;
+
+            var dest = Path.Combine(targetPath, dirName);
+            CopyDirectory(dir, dest, shouldSkip);
+        }
+
+        foreach (var file in Directory.EnumerateFiles(sourcePath))
+        {
+            if (shouldSkip?.Invoke(file) == true) continue;
+            var fileName = Path.GetFileName(file);
+            if (fileName == null) continue;
+
+            File.Copy(file, Path.Combine(targetPath, fileName), overwrite: true);
+        }
+    }
+
+    private static void CopyDirectory(string source, string destination, Func<string, bool>? shouldSkip = null)
+    {
+        Directory.CreateDirectory(destination);
+        foreach (var dir in Directory.EnumerateDirectories(source))
+        {
+            if (shouldSkip?.Invoke(dir) == true) continue;
+            var destSub = Path.Combine(destination, Path.GetFileName(dir)!);
+            CopyDirectory(dir, destSub, shouldSkip);
+        }
+
+        foreach (var file in Directory.EnumerateFiles(source))
+        {
+            if (shouldSkip?.Invoke(file) == true) continue;
+            var destFile = Path.Combine(destination, Path.GetFileName(file)!);
+            File.Copy(file, destFile, overwrite: true);
         }
     }
 
@@ -156,25 +318,27 @@ public static class DmgIsoBuilder
         }
     }
 
-    private static void AddDmgAdornments(IsoDirectory root, string sourceFolder)
+    private static void AddDmgAdornments(string stagingRoot, bool includeDefaultLayout)
     {
-        // Add .VolumeIcon.icns if present
-        var volIcon = Path.Combine(sourceFolder, ".VolumeIcon.icns");
-        if (File.Exists(volIcon))
+        var volIconSource = Path.Combine(stagingRoot, ".VolumeIcon.icns");
+        if (File.Exists(volIconSource))
         {
-            root.AddChild(new IsoFile(".VolumeIcon.icns")
-            {
-                ContentSource = () => ByteSource.FromStreamFactory(() => File.OpenRead(volIcon)),
-                SourcePath = volIcon
-            });
+            // leave as-is
         }
 
-        // Add .background directory if present
-        var backgroundDir = Path.Combine(sourceFolder, ".background");
-        if (Directory.Exists(backgroundDir))
+        var backgroundDir = Path.Combine(stagingRoot, ".background");
+        var hasBackgroundDir = Directory.Exists(backgroundDir);
+        if (!hasBackgroundDir && includeDefaultLayout)
         {
-            var bgDir = root.AddDirectory(".background");
-            AddDirectoryRecursive(bgDir, backgroundDir);
+            Directory.CreateDirectory(backgroundDir);
+            var defaultBg = Path.Combine(backgroundDir, "Background.png");
+            DefaultDmgLayout.BackgroundPng.WriteTo(defaultBg);
+        }
+
+        var dsStorePath = Path.Combine(stagingRoot, ".DS_Store");
+        if (includeDefaultLayout && !File.Exists(dsStorePath))
+        {
+            DefaultDmgLayout.DsStore.WriteTo(dsStorePath);
         }
     }
 

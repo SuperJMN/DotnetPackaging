@@ -1,10 +1,17 @@
 using System.Text;
+using System.Linq;
+using System.Collections.Generic;
 using FluentAssertions;
 
 namespace DotnetPackaging.Dmg.Tests;
 
 public class DmgIsoBuilderTests
 {
+    static DmgIsoBuilderTests()
+    {
+        Environment.SetEnvironmentVariable("DOTNETPACKAGING_FORCE_ISO", "1");
+    }
+
     [Fact]
     public async Task Creates_dmg_with_app_bundle_and_files()
     {
@@ -116,6 +123,168 @@ public class DmgIsoBuilderTests
         fs.Read(signature, 0, 5);
         Encoding.ASCII.GetString(signature).Should().Be("CD001", "should have ISO9660 PVD signature");
     }
+
+    [Fact]
+    public async Task Rock_ridge_entries_are_emitted_and_preserve_names()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "pub");
+        Directory.CreateDirectory(publish);
+        await File.WriteAllTextAsync(Path.Combine(publish, "ReadMe.txt"), "ok");
+
+        var outDmg = Path.Combine(tempRoot.Path, "Sample.dmg");
+        await DmgIsoBuilder.Create(publish, outDmg, "Sample", compress: false, addApplicationsSymlink: true);
+
+        using var fs = File.OpenRead(outDmg);
+        var (rootExtentStart, rootDataLength) = ReadRootExtent(fs);
+        var records = EnumerateDirectoryTree(fs, rootExtentStart, rootDataLength).ToList();
+
+        var rootSusp = GetSusp(records.First(IsDotEntry));
+        rootSusp.Select(e => e.Signature).Should().Contain(new[] { "SP", "ER" });
+
+        var nmValues = records
+            .SelectMany(r => GetSusp(r)
+                .Where(e => e.Signature == "NM" && e.Data.Length > 1)
+                .Select(e => Encoding.UTF8.GetString(e.Data, 1, e.Data.Length - 1)))
+            .ToList();
+
+        nmValues.Should().Contain("ReadMe.txt");
+    }
+
+    private static (long Start, int Length) ReadRootExtent(Stream stream)
+    {
+        stream.Seek(16 * 2048, SeekOrigin.Begin);
+        var pvd = new byte[2048];
+        var read = stream.Read(pvd, 0, pvd.Length);
+        if (read != pvd.Length)
+        {
+            throw new IOException("Unable to read PVD");
+        }
+
+        int extentLocation = BitConverter.ToInt32(pvd, 156 + 2);
+        int dataLength = BitConverter.ToInt32(pvd, 156 + 10);
+        return (extentLocation * 2048L, dataLength);
+    }
+
+    private static IEnumerable<byte[]> EnumerateDirectoryTree(Stream stream, long rootStart, int rootLength)
+    {
+        var pending = new Queue<(long Start, int Length)>();
+        pending.Enqueue((rootStart, rootLength));
+
+        while (pending.Count > 0)
+        {
+            var current = pending.Dequeue();
+            foreach (var record in ReadDirectoryRecords(stream, current.Start, current.Length))
+            {
+                if (record.Length < 26)
+                {
+                    continue;
+                }
+                yield return record;
+
+                var isDirectory = (record[25] & 0x02) != 0;
+                if (isDirectory && !IsDotEntry(record) && !IsDotDotEntry(record))
+                {
+                    var extent = BitConverter.ToInt32(record, 2);
+                    var dataLength = BitConverter.ToInt32(record, 10);
+                    pending.Enqueue((extent * 2048L, dataLength));
+                }
+            }
+        }
+    }
+
+    private static IEnumerable<byte[]> ReadDirectoryRecords(Stream stream, long start, int length)
+    {
+        stream.Seek(start, SeekOrigin.Begin);
+        var end = start + length;
+
+        while (stream.Position < end)
+        {
+            var lenByte = stream.ReadByte();
+            if (lenByte < 0)
+            {
+                yield break;
+            }
+
+            if (lenByte == 0)
+            {
+                var offsetInSector = (stream.Position - start) % 2048;
+                if (offsetInSector != 0)
+                {
+                    stream.Seek(2048 - offsetInSector, SeekOrigin.Current);
+                }
+                continue;
+            }
+
+            var record = new byte[lenByte];
+            record[0] = (byte)lenByte;
+            var remaining = lenByte - 1;
+            var read = stream.Read(record, 1, remaining);
+            if (read != remaining)
+            {
+                throw new IOException("Unexpected end of directory record");
+            }
+
+            yield return record;
+        }
+    }
+
+    private static List<SuspEntry> GetSusp(byte[] record)
+    {
+        int len = record[0];
+        int nameLen = record[32];
+        int suspStart = 33 + nameLen;
+        if (suspStart % 2 != 0)
+        {
+            suspStart++;
+        }
+
+        var entries = new List<SuspEntry>();
+        int offset = suspStart;
+
+        while (offset + 4 <= len)
+        {
+            var signature = Encoding.ASCII.GetString(record, offset, 2);
+            var entryLen = record[offset + 2];
+
+            if (entryLen == 0 || entryLen < 4)
+            {
+                break;
+            }
+
+            var data = new byte[entryLen - 4];
+            Array.Copy(record, offset + 4, data, 0, data.Length);
+
+            entries.Add(new SuspEntry(signature, data));
+            offset += entryLen;
+        }
+
+        return entries;
+    }
+
+    private static bool IsDotEntry(byte[] record)
+    {
+        var nameLen = record[32];
+        if (nameLen != 1)
+        {
+            return false;
+        }
+
+        return record[33] == 0;
+    }
+
+    private static bool IsDotDotEntry(byte[] record)
+    {
+        var nameLen = record[32];
+        if (nameLen != 1)
+        {
+            return false;
+        }
+
+        return record[33] == 1;
+    }
+
+    private record SuspEntry(string Signature, byte[] Data);
 
 }
 

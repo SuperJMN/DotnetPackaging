@@ -12,12 +12,19 @@ public static class DmgCommand
     public static Command GetCommand()
     {
         // DMG command (experimental, cross-platform)
+        var defaultLayoutOption = new Option<bool>("--with-default-layout")
+        {
+            Description = "Add a default Finder layout (background image, Applications link positioning) when none is provided"
+        };
+        defaultLayoutOption.DefaultValueFactory = _ => true;
+
         var dmgCommand = CommandFactory.CreateCommand(
             "dmg",
             "macOS disk image",
             ".dmg",
             CreateDmg,
             "Create a simple macOS disk image (.dmg). Currently uses an ISO/UDF (UDTO) payload for broad compatibility.",
+            defaultLayoutOption,
             "pack-dmg");
         
         AddDmgFromProjectSubcommand(dmgCommand);
@@ -58,7 +65,8 @@ public static class DmgCommand
     {
         logger.Debug("Packaging DMG artifact from {Directory}", inputDir.FullName);
         var name = options.Name.GetValueOrDefault(inputDir.Name);
-        return DmgIsoBuilder.Create(inputDir.FullName, outputFile.FullName, name, compress: true, addApplicationsSymlink: true);
+        var useDefaultLayout = options.UseDefaultLayout.GetValueOrDefault(true);
+        return DmgIsoBuilder.Create(inputDir.FullName, outputFile.FullName, name, compress: true, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout);
     }
 
     private static void AddDmgFromProjectSubcommand(Command dmgCommand)
@@ -75,6 +83,8 @@ public static class DmgCommand
         var output = new Option<FileInfo>("--output") { Description = "Output .dmg file", Required = true };
         var compress = new Option<bool>("--compress") { Description = "Compress the DMG payload (bzip2/UDZO-like)" };
         compress.DefaultValueFactory = _ => true;
+        var defaultLayoutOption = new Option<bool>("--with-default-layout") { Description = "Add a default Finder layout (background image, Applications link positioning) when none is provided" };
+        defaultLayoutOption.DefaultValueFactory = _ => true;
 
         // Reuse metadata options to get volume name from --application-name if present
         var appName = new Option<string>("--application-name") { Description = "Application name / volume name", Required = false };
@@ -95,7 +105,8 @@ public static class DmgCommand
             new Option<string>("--summary"),
             new Option<string>("--appId"),
             new Option<string>("--executable-name"),
-            new Option<bool>("--is-terminal"));
+            new Option<bool>("--is-terminal"),
+            defaultLayoutOption);
 
         var fromProject = new Command("from-project") { Description = "Publish a .NET project and build a .dmg from the published output (.app bundle auto-generated if missing). Experimental." };
         fromProject.Add(project);
@@ -107,6 +118,7 @@ public static class DmgCommand
         fromProject.Add(output);
         fromProject.Add(appName);
         fromProject.Add(compress);
+        fromProject.Add(defaultLayoutOption);
 
         fromProject.SetAction(async parseResult =>
         {
@@ -119,6 +131,7 @@ public static class DmgCommand
             var opt = optionsBinder.Bind(parseResult);
             var ridVal = parseResult.GetValue(arch);
             var compressVal = parseResult.GetValue(compress);
+            var useDefaultLayout = opt.UseDefaultLayout.GetValueOrDefault(true);
 
             await ExecutionWrapper.ExecuteWithLogging("dmg-from-project", outFile.FullName, async logger =>
             {
@@ -149,7 +162,7 @@ public static class DmgCommand
                 }
 
                 var volName = opt.Name.GetValueOrDefault(pub.Value.Name.GetValueOrDefault("App"));
-                await DmgIsoBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName, compressVal, addApplicationsSymlink: true);
+                await DmgIsoBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout);
                 logger.Information("Success");
             });
         });

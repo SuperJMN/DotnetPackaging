@@ -11,6 +11,7 @@ public static class CommandFactory
         string extension,
         Func<DirectoryInfo, FileInfo, Options, ILogger, Task> handler,
         string? description = null,
+        Option<bool>? defaultLayoutOption = null,
         params string[] aliases)
     {
         var buildDir = new Option<DirectoryInfo>("--directory")
@@ -134,6 +135,10 @@ public static class CommandFactory
         fromBuildDir.Add(appId);
         fromBuildDir.Add(executableName);
         fromBuildDir.Add(isTerminal);
+        if (defaultLayoutOption != null)
+        {
+            fromBuildDir.Add(defaultLayoutOption);
+        }
 
         var options = new OptionsBinder(
             appName, 
@@ -150,7 +155,8 @@ public static class CommandFactory
             summary, 
             appId,
             executableName, 
-            isTerminal);
+            isTerminal,
+            defaultLayoutOption);
         
         fromBuildDir.SetAction(async parseResult =>
         {

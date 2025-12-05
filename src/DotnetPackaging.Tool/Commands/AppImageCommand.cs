@@ -22,6 +22,7 @@ public static class AppImageCommand
             ".AppImage",
             CreateAppImage,
             "Create a portable AppImage (.AppImage) from a published directory. Use subcommands for AppDir workflows.",
+            null,
             "pack-appimage");
         
         AddAppImageSubcommands(command);

@@ -18,6 +18,7 @@ public static class DebCommand
             ".deb",
             CreateDeb,
             "Create a Debian (.deb) installer for Debian and Ubuntu based distributions.",
+            null,
             "pack-deb",
             "debian");
             

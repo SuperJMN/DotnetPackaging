@@ -18,6 +18,7 @@ public static class RpmCommand
             ".rpm",
             CreateRpm,
             "Create an RPM (.rpm) package suitable for Fedora, openSUSE, and other RPM-based distributions.",
+            null,
             "pack-rpm");
         
         AddFromProjectSubcommand(command);

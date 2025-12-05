@@ -17,4 +17,5 @@ public class Options
     public Maybe<string> Summary { get; set; }
     public Maybe<string> ExecutableName { get; set; }
     public Maybe<bool> IsTerminal { get; set; }
+    public Maybe<bool> UseDefaultLayout { get; set; }
 }
