@@ -16,8 +16,6 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Xunit.SkippableFact" />
-    <PackageReference Include="Zafiro.DivineBytes" />
-    <PackageReference Include="Zafiro" />
     <PackageReference Include="System.IO.Abstractions" />
     <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" />
   </ItemGroup>
@@ -29,6 +27,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\DotnetPackaging.Exe.Installer\DotnetPackaging.Exe.Installer.csproj" />
     <ProjectReference Include="..\..\src\DotnetPackaging.Exe\DotnetPackaging.Exe.csproj" />
+    <ProjectReference Include="..\..\..\Zafiro\src\Zafiro\Zafiro.csproj" />
+    <ProjectReference Include="..\..\..\Zafiro\src\Zafiro.DivineBytes\Zafiro.DivineBytes.csproj" />
   </ItemGroup>
 
 </Project>
