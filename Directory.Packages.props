@@ -39,6 +39,7 @@
     <PackageVersion Include="SharpZipLib" Version="1.4.2" />
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageVersion Include="System.CommandLine" Version="2.0.0" />
+    <PackageVersion Include="System.Reactive" Version="6.1.0" />
     <PackageVersion Include="System.IO.Abstractions.TestingHelpers" Version="22.0.16" />
     <PackageVersion Include="System.Security.Permissions" Version="10.0.0" />
     <PackageVersion Include="TestableIO.System.IO.Abstractions.Extensions" Version="2.2.5" />

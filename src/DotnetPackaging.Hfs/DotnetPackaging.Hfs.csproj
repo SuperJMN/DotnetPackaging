@@ -6,7 +6,8 @@
   </PropertyGroup>
   <Import Project="..\Common.props" />
   <ItemGroup>
-    <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
-    <ProjectReference Include="..\DotnetPackaging.Hfs\DotnetPackaging.Hfs.csproj" />
+    <PackageReference Include="CSharpFunctionalExtensions" />
+    <PackageReference Include="System.Reactive" />
+    <PackageReference Include="Zafiro.DivineBytes" />
   </ItemGroup>
 </Project>
