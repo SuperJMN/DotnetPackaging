@@ -1,10 +1,12 @@
-using System.Runtime.InteropServices;
+using System;
 using CSharpFunctionalExtensions;
+using System.IO;
+using System.Runtime.InteropServices;
 using DotnetPackaging.Publish;
 using Serilog;
+using System.IO.Abstractions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
-using System.IO.Abstractions;
 using RuntimeArchitecture = System.Runtime.InteropServices.Architecture;
 using Path = System.IO.Path;
 
@@ -148,18 +150,47 @@ public sealed class ExePackagingService
 
         async Task<Result<IContainer>> BuildWithStub(IByteSource stubBytes)
         {
-            var buildResult = await SimpleExePacker.Build(stubBytes, request.PublishDirectory, metadata, request.SetupLogo);
+            var detachedStubResult = await DetachStub(stubBytes);
+            if (detachedStubResult.IsFailure)
+            {
+                return detachedStubResult.ConvertFailure<IContainer>();
+            }
+
+            var buildResult = await SimpleExePacker.Build(detachedStubResult.Value, request.PublishDirectory, metadata, request.SetupLogo);
             if (buildResult.IsFailure)
             {
                 return Result.Failure<IContainer>(buildResult.Error);
             }
 
+            var detachedInstallerResult = await ByteSourceDetacher.Detach(buildResult.Value.Installer, request.OutputName);
+            if (detachedInstallerResult.IsFailure)
+            {
+                return detachedInstallerResult.ConvertFailure<IContainer>();
+            }
+
             var resources = new List<INamedByteSource>
             {
-                new Resource(request.OutputName, buildResult.Value.Installer),
+                new Resource(request.OutputName, detachedInstallerResult.Value),
             };
-            
+
             return Result.Success<IContainer>(new RootContainer(resources, Enumerable.Empty<INamedContainer>()));
+        }
+
+        async Task<Result<IByteSource>> DetachStub(IByteSource stubBytes)
+        {
+            var detachedResult = await ByteSourceDetacher.Detach(stubBytes, "InstallerStub.exe");
+            if (detachedResult.IsFailure)
+            {
+                return detachedResult;
+            }
+
+            var bufferResult = await detachedResult.Value.ReadAll();
+            if (bufferResult.IsFailure)
+            {
+                return bufferResult.ConvertFailure<IByteSource>();
+            }
+
+            return Result.Success<IByteSource>(ByteSource.FromBytes(bufferResult.Value));
         }
 
         if (request.Stub.HasValue)
@@ -190,6 +221,7 @@ public sealed class ExePackagingService
             ? await BuildWithStub(ByteSource.FromStreamFactory(() => File.OpenRead(stubPathResult.Value)))
             : Result.Failure<IContainer>(stubPathResult.Error);
     }
+
 
     private static Maybe<T> ToMaybe<T>(T? value) where T : class
     {
