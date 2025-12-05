@@ -1,6 +1,5 @@
 using System.Buffers.Binary;
-using System.Text;
-using CSharpFunctionalExtensions;
+using DotnetPackaging.Dmg;
 using FluentAssertions;
 using Path = System.IO.Path;
 
@@ -8,6 +7,22 @@ namespace DotnetPackaging.Dmg.Tests;
 
 public class DmgHfsBuilderTests
 {
+    [Fact]
+    public async Task Creates_udif_container()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "pub");
+        Directory.CreateDirectory(publish);
+        await File.WriteAllTextAsync(Path.Combine(publish, "App"), "exe");
+
+        var outDmg = Path.Combine(tempRoot.Path, "Volume.dmg");
+        await DmgHfsBuilder.Create(publish, outDmg, "Volume");
+
+        var udif = await UdifImage.Load(outDmg);
+        udif.Trailer.Signature.Should().Be("koly");
+        udif.Runs.Should().NotBeEmpty();
+    }
+
     [Fact]
     public async Task Creates_dmg_with_app_bundle_and_files()
     {
@@ -26,16 +41,9 @@ public class DmgHfsBuilderTests
 
         File.Exists(outDmg).Should().BeTrue("the dmg file must be created");
 
-        // Validate DMG was created with reasonable size
-        var info = new FileInfo(outDmg);
-        info.Length.Should().BeGreaterThan(0, "dmg should have content");
-        
-        // Verify it's a valid HFS+ by checking signature at offset 1024
-        await using var fs = File.OpenRead(outDmg);
-        fs.Seek(1024, SeekOrigin.Begin);
-        var signature = new byte[2];
-        await fs.ReadAsync(signature, 0, 2);
-        BinaryPrimitives.ReadUInt16BigEndian(signature).Should().Be(0x482B, "should have HFS+ signature 'H+'");
+        var data = await ExtractVolumeBytes(outDmg);
+        data.Length.Should().BeGreaterThan(0);
+        BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(1024, 2)).Should().Be(0x482B, "should have HFS+ signature 'H+'");
     }
 
     [Fact]
@@ -53,15 +61,9 @@ public class DmgHfsBuilderTests
 
         // Verify DMG was created successfully
         File.Exists(outDmg).Should().BeTrue();
-        var info = new FileInfo(outDmg);
-        info.Length.Should().BeGreaterThan(1000, "dmg should contain app bundle content");
-        
-        // Verify it's a valid HFS+
-        await using var fs = File.OpenRead(outDmg);
-        fs.Seek(1024, SeekOrigin.Begin);
-        var signature = new byte[2];
-        await fs.ReadAsync(signature, 0, 2);
-        BinaryPrimitives.ReadUInt16BigEndian(signature).Should().Be(0x482B);
+        var data = await ExtractVolumeBytes(outDmg);
+        data.Length.Should().BeGreaterThan(1000, "dmg should contain app bundle content");
+        BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(1024, 2)).Should().Be(0x482B);
     }
 
     [Fact]
@@ -79,11 +81,8 @@ public class DmgHfsBuilderTests
         File.Exists(outDmg).Should().BeTrue();
         
         // Verify it's a valid HFS+
-        await using var fs = File.OpenRead(outDmg);
-        fs.Seek(1024, SeekOrigin.Begin);
-        var signature = new byte[2];
-        await fs.ReadAsync(signature, 0, 2);
-        BinaryPrimitives.ReadUInt16BigEndian(signature).Should().Be(0x482B);
+        var data = await ExtractVolumeBytes(outDmg);
+        BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(1024, 2)).Should().Be(0x482B);
     }
 
     [Fact]
@@ -100,15 +99,11 @@ public class DmgHfsBuilderTests
 
         // Verify DMG was created successfully
         File.Exists(outDmg).Should().BeTrue();
-        var info = new FileInfo(outDmg);
-        info.Length.Should().BeGreaterThan(1000, "dmg should contain content");
         
         // Verify it's a valid HFS+
-        await using var fs = File.OpenRead(outDmg);
-        fs.Seek(1024, SeekOrigin.Begin);
-        var signature = new byte[2];
-        await fs.ReadAsync(signature, 0, 2);
-        BinaryPrimitives.ReadUInt16BigEndian(signature).Should().Be(0x482B);
+        var data = await ExtractVolumeBytes(outDmg);
+        data.Length.Should().BeGreaterThan(1000, "dmg should contain content");
+        BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(1024, 2)).Should().Be(0x482B);
     }
 
     [Fact]
@@ -125,11 +120,8 @@ public class DmgHfsBuilderTests
         File.Exists(outDmg).Should().BeTrue();
         
         // Verify it's a valid HFS+
-        await using var fs = File.OpenRead(outDmg);
-        fs.Seek(1024, SeekOrigin.Begin);
-        var signature = new byte[2];
-        await fs.ReadAsync(signature, 0, 2);
-        BinaryPrimitives.ReadUInt16BigEndian(signature).Should().Be(0x482B);
+        var data = await ExtractVolumeBytes(outDmg);
+        BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(1024, 2)).Should().Be(0x482B);
     }
 
     [Fact]
@@ -143,16 +135,20 @@ public class DmgHfsBuilderTests
         var outDmg = Path.Combine(tempRoot.Path, "Version.dmg");
         await DmgHfsBuilder.Create(publish, outDmg, "Version Test");
 
-        await using var fs = File.OpenRead(outDmg);
-        fs.Seek(1024, SeekOrigin.Begin);
-        var header = new byte[6];
-        await fs.ReadAsync(header);
+        var data = await ExtractVolumeBytes(outDmg);
+        var header = data.AsSpan(1024, 6).ToArray();
         
         // Bytes 0-1: signature 'H+' (0x482B)
         BinaryPrimitives.ReadUInt16BigEndian(header.AsSpan(0, 2)).Should().Be(0x482B);
         
         // Bytes 2-3: version (should be 4 for HFS+)
         BinaryPrimitives.ReadUInt16BigEndian(header.AsSpan(2, 2)).Should().Be(4);
+    }
+
+    private static async Task<byte[]> ExtractVolumeBytes(string dmgPath)
+    {
+        var udif = await UdifImage.Load(dmgPath);
+        return await udif.ExtractDataFork();
     }
 }
 
