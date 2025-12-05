@@ -7,9 +7,6 @@
     <RootNamespace>DotnetPackaging.Formats.Dmg.Udif</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DotnetPackaging.Dmg.Iso\DotnetPackaging.Dmg.Iso.csproj" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="SharpCompress" />
     <PackageReference Include="Zafiro.DivineBytes" />
   </ItemGroup>

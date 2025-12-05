@@ -97,22 +97,9 @@ public sealed class UdifImage
             }
         }
 
-        if (Trailer.SectorCount < DmgLayout.ExtraSectors)
-        {
-            throw new InvalidDataException("UDIF sector count is smaller than metadata overhead");
-        }
-
-        var hfsSectors = Trailer.SectorCount - DmgLayout.ExtraSectors;
-        var hfsOffset = DmgLayout.UserOffset * DmgLayout.SectorSize;
-        var hfsLength = checked((int)(hfsSectors * DmgLayout.SectorSize));
-        if (hfsOffset + hfsLength > output.Length)
-        {
-            throw new InvalidDataException("HFS slice exceeds extracted data");
-        }
-
-        var result = new byte[hfsLength];
-        Buffer.BlockCopy(output, hfsOffset, result, 0, hfsLength);
-        return result;
+        // Modern DMG created by UdifWriter doesn't have legacy APM overhead
+        // Just return the full extracted volume (raw HFS+)
+        return output;
     }
 
     private static byte[] ExtractFirstBlkx(byte[] xmlBytes)

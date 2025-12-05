@@ -152,16 +152,3 @@ public class DmgHfsBuilderTests
     }
 }
 
-file sealed class TempDir : IDisposable
-{
-    public string Path { get; }
-    public TempDir()
-    {
-        Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dmgtest-" + Guid.NewGuid());
-        Directory.CreateDirectory(Path);
-    }
-    public void Dispose()
-    {
-        try { Directory.Delete(Path, recursive: true); } catch { }
-    }
-}

@@ -152,6 +152,14 @@ namespace DotnetPackaging.Formats.Dmg.Udif
 
         private byte[] CompressChunk(byte[] buffer, int length)
         {
+            if (CompressionType == CompressionType.Raw)
+            {
+                // Raw/uncompressed - just return the data as-is
+                var result = new byte[length];
+                Array.Copy(buffer, result, length);
+                return result;
+            }
+            
             using (var ms = new MemoryStream())
             {
                 if (CompressionType == CompressionType.Zlib)

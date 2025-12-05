@@ -1,13 +1,10 @@
 using System.Buffers.Binary;
-using System.Diagnostics;
 using System.Reactive.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Formats.Dmg.Udif;
 using DotnetPackaging.Hfs.Builder;
 using DotnetPackaging.Hfs.Files;
-using Serilog;
 using Zafiro.DivineBytes;
 using Path = System.IO.Path;
 
@@ -40,8 +37,7 @@ public static class DmgHfsBuilder
         bool compress = false, 
         bool addApplicationsSymlink = false, 
         bool includeDefaultLayout = true, 
-        Maybe<IIcon> icon = default,
-        ILogger? logger = null)
+        Maybe<IIcon> icon = default)
     {
         var builder = HfsVolumeBuilder.Create(SanitizeVolumeName(volumeName));
 
@@ -101,19 +97,19 @@ public static class DmgHfsBuilder
         // Build the HFS+ volume
         var volume = builder.Build();
         var hfsBytes = HfsVolumeWriter.WriteToBytes(volume);
-        var rawImage = UdifWriter.BuildRawImage(hfsBytes);
-        var remainder = rawImage.Length % DmgLayout.SectorSize;
-        Console.WriteLine($"raw image length {rawImage.Length}, remainder {remainder}");
-        var effectiveLogger = logger ?? Log.Logger;
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        
+        // Wrap HFS+ volume in UDIF format (DMG)
+        using var hfsStream = new MemoryStream(hfsBytes);
+        using var dmgStream = new MemoryStream();
+        
+        var udifWriter = new UdifWriter
         {
-            await WriteDmgWithHdiutil(rawImage, outputPath, effectiveLogger, compress);
-            return;
-        }
-
-        var dmgBytes = UdifWriter.Build(hfsBytes, compress: false);
-        await File.WriteAllBytesAsync(outputPath, dmgBytes);
+            CompressionType = compress ? CompressionType.Zlib : CompressionType.Raw
+        };
+        
+        udifWriter.Create(hfsStream, dmgStream);
+        
+        await File.WriteAllBytesAsync(outputPath, dmgStream.ToArray());
     }
 
     private static async Task AddDirectoryContentsRecursive(HfsDirectory target, string sourcePath)
@@ -316,73 +312,6 @@ public static class DmgHfsBuilder
         return string.IsNullOrWhiteSpace(cleaned) ? "App" : cleaned;
     }
 
-    private static async Task WriteDmgWithHdiutil(byte[] rawImage, string outputPath, ILogger logger, bool compress)
-    {
-        var tempRaw = Path.Combine(Path.GetTempPath(), $"dmgraw-{Guid.NewGuid():N}.img");
-        var tempDmg = Path.Combine(Path.GetTempPath(), $"dmgout-{Guid.NewGuid():N}.dmg");
-        await File.WriteAllBytesAsync(tempRaw, rawImage);
-        Console.WriteLine($"temp raw {tempRaw} length {rawImage.Length}");
-        var format = compress ? "UDZO" : "UDRO";
-        logger.Debug("Running hdiutil convert (format={Format})", format);
-
-        var psi = new ProcessStartInfo("hdiutil")
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        psi.ArgumentList.Add("convert");
-        psi.ArgumentList.Add(tempRaw);
-        psi.ArgumentList.Add("-format");
-        psi.ArgumentList.Add(format);
-        psi.ArgumentList.Add("-ov");
-        psi.ArgumentList.Add("-o");
-        psi.ArgumentList.Add(tempDmg);
-
-        try
-        {
-            using var process = Process.Start(psi);
-            if (process == null)
-            {
-                throw new InvalidOperationException("Failed to start hdiutil");
-            }
-
-            var stdOutTask = process.StandardOutput.ReadToEndAsync();
-            var stdErrTask = process.StandardError.ReadToEndAsync();
-
-            await process.WaitForExitAsync();
-            var stdOut = await stdOutTask;
-            var stdErr = await stdErrTask;
-
-            if (!string.IsNullOrWhiteSpace(stdOut))
-            {
-                logger.Debug("hdiutil output: {Output}", stdOut.Trim());
-            }
-
-            if (process.ExitCode != 0)
-            {
-                throw new InvalidOperationException($"hdiutil convert failed ({process.ExitCode}): {stdErr.Trim()}");
-            }
-
-            File.Move(tempDmg, outputPath, overwrite: true);
-        }
-        finally
-        {
-            TryCleanup(tempRaw);
-            TryCleanup(tempDmg);
-        }
-
-        static void TryCleanup(string path)
-        {
-            try
-            {
-                if (File.Exists(path))
-                    File.Delete(path);
-            }
-            catch { }
-        }
-    }
 }
 
 /// <summary>

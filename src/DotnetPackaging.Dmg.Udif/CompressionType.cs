@@ -6,6 +6,11 @@ namespace DotnetPackaging.Formats.Dmg.Udif
     public enum CompressionType : uint
     {
         /// <summary>
+        /// Raw/uncompressed data (0x00000001)
+        /// </summary>
+        Raw = 0x00000001,
+        
+        /// <summary>
         /// UDZO - zlib compression (0x80000005)
         /// </summary>
         Zlib = 0x80000005,

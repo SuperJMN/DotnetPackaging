@@ -70,7 +70,7 @@ public static class DmgCommand
         logger.Debug("Packaging DMG artifact from {Directory}", inputDir.FullName);
         var name = options.Name.GetValueOrDefault(inputDir.Name);
         var useDefaultLayout = options.UseDefaultLayout.GetValueOrDefault(true);
-        return DmgHfsBuilder.Create(inputDir.FullName, outputFile.FullName, name, compress: true, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: options.Icon, logger);
+        return DmgHfsBuilder.Create(inputDir.FullName, outputFile.FullName, name, compress: true, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: options.Icon);
     }
 
     private static void AddDmgFromProjectSubcommand(Command dmgCommand)
@@ -167,7 +167,7 @@ public static class DmgCommand
 
                 var volName = opt.Name.GetValueOrDefault(pub.Value.Name.GetValueOrDefault("App"));
                 var icon = await ResolveIcon(opt, prj.Directory!, logger);
-                await DmgHfsBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon, logger);
+                await DmgHfsBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon);
                 logger.Information("Success");
             });
         });
