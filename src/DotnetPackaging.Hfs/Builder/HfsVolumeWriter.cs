@@ -52,9 +52,10 @@ public static class HfsVolumeWriter
         var extents = new ExtentsBTree((int)blockSize);
         var attributes = new AttributesBTree((int)blockSize);
 
-        // Calculate total data size
-        long totalDataSize = fileDataList.Sum(f => f.data.Length) + symlinkDataList.Sum(s => s.data.Length);
-        var dataBlocksNeeded = (uint)((totalDataSize + blockSize - 1) / blockSize);
+        // Calculate total data blocks needed (sum of individual file block counts, not total bytes divided)
+        // Each file needs ceiling(size/blockSize) blocks, even if size is 0 (symlinks with empty target need 0)
+        var dataBlocksNeeded = (uint)fileDataList.Sum(f => (f.data.Length + (long)blockSize - 1) / blockSize)
+                             + (uint)symlinkDataList.Sum(s => (s.data.Length + (long)blockSize - 1) / blockSize);
 
         // Calculate special file sizes in blocks
         var catalogBlocks = (uint)((catalog.TotalSize + blockSize - 1) / blockSize);
@@ -62,18 +63,27 @@ public static class HfsVolumeWriter
         var attributesBlocks = (uint)((attributes.TotalSize + blockSize - 1) / blockSize);
 
         // Allocation bitmap size (1 bit per block)
-        // We need to know total blocks first, but that depends on allocation size
-        // Start with estimate and iterate if needed
-        var estimatedTotalBlocks = 64u + catalogBlocks + extentsBlocks + attributesBlocks + dataBlocksNeeded;
-        var allocationBytes = (int)((estimatedTotalBlocks + 7) / 8);
-        var allocationBlocks = (uint)((allocationBytes + blockSize - 1) / blockSize);
-
-        // Final total (add some padding)
-        var totalBlocks = 3u + allocationBlocks + extentsBlocks + catalogBlocks + attributesBlocks + dataBlocksNeeded + 2;
+        // The allocation file size depends on total blocks, which includes allocation file itself.
+        // Iterate until convergence.
+        var baseBlocks = 5u + extentsBlocks + catalogBlocks + attributesBlocks + dataBlocksNeeded; // 5 = 3 boot/header + 2 alt header/reserved
+        uint allocationBlocks = 1;
+        uint totalBlocks;
+        int allocationBytes;
         
-        // Recalculate allocation with actual total
-        allocationBytes = (int)((totalBlocks + 7) / 8);
-        allocationBlocks = (uint)((allocationBytes + blockSize - 1) / blockSize);
+        do
+        {
+            var previousAllocationBlocks = allocationBlocks;
+            totalBlocks = baseBlocks + allocationBlocks;
+            allocationBytes = (int)((totalBlocks + 7) / 8);
+            allocationBlocks = (uint)((allocationBytes + blockSize - 1) / blockSize);
+            
+            // Safety: ensure we don't loop forever
+            if (allocationBlocks <= previousAllocationBlocks)
+                break;
+        } while (true);
+        
+        // Final total with correct allocation size
+        totalBlocks = baseBlocks + allocationBlocks;
 
         // Build allocation bitmap
         var allocation = new AllocationBitmap(totalBlocks);
