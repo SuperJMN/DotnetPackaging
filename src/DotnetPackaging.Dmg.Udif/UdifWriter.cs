@@ -159,7 +159,7 @@ namespace DotnetPackaging.Formats.Dmg.Udif
                 Array.Copy(buffer, result, length);
                 return result;
             }
-            
+
             using (var ms = new MemoryStream())
             {
                 if (CompressionType == CompressionType.Zlib)
@@ -244,9 +244,9 @@ namespace DotnetPackaging.Formats.Dmg.Udif
 				<data>
 {sb.ToString()}				</data>
 				<key>ID</key>
-				<string>-1</string>
+				<string>1</string>
 				<key>Name</key>
-				<string>Driver Descriptor Map</string>
+				<string>Apple_HFS</string>
 			</dict>
 		</array>
 		<key>plst</key>
@@ -295,11 +295,11 @@ namespace DotnetPackaging.Formats.Dmg.Udif
 
                 w.Write(Swap(totalSectors)); // Sector Count
                 w.Write(Swap((ulong)0)); // Data Offset
-                
+
                 // Buffers Needed: Maximum sectors per block (ChunkSize / SectorSize)
                 uint buffersNeeded = (uint)(ChunkSize / SectorSize);
                 w.Write(Swap(buffersNeeded)); // Buffers Needed (2048 for 1MB chunks)
-                
+
                 w.Write(Swap(0)); // Block Descriptors
                 w.Write(new byte[24]); // Reserved
 
