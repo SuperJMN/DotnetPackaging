@@ -101,7 +101,7 @@ namespace DotnetPackaging.Formats.Dmg.Udif
             long dataForkLength = xmlStart - dataStart;
 
             // 2. Generate XML Plist
-            string xml = GeneratePlist(blockMap, (ulong)input.Length);
+            string xml = GeneratePlist(blockMap, (ulong)input.Length, dataCrc);
             byte[] xmlBytes = Encoding.UTF8.GetBytes(xml);
 
             long xmlOffsetAbsolute = output.Position; // absolute offset for koly (already aligned)
@@ -129,7 +129,11 @@ namespace DotnetPackaging.Formats.Dmg.Udif
             koly.SectorCount = (ulong)((input.Length + SectorSize - 1) / SectorSize); // total sectors (ceil)
 
             // Checksums (CRC32)
-            uint dataForkCrc = BinaryPrimitives.ReadUInt32BigEndian(dataCrc.GetCurrentHash());
+            // System.IO.Hashing produces Little Endian bytes. Reverse for UDIF (Big Endian).
+            byte[] dfHash = dataCrc.GetCurrentHash();
+            Array.Reverse(dfHash);
+            uint dataForkCrc = BinaryPrimitives.ReadUInt32BigEndian(dfHash);
+
             koly.DataForkChecksumType = 2;
             koly.DataForkChecksumSize = 4;
             koly.DataForkChecksum = new byte[128];
@@ -138,7 +142,9 @@ namespace DotnetPackaging.Formats.Dmg.Udif
             koly.DataForkChecksum[2] = (byte)(dataForkCrc >> 8);
             koly.DataForkChecksum[3] = (byte)dataForkCrc;
 
-            uint masterCrcValue = BinaryPrimitives.ReadUInt32BigEndian(masterCrc.GetCurrentHash());
+            byte[] mHash = masterCrc.GetCurrentHash();
+            Array.Reverse(mHash);
+            uint masterCrcValue = BinaryPrimitives.ReadUInt32BigEndian(mHash);
             koly.ChecksumType = 2;
             koly.ChecksumSize = 4;
             koly.Checksum = new byte[128];
@@ -215,10 +221,10 @@ namespace DotnetPackaging.Formats.Dmg.Udif
             s.WriteByte((byte)adler);
         }
 
-        private string GeneratePlist(List<BlockEntry> blocks, ulong totalSize)
+        private string GeneratePlist(List<BlockEntry> blocks, ulong totalSize, Crc32 checksum)
         {
             // We need to generate the 'mish' block data (Base64)
-            byte[] mishData = GenerateMishBlock(blocks);
+            byte[] mishData = GenerateMishBlock(blocks, checksum);
             string base64Mish = Convert.ToBase64String(mishData);
 
             // Split base64 into lines for prettiness (optional but standard)
@@ -240,27 +246,15 @@ namespace DotnetPackaging.Formats.Dmg.Udif
 			<dict>
 				<key>Attributes</key>
 				<string>0x0050</string>
+				<key>CFName</key>
+				<string>disk image</string>
 				<key>Data</key>
 				<data>
 {sb.ToString()}				</data>
 				<key>ID</key>
-				<string>1</string>
-				<key>Name</key>
-				<string>Apple_HFS</string>
-			</dict>
-		</array>
-		<key>plst</key>
-		<array>
-			<dict>
-				<key>Attributes</key>
-				<string>0x0050</string>
-				<key>Data</key>
-				<data>
-				</data>
-				<key>ID</key>
 				<string>0</string>
 				<key>Name</key>
-				<string>Apple Partition Map</string>
+				<string>disk image</string>
 			</dict>
 		</array>
 	</dict>
@@ -268,7 +262,7 @@ namespace DotnetPackaging.Formats.Dmg.Udif
 </plist>";
         }
 
-        private byte[] GenerateMishBlock(List<BlockEntry> blocks)
+        private byte[] GenerateMishBlock(List<BlockEntry> blocks, Crc32 checksum)
         {
             // 'mish' block structure
             // Signature (4) 'mish'
@@ -300,13 +294,24 @@ namespace DotnetPackaging.Formats.Dmg.Udif
                 uint buffersNeeded = (uint)(ChunkSize / SectorSize);
                 w.Write(Swap(buffersNeeded)); // Buffers Needed (2048 for 1MB chunks)
 
-                w.Write(Swap(0)); // Block Descriptors
+                w.Write(Swap(0xFFFFFFFE)); // Block Descriptors (ID -2 for whole disk)
                 w.Write(new byte[24]); // Reserved
 
                 // Checksum (136 bytes: type(4) + size(4) + data(128))
-                w.Write(Swap((uint)0)); // Checksum Type
-                w.Write(Swap((uint)0)); // Checksum Size
-                w.Write(new byte[128]); // Checksum Data + Padding
+                w.Write(Swap((uint)2)); // Checksum Type (CRC32)
+                w.Write(Swap((uint)4)); // Checksum Size
+                
+                var checksumBytes = new byte[128];
+                if (checksum != null)
+                {
+                    var hash = checksum.GetCurrentHash();
+                    // System.IO.Hashing returns LE bytes. Reverse to BE for UDIF.
+                    Array.Reverse(hash);
+                    
+                    // Copy 4 bytes.
+                    Array.Copy(hash, 0, checksumBytes, 0, 4);
+                }
+                w.Write(checksumBytes); // Checksum Data + Padding
 
                 w.Write(Swap(blocks.Count)); // Block Run Count (now at offset 0xC8)
 
