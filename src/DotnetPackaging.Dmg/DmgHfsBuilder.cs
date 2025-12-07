@@ -37,7 +37,8 @@ public static class DmgHfsBuilder
         bool compress = false, 
         bool addApplicationsSymlink = false, 
         bool includeDefaultLayout = true, 
-        Maybe<IIcon> icon = default)
+        Maybe<IIcon> icon = default,
+        string? executableName = null)
     {
         var builder = HfsVolumeBuilder.Create(SanitizeVolumeName(volumeName));
 
@@ -80,7 +81,7 @@ public static class DmgHfsBuilder
             var appIcon = await PrepareAppIcon(sourceFolder, resourcesDir, icon);
 
             // Generate Info.plist
-            var exeName = GuessExecutableName(sourceFolder, volumeName);
+            var exeName = executableName ?? GuessExecutableName(sourceFolder, volumeName);
             var plist = GenerateMinimalPlist(volumeName, exeName, appIcon.HasValue ? appIcon.Value : null);
             contentsDir.AddFile("Info.plist", Encoding.UTF8.GetBytes(plist));
             contentsDir.AddFile("PkgInfo", Encoding.ASCII.GetBytes("APPL????"));
@@ -266,10 +267,31 @@ public static class DmgHfsBuilder
             .Select(n => n!)
             .ToList();
         var vn = new string(volumeName.Where(char.IsLetterOrDigit).ToArray());
-        var match = candidates.FirstOrDefault(n => string.Equals(n, vn, StringComparison.OrdinalIgnoreCase))
-                   ?? candidates.FirstOrDefault(n => Path.GetExtension(n) == string.Empty)
-                   ?? candidates.FirstOrDefault()
-                   ?? vn;
+        
+        // 1. Exact match (e.g. EvaluacionesApp.Desktop == EvaluacionesApp.Desktop)
+        var match = candidates.FirstOrDefault(n => string.Equals(n, volumeName, StringComparison.OrdinalIgnoreCase));
+        
+        // 2. Match without extension (e.g. My App.exe -> matches "My App" volume?) - Less likely on Mac but possible
+        if (match == null)
+        {
+            match = candidates.FirstOrDefault(n => string.Equals(Path.GetFileNameWithoutExtension(n), volumeName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // 3. Match against sanitized name (Existing logic)
+        if (match == null)
+        {
+            match = candidates.FirstOrDefault(n => string.Equals(n, vn, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // 4. Prefer files without extension (Unix binaries)
+        if (match == null)
+        {
+            match = candidates.FirstOrDefault(n => Path.GetExtension(n) == string.Empty);
+        }
+
+        // 5. Fallback
+        match ??= candidates.FirstOrDefault() ?? vn;
+        
         return match;
     }
 
