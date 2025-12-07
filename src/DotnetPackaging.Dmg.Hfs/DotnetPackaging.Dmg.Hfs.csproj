@@ -3,11 +3,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>DotnetPackaging.Formats.Hfs</RootNamespace>
   </PropertyGroup>
   <Import Project="..\Common.props" />
   <ItemGroup>
-    <ProjectReference Include="..\DotnetPackaging.Dmg.Hfs\DotnetPackaging.Dmg.Hfs.csproj" />
-    <ProjectReference Include="..\DotnetPackaging.Dmg.Udif\DotnetPackaging.Dmg.Udif.csproj" />
-    <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
+    <PackageReference Include="CSharpFunctionalExtensions" />
+    <PackageReference Include="System.Reactive" />
+    <PackageReference Include="Zafiro.DivineBytes" />
   </ItemGroup>
 </Project>

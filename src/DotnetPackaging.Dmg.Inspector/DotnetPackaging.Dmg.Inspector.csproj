@@ -1,13 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-  <Import Project="..\Common.props" />
+
   <ItemGroup>
-    <ProjectReference Include="..\DotnetPackaging.Dmg.Hfs\DotnetPackaging.Dmg.Hfs.csproj" />
     <ProjectReference Include="..\DotnetPackaging.Dmg.Udif\DotnetPackaging.Dmg.Udif.csproj" />
-    <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
   </ItemGroup>
+
 </Project>

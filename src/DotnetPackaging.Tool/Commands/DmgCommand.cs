@@ -27,7 +27,7 @@ public static class DmgCommand
             "macOS disk image",
             ".dmg",
             CreateDmg,
-            "Create a simple macOS disk image (.dmg). Currently uses an ISO/UDF (UDTO) payload for broad compatibility.",
+            "Create a macOS disk image (.dmg) with a native HFS+ payload wrapped in UDIF (DMG) format.",
             defaultLayoutOption,
             "pack-dmg");
         
@@ -70,7 +70,7 @@ public static class DmgCommand
         logger.Debug("Packaging DMG artifact from {Directory}", inputDir.FullName);
         var name = options.Name.GetValueOrDefault(inputDir.Name);
         var useDefaultLayout = options.UseDefaultLayout.GetValueOrDefault(true);
-        return DmgIsoBuilder.Create(inputDir.FullName, outputFile.FullName, name, compress: true, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: options.Icon);
+        return DmgHfsBuilder.Create(inputDir.FullName, outputFile.FullName, name, compress: true, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: options.Icon);
     }
 
     private static void AddDmgFromProjectSubcommand(Command dmgCommand)
@@ -166,8 +166,12 @@ public static class DmgCommand
                 }
 
                 var volName = opt.Name.GetValueOrDefault(pub.Value.Name.GetValueOrDefault("App"));
+                
+                // Prioritize user override, then the detected Assembly Name (via DotnetPublisher), then null (fallback to DmgHfsBuilder guessing)
+                var executableName = opt.ExecutableName.GetValueOrDefault(pub.Value.Name.GetValueOrDefault());
+                
                 var icon = await ResolveIcon(opt, prj.Directory!, logger);
-                await DmgIsoBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon);
+                await DmgHfsBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon, executableName: executableName);
                 logger.Information("Success");
             });
         });
