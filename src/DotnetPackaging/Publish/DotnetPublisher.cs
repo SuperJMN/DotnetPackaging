@@ -63,7 +63,7 @@ public sealed class DotnetPublisher : IPublisher
             var wrapper = new DirectoryInfoWrapper(fileSystem, new DirectoryInfo(outputDir));
             var container = new DirectoryContainer(wrapper).AsRoot();
             
-            var name = DeriveName(request.ProjectPath);
+            var name = await DeriveName(request.ProjectPath);
             logger.Information("Publish succeeded for {ProjectPath} (Name: {Name})", request.ProjectPath, name.GetValueOrDefault("unknown"));
 
             return Result.Success(new PublishResult(container, name, outputDir));
@@ -75,8 +75,27 @@ public sealed class DotnetPublisher : IPublisher
         }
     }
 
-    private static Maybe<string> DeriveName(string projectPath)
+    private async Task<Maybe<string>> DeriveName(string projectPath)
     {
+        try
+        {
+            // Try to get AssemblyName from project properties
+            var assemblyNameResult = await command.Execute("dotnet", $"msbuild \"{projectPath}\" -getProperty:AssemblyName");
+            if (assemblyNameResult.IsSuccess)
+            {
+                var output = string.Join("", assemblyNameResult.Value).Trim();
+                if (!string.IsNullOrWhiteSpace(output))
+                {
+                    logger.Debug("Detected AssemblyName: {AssemblyName}", output);
+                    return Maybe<string>.From(output);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.Execute(l => l.Warning(ex, "Failed to retrieve AssemblyName property"));
+        }
+
         try
         {
             var fileName = System.IO.Path.GetFileNameWithoutExtension(projectPath);

@@ -167,8 +167,8 @@ public static class DmgCommand
 
                 var volName = opt.Name.GetValueOrDefault(pub.Value.Name.GetValueOrDefault("App"));
                 
-                // Prioritize user override, then Project Name (which matches the assembly binary name), then null (fallback to DmgHfsBuilder guessing)
-                var executableName = opt.ExecutableName.GetValueOrDefault(pub.Value.Name.HasValue ? pub.Value.Name.Value : null);
+                // Prioritize user override, then the detected Assembly Name (via DotnetPublisher), then null (fallback to DmgHfsBuilder guessing)
+                var executableName = opt.ExecutableName.GetValueOrDefault(pub.Value.Name.GetValueOrDefault());
                 
                 var icon = await ResolveIcon(opt, prj.Directory!, logger);
                 await DmgHfsBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon, executableName: executableName);
