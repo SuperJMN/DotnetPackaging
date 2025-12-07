@@ -46,7 +46,7 @@ public class CatalogTests
     public void CatalogBTree_ShouldAddRootFolder()
     {
         var catalog = new CatalogBTree();
-        catalog.AddRootFolder(5);
+        catalog.AddRootFolder("TestVolume", 5);
         
         // Should have header node + leaf node with root folder + thread
         catalog.BTree.Header.LeafRecords.Should().Be(2);
