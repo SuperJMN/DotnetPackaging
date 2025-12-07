@@ -29,7 +29,8 @@ public sealed class BTreeNode
         get
         {
             // Descriptor + records + offset table (2 bytes per record + 2 for free space offset)
-            var recordsSize = Records.Sum(r => r.Length);
+            // Descriptor + records (aligned) + offset table
+            var recordsSize = Records.Sum(r => r.Length + (r.Length % 2));
             var offsetsSize = (Records.Count + 1) * 2;
             return NodeDescriptor.Size + recordsSize + offsetsSize;
         }
@@ -81,6 +82,18 @@ public sealed class BTreeNode
         {
             record.CopyTo(buffer[recordOffset..]);
             recordOffset += record.Length;
+            
+            // HFS+ requires records to be on even byte boundaries.
+            // If record ends on odd byte, add pad byte.
+            if (recordOffset % 2 != 0)
+            {
+                // Pad byte is part of the "record" in terms of offset matching?
+                // No, the offset table points to the START of the record.
+                // The SPACE taken consumes the pad.
+                buffer[recordOffset] = 0; // Padding
+                recordOffset++;
+            }
+            
             offsets.Add((ushort)recordOffset);
         }
 
@@ -122,7 +135,10 @@ public sealed class BTreeNode
         if (mapSize < 0) mapSize = 256;
         var mapRecord = new byte[mapSize];
         // First two bits are set (header node and root node are allocated)
-        mapRecord[0] = 0xC0; // Binary: 11000000
+        // First bit is set (header node is allocated).
+        // Standard impl for empty tree suggests only node 0 is used.
+        // If Root exists (node 1), BTreeFile should update this later.
+        mapRecord[0] = 0x80; // Binary: 10000000
         node.Records.Add(mapRecord);
 
         return node;

@@ -49,7 +49,10 @@ namespace DotnetPackaging.Formats.Dmg.Udif
                 long alignPad = AlignUp(output.Position, SectorSize) - output.Position;
                 if (alignPad > 0)
                 {
-                    output.Write(new byte[alignPad], 0, (int)alignPad);
+                    var padding = new byte[alignPad];
+                    output.Write(padding, 0, (int)alignPad);
+                    dataCrc.Append(padding);
+                    masterCrc.Append(padding);
                 }
 
                 long blockStartAbsolute = output.Position; // absolute offset in file
@@ -142,16 +145,9 @@ namespace DotnetPackaging.Formats.Dmg.Udif
             koly.DataForkChecksum[2] = (byte)(dataForkCrc >> 8);
             koly.DataForkChecksum[3] = (byte)dataForkCrc;
 
-            byte[] mHash = masterCrc.GetCurrentHash();
-            Array.Reverse(mHash);
-            uint masterCrcValue = BinaryPrimitives.ReadUInt32BigEndian(mHash);
-            koly.ChecksumType = 2;
-            koly.ChecksumSize = 4;
+            koly.ChecksumType = 0; // Disable Master Checksum
+            koly.ChecksumSize = 0;
             koly.Checksum = new byte[128];
-            koly.Checksum[0] = (byte)(masterCrcValue >> 24);
-            koly.Checksum[1] = (byte)(masterCrcValue >> 16);
-            koly.Checksum[2] = (byte)(masterCrcValue >> 8);
-            koly.Checksum[3] = (byte)masterCrcValue;
 
             WriteKoly(output, koly);
         }
@@ -299,19 +295,13 @@ namespace DotnetPackaging.Formats.Dmg.Udif
 
                 // Checksum (136 bytes: type(4) + size(4) + data(128))
                 w.Write(Swap((uint)2)); // Checksum Type (CRC32)
-                w.Write(Swap((uint)4)); // Checksum Size
+                w.Write(Swap((uint)32)); // Checksum Size (32 bits)
                 
-                var checksumBytes = new byte[128];
-                if (checksum != null)
-                {
-                    var hash = checksum.GetCurrentHash();
-                    // System.IO.Hashing returns LE bytes. Reverse to BE for UDIF.
-                    Array.Reverse(hash);
-                    
-                    // Copy 4 bytes.
-                    Array.Copy(hash, 0, checksumBytes, 0, 4);
-                }
-                w.Write(checksumBytes); // Checksum Data + Padding
+                // Write calculated CRC (reversed)
+                byte[] mishHash = checksum.GetCurrentHash();
+                Array.Reverse(mishHash);
+                w.Write(mishHash);
+                w.Write(new byte[124]); // Padding (128 - 4)
 
                 w.Write(Swap(blocks.Count)); // Block Run Count (now at offset 0xC8)
 

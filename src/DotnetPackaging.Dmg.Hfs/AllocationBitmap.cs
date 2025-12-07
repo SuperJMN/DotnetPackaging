@@ -71,14 +71,14 @@ public sealed class AllocationBitmap
     /// Allocates a contiguous range of blocks and returns the start block.
     /// Returns null if not enough contiguous free blocks are available.
     /// </summary>
-    public uint? Allocate(uint count)
+    public uint? Allocate(uint count, uint startHint = 0)
     {
         if (count == 0) return 0;
         
         uint consecutive = 0;
         uint startBlock = 0;
 
-        for (uint i = 0; i < totalBlocks; i++)
+        for (uint i = startHint; i < totalBlocks; i++)
         {
             if (IsFree(i))
             {
@@ -98,7 +98,11 @@ public sealed class AllocationBitmap
                 consecutive = 0;
             }
         }
-
+        
+        // If not found from startHint, try from 0 if startHint > 0?
+        // For our rigorous linear Writer, we usually want strictly forward, but generic bitmap should scan all.
+        // But for now, strict forward is fine for the Writer's purpose.
+        
         return null;
     }
 

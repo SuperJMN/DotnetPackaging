@@ -36,6 +36,9 @@ public static class HfsVolumeWriter
     /// <summary>
     /// Writes an HFS+ volume to a byte array.
     /// </summary>
+    /// <summary>
+    /// Writes an HFS+ volume to a byte array.
+    /// </summary>
     public static byte[] WriteToBytes(HfsVolume volume)
     {
         var blockSize = volume.BlockSize;
@@ -46,95 +49,107 @@ public static class HfsVolumeWriter
         var symlinkDataList = new List<(HfsSymlink symlink, byte[] data, uint startBlock, uint blockCount)>();
         
         CollectFileData(volume.Root, fileDataList, symlinkDataList);
+        
+        // 1. Calculate Reserved Blocks (Headers & Wrappers)
+        // Block 0: Boot Blocks (0-1024) + Volume Header (1024-1536).
+        // If BlockSize=4096, this is just Block 0.
+        // If BlockSize=512, this is Blocks 0, 1, 2.
+        var headerBytes = BootBlocksSize + VolumeHeader.Size; // 1536 bytes
+        var headerBlocks = (uint)((headerBytes + blockSize - 1) / blockSize);
 
-        // Calculate sizes
-        var catalog = BuildCatalog(volume, fileDataList, symlinkDataList, out var nextCnid);
+        // Last Block: Alt Volume Header (last 1024 bytes area)
+        var altHeaderBytes = SectorSize * 2; // Reserved + AltHeader = 1024 bytes
+        var altHeaderBlocks = (uint)((altHeaderBytes + blockSize - 1) / blockSize);
+
+        // 2. Estimate Metadata Sizes
+        var nextCnid = CatalogNodeId.FirstUserCatalogNodeId.Value;
+        // Build catalog initially to get size
+        var catalog = BuildCatalog(volume, fileDataList, symlinkDataList, out _);
         var extents = new ExtentsBTree((int)blockSize);
         var attributes = new AttributesBTree((int)blockSize);
-
-        // Calculate total data blocks needed (sum of individual file block counts, not total bytes divided)
-        // Each file needs ceiling(size/blockSize) blocks, even if size is 0 (symlinks with empty target need 0)
+        
+        var catalogBlocks = (uint)((catalog.TotalSize + blockSize - 1) / blockSize);
+        // Force allocation of Extents and Attributes to comply with standard macOS layout
+        var extentsBlocks = 1u; // Minimum 1 block
+        var attributesBlocks = 1u; // Minimum 1 block
+        
+        // Calculate data blocks
         var dataBlocksNeeded = (uint)fileDataList.Sum(f => (f.data.Length + (long)blockSize - 1) / blockSize)
                              + (uint)symlinkDataList.Sum(s => (s.data.Length + (long)blockSize - 1) / blockSize);
 
-        // Calculate special file sizes in blocks
-        var catalogBlocks = (uint)((catalog.TotalSize + blockSize - 1) / blockSize);
-        var extentsBlocks = (uint)((extents.TotalSize + blockSize - 1) / blockSize);
-        var attributesBlocks = (uint)((attributes.TotalSize + blockSize - 1) / blockSize);
-
-        // Allocation bitmap size (1 bit per block)
-        // The allocation file size depends on total blocks, which includes allocation file itself.
-        // Iterate until convergence.
-        var baseBlocks = 5u + extentsBlocks + catalogBlocks + attributesBlocks + dataBlocksNeeded; // 5 = 3 boot/header + 2 alt header/reserved
+        // 3. Iterate to find TotalBlocks (converge on AllocationFile size)
+        var fixedBlocks = headerBlocks + altHeaderBlocks + catalogBlocks + extentsBlocks + attributesBlocks + dataBlocksNeeded;
+        
         uint allocationBlocks = 1;
         uint totalBlocks;
         int allocationBytes;
         
-        do
+        while (true)
         {
             var previousAllocationBlocks = allocationBlocks;
-            totalBlocks = baseBlocks + allocationBlocks;
+            totalBlocks = fixedBlocks + allocationBlocks;
             allocationBytes = (int)((totalBlocks + 7) / 8);
             allocationBlocks = (uint)((allocationBytes + blockSize - 1) / blockSize);
             
-            // Safety: ensure we don't loop forever
             if (allocationBlocks <= previousAllocationBlocks)
+            {
+                allocationBlocks = previousAllocationBlocks; // Stabilized
+                totalBlocks = fixedBlocks + allocationBlocks;
                 break;
-        } while (true);
-        
-        // Final total with correct allocation size
-        totalBlocks = baseBlocks + allocationBlocks;
+            }
+        }
 
-        // Build allocation bitmap
+        // 4. Build Bitmap and Assign Blocks
         var allocation = new AllocationBitmap(totalBlocks);
+        
+        // Reserve Header Blocks
+        allocation.MarkUsed(0, headerBlocks);
+        // Reserve Alt Header Blocks (at end)
+        // Careful: The last blocks are indices [TotalBlocks - altHeaderBlocks ... TotalBlocks - 1]
+        allocation.MarkUsed(totalBlocks - altHeaderBlocks, altHeaderBlocks);
 
-        // Reserve boot blocks and volume header (blocks 0-2 conceptually)
-        // In HFS+, the first allocation block starts after the volume header
-        var nextBlock = 0u;
+        // Current allocator pointer starts after headers
+        var allocatorSearchStart = headerBlocks; // Point where to start searching for free blocks
+        var nextBlock = headerBlocks;
 
-        // Allocate extents file (typically at the beginning)
-        var extentsStartBlock = nextBlock;
-        allocation.MarkUsed(extentsStartBlock, extentsBlocks);
-        nextBlock += extentsBlocks;
+        // Use a helper to allocate contiguous blocks
+        uint Allocate(uint count)
+        {
+            if (count == 0) return 0;
+            var start = allocation.Allocate(count, nextBlock); 
+            if (start == null)
+                 throw new InvalidOperationException($"Not enough contiguous space for {count} blocks");
+            
+            nextBlock = start.Value + count;
+            return start.Value;
+        }
 
-        // Allocate catalog file
-        var catalogStartBlock = nextBlock;
-        allocation.MarkUsed(catalogStartBlock, catalogBlocks);
-        nextBlock += catalogBlocks;
+        // Allocate Metadata
+        // Standard HFS+ Layout preference: Wrapper -> Allocation -> Extents -> Catalog -> Attributes
+        var allocationStartBlock = Allocate(allocationBlocks);
+        var extentsStartBlock = Allocate(extentsBlocks);
+        var catalogStartBlock = Allocate(catalogBlocks);
+        var attributesStartBlock = Allocate(attributesBlocks);
 
-        // Allocate attributes file
-        var attributesStartBlock = nextBlock;
-        allocation.MarkUsed(attributesStartBlock, attributesBlocks);
-        nextBlock += attributesBlocks;
-
-        // Allocate allocation file itself
-        var allocationStartBlock = nextBlock;
-        allocation.MarkUsed(allocationStartBlock, allocationBlocks);
-        nextBlock += allocationBlocks;
-
-        // Allocate file data
+        // Allocate Files
         for (var i = 0; i < fileDataList.Count; i++)
         {
             var (file, data, _, _) = fileDataList[i];
-            var fileBlocks = (uint)((data.Length + blockSize - 1) / blockSize);
-            fileDataList[i] = (file, data, nextBlock, fileBlocks);
-            allocation.MarkUsed(nextBlock, fileBlocks);
-            nextBlock += fileBlocks;
+            var blocks = (uint)((data.Length + blockSize - 1) / blockSize);
+            fileDataList[i] = (file, data, Allocate(blocks), blocks);
         }
 
         for (var i = 0; i < symlinkDataList.Count; i++)
         {
             var (symlink, data, _, _) = symlinkDataList[i];
-            var linkBlocks = (uint)((data.Length + blockSize - 1) / blockSize);
-            symlinkDataList[i] = (symlink, data, nextBlock, linkBlocks);
-            allocation.MarkUsed(nextBlock, linkBlocks);
-            nextBlock += linkBlocks;
+            var blocks = (uint)((data.Length + blockSize - 1) / blockSize);
+            symlinkDataList[i] = (symlink, data, Allocate(blocks), blocks);
         }
 
-        // Rebuild catalog with correct block assignments
+        // 5. Rebuild Catalog with finalized block numbers
         catalog = BuildCatalogWithBlocks(volume, fileDataList, symlinkDataList, out nextCnid);
-
-        // Create volume header
+        
+        // 6. Create Volume Header
         var now = DateTime.UtcNow;
         var header = new VolumeHeader
         {
@@ -142,69 +157,53 @@ public static class HfsVolumeWriter
             ModifyDate = now,
             CheckedDate = now,
             FileCount = fileCount + (uint)symlinkDataList.Count,
-            FolderCount = folderCount + 1, // +1 for root
+            FolderCount = folderCount, // Remove +1 as fsck counts 13 matching folderCount
             BlockSize = blockSize,
             TotalBlocks = totalBlocks,
             FreeBlocks = allocation.FreeBlocks,
             NextCatalogId = nextCnid,
+            NextAllocation = allocatorSearchStart, // Reset hint to start of free usage for OS
+            EncodingsBitmap = 1, // MacRoman (Bit 0)
             AllocationFile = ForkData.FromExtent((ulong)allocationBytes, allocationStartBlock, allocationBlocks),
-            ExtentsFile = ForkData.FromExtent((ulong)extents.TotalSize, extentsStartBlock, extentsBlocks),
+            ExtentsFile = ForkData.FromExtent(blockSize, extentsStartBlock, extentsBlocks),
             CatalogFile = ForkData.FromExtent((ulong)catalog.TotalSize, catalogStartBlock, catalogBlocks),
-            AttributesFile = ForkData.FromExtent((ulong)attributes.TotalSize, attributesStartBlock, attributesBlocks)
+            AttributesFile = ForkData.FromExtent(blockSize, attributesStartBlock, attributesBlocks) with { ClumpSize = blockSize }
         };
 
-        // Calculate total volume size
-        var totalSize = (long)totalBlocks * blockSize + BootBlocksSize + VolumeHeader.Size * 2 + SectorSize;
-        // Round up to block boundary
-        totalSize = ((totalSize + blockSize - 1) / blockSize) * blockSize;
+        // 7. Write Result Buffer
+        // Total size is exactly TotalBlocks * BlockSize
+        var totalSizeBytes = (long)totalBlocks * blockSize;
+        var buffer = new byte[totalSizeBytes];
 
-        // Write everything
-        var buffer = new byte[totalSize];
-
-        // Boot blocks (zeroed) - already zero
-
-        // Volume header at offset 1024
+        // Helper to write data at block offset
+        void WriteAtBlock(uint blockIdx, byte[] data)
+        {
+            if (blockIdx == 0 && data.Length == 0) return;
+             // Determine exact byte offset
+            var offset = (long)blockIdx * blockSize;
+            data.CopyTo(buffer.AsSpan((int)offset)); // Assuming DMG < 2GB for array
+        }
+        
+        // Write Headers
+        // Boot blocks are 0-1024 (Zeroed)
+        // Volume header is 1024-1536
         header.WriteTo(buffer.AsSpan(VolumeHeaderOffset, VolumeHeader.Size));
 
-        // Calculate where allocation blocks start
-        var allocBlockStart = BootBlocksSize + VolumeHeader.Size;
-        // Align to block boundary
-        allocBlockStart = (int)(((allocBlockStart + blockSize - 1) / blockSize) * blockSize);
+        // Write Metadata
+        WriteAtBlock(allocationStartBlock, allocation.ToBytes());
+        WriteAtBlock(extentsStartBlock, extents.ToBytes()); // if size > 0
+        WriteAtBlock(catalogStartBlock, catalog.ToBytes());
+        WriteAtBlock(attributesStartBlock, attributes.ToBytes());
+        
+        // Write Files
+        foreach (var (_, data, start, _) in fileDataList) WriteAtBlock(start, data);
+        foreach (var (_, data, start, _) in symlinkDataList) WriteAtBlock(start, data);
 
-        // Write extents file
-        var extentsOffset = allocBlockStart + (int)(extentsStartBlock * blockSize);
-        extents.ToBytes().CopyTo(buffer.AsSpan(extentsOffset));
-
-        // Write catalog file
-        var catalogOffset = allocBlockStart + (int)(catalogStartBlock * blockSize);
-        catalog.ToBytes().CopyTo(buffer.AsSpan(catalogOffset));
-
-        // Write attributes file
-        var attributesOffset = allocBlockStart + (int)(attributesStartBlock * blockSize);
-        attributes.ToBytes().CopyTo(buffer.AsSpan(attributesOffset));
-
-        // Write allocation file
-        var allocationOffset = allocBlockStart + (int)(allocationStartBlock * blockSize);
-        allocation.ToBytes().CopyTo(buffer.AsSpan(allocationOffset));
-
-        // Write file data
-        foreach (var (_, data, startBlock, _) in fileDataList)
-        {
-            var offset = allocBlockStart + (int)(startBlock * blockSize);
-            data.CopyTo(buffer.AsSpan(offset));
-        }
-
-        foreach (var (_, data, startBlock, _) in symlinkDataList)
-        {
-            var offset = allocBlockStart + (int)(startBlock * blockSize);
-            data.CopyTo(buffer.AsSpan(offset));
-        }
-
-        // Alternate volume header (second-to-last sector)
-        var altHeaderOffset = buffer.Length - SectorSize * 2;
+        // Write Alt Header
+        // Located in second-to-last 512-byte sector.
+        // Offset = TotalSizeBytes - 1024
+        var altHeaderOffset = (int)(totalSizeBytes - 1024);
         header.WriteTo(buffer.AsSpan(altHeaderOffset, VolumeHeader.Size));
-
-        // Last sector reserved (already zeroed)
 
         return buffer;
     }
@@ -244,7 +243,7 @@ public static class HfsVolumeWriter
 
         // Add root folder
         var rootValence = (uint)volume.Root.Children.Count;
-        catalog.AddRootFolder(rootValence);
+        catalog.AddRootFolder(volume.VolumeName, rootValence);
 
         // Add entries recursively
         AddEntriesRecursive(catalog, CatalogNodeId.RootFolder, volume.Root, fileDataList, symlinkDataList, ref nextCnid, volume.BlockSize);
@@ -263,7 +262,7 @@ public static class HfsVolumeWriter
 
         // Add root folder
         var rootValence = (uint)volume.Root.Children.Count;
-        catalog.AddRootFolder(rootValence);
+        catalog.AddRootFolder(volume.VolumeName, rootValence);
 
         // Add entries recursively with block info
         AddEntriesWithBlocksRecursive(catalog, CatalogNodeId.RootFolder, volume.Root, fileDataList, symlinkDataList, ref nextCnid, volume.BlockSize);

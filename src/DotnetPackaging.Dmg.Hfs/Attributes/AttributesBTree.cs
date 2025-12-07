@@ -13,8 +13,8 @@ public sealed class AttributesBTree
 
     public AttributesBTree(int nodeSize = 4096)
     {
-        // Attribute key max length
-        btree = new BTreeFile(nodeSize, maxKeyLength: 532);
+        // Attribute key max length: fsck_hfs expects 266
+        btree = new BTreeFile(nodeSize, maxKeyLength: 266);
     }
 
     /// <summary>

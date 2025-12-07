@@ -103,11 +103,19 @@ public sealed record ForkData
 
     public static ForkData FromExtent(ulong logicalSize, uint startBlock, uint blockCount)
     {
+        if (startBlock == 3 && blockCount == 0)
+        {
+             System.Console.WriteLine($"[DEBUG] Generating potentially invalid extent: Start={startBlock}, Count={blockCount}");
+        }
+
+        // Enforce valid extent rule: if Count is 0, Start must be 0.
+        var effectiveStart = blockCount > 0 ? startBlock : 0;
+
         return new ForkData
         {
             LogicalSize = logicalSize,
             TotalBlocks = blockCount,
-            Extents = ExtentRecord.FromSingleExtent(startBlock, blockCount)
+            Extents = ExtentRecord.FromSingleExtent(effectiveStart, blockCount)
         };
     }
 

@@ -337,7 +337,8 @@ public sealed record CatalogThreadRecord
     public byte[] ToBytes()
     {
         var nameWithLength = HfsUnicode.EncodeWithLength(NodeName);
-        var buffer = new byte[10 + nameWithLength.Length];
+        // Header (8 bytes) + NameWithLength
+        var buffer = new byte[8 + nameWithLength.Length];
         WriteTo(buffer);
         return buffer;
     }

@@ -21,10 +21,10 @@ public sealed record CatalogKey
     public string NodeName { get; init; } = string.Empty;
 
     /// <summary>
-    /// Creates a key for the root folder (parent=1, name="").
+    /// Creates a key for the root folder (parent=1, name=VolumeName).
     /// </summary>
-    public static CatalogKey ForRootFolder()
-        => new() { ParentId = CatalogNodeId.RootParent, NodeName = string.Empty };
+    public static CatalogKey ForRootFolder(string volumeName)
+        => new() { ParentId = CatalogNodeId.RootParent, NodeName = volumeName };
 
     /// <summary>
     /// Creates a key for a thread record (parent=CNID, name="").
