@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using Zafiro.Commands;
 using Zafiro.DivineBytes.System.IO;
 using Zafiro.Mixins;
+using DotnetPackaging.Internal;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Publish;
@@ -62,11 +63,11 @@ public sealed class DotnetPublisher : IPublisher
             var fileSystem = new FileSystem();
             var wrapper = new DirectoryInfoWrapper(fileSystem, new DirectoryInfo(outputDir));
             var container = new DirectoryContainer(wrapper).AsRoot();
-            
+
             var name = await DeriveName(request.ProjectPath);
             logger.Information("Publish succeeded for {ProjectPath} (Name: {Name})", request.ProjectPath, name.GetValueOrDefault("unknown"));
 
-            return Result.Success(new PublishResult(container, name, outputDir));
+            return Result.Success(new PublishResult(container, name, outputDir, new TemporaryDirectory(outputDir, logger.GetValueOrDefault(Log.Logger))));
         }
         catch (Exception ex)
         {

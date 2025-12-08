@@ -21,7 +21,7 @@ public static class DebCommand
             null,
             "pack-deb",
             "debian");
-            
+
         AddFromProjectSubcommand(command);
         return command;
     }
@@ -131,16 +131,17 @@ public static class DebCommand
                     Trimmed = tr
                 };
 
-                var pub = await publisher.Publish(req);
-                if (pub.IsFailure)
+                var pubResult = await publisher.Publish(req);
+                if (pubResult.IsFailure)
                 {
-                    logger.Error("Publish failed: {Error}", pub.Error);
+                    logger.Error("Publish failed: {Error}", pubResult.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
 
-                var container = pub.Value.Container;
-                var name = pub.Value.Name.Match(value => value, () => (string?)null);
+                using var pub = pubResult.Value;
+                var container = pub.Container;
+                var name = pub.Name.Match(value => value, () => (string?)null);
                 var built = await DotnetPackaging.Deb.DebFile.From().Container(container, name).Configure(o => o.From(opt)).Build();
                 if (built.IsFailure)
                 {
@@ -149,9 +150,15 @@ public static class DebCommand
                     return;
                 }
 
-                var data = DebMixin.ToByteSource(built.Value);
-                await using var fs = outFile.Open(FileMode.Create);
-                var write = await data.WriteTo(fs);
+                var detached = await ByteSourceDetacher.Detach(DebMixin.ToByteSource(built.Value), outFile.Name);
+                if (detached.IsFailure)
+                {
+                    logger.Error("Deb creation failed: {Error}", detached.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
+
+                var write = await detached.Value.WriteTo(outFile.FullName);
                 if (write.IsFailure)
                 {
                     logger.Error("Could not write deb file: {Error}", write.Error);

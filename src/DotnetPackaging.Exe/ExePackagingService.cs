@@ -97,9 +97,10 @@ public sealed class ExePackagingService
             return Result.Failure<IContainer>(publishResult.Error);
         }
 
+        using var pub = publishResult.Value;
         var projectMetadata = ReadProjectMetadata(projectFile);
 
-        var publishDir = new DirectoryInfo(publishResult.Value.OutputDirectory);
+        var publishDir = new DirectoryInfo(pub.OutputDirectory);
         var containerResult = BuildContainer(publishDir);
         if (containerResult.IsFailure)
         {
@@ -113,7 +114,7 @@ public sealed class ExePackagingService
             ToMaybe(vendor),
             ToMaybe(runtimeIdentifier),
             ToMaybe(stubFile),
-            publishResult.Value.Name,
+            pub.Name,
             projectMetadata,
             ToMaybe(setupLogo));
 
@@ -138,7 +139,7 @@ public sealed class ExePackagingService
     private async Task<Result<IContainer>> Build(ExePackagingRequest request)
     {
         var inferredExecutable = InferExecutableName(request.PublishDirectory, request.ProjectName);
-        
+
         var metadata = BuildInstallerMetadata(
             request.Options,
             request.PublishDirectory,
@@ -213,7 +214,7 @@ public sealed class ExePackagingService
         var localStub = localStubResult.Value;
         if (localStub.HasValue)
         {
-            return await BuildWithStub(ByteSource.FromStreamFactory(() => File.OpenRead(localStub.Value)));
+            return await BuildWithStub(localStub.Value);
         }
 
         var stubPathResult = await stubProvider.GetStub(ridResult.Value);
@@ -381,12 +382,12 @@ public sealed class ExePackagingService
         return Result.Failure<string>("--arch is required when building EXE on non-Windows hosts (x64/arm64).");
     }
 
-    private async Task<Result<Maybe<string>>> TryResolveLocalStub(string rid)
+    private async Task<Result<Maybe<IByteSource>>> TryResolveLocalStub(string rid)
     {
         var projectPath = FindLocalStubProject();
         if (projectPath.HasNoValue)
         {
-            return Result.Success(Maybe<string>.None);
+            return Result.Success(Maybe<IByteSource>.None);
         }
 
         logger.Information("Building installer stub locally from {ProjectPath} for {RID}.", projectPath.Value, rid);
@@ -397,7 +398,7 @@ public sealed class ExePackagingService
             Configuration = "Release",
             SingleFile = true,
             Trimmed = false,
-                MsBuildProperties = new Dictionary<string, string>
+            MsBuildProperties = new Dictionary<string, string>
             {
                 ["IncludeNativeLibrariesForSelfExtract"] = "true",
                 ["IncludeAllContentForSelfExtract"] = "true",
@@ -411,35 +412,37 @@ public sealed class ExePackagingService
         // the "AppHost with embedded payload corrupted" issue when used as a raw binary.
         // BUT, we actually want the SingleFile stub to be the installer itself.
         // The problem is we are using the SAME file for both the "Installer Stub" (wrapper) and the "Uninstaller Stub" (embedded).
-        
+
         // If we use the SingleFile output as the embedded uninstaller, it seems to crash when extracted.
         // This might be because SingleFile apps rely on the bundle signature at the end of the file.
         // When we embed it in a zip, and then extract it, it should be identical.
-        
+
         // However, maybe we should publish it WITHOUT SingleFile for the purpose of embedding?
         // But we want a single Uninstall.exe.
-        
+
         // The issue is likely that the SingleFile host has issues when it was previously part of a larger bundle? No.
-        
+
         // Let's try publishing it as a non-SingleFile app? No, then it's a folder.
-        
+
         // What if we publish it as SingleFile but disable compression?
         // MsBuildProperties["EnableCompressionInSingleFile"] = "false";
-        
+
         var publishResult = await publisher.Publish(publishRequest);
         if (publishResult.IsFailure)
         {
-            return Result.Failure<Maybe<string>>($"Failed to publish installer stub from {projectPath.Value}: {publishResult.Error}");
+            return Result.Failure<Maybe<IByteSource>>($"Failed to publish installer stub from {projectPath.Value}: {publishResult.Error}");
         }
 
-        var stubPath = ResolveStubOutputPath(projectPath.Value, publishResult.Value.OutputDirectory);
+        using var pub = publishResult.Value;
+        var stubPath = ResolveStubOutputPath(projectPath.Value, pub.OutputDirectory);
         if (stubPath.HasNoValue)
         {
-            return Result.Failure<Maybe<string>>($"Installer stub was published but no executable was located under {publishResult.Value.OutputDirectory}.");
+            return Result.Failure<Maybe<IByteSource>>($"Installer stub was published but no executable was located under {pub.OutputDirectory}.");
         }
 
         logger.Information("Using locally built installer stub at {StubPath}", stubPath.Value);
-        return Result.Success(Maybe<string>.From(stubPath.Value));
+        var bytes = await File.ReadAllBytesAsync(stubPath.Value);
+        return Result.Success(Maybe<IByteSource>.From(ByteSource.FromBytes(bytes)));
     }
 
     private Maybe<string> FindLocalStubProject()
