@@ -27,8 +27,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\DotnetPackaging.Exe.Installer\DotnetPackaging.Exe.Installer.csproj" />
     <ProjectReference Include="..\..\src\DotnetPackaging.Exe\DotnetPackaging.Exe.csproj" />
-    <ProjectReference Include="..\..\..\Zafiro\src\Zafiro\Zafiro.csproj" />
-    <ProjectReference Include="..\..\..\Zafiro\src\Zafiro.DivineBytes\Zafiro.DivineBytes.csproj" />
   </ItemGroup>
 
 </Project>
