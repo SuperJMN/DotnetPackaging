@@ -31,8 +31,8 @@
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.9" />
     <PackageVersion Include="Avalonia.ReactiveUI" Version="11.3.6" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
-    <PackageVersion Include="Zafiro.Avalonia" Version="44.0.1" />
-    <PackageVersion Include="Zafiro.Avalonia.Dialogs" Version="44.0.1" />
+    <PackageVersion Include="Zafiro.Avalonia" Version="44.0.2" />
+    <PackageVersion Include="Zafiro.Avalonia.Dialogs" Version="44.0.2" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="Serilog.Sinks.XUnit" Version="3.0.19" />
     <PackageVersion Include="SharpCompress" Version="0.42.0" />
@@ -54,9 +54,9 @@
     <PackageVersion Include="System.IO.Hashing" Version="10.0.0" />
     <PackageVersion Include="DeflateBlockCompressor" Version="0.0.13" />
     <PackageVersion Include="NuGet.Versioning" Version="7.0.1" />
-    <PackageVersion Include="Zafiro.Avalonia.Generators" Version="44.0.1" />
-    <PackageVersion Include="Zafiro" Version="44.0.3" />
-    <PackageVersion Include="Zafiro.DivineBytes" Version="44.0.3" />
+    <PackageVersion Include="Zafiro.Avalonia.Generators" Version="44.0.2" />
+    <PackageVersion Include="Zafiro" Version="44.0.4" />
+    <PackageVersion Include="Zafiro.DivineBytes" Version="44.0.4" />
     <PackageVersion Include="DiscUtils" Version="0.16.13" />
     <PackageVersion Include="Xunit.SkippableFact" Version="1.5.23" />
   </ItemGroup>

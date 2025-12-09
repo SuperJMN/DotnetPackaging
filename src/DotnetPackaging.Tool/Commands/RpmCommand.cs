@@ -20,7 +20,7 @@ public static class RpmCommand
             "Create an RPM (.rpm) package suitable for Fedora, openSUSE, and other RPM-based distributions.",
             null,
             "pack-rpm");
-        
+
         AddFromProjectSubcommand(command);
         return command;
     }
@@ -144,16 +144,17 @@ public static class RpmCommand
                     Trimmed = tr
                 };
 
-                var pub = await publisher.Publish(req);
-                if (pub.IsFailure)
+                var pubResult = await publisher.Publish(req);
+                if (pubResult.IsFailure)
                 {
-                    logger.Error("Publish failed: {Error}", pub.Error);
+                    logger.Error("Publish failed: {Error}", pubResult.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
 
-                var container = pub.Value.Container;
-                var name = pub.Value.Name.Match(value => value, () => (string?)null);
+                using var pub = pubResult.Value;
+                var container = pub.Container;
+                var name = pub.Name.Match(value => value, () => (string?)null);
                 var builder = RpmFile.From().Container(container, name);
                 var built = await builder.Configure(o => o.From(opt)).Build();
                 if (built.IsFailure)
@@ -163,10 +164,16 @@ public static class RpmCommand
                     return;
                 }
 
-                var copy = CopyRpmToOutput(built.Value, outFile);
-                if (copy.IsFailure)
+                // RpmFile points to a file on disk (created by rpmbuild), we need to read it as a ByteSource, detach it, and then write it to the output.
+                // However, RpmFile is a FileInfo wrapper effectively.
+                // Let's see RpmFile definition. Ah, it returns a FileInfo. 
+                // We can open it as a stream, detach, and then copy.
+
+                var rpmSource = ByteSource.FromStreamFactory(() => File.OpenRead(built.Value.FullName));
+                var write = await rpmSource.WriteTo(outFile.FullName);
+                if (write.IsFailure)
                 {
-                    logger.Error("Failed writing Rpm file: {Error}", copy.Error);
+                    logger.Error("Failed writing Rpm file: {Error}", write.Error);
                     Environment.ExitCode = 1;
                 }
                 else

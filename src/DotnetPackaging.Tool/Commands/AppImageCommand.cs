@@ -24,7 +24,7 @@ public static class AppImageCommand
             "Create a portable AppImage (.AppImage) from a published directory. Use subcommands for AppDir workflows.",
             null,
             "pack-appimage");
-        
+
         AddAppImageSubcommands(command);
         AddFromProjectSubcommand(command);
         return command;
@@ -296,28 +296,29 @@ public static class AppImageCommand
                     Trimmed = tr
                 };
 
-                var pub = await publisher.Publish(req);
-                if (pub.IsFailure)
+                var pubResult = await publisher.Publish(req);
+                if (pubResult.IsFailure)
                 {
-                    logger.Error("Publish failed: {Error}", pub.Error);
+                    logger.Error("Publish failed: {Error}", pubResult.Error);
                     Environment.ExitCode = 1;
                     return;
                 }
 
-                var root = pub.Value.Container;
-                var ctxDir = new DirectoryInfo(pub.Value.OutputDirectory);
+                using var pub = pubResult.Value;
+                var root = pub.Container;
+                var ctxDir = new DirectoryInfo(pub.OutputDirectory);
                 var metadata = BuildAppImageMetadata(opt, ctxDir);
                 var factory = new AppImageFactory();
                 var res = await factory.Create(root, metadata)
                     .Bind(x => x.ToByteSource())
                     .Bind(bytes => bytes.WriteTo(outFile.FullName));
-                
+
                 if (res.IsFailure)
                 {
                     logger.Error("AppImage creation failed: {Error}", res.Error);
                     Environment.ExitCode = 1;
                 }
-                else 
+                else
                 {
                     logger.Information("{OutputFile}", outFile.FullName);
                 }
