@@ -39,11 +39,6 @@
         <PackageReference Include="Zafiro.Avalonia.Dialogs" />
         <PackageReference Include="Zafiro.Avalonia.Generators" />
     </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\..\..\Zafiro\src\Zafiro\Zafiro.csproj" />
-        <ProjectReference Include="..\..\..\Zafiro\src\Zafiro.DivineBytes\Zafiro.DivineBytes.csproj" />
-    </ItemGroup>
     
     <ItemGroup>
       <Compile Update="Steps\Welcome\WelcomeView.axaml.cs">
