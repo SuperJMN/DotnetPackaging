@@ -170,16 +170,7 @@ public static class RpmCommand
                 // We can open it as a stream, detach, and then copy.
 
                 var rpmSource = ByteSource.FromStreamFactory(() => File.OpenRead(built.Value.FullName));
-                var detached = await ByteSourceDetacher.Detach(rpmSource, outFile.Name);
-
-                if (detached.IsFailure)
-                {
-                    logger.Error("Failed to detach RPM file: {Error}", detached.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                var write = await detached.Value.WriteTo(outFile.FullName);
+                var write = await rpmSource.WriteTo(outFile.FullName);
                 if (write.IsFailure)
                 {
                     logger.Error("Failed writing Rpm file: {Error}", write.Error);

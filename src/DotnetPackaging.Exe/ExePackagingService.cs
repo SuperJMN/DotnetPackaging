@@ -151,47 +151,18 @@ public sealed class ExePackagingService
 
         async Task<Result<IContainer>> BuildWithStub(IByteSource stubBytes)
         {
-            var detachedStubResult = await DetachStub(stubBytes);
-            if (detachedStubResult.IsFailure)
-            {
-                return detachedStubResult.ConvertFailure<IContainer>();
-            }
-
-            var buildResult = await SimpleExePacker.Build(detachedStubResult.Value, request.PublishDirectory, metadata, request.SetupLogo);
+            var buildResult = await SimpleExePacker.Build(stubBytes, request.PublishDirectory, metadata, request.SetupLogo);
             if (buildResult.IsFailure)
             {
                 return Result.Failure<IContainer>(buildResult.Error);
             }
 
-            var detachedInstallerResult = await ByteSourceDetacher.Detach(buildResult.Value.Installer, request.OutputName);
-            if (detachedInstallerResult.IsFailure)
-            {
-                return detachedInstallerResult.ConvertFailure<IContainer>();
-            }
-
             var resources = new List<INamedByteSource>
             {
-                new Resource(request.OutputName, detachedInstallerResult.Value),
+                new Resource(request.OutputName, buildResult.Value.Installer),
             };
 
             return Result.Success<IContainer>(new RootContainer(resources, Enumerable.Empty<INamedContainer>()));
-        }
-
-        async Task<Result<IByteSource>> DetachStub(IByteSource stubBytes)
-        {
-            var detachedResult = await ByteSourceDetacher.Detach(stubBytes, "InstallerStub.exe");
-            if (detachedResult.IsFailure)
-            {
-                return detachedResult;
-            }
-
-            var bufferResult = await detachedResult.Value.ReadAll();
-            if (bufferResult.IsFailure)
-            {
-                return bufferResult.ConvertFailure<IByteSource>();
-            }
-
-            return Result.Success<IByteSource>(ByteSource.FromBytes(bufferResult.Value));
         }
 
         if (request.Stub.HasValue)

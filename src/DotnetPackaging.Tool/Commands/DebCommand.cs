@@ -150,15 +150,7 @@ public static class DebCommand
                     return;
                 }
 
-                var detached = await ByteSourceDetacher.Detach(DebMixin.ToByteSource(built.Value), outFile.Name);
-                if (detached.IsFailure)
-                {
-                    logger.Error("Deb creation failed: {Error}", detached.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                var write = await detached.Value.WriteTo(outFile.FullName);
+                var write = await DebMixin.ToByteSource(built.Value).WriteTo(outFile.FullName);
                 if (write.IsFailure)
                 {
                     logger.Error("Could not write deb file: {Error}", write.Error);

@@ -1,8 +1,16 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using System.IO.Compression;
+
 using System.Text;
 using System.Text.Json;
 using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
+
+using System.Reactive.Linq;
 
 namespace DotnetPackaging.Exe;
 
@@ -105,17 +113,12 @@ public static class SimpleExePacker
     private static async Task<IByteSource> AppendPayload(IByteSource stub, IByteSource payload)
     {
         var payloadBytes = await ToBytes(payload);
-        var stubBytes = await ToBytes(stub);
         var lengthBytes = BitConverter.GetBytes((long)payloadBytes.Length);
         var magicBytes = Encoding.ASCII.GetBytes("DPACKEXE1");
 
-        await using var output = new MemoryStream();
-        await output.WriteAsync(stubBytes);
-        await output.WriteAsync(payloadBytes);
-        await output.WriteAsync(lengthBytes);
-        await output.WriteAsync(magicBytes);
+        var footer = ByteSource.FromBytes(lengthBytes.Concat(magicBytes).ToArray());
 
-        return ByteSource.FromBytes(output.ToArray());
+        return ByteSource.FromByteObservable(stub.Bytes.Concat(ByteSource.FromBytes(payloadBytes).Bytes).Concat(footer.Bytes));
     }
 
     private static async Task<byte[]> ToBytes(IByteSource source)

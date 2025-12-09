@@ -311,7 +311,6 @@ public static class AppImageCommand
                 var factory = new AppImageFactory();
                 var res = await factory.Create(root, metadata)
                     .Bind(x => x.ToByteSource())
-                    .Bind(bytes => ByteSourceDetacher.Detach(bytes, outFile.Name))
                     .Bind(bytes => bytes.WriteTo(outFile.FullName));
 
                 if (res.IsFailure)
