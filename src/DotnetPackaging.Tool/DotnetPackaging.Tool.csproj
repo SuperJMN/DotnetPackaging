@@ -24,6 +24,5 @@
     <ProjectReference Include="..\DotnetPackaging.Rpm\DotnetPackaging.Rpm.csproj" />
     <ProjectReference Include="..\DotnetPackaging.Msix\DotnetPackaging.Msix.csproj" />
     <ProjectReference Include="..\DotnetPackaging.Exe\DotnetPackaging.Exe.csproj" />
-    <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
   </ItemGroup>
 </Project>
