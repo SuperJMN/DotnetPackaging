@@ -100,21 +100,14 @@ public sealed class ExePackagingService
         using var pub = publishResult.Value;
         var projectMetadata = ReadProjectMetadata(projectFile);
 
-        var publishDir = new DirectoryInfo(pub.OutputDirectory);
-        var containerResult = BuildContainer(publishDir);
-        if (containerResult.IsFailure)
-        {
-            return Result.Failure<IContainer>(containerResult.Error);
-        }
-
         var request = new ExePackagingRequest(
-            containerResult.Value,
+            pub,
             outputName,
             options,
             ToMaybe(vendor),
             ToMaybe(runtimeIdentifier),
             ToMaybe(stubFile),
-            pub.Name,
+            Maybe<string>.From(Path.GetFileNameWithoutExtension(projectFile.Name)),
             projectMetadata,
             ToMaybe(setupLogo));
 
@@ -405,15 +398,28 @@ public sealed class ExePackagingService
         }
 
         using var pub = publishResult.Value;
-        var stubPath = ResolveStubOutputPath(projectPath.Value, pub.OutputDirectory);
-        if (stubPath.HasNoValue)
+        
+        var assemblyName = Path.GetFileNameWithoutExtension(projectPath.Value);
+        var stubResource = pub.Resources
+            .FirstOrDefault(r => r.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && 
+                                 (string.IsNullOrWhiteSpace(assemblyName) || 
+                                  Path.GetFileNameWithoutExtension(r.Name).Equals(assemblyName, StringComparison.OrdinalIgnoreCase)));
+
+        if (stubResource == null)
         {
-            return Result.Failure<Maybe<IByteSource>>($"Installer stub was published but no executable was located under {pub.OutputDirectory}.");
+             // Fallback: any exe that is not createdump
+             stubResource = pub.Resources
+                .FirstOrDefault(r => r.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && 
+                                     !Path.GetFileName(r.Name).Equals("createdump.exe", StringComparison.OrdinalIgnoreCase));
         }
 
-        logger.Information("Using locally built installer stub at {StubPath}", stubPath.Value);
-        var bytes = await File.ReadAllBytesAsync(stubPath.Value);
-        return Result.Success(Maybe<IByteSource>.From(ByteSource.FromBytes(bytes)));
+        if (stubResource == null)
+        {
+            return Result.Failure<Maybe<IByteSource>>($"Installer stub was published but no executable was located in the output container.");
+        }
+
+        logger.Information("Using locally built installer stub {StubName}", stubResource.Name);
+        return Result.Success(Maybe<IByteSource>.From(stubResource));
     }
 
     private Maybe<string> FindLocalStubProject()

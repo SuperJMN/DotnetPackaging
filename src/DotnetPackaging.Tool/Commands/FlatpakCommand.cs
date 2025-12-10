@@ -230,7 +230,8 @@ public static class FlatpakCommand
                     return;
                 }
 
-                var root = pub.Value.Container;
+                using var pubValue = pub.Value;
+                var root = pubValue;
                 var setup = new FromDirectoryOptions();
                 setup.From(opt);
 
@@ -250,7 +251,8 @@ public static class FlatpakCommand
                     return;
                 }
 
-                var pm = await BuildUtils.CreateMetadata(setup, root, archRes.Value, execRes.Value, opt.IsTerminal.GetValueOrDefault(false), pub.Value.Name, logger);
+                var projectName = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
+                var pm = await BuildUtils.CreateMetadata(setup, root, archRes.Value, execRes.Value, opt.IsTerminal.GetValueOrDefault(false), Maybe<string>.From(projectName), logger);
                 var planRes = await new FlatpakFactory().BuildPlan(root, pm, fopt);
                 if (planRes.IsFailure)
                 {

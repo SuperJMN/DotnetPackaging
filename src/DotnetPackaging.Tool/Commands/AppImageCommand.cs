@@ -46,9 +46,9 @@ public static class AppImageCommand
             .WriteResult();
     }
 
-    private static AppImageMetadata BuildAppImageMetadata(Options options, DirectoryInfo contextDir)
+    private static AppImageMetadata BuildAppImageMetadata(Options options, DirectoryInfo contextDir, Maybe<string> projectName = default)
     {
-        var appName = options.Name.GetValueOrDefault(contextDir.Name);
+        var appName = options.Name.Or(() => projectName).GetValueOrDefault(contextDir.Name);
         var packageName = appName.ToLowerInvariant().Replace(" ", "").Replace("-", "");
         var appId = options.Id.GetValueOrDefault($"com.{packageName}");
 
@@ -305,11 +305,9 @@ public static class AppImageCommand
                 }
 
                 using var pub = pubResult.Value;
-                var root = pub.Container;
-                var ctxDir = new DirectoryInfo(pub.OutputDirectory);
-                var metadata = BuildAppImageMetadata(opt, ctxDir);
+                var metadata = BuildAppImageMetadata(opt, new DirectoryInfo(prj.DirectoryName!), Maybe<string>.From(System.IO.Path.GetFileNameWithoutExtension(prj.Name)));
                 var factory = new AppImageFactory();
-                var res = await factory.Create(root, metadata)
+                var res = await factory.Create(pub, metadata)
                     .Bind(x => x.ToByteSource())
                     .Bind(bytes => bytes.WriteTo(outFile.FullName));
 

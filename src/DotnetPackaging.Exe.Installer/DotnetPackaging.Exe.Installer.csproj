@@ -1,49 +1,46 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <OutputType>WinExe</OutputType>
-        <TargetFramework>net10.0-windows</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <UseWPF>false</UseWPF>
-        <UseWindowsForms>false</UseWindowsForms>
-        <EnableWindowsTargeting>true</EnableWindowsTargeting>
-        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-        <IsPackable>false</IsPackable>
-        <ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
-        <AssemblyVersion>2.0.0.0</AssemblyVersion>
-        <FileVersion>2.0.0.0</FileVersion>
-        <Deterministic>false</Deterministic>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <AvaloniaResource Include="Assets\**" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <AvaloniaResource Include="..\..\icon.png">
-          <Link>Assets/icon.png</Link>
-        </AvaloniaResource>
-        <Content Include="Assets\Icon.ico" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Avalonia.Desktop" />
-        <PackageReference Include="Avalonia.Fonts.Inter" />
-        <PackageReference Include="Avalonia.Themes.Fluent" />
-        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="AvaloniaUI.DiagnosticsSupport" />
-        <PackageReference Include="ReactiveProperty" />
-        <PackageReference Include="ReactiveUI.Avalonia" />
-        <PackageReference Include="Serilog" />
-        <PackageReference Include="Serilog.Sinks.File" />
-        <PackageReference Include="Zafiro.Avalonia" />
-        <PackageReference Include="Zafiro.Avalonia.Dialogs" />
-        <PackageReference Include="Zafiro.Avalonia.Generators" />
-    </ItemGroup>
-    
-    <ItemGroup>
-      <Compile Update="Steps\Welcome\WelcomeView.axaml.cs">
-        <DependentUpon>WelcomeView.axaml</DependentUpon>
-        <SubType>Code</SubType>
-      </Compile>
-    </ItemGroup>
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseWPF>false</UseWPF>
+    <UseWindowsForms>false</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <IsPackable>false</IsPackable>
+    <ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
+    <Deterministic>false</Deterministic>
+  </PropertyGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="..\..\icon.png">
+      <Link>Assets/icon.png</Link>
+    </AvaloniaResource>
+    <Content Include="Assets\Icon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="AvaloniaUI.DiagnosticsSupport" />
+    <PackageReference Include="ReactiveProperty" />
+    <PackageReference Include="ReactiveUI.Avalonia" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Sinks.File" />
+    <ProjectReference Include="../../../Zafiro.Avalonia/src/Zafiro.Avalonia/Zafiro.Avalonia.csproj" />
+    <ProjectReference Include="../../../Zafiro.Avalonia/src/Zafiro.Avalonia.Dialogs/Zafiro.Avalonia.Dialogs.csproj" />
+    <ProjectReference Include="../../../Zafiro.Avalonia/src/Zafiro.Avalonia.Generators/Zafiro.Avalonia.Generators.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Steps\Welcome\WelcomeView.axaml.cs">
+      <DependentUpon>WelcomeView.axaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
 </Project>

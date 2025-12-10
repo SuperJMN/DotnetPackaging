@@ -165,13 +165,33 @@ public static class DmgCommand
                     return;
                 }
 
-                var volName = opt.Name.GetValueOrDefault(pub.Value.Name.GetValueOrDefault("App"));
+                using var pubValue = pub.Value;
+
+                var inferredName = Path.GetFileNameWithoutExtension(prj.Name);
+                var volName = opt.Name.GetValueOrDefault(inferredName);
                 
                 // Prioritize user override, then the detected Assembly Name (via DotnetPublisher), then null (fallback to DmgHfsBuilder guessing)
-                var executableName = opt.ExecutableName.GetValueOrDefault(pub.Value.Name.GetValueOrDefault());
+                var executableName = opt.ExecutableName.GetValueOrDefault(inferredName);
                 
                 var icon = await ResolveIcon(opt, prj.Directory!, logger);
-                await DmgHfsBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon, executableName: executableName);
+
+                var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+                try 
+                {
+                    var writeResult = await pubValue.WriteTo(tempDir);
+                    if (writeResult.IsFailure)
+                    {
+                        logger.Error("Failed to write publish output to temp dir: {Error}", writeResult.Error);
+                        Environment.ExitCode = 1;
+                        return;
+                    }
+
+                    await DmgHfsBuilder.Create(tempDir, outFile.FullName, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon, executableName: executableName);
+                }
+                finally
+                {
+                    if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+                }
                 logger.Information("Success");
             });
         });

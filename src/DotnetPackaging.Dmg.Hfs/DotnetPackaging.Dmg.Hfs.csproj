@@ -1,3 +1,4 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -9,6 +10,6 @@
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" />
     <PackageReference Include="System.Reactive" />
-    <PackageReference Include="Zafiro.DivineBytes" />
+    <ProjectReference Include="../../../Zafiro/src/Zafiro.DivineBytes/Zafiro.DivineBytes.csproj" />
   </ItemGroup>
 </Project>

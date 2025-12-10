@@ -140,9 +140,8 @@ public static class DebCommand
                 }
 
                 using var pub = pubResult.Value;
-                var container = pub.Container;
-                var name = pub.Name.Match(value => value, () => (string?)null);
-                var built = await DotnetPackaging.Deb.DebFile.From().Container(container, name).Configure(o => o.From(opt)).Build();
+                var name = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
+                var built = await DotnetPackaging.Deb.DebFile.From().Container(pub, name).Configure(o => o.From(opt)).Build();
                 if (built.IsFailure)
                 {
                     logger.Error("Deb creation failed: {Error}", built.Error);

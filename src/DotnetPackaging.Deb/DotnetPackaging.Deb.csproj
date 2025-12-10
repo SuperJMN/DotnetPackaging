@@ -9,7 +9,7 @@
   <ItemGroup>
     <PackageReference Include="SharpCompress" />
     <PackageReference Include="SixLabors.ImageSharp" />
-    <PackageReference Include="SharpZipLib" />
+    <ProjectReference Include="../../../SharpZipLib/src/ICSharpCode.SharpZipLib/ICSharpCode.SharpZipLib.csproj" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />

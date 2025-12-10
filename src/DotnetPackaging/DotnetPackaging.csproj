@@ -7,10 +7,11 @@
   </PropertyGroup>
   <Import Project="..\Common.props" />
   <ItemGroup>
+    <PackageReference Include="Serilog" />
     <PackageReference Include="SixLabors.ImageSharp" />
     <PackageReference Include="NuGet.Versioning" />
     <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" />
     <PackageReference Include="System.IO.Abstractions" />
-    <PackageReference Include="Zafiro.DivineBytes" />
+    <ProjectReference Include="../../../Zafiro/src/Zafiro.DivineBytes/Zafiro.DivineBytes.csproj" />
   </ItemGroup>
 </Project>

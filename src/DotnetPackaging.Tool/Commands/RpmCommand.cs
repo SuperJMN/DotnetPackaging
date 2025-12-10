@@ -153,9 +153,8 @@ public static class RpmCommand
                 }
 
                 using var pub = pubResult.Value;
-                var container = pub.Container;
-                var name = pub.Name.Match(value => value, () => (string?)null);
-                var builder = RpmFile.From().Container(container, name);
+                var name = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
+                var builder = RpmFile.From().Container(pub, name);
                 var built = await builder.Configure(o => o.From(opt)).Build();
                 if (built.IsFailure)
                 {

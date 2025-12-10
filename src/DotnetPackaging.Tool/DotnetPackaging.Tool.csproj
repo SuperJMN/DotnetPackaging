@@ -25,5 +25,6 @@
     <ProjectReference Include="..\DotnetPackaging.Msix\DotnetPackaging.Msix.csproj" />
     <ProjectReference Include="..\DotnetPackaging.Exe\DotnetPackaging.Exe.csproj" />
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
+    <ProjectReference Include="../../../Zafiro/src/Zafiro.DivineBytes/Zafiro.DivineBytes.csproj" />
   </ItemGroup>
 </Project>
