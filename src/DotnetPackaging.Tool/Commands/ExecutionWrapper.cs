@@ -1,8 +1,7 @@
-using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using Serilog;
-using Serilog.Context;
+using CSharpFunctionalExtensions;
+using DotnetPackaging.Publish;
+using Zafiro.DivineBytes;
+using System.IO;
 
 namespace DotnetPackaging.Tool.Commands;
 
@@ -25,4 +24,60 @@ public static class ExecutionWrapper
             throw;
         }
     }
-}
+    
+    // Actually, I will implement a cleaner version directly in the code block below.
+    public static async Task ExecuteWithPublishedProject(
+        string commandName,
+        string outputFile,
+        FileInfo projectFile,
+        string? architecture,
+        string platformNameForRid,
+        Func<string?, string, Result<string>> ridResolver,
+        bool selfContained,
+        string configuration,
+        bool singleFile,
+        bool trimmed,
+        Func<IDisposableContainer, ILogger, Task<Result>> packageAction)
+    {
+         await ExecuteWithLogging(commandName, outputFile, async logger =>
+         {
+             var ridResult = ridResolver(architecture, commandName);
+             if (ridResult.IsFailure)
+             {
+                 logger.Error("Invalid architecture: {Error}", ridResult.Error);
+                 Environment.ExitCode = 1;
+                 return;
+             }
+
+             var publisher = new DotnetPackaging.Publish.DotnetPublisher(Maybe<ILogger>.From(logger));
+             var req = new DotnetPackaging.Publish.ProjectPublishRequest(projectFile.FullName)
+             {
+                 Rid = string.IsNullOrWhiteSpace(architecture) ? Maybe<string>.None : Maybe<string>.From(ridResult.Value),
+                 SelfContained = selfContained,
+                 Configuration = configuration,
+                 SingleFile = singleFile,
+                 Trimmed = trimmed
+             };
+
+             var pubResult = await publisher.Publish(req);
+             if (pubResult.IsFailure)
+             {
+                 logger.Error("Publish failed: {Error}", pubResult.Error);
+                 Environment.ExitCode = 1;
+                 return;
+             }
+
+             using var pub = pubResult.Value;
+             var result = await packageAction(pub, logger);
+             
+             if (result.IsFailure)
+             {
+                 logger.Error("Packaging failed: {Error}", result.Error);
+                 Environment.ExitCode = 1;
+             }
+             else
+             {
+                 logger.Information("{OutputFile}", outputFile);
+             }
+         });
+    }

@@ -69,6 +69,31 @@ public sealed class ExePackagingService
         return Build(request);
     }
 
+    public Task<Result<IContainer>> BuildFromDirectory(
+        IContainer publishDirectory,
+        string outputName,
+        Options options,
+        string? vendor,
+        string? runtimeIdentifier,
+        IByteSource? stubFile,
+        IByteSource? setupLogo,
+        Maybe<string> projectName,
+        Maybe<ProjectMetadata> projectMetadata)
+    {
+        var request = new ExePackagingRequest(
+            publishDirectory,
+            outputName,
+            options,
+            ToMaybe(vendor),
+            ToMaybe(runtimeIdentifier),
+            ToMaybe(stubFile),
+            projectName,
+            projectMetadata,
+            ToMaybe(setupLogo));
+
+        return Build(request);
+    }
+
     public async Task<Result<IContainer>> BuildFromProject(
         FileInfo projectFile,
         string? runtimeIdentifier,

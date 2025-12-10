@@ -276,51 +276,22 @@ public static class AppImageCommand
             var opt = optionsBinder.Bind(parseResult);
             var archVal = parseResult.GetValue(arch);
 
-            await ExecutionWrapper.ExecuteWithLogging("appimage-from-project", outFile.FullName, async logger =>
-            {
-                var ridResult = RidUtils.ResolveLinuxRid(archVal, "AppImage packaging");
-                if (ridResult.IsFailure)
+            await ExecutionWrapper.ExecuteWithPublishedProject(
+                "appimage-from-project",
+                outFile.FullName,
+                prj,
+                archVal,
+                "AppImage packaging",
+                RidUtils.ResolveLinuxRid,
+                sc, cfg, sf, tr,
+                async (pub, l) =>
                 {
-                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                var publisher = new DotnetPackaging.Publish.DotnetPublisher(Maybe<ILogger>.From(logger));
-                var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
-                {
-                    Rid = string.IsNullOrWhiteSpace(archVal) ? Maybe<string>.None : Maybe<string>.From(ridResult.Value),
-                    SelfContained = sc,
-                    Configuration = cfg,
-                    SingleFile = sf,
-                    Trimmed = tr
-                };
-
-                var pubResult = await publisher.Publish(req);
-                if (pubResult.IsFailure)
-                {
-                    logger.Error("Publish failed: {Error}", pubResult.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                using var pub = pubResult.Value;
-                var metadata = BuildAppImageMetadata(opt, new DirectoryInfo(prj.DirectoryName!), Maybe<string>.From(System.IO.Path.GetFileNameWithoutExtension(prj.Name)));
-                var factory = new AppImageFactory();
-                var res = await factory.Create(pub, metadata)
-                    .Bind(x => x.ToByteSource())
-                    .Bind(bytes => bytes.WriteTo(outFile.FullName));
-
-                if (res.IsFailure)
-                {
-                    logger.Error("AppImage creation failed: {Error}", res.Error);
-                    Environment.ExitCode = 1;
-                }
-                else
-                {
-                    logger.Information("{OutputFile}", outFile.FullName);
-                }
-            });
+                    var metadata = BuildAppImageMetadata(opt, new DirectoryInfo(prj.DirectoryName!), Maybe<string>.From(System.IO.Path.GetFileNameWithoutExtension(prj.Name)));
+                    var factory = new AppImageFactory();
+                    return await factory.Create(pub, metadata)
+                        .Bind(x => x.ToByteSource())
+                        .Bind(bytes => bytes.WriteTo(outFile.FullName));
+                });
         });
 
         appImageCommand.Add(fromProject);

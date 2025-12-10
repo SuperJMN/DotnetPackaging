@@ -111,53 +111,20 @@ public static class DebCommand
             var opt = optionsBinder.Bind(parseResult);
             var archVal = parseResult.GetValue(arch);
 
-            await ExecutionWrapper.ExecuteWithLogging("deb-from-project", outFile.FullName, async logger =>
-            {
-                var ridResult = RidUtils.ResolveLinuxRid(archVal, "DEB packaging");
-                if (ridResult.IsFailure)
+            await ExecutionWrapper.ExecuteWithPublishedProject(
+                "deb-from-project",
+                outFile.FullName,
+                prj,
+                archVal,
+                "DEB packaging",
+                RidUtils.ResolveLinuxRid,
+                sc, cfg, sf, tr,
+                async (pub, l) =>
                 {
-                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                var publisher = new DotnetPackaging.Publish.DotnetPublisher();
-                var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
-                {
-                    Rid = string.IsNullOrWhiteSpace(archVal) ? Maybe<string>.None : Maybe<string>.From(ridResult.Value),
-                    SelfContained = sc,
-                    Configuration = cfg,
-                    SingleFile = sf,
-                    Trimmed = tr
-                };
-
-                var pubResult = await publisher.Publish(req);
-                if (pubResult.IsFailure)
-                {
-                    logger.Error("Publish failed: {Error}", pubResult.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                using var pub = pubResult.Value;
-                var name = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
-                var built = await DotnetPackaging.Deb.DebFile.From().Container(pub, name).Configure(o => o.From(opt)).Build();
-                if (built.IsFailure)
-                {
-                    logger.Error("Deb creation failed: {Error}", built.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                var write = await DebMixin.ToByteSource(built.Value).WriteTo(outFile.FullName);
-                if (write.IsFailure)
-                {
-                    logger.Error("Could not write deb file: {Error}", write.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-                logger.Information("{OutputFile}", outFile.FullName);
-            });
+                    var name = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
+                    var built = await DotnetPackaging.Deb.DebFile.From().Container(pub, name).Configure(o => o.From(opt)).Build();
+                    return await built.Bind(deb => DebMixin.ToByteSource(deb).WriteTo(outFile.FullName));
+                });
         });
 
         debCommand.Add(fromProject);

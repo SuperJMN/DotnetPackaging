@@ -226,37 +226,45 @@ public static class ExeCommand
             var vendorOpt = parseResult.GetValue(exVendor);
             var opt = optionsBinder.Bind(parseResult);
 
-            await ExecutionWrapper.ExecuteWithLogging("exe-from-project", extrasOutput.FullName, async logger =>
-            {
-                var ridResult = RidUtils.ResolveWindowsRid(archVal, "EXE packaging");
-                if (ridResult.IsFailure)
+            await ExecutionWrapper.ExecuteWithPublishedProject(
+                "exe-from-project",
+                extrasOutput.FullName,
+                prj,
+                archVal,
+                "EXE packaging",
+                RidUtils.ResolveWindowsRid,
+                sc, cfg, sf, tr,
+                async (pub, l) =>
                 {
-                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                    var exeService = new ExePackagingService(l);
+                    
+                    var stubBytes = extrasStub != null 
+                        ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasStub.FullName)) 
+                        : null;
 
-                var exeService = new ExePackagingService(logger);
-                
-                var stubBytes = extrasStub != null 
-                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasStub.FullName)) 
-                    : null;
+                    var logoBytes = extrasLogo != null 
+                        ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasLogo.FullName)) 
+                        : null;
 
-                var logoBytes = extrasLogo != null 
-                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasLogo.FullName)) 
-                    : null;
+                    var projectMetadata = ProjectMetadataReader.Read(prj).Match(m => Maybe<ProjectMetadata>.From(m), error =>
+                    {
+                        l.Warning("Unable to read project metadata from {ProjectFile}: {Error}", prj.FullName, error);
+                        return Maybe<ProjectMetadata>.None;
+                    });
+                    
+                    var result = await exeService.BuildFromDirectory(
+                        pub, 
+                        extrasOutput.Name, 
+                        opt, 
+                        vendorOpt, 
+                        string.IsNullOrWhiteSpace(archVal) ? null : archVal, 
+                        stubBytes, 
+                        logoBytes,
+                        Maybe<string>.From(System.IO.Path.GetFileNameWithoutExtension(prj.Name)), 
+                        projectMetadata);
 
-                var result = await exeService.BuildFromProject(prj, ridResult.Value, sc, cfg, sf, tr, extrasOutput.Name, opt, vendorOpt, stubBytes, logoBytes);
-                if (result.IsFailure)
-                {
-                    logger.Error("EXE from project packaging failed: {Error}", result.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                await result.Value.WriteTo(extrasOutput.DirectoryName ?? Directory.GetCurrentDirectory());
-                logger.Information("{OutputFile}", extrasOutput.FullName);
-            });
+                    return await result.Bind(container => container.WriteTo(extrasOutput.DirectoryName ?? Directory.GetCurrentDirectory()));
+                });
         });
 
         exeCommand.Add(exFromProject);

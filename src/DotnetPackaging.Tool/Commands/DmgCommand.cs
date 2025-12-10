@@ -137,63 +137,43 @@ public static class DmgCommand
             var compressVal = parseResult.GetValue(compress);
             var useDefaultLayout = opt.UseDefaultLayout.GetValueOrDefault(true);
 
-            await ExecutionWrapper.ExecuteWithLogging("dmg-from-project", outFile.FullName, async logger =>
-            {
-                var ridResult = RidUtils.ResolveMacRid(ridVal);
-                if (ridResult.IsFailure)
+            await ExecutionWrapper.ExecuteWithPublishedProject(
+                "dmg-from-project",
+                outFile.FullName,
+                prj,
+                ridVal,
+                "DMG packaging",
+                RidUtils.ResolveMacRid,
+                sc, cfg, sf, tr,
+                async (pub, l) =>
                 {
-                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                var publisher = new DotnetPackaging.Publish.DotnetPublisher();
-                var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
-                {
-                    Rid = Maybe<string>.From(ridResult.Value),
-                    SelfContained = sc,
-                    Configuration = cfg,
-                    SingleFile = sf,
-                    Trimmed = tr
-                };
-
-                var pub = await publisher.Publish(req);
-                if (pub.IsFailure)
-                {
-                    logger.Error("Publish failed: {Error}", pub.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                using var pubValue = pub.Value;
-
-                var inferredName = Path.GetFileNameWithoutExtension(prj.Name);
-                var volName = opt.Name.GetValueOrDefault(inferredName);
+                    var inferredName = Path.GetFileNameWithoutExtension(prj.Name);
+                    var volName = opt.Name.GetValueOrDefault(inferredName);
                 
-                // Prioritize user override, then the detected Assembly Name (via DotnetPublisher), then null (fallback to DmgHfsBuilder guessing)
-                var executableName = opt.ExecutableName.GetValueOrDefault(inferredName);
+                    // Prioritize user override, then the detected Assembly Name (via DotnetPublisher), then null (fallback to DmgHfsBuilder guessing)
+                    var executableName = opt.ExecutableName.GetValueOrDefault(inferredName);
                 
-                var icon = await ResolveIcon(opt, prj.Directory!, logger);
+                    var icon = await ResolveIcon(opt, prj.Directory!, l);
 
-                var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-                try 
-                {
-                    var writeResult = await pubValue.WriteTo(tempDir);
-                    if (writeResult.IsFailure)
+                    var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+                    try 
                     {
-                        logger.Error("Failed to write publish output to temp dir: {Error}", writeResult.Error);
-                        Environment.ExitCode = 1;
-                        return;
-                    }
+                        var writeResult = await pub.WriteTo(tempDir);
+                        if (writeResult.IsFailure)
+                        {
+                            l.Error("Failed to write publish output to temp dir: {Error}", writeResult.Error);
+                            Environment.ExitCode = 1;
+                            return Result.Failure("Failed to write publish output to temp dir");
+                        }
 
-                    await DmgHfsBuilder.Create(tempDir, outFile.FullName, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon, executableName: executableName);
-                }
-                finally
-                {
-                    if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
-                }
-                logger.Information("Success");
-            });
+                        await DmgHfsBuilder.Create(tempDir, outFile.FullName, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon, executableName: executableName);
+                        return Result.Success();
+                    }
+                    finally
+                    {
+                        if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+                    }
+                });
         });
 
         dmgCommand.Add(fromProject);

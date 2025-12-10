@@ -211,125 +211,143 @@ public static class FlatpakCommand
             var opt = binder.Bind(parseResult);
             var fopt = fpBinder.Bind(parseResult);
 
-            await ExecutionWrapper.ExecuteWithLogging("flatpak-from-project", outFile.FullName, async logger =>
-            {
-                var publisher = new DotnetPackaging.Publish.DotnetPublisher(Maybe<ILogger>.From(logger));
-                var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
+            await ExecutionWrapper.ExecuteWithPublishedProject(
+                "flatpak-from-project",
+                outFile.FullName,
+                prj,
+                null, // Architecture is handled inside due to Flatpak specifics? No, we can pass null and let RidUtils fail?
+                // Wait, FlatpakCommand ignores the arch arg for RID resolution?
+                // Original code: var ridResult = RidUtils.ResolveLinuxRid(archVal, "AppImage packaging"); <-- Wait, that was AppImage.
+                // Original Flatpak code: 
+                // var publisher = new DotnetPackaging.Publish.DotnetPublisher(Maybe<ILogger>.From(logger));
+                // var req = ... { SelfContained = false, ... } <-- It does NOT set RID?
+                // It relies on implicit RID or portable publish?
+                // Let's re-read the original code.
+                // Req: SelfContained=false, Configuration="Release". Rid is NOT set in ProjectPublishRequest in original code!
+                // It publishes as portable?
+                // "var pub = await publisher.Publish(req);"
+                // Then it does "BuildUtils.GetArch(setup, execRes.Value)" which inspects the binary?
+                
+                // If I use ExecuteWithPublishedProject, it forces RID resolution if I pass one.
+                // If I pass null for architecture, RidUtils.ResolveLinuxRid(null) will return "linux-x64" or similar if on Linux, or fail if on Windows.
+                // BUT FlatpakCommand original code DOES NOT CALL RidUtils.ResolveLinuxRid.
+                // It blindly publishes without RID.
+                // This means it produces a Framework-dependent build?
+                // Checking line 218: SelfContained = false.
+                
+                // If I force a RID, it might change behavior (e.g. self-contained true/false).
+                // My helper sets RID if resolved.
+                // Helpers ProjectPublishRequest: Rid = architectureResult.Value.
+                // And SelfContained = selfContained arg.
+                
+                // FlatpakCommand passes "false" for self-contained validation?
+                // The Flatpak logic seems to be: Publish (portable?), then inspect binary to find Arch, then build Flatpak.
+                
+                // To support this, I might need to allow skipping RID resolution in the wrapper or pass a "neutral" architecture?
+                // Or maybe I should just use the wrapper but pass a custom ridResolver that always returns success/empty?
+                // But the wrapper uses the result of ridResolver to set the RID in the request.
+                
+                // If I want to match original behavior EXACTLY (no RID), I need the wrapper to support "No RID".
+                // RidUtils.ResolveLinuxRid returns a string.
+                // If I pass null to wrapper's architecture, and use a dummy resolver?
+                
+                // Alternative: The wrapper *requires* a ridResolver.
+                // If I provide `(a, c) => Result.Success("linux-x64")` it will force linux-x64.
+                // Original code didn't force RID.
+                
+                // Let's look at `ExecuteWithPublishedProject` again.
+                // `Rid = string.IsNullOrWhiteSpace(architecture) ? Maybe<string>.None : Maybe<string>.From(ridResult.Value)`
+                // If I pass `architecture: null`, then `Rid` becomes `None`.
+                // BUT, `ridResult` is calculated first: `var ridResult = ridResolver(architecture, commandName);`
+                // And checked: `if (ridResult.IsFailure) ... return;`
+                
+                // So if I pass `architecture: null`, the resolver MUST succeed.
+                // `RidUtils.ResolveLinuxRid(null)` fails on Windows ("--arch required...").
+                // But Flatpak command is cross-platform tool!
+                
+                // So I need a "DoNothing" resolver?
+                // `(arch, ctx) => Result.Success("")`
+                // Then `Rid` becomes `None` (if arch is null) OR `From("")`.
+                // Wait. `Rid = string.IsNullOrWhiteSpace(architecture) ? ...` uses the INPUT architecture string.
+                // If input `architecture` is null, `Rid` is `None`.
+                // So I just need the resolver to NOT fail.
+                
+                // So I can pass `(_, _) => Result.Success("")`.
+                
+                // Let's verify leak fix.
+                // I need to ensure `tmpAppDir` and `tmpRepoDir` are deleted.
+                // Using `DisposableDirectory`? I don't see one in the codebase.
+                // I'll implement `try...finally` with a local `DeleteRecursively` helper or just `Directory.Delete`.
+                
+                "flatpak-packaging",
+                (_, _) => Result.Success("ignored"), // Bypass RID resolution to match original behavior (portable publish)
+                false, // SelfContained = false
+                "Release",
+                false, // SingleFile
+                false, // Trimmed
+                async (pub, l) =>
                 {
-                    SelfContained = false,
-                    Configuration = "Release",
-                    SingleFile = false,
-                    Trimmed = false
-                };
+                    var root = pub;
+                    var setup = new FromDirectoryOptions();
+                    setup.From(opt);
+                    setup.IsTerminal = opt.IsTerminal; // IsTerminal was missing in original From mapping? No, checked standard binder.
 
-                var pub = await publisher.Publish(req);
-                if (pub.IsFailure)
-                {
-                    logger.Error("Failed publishing project {Project}: {Error}", prj.FullName, pub.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                    var execRes = await BuildUtils.GetExecutable(root, setup, l);
+                    if (execRes.IsFailure) return Result.Failure(execRes.Error);
+                    
+                    var archRes = await BuildUtils.GetArch(setup, execRes.Value);
+                    if (archRes.IsFailure) return Result.Failure(archRes.Error);
 
-                using var pubValue = pub.Value;
-                var root = pubValue;
-                var setup = new FromDirectoryOptions();
-                setup.From(opt);
+                    var projectName = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
+                    var pm = await BuildUtils.CreateMetadata(setup, root, archRes.Value, execRes.Value, opt.IsTerminal.GetValueOrDefault(false), Maybe<string>.From(projectName), l);
+                    var planRes = await new FlatpakFactory().BuildPlan(root, pm, fopt);
+                    if (planRes.IsFailure) return Result.Failure(planRes.Error);
 
-                var execRes = await BuildUtils.GetExecutable(root, setup, logger);
-                if (execRes.IsFailure)
-                {
-                    logger.Error("Executable discovery failed: {Error}", execRes.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                    var plan = planRes.Value;
 
-                var archRes = await BuildUtils.GetArch(setup, execRes.Value);
-                if (archRes.IsFailure)
-                {
-                    logger.Error("Architecture detection failed: {Error}", archRes.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                    if (!useSystemBundler)
+                    {
+                        var internalBytes = FlatpakBundle.CreateOstree(plan);
+                        return await internalBytes.Bind(bytes => bytes.WriteTo(outFile.FullName));
+                    }
 
-                var projectName = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
-                var pm = await BuildUtils.CreateMetadata(setup, root, archRes.Value, execRes.Value, opt.IsTerminal.GetValueOrDefault(false), Maybe<string>.From(projectName), logger);
-                var planRes = await new FlatpakFactory().BuildPlan(root, pm, fopt);
-                if (planRes.IsFailure)
-                {
-                    logger.Error("Flatpak plan generation failed: {Error}", planRes.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                    // System bundler with cleanup
+                    var tmpAppDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-app-" + Guid.NewGuid());
+                    var tmpRepoDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-repo-" + Guid.NewGuid());
+                    
+                    try
+                    {
+                        Directory.CreateDirectory(tmpAppDir);
+                        Directory.CreateDirectory(tmpRepoDir);
 
-                var plan = planRes.Value;
+                        var write = await plan.ToRootContainer().WriteTo(tmpAppDir);
+                        if (write.IsFailure) return Result.Failure(write.Error);
 
-                if (!useSystemBundler)
-                {
-                    var internalBytes = FlatpakBundle.CreateOstree(plan);
-                if (internalBytes.IsFailure)
-                {
-                    logger.Error("Internal bundler failed: {Error}", internalBytes.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                        ProcessUtils.MakeExecutable(System.IO.Path.Combine(tmpAppDir, "files", "bin", plan.CommandName));
+                        ProcessUtils.MakeExecutable(System.IO.Path.Combine(tmpAppDir, "files", plan.ExecutableTargetPath.Replace('/', System.IO.Path.DirectorySeparatorChar)));
 
-                var wr = await internalBytes.Value.WriteTo(outFile.FullName);
-                if (wr.IsFailure)
-                {
-                    logger.Error("Failed writing bundle: {Error}", wr.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                        var effArch = fopt.ArchitectureOverride.GetValueOrDefault(plan.Metadata.Architecture).PackagePrefix;
+                        var cmd = fopt.CommandOverride.GetValueOrDefault(plan.CommandName);
+                        var finishArgs = $"build-finish \"{tmpAppDir}\" --command={cmd} {string.Join(" ", fopt.Shared.Select(s => $"--share={s}"))} {string.Join(" ", fopt.Sockets.Select(s => $"--socket={s}"))} {string.Join(" ", fopt.Devices.Select(d => $"--device={d}"))} {string.Join(" ", fopt.Filesystems.Select(f => $"--filesystem={f}"))}";
+                        
+                        var finish = ProcessUtils.Run("flatpak", finishArgs);
+                        if (finish.IsFailure) return Result.Failure(finish.Error);
 
-                    logger.Information("{OutputFile}", outFile.FullName);
-                    return;
-                }
+                        var export = ProcessUtils.Run("flatpak", $"build-export --arch={effArch} \"{tmpRepoDir}\" \"{tmpAppDir}\" {fopt.Branch}");
+                        if (export.IsFailure) return Result.Failure(export.Error);
 
-                var tmpAppDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-app-" + Guid.NewGuid());
-                var tmpRepoDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-repo-" + Guid.NewGuid());
-                Directory.CreateDirectory(tmpAppDir);
-                Directory.CreateDirectory(tmpRepoDir);
+                        var bundle = ProcessUtils.Run("flatpak", $"build-bundle \"{tmpRepoDir}\" \"{outFile.FullName}\" {plan.AppId} {fopt.Branch} --arch={effArch}");
+                        if (bundle.IsFailure) return Result.Failure(bundle.Error);
 
-                var write = await plan.ToRootContainer().WriteTo(tmpAppDir);
-                if (write.IsFailure)
-                {
-                    logger.Error("Failed materializing Flatpak plan: {Error}", write.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                ProcessUtils.MakeExecutable(System.IO.Path.Combine(tmpAppDir, "files", "bin", plan.CommandName));
-                ProcessUtils.MakeExecutable(System.IO.Path.Combine(tmpAppDir, "files", plan.ExecutableTargetPath.Replace('/', System.IO.Path.DirectorySeparatorChar)));
-
-                var effArch = fopt.ArchitectureOverride.GetValueOrDefault(plan.Metadata.Architecture).PackagePrefix;
-                var cmd = fopt.CommandOverride.GetValueOrDefault(plan.CommandName);
-                var finishArgs = $"build-finish \"{tmpAppDir}\" --command={cmd} {string.Join(" ", fopt.Shared.Select(s => $"--share={s}"))} {string.Join(" ", fopt.Sockets.Select(s => $"--socket={s}"))} {string.Join(" ", fopt.Devices.Select(d => $"--device={d}"))} {string.Join(" ", fopt.Filesystems.Select(f => $"--filesystem={f}"))}";
-                var finish = ProcessUtils.Run("flatpak", finishArgs);
-                if (finish.IsFailure)
-                {
-                    logger.Error("flatpak build-finish failed: {Error}", finish.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                var export = ProcessUtils.Run("flatpak", $"build-export --arch={effArch} \"{tmpRepoDir}\" \"{tmpAppDir}\" {fopt.Branch}");
-                if (export.IsFailure)
-                {
-                    logger.Error("flatpak build-export failed: {Error}", export.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                var bundle = ProcessUtils.Run("flatpak", $"build-bundle \"{tmpRepoDir}\" \"{outFile.FullName}\" {plan.AppId} {fopt.Branch} --arch={effArch}");
-                if (bundle.IsFailure)
-                {
-                    logger.Error("flatpak build-bundle failed: {Error}", bundle.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                logger.Information("{OutputFile}", outFile.FullName);
-            });
+                        l.Information("{OutputFile}", outFile.FullName);
+                        return Result.Success();
+                    }
+                    finally
+                    {
+                        if (Directory.Exists(tmpAppDir)) Directory.Delete(tmpAppDir, true);
+                        if (Directory.Exists(tmpRepoDir)) Directory.Delete(tmpRepoDir, true);
+                    }
+                });
         });
 
         flatpakCommand.Add(fromProjectCmd);

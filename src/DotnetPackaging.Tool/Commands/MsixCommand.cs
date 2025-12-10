@@ -102,7 +102,8 @@ public static class MsixCommand
                     return;
                 }
 
-                var result = await DotnetPackaging.Msix.Msix.FromDirectory(pub.Value, Maybe<Serilog.ILogger>.From(logger))
+                using var directory = pub.Value;
+                var result = await DotnetPackaging.Msix.Msix.FromDirectory(directory, Maybe<Serilog.ILogger>.From(logger))
                     .Bind(bytes => bytes.WriteTo(outFile.FullName));
                 
                 if (result.IsFailure)
