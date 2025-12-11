@@ -9,8 +9,9 @@ using System.IO.Abstractions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
 using RuntimeArchitecture = System.Runtime.InteropServices.Architecture;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using System.IO;
+using System.Linq;
 using Path = System.IO.Path;
 
 namespace DotnetPackaging.Exe;
@@ -97,7 +98,7 @@ public sealed class ExePackagingService
         return Build(request);
     }
 
-    public async Task<Result<IContainer>> BuildFromProject(
+    public async Task<Result<IPackagingSession>> BuildFromProject(
         FileInfo projectFile,
         string? runtimeIdentifier,
         bool selfContained,
@@ -122,14 +123,14 @@ public sealed class ExePackagingService
         var publishResult = await publisher.Publish(publishRequest);
         if (publishResult.IsFailure)
         {
-            return Result.Failure<IContainer>(publishResult.Error);
+            return Result.Failure<IPackagingSession>(publishResult.Error);
         }
 
-        using var pub = publishResult.Value;
+        var disposables = new CompositeDisposable { publishResult.Value };
         var projectMetadata = ReadProjectMetadata(projectFile);
 
         var request = new ExePackagingRequest(
-            pub,
+            publishResult.Value,
             outputName,
             options,
             ToMaybe(vendor),
@@ -139,7 +140,16 @@ public sealed class ExePackagingService
             projectMetadata,
             ToMaybe(setupLogo));
 
-        return await Build(request);
+        var buildResult = await Build(request);
+        if (buildResult.IsFailure)
+        {
+            disposables.Dispose();
+            return Result.Failure<IPackagingSession>(buildResult.Error);
+        }
+
+        var packages = buildResult.Value.Resources.Select(Result.Success<INamedByteSource>).ToObservable();
+
+        return Result.Success<IPackagingSession>(new PackagingSession(packages, disposables));
     }
 
     private Maybe<ProjectMetadata> ReadProjectMetadata(FileInfo projectFile)

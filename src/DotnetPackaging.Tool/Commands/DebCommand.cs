@@ -119,7 +119,6 @@ public static class DebCommand
                 outFile.FullName,
                 prj,
                 archVal,
-                "DEB packaging",
                 RidUtils.ResolveLinuxRid,
                 sc, cfg, sf, tr,
                 async (pub, l) =>
@@ -135,7 +134,12 @@ public static class DebCommand
                             }
                         })
                         .Build();
-                    return await built.Bind(deb => DebMixin.ToByteSource(deb).WriteTo(outFile.FullName));
+
+                    return built.Map(deb =>
+                    {
+                        var package = new Resource(outFile.Name, DebMixin.ToByteSource(deb));
+                        return PackagingArtifacts.FromPackage(package);
+                    });
                 });
         });
 

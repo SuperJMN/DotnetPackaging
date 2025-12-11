@@ -9,6 +9,7 @@ using DotnetPackaging.Tool;
 using DotnetPackaging;
 using Zafiro.DivineBytes;
 using Zafiro.CSharpFunctionalExtensions;
+using System.Reactive.Disposables;
 
 namespace DotnetPackaging.Tool.Commands;
 
@@ -221,7 +222,6 @@ public static class FlatpakCommand
 
                 
                 parseResult.GetValue(fpArch) ?? "x64",
-                "flatpak-packaging",
                 RidUtils.ResolveLinuxRid,
                 false, // SelfContained = false
                 "Release",
@@ -240,27 +240,32 @@ public static class FlatpakCommand
                     setup.WithIsTerminal(opt.IsTerminal.GetValueOrDefault(false));
 
                     var execRes = await BuildUtils.GetExecutable(root, setup, l);
-                    if (execRes.IsFailure) return Result.Failure(execRes.Error);
+                    if (execRes.IsFailure) return Result.Failure<PackagingArtifacts>(execRes.Error);
                     
                     var archRes = await BuildUtils.GetArch(setup, execRes.Value);
-                    if (archRes.IsFailure) return Result.Failure(archRes.Error);
+                    if (archRes.IsFailure) return Result.Failure<PackagingArtifacts>(archRes.Error);
 
                     var projectName = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
                     var pm = await BuildUtils.CreateMetadata(setup, root, archRes.Value, execRes.Value, opt.IsTerminal.GetValueOrDefault(false), Maybe<string>.From(projectName), l);
                     var planRes = await new FlatpakFactory().BuildPlan(root, pm, fopt);
-                    if (planRes.IsFailure) return Result.Failure(planRes.Error);
+                    if (planRes.IsFailure) return Result.Failure<PackagingArtifacts>(planRes.Error);
 
                     var plan = planRes.Value;
 
                     if (!useSystemBundler)
                     {
                         var internalBytes = FlatpakBundle.CreateOstree(plan);
-                        return await internalBytes.Bind(bytes => bytes.WriteTo(outFile.FullName));
+                        return internalBytes.Map(bytes =>
+                        {
+                            var package = new Resource(outFile.Name, bytes);
+                            return PackagingArtifacts.FromPackage(package);
+                        });
                     }
 
                     // System bundler with cleanup
                     var tmpAppDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-app-" + Guid.NewGuid());
                     var tmpRepoDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-repo-" + Guid.NewGuid());
+                    var bundlePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dp-flatpak-{Guid.NewGuid():N}-{outFile.Name}");
                     
                     try
                     {
@@ -268,7 +273,7 @@ public static class FlatpakCommand
                         Directory.CreateDirectory(tmpRepoDir);
 
                         var write = await plan.ToRootContainer().WriteTo(tmpAppDir);
-                        if (write.IsFailure) return Result.Failure(write.Error);
+                        if (write.IsFailure) return Result.Failure<PackagingArtifacts>(write.Error);
 
                         ProcessUtils.MakeExecutable(System.IO.Path.Combine(tmpAppDir, "files", "bin", plan.CommandName));
                         ProcessUtils.MakeExecutable(System.IO.Path.Combine(tmpAppDir, "files", plan.ExecutableTargetPath.Replace('/', System.IO.Path.DirectorySeparatorChar)));
@@ -278,16 +283,25 @@ public static class FlatpakCommand
                         var finishArgs = $"build-finish \"{tmpAppDir}\" --command={cmd} {string.Join(" ", fopt.Shared.Select(s => $"--share={s}"))} {string.Join(" ", fopt.Sockets.Select(s => $"--socket={s}"))} {string.Join(" ", fopt.Devices.Select(d => $"--device={d}"))} {string.Join(" ", fopt.Filesystems.Select(f => $"--filesystem={f}"))}";
                         
                         var finish = ProcessUtils.Run("flatpak", finishArgs);
-                        if (finish.IsFailure) return Result.Failure(finish.Error);
+                        if (finish.IsFailure) return Result.Failure<PackagingArtifacts>(finish.Error);
 
                         var export = ProcessUtils.Run("flatpak", $"build-export --arch={effArch} \"{tmpRepoDir}\" \"{tmpAppDir}\" {fopt.Branch}");
-                        if (export.IsFailure) return Result.Failure(export.Error);
+                        if (export.IsFailure) return Result.Failure<PackagingArtifacts>(export.Error);
 
-                        var bundle = ProcessUtils.Run("flatpak", $"build-bundle \"{tmpRepoDir}\" \"{outFile.FullName}\" {plan.AppId} {fopt.Branch} --arch={effArch}");
-                        if (bundle.IsFailure) return Result.Failure(bundle.Error);
+                        var bundle = ProcessUtils.Run("flatpak", $"build-bundle \"{tmpRepoDir}\" \"{bundlePath}\" {plan.AppId} {fopt.Branch} --arch={effArch}");
+                        if (bundle.IsFailure) return Result.Failure<PackagingArtifacts>(bundle.Error);
 
-                        l.Information("{OutputFile}", outFile.FullName);
-                        return Result.Success();
+                        var byteSource = ByteSource.FromStreamFactory(() => File.OpenRead(bundlePath));
+                        var package = new Resource(outFile.Name, byteSource);
+                        var cleanup = Disposable.Create(() =>
+                        {
+                            if (File.Exists(bundlePath))
+                            {
+                                File.Delete(bundlePath);
+                            }
+                        });
+
+                        return Result.Success(PackagingArtifacts.FromPackage(package, cleanup));
                     }
                     finally
                     {

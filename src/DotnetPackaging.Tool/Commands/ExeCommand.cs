@@ -6,6 +6,7 @@ using DotnetPackaging.Exe;
 using Serilog;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
+using System.Linq;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
 using DotnetPackaging.Tool;
@@ -236,7 +237,6 @@ public static class ExeCommand
                 extrasOutput.FullName,
                 prj,
                 archVal,
-                "EXE packaging",
                 RidUtils.ResolveWindowsRid,
                 sc, cfg, sf, tr,
                 async (pub, l) =>
@@ -254,19 +254,27 @@ public static class ExeCommand
                     var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
                     
                     var ridResult = RidUtils.ResolveWindowsRid(archVal, "EXE packaging");
-                    
+                    if (ridResult.IsFailure)
+                    {
+                        return Result.Failure<PackagingArtifacts>(ridResult.Error);
+                    }
+
                     var result = await exeService.BuildFromDirectory(
-                        pub, 
-                        extrasOutput.Name, 
-                        opt, 
-                        vendorOpt, 
-                        ridResult.Value, 
-                        stubBytes, 
+                        pub,
+                        extrasOutput.Name,
+                        opt,
+                        vendorOpt,
+                        ridResult.Value,
+                        stubBytes,
                         logoBytes,
-                        Maybe<string>.From(System.IO.Path.GetFileNameWithoutExtension(prj.Name)), 
+                        Maybe<string>.From(System.IO.Path.GetFileNameWithoutExtension(prj.Name)),
                         projectMetadata);
 
-                    return await result.Bind(container => container.WriteTo(extrasOutput.DirectoryName ?? Directory.GetCurrentDirectory()));
+                    return result.Map(container =>
+                    {
+                        var packages = container.Resources.Select(Result.Success<INamedByteSource>);
+                        return PackagingArtifacts.FromPackages(packages);
+                    });
                 });
         });
 

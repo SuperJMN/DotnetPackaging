@@ -6,6 +6,7 @@ using DotnetPackaging.Dmg;
 using Serilog;
 using Zafiro.DivineBytes;
 using Path = System.IO.Path;
+using System.Reactive.Disposables;
 
 namespace DotnetPackaging.Tool.Commands;
 
@@ -144,7 +145,6 @@ public static class DmgCommand
                 outFile.FullName,
                 prj,
                 ridVal,
-                "DMG packaging",
                 RidUtils.ResolveMacRid,
                 sc, cfg, sf, tr,
                 async (pub, l) =>
@@ -158,18 +158,26 @@ public static class DmgCommand
                     var icon = await ResolveIcon(opt, prj.Directory!, l);
 
                     var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+                    var dmgPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dp-dmg-{Guid.NewGuid():N}-{outFile.Name}");
                     try 
                     {
                         var writeResult = await pub.WriteTo(tempDir);
                         if (writeResult.IsFailure)
                         {
                             l.Error("Failed to write publish output to temp dir: {Error}", writeResult.Error);
-                            Environment.ExitCode = 1;
-                            return Result.Failure("Failed to write publish output to temp dir");
+                            return Result.Failure<PackagingArtifacts>("Failed to write publish output to temp dir");
                         }
 
-                        await DmgHfsBuilder.Create(tempDir, outFile.FullName, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon, executableName: executableName);
-                        return Result.Success();
+                        await DmgHfsBuilder.Create(tempDir, dmgPath, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon, executableName: executableName);
+                        var package = new Resource(outFile.Name, ByteSource.FromStreamFactory(() => File.OpenRead(dmgPath)));
+                        var cleanup = Disposable.Create(() =>
+                        {
+                            if (File.Exists(dmgPath))
+                            {
+                                File.Delete(dmgPath);
+                            }
+                        });
+                        return Result.Success(PackagingArtifacts.FromPackage(package, cleanup));
                     }
                     finally
                     {

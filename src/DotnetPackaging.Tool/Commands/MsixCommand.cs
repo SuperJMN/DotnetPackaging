@@ -75,47 +75,22 @@ public static class MsixCommand
             var outFile = parseResult.GetValue(outMsix)!;
             var archVal = parseResult.GetValue(arch);
 
-            await ExecutionWrapper.ExecuteWithLogging("msix-from-project", outFile.FullName, async logger =>
-            {
-                var ridResult = RidUtils.ResolveWindowsRid(archVal, "MSIX packaging");
-                if (ridResult.IsFailure)
+            await ExecutionWrapper.ExecuteWithPublishedProject(
+                "msix-from-project",
+                outFile.FullName,
+                prj,
+                archVal,
+                RidUtils.ResolveWindowsRid,
+                sc, cfg, sf, tr,
+                (pub, logger) =>
                 {
-                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                var publisher = new DotnetPackaging.Publish.DotnetPublisher();
-                var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
-                {
-                    Rid = string.IsNullOrWhiteSpace(archVal) ? Maybe<string>.None : Maybe<string>.From(ridResult.Value),
-                    SelfContained = sc,
-                    Configuration = cfg,
-                    SingleFile = sf,
-                    Trimmed = tr
-                };
-                var pub = await publisher.Publish(req);
-                if (pub.IsFailure)
-                {
-                    logger.Error("Publish failed: {Error}", pub.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                using var directory = pub.Value;
-                var result = await DotnetPackaging.Msix.Msix.FromDirectory(directory, Maybe<Serilog.ILogger>.From(logger))
-                    .Bind(bytes => bytes.WriteTo(outFile.FullName));
-                
-                if (result.IsFailure)
-                {
-                    logger.Error("MSIX creation failed: {Error}", result.Error);
-                    Environment.ExitCode = 1;
-                }
-                else
-                {
-                    logger.Information("Success");
-                }
-            });
+                    var msixResult = DotnetPackaging.Msix.Msix.FromDirectory(pub, Maybe<Serilog.ILogger>.From(logger));
+                    return Task.FromResult(msixResult.Map(bytes =>
+                    {
+                        var package = new Resource(outFile.Name, bytes);
+                        return PackagingArtifacts.FromPackage(package);
+                    }));
+                });
         });
         msixCommand.Add(fromProject);
     }

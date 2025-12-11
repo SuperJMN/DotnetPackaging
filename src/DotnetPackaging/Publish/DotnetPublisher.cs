@@ -1,4 +1,5 @@
 using Zafiro.Commands;
+using Zafiro.DivineBytes;
 using Zafiro.Mixins;
 using Result = CSharpFunctionalExtensions.Result;
 

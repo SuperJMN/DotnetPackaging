@@ -7,6 +7,7 @@ using DotnetPackaging.Tool;
 using System.IO.Abstractions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
+using System.Reactive.Disposables;
 
 namespace DotnetPackaging.Tool.Commands;
 public static class RpmCommand
@@ -132,7 +133,6 @@ public static class RpmCommand
                 outFile.FullName,
                 prj,
                 archVal,
-                "RPM packaging",
                 RidUtils.ResolveLinuxRid,
                 sc, cfg, sf, tr,
                 async (pub, l) =>
@@ -140,19 +140,28 @@ public static class RpmCommand
                     var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
                     var name = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
                     var builder = RpmFile.From().Container(pub, name);
-                    return await builder.Configure(o =>
+                    var rpmResult = await builder.Configure(o =>
                         {
                             o.From(opt);
                             if (projectMetadata.HasValue)
                             {
                                 o.WithProjectMetadata(projectMetadata.Value);
                             }
-                        }).Build()
-                        .Bind(rpmFile => 
+                        }).Build();
+
+                    return rpmResult.Map(rpmFile =>
+                    {
+                        var rpmSource = ByteSource.FromStreamFactory(() => File.OpenRead(rpmFile.FullName));
+                        var package = new Resource(outFile.Name, rpmSource);
+                        var cleanup = Disposable.Create(() =>
                         {
-                            var rpmSource = ByteSource.FromStreamFactory(() => File.OpenRead(rpmFile.FullName));
-                            return rpmSource.WriteTo(outFile.FullName);
+                            if (File.Exists(rpmFile.FullName))
+                            {
+                                File.Delete(rpmFile.FullName);
+                            }
                         });
+                        return PackagingArtifacts.FromPackage(package, cleanup);
+                    });
                 });
         });
 

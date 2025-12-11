@@ -1,10 +1,13 @@
 using CSharpFunctionalExtensions;
+using DotnetPackaging;
 using DotnetPackaging.Publish;
 using Zafiro.DivineBytes;
 using System.IO;
 using System.Diagnostics;
 using Serilog;
 using Serilog.Context;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 
 namespace DotnetPackaging.Tool.Commands;
 
@@ -34,13 +37,12 @@ public static class ExecutionWrapper
         string outputFile,
         FileInfo projectFile,
         string? architecture,
-        string platformNameForRid,
         Func<string?, string, Result<string>> ridResolver,
         bool selfContained,
         string configuration,
         bool singleFile,
         bool trimmed,
-        Func<IDisposableContainer, ILogger, Task<Result>> packageAction)
+        Func<IDisposableContainer, ILogger, Task<Result<PackagingArtifacts>>> packageAction)
     {
          await ExecuteWithLogging(commandName, outputFile, async logger =>
          {
@@ -70,18 +72,43 @@ public static class ExecutionWrapper
                  return;
              }
 
-             using var pub = pubResult.Value;
-             var result = await packageAction(pub, logger);
-             
-             if (result.IsFailure)
+             var artifactsResult = await packageAction(pubResult.Value, logger);
+             if (artifactsResult.IsFailure)
              {
-                 logger.Error("Packaging failed: {Error}", result.Error);
+                 logger.Error("Packaging failed: {Error}", artifactsResult.Error);
+                 pubResult.Value.Dispose();
                  Environment.ExitCode = 1;
+                 return;
              }
-             else
+
+             var composite = new CompositeDisposable { pubResult.Value };
+             foreach (var disposable in artifactsResult.Value.Disposables)
              {
-                 logger.Information("{OutputFile}", outputFile);
+                 composite.Add(disposable);
              }
+
+             using var session = new PackagingSession(artifactsResult.Value.Packages, composite);
+             var package = await session.Packages
+                 .Take(1)
+                 .DefaultIfEmpty(Result.Failure<INamedByteSource>("No packages were produced"))
+                 .FirstAsync();
+
+             if (package.IsFailure)
+             {
+                 logger.Error("Packaging failed: {Error}", package.Error);
+                 Environment.ExitCode = 1;
+                 return;
+             }
+
+             var writeResult = await package.Value.WriteTo(outputFile);
+             if (writeResult.IsFailure)
+             {
+                 logger.Error("Failed to persist package: {Error}", writeResult.Error);
+                 Environment.ExitCode = 1;
+                 return;
+             }
+
+             logger.Information("{OutputFile}", outputFile);
          });
     }
 }

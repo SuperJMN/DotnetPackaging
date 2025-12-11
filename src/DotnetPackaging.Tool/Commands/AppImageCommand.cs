@@ -296,17 +296,21 @@ public static class AppImageCommand
                 outFile.FullName,
                 prj,
                 archVal,
-                "AppImage packaging",
                 RidUtils.ResolveLinuxRid,
                 sc, cfg, sf, tr,
                 async (pub, l) =>
                 {
                     var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
                     var metadataResult = await BuildAppImageMetadata(opt, pub, projectMetadata, l);
-                    return await metadataResult
+                    var appImageResult = await metadataResult
                         .Bind(metadata => new AppImageFactory().Create(pub, metadata))
-                        .Bind(x => x.ToByteSource())
-                        .Bind(bytes => bytes.WriteTo(outFile.FullName));
+                        .Bind(x => x.ToByteSource());
+
+                    return appImageResult.Map(bytes =>
+                    {
+                        var package = new Resource(outFile.Name, bytes);
+                        return PackagingArtifacts.FromPackage(package);
+                    });
                 });
         });
 
