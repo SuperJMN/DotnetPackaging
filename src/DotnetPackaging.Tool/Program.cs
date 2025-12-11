@@ -19,7 +19,6 @@ static class Program
         Environment.ExitCode = 0;
         var verboseEnabled = IsVerboseRequested(args);
         SetVerboseEnvironment(verboseEnabled);
-        var normalizedArgs = NormalizeMetadataAliases(args);
 
         var levelSwitch = new LoggingLevelSwitch(verboseEnabled ? LogEventLevel.Debug : LogEventLevel.Information);
 
@@ -53,7 +52,7 @@ static class Program
         rootCommand.Add(MsixCommand.GetCommand());
         rootCommand.Add(ExeCommand.GetCommand());
         
-        var parseResult = rootCommand.Parse(normalizedArgs, configuration: null);
+        var parseResult = rootCommand.Parse(args, configuration: null);
         var exitCode = await parseResult.InvokeAsync(parseResult.InvocationConfiguration, CancellationToken.None);
         var finalExitCode = Environment.ExitCode != 0 ? Environment.ExitCode : exitCode;
         Environment.ExitCode = finalExitCode;
@@ -95,43 +94,6 @@ static class Program
     private static void SetVerboseEnvironment(bool verbose)
     {
         Environment.SetEnvironmentVariable(VerboseEnvVar, verbose ? "1" : "0");
-    }
-
-    private static string[] NormalizeMetadataAliases(string[] args)
-    {
-        if (args.Length == 0)
-        {
-            return args;
-        }
-
-        var replacements = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["--productName"] = "--application-name",
-            ["--appName"] = "--application-name",
-            ["--company"] = "--vendor"
-        };
-
-        var normalized = new string[args.Length];
-        for (var i = 0; i < args.Length; i++)
-        {
-            var token = args[i];
-            if (token.StartsWith("--", StringComparison.Ordinal))
-            {
-                var separatorIndex = token.IndexOf('=');
-                var key = separatorIndex >= 0 ? token[..separatorIndex] : token;
-                if (replacements.TryGetValue(key, out var replacement))
-                {
-                    normalized[i] = separatorIndex >= 0
-                        ? string.Concat(replacement, token[separatorIndex..])
-                        : replacement;
-                    continue;
-                }
-            }
-
-            normalized[i] = token;
-        }
-
-        return normalized;
     }
 
     private static void AddSuggestDirective(RootCommand rootCommand)

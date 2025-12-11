@@ -92,6 +92,8 @@ public static class DmgCommand
 
         // Reuse metadata options to get volume name from --application-name if present
         var appName = new Option<string>("--application-name") { Description = "Application name / volume name", Required = false };
+        appName.Aliases.Add("--productName");
+        appName.Aliases.Add("--appName");
         var dmgIconOption = new Option<IIcon?>("--icon") { Description = "Path to the application icon" };
         dmgIconOption.CustomParser = OptionsBinder.GetIcon;
 

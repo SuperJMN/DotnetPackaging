@@ -47,6 +47,8 @@ public static class ExeCommand
             Description = "Application name",
             Required = false
         };
+        exAppName.Aliases.Add("--productName");
+        exAppName.Aliases.Add("--appName");
         var exComment = new Option<string>("--comment")
         {
             Description = "Comment / long description",
@@ -67,6 +69,7 @@ public static class ExeCommand
             Description = "Vendor/Publisher",
             Required = false
         };
+        exVendor.Aliases.Add("--company");
         var exExecutableName = new Option<string>("--executable-name")
         {
             Description = "Name of your application's executable",

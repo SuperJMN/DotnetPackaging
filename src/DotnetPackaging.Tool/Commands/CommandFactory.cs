@@ -29,6 +29,8 @@ public static class CommandFactory
             Description = "Application name",
             Required = false
         };
+        appName.Aliases.Add("--productName");
+        appName.Aliases.Add("--appName");
         var startupWmClass = new Option<string>("--wm-class")
         {
             Description = "Startup WM Class",

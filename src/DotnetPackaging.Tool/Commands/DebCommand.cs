@@ -59,6 +59,8 @@ public static class DebCommand
         var output = new Option<FileInfo>("--output") { Description = "Destination path for the generated .deb", Required = true };
 
         var appName = new Option<string>("--application-name") { Description = "Application name", Required = false };
+        appName.Aliases.Add("--productName");
+        appName.Aliases.Add("--appName");
         var startupWmClass = new Option<string>("--wm-class") { Description = "Startup WM Class", Required = false };
         var mainCategory = new Option<MainCategory?>("--main-category") { Description = "Main category", Required = false, Arity = ArgumentArity.ZeroOrOne, };
         var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories") { Description = "Additional categories", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
