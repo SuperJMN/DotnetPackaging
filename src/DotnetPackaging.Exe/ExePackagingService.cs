@@ -8,6 +8,8 @@ using System.IO.Abstractions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
 using RuntimeArchitecture = System.Runtime.InteropServices.Architecture;
+using System.Reactive.Linq;
+using System.IO;
 using Path = System.IO.Path;
 
 namespace DotnetPackaging.Exe;
@@ -443,8 +445,19 @@ public sealed class ExePackagingService
             return Result.Failure<Maybe<IByteSource>>($"Installer stub was published but no executable was located in the output container.");
         }
 
-        logger.Information("Using locally built installer stub {StubName}", stubResource.Name);
-        return Result.Success(Maybe<IByteSource>.From(stubResource));
+        var chunks = await stubResource.Bytes.ToList();
+        
+        // List<byte[]> to byte[]:
+        var totalBytes = chunks.Sum(cb => cb.Length);
+        var buffer = new byte[totalBytes];
+        var offset = 0;
+        foreach (var chunk in chunks)
+        {
+            Buffer.BlockCopy(chunk, 0, buffer, offset, chunk.Length);
+            offset += chunk.Length;
+        }
+
+        return Result.Success(Maybe<IByteSource>.From(ByteSource.FromBytes(buffer)));
     }
 
     private Maybe<string> FindLocalStubProject()

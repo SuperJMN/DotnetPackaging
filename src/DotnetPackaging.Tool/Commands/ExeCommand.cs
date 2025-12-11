@@ -252,12 +252,14 @@ public static class ExeCommand
                         return Maybe<ProjectMetadata>.None;
                     });
                     
+                    var ridResult = RidUtils.ResolveWindowsRid(archVal, "EXE packaging");
+                    
                     var result = await exeService.BuildFromDirectory(
                         pub, 
                         extrasOutput.Name, 
                         opt, 
                         vendorOpt, 
-                        string.IsNullOrWhiteSpace(archVal) ? null : archVal, 
+                        ridResult.Value, 
                         stubBytes, 
                         logoBytes,
                         Maybe<string>.From(System.IO.Path.GetFileNameWithoutExtension(prj.Name)), 

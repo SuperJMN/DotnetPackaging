@@ -17,9 +17,9 @@ public static class RidUtils
         return ResolveRidForPlatform(architecture, OSPlatform.Linux, "Linux", "linux", context);
     }
 
-    public static Result<string> ResolveMacRid(string? architecture)
+    public static Result<string> ResolveMacRid(string? architecture, string context)
     {
-        return ResolveRidForPlatform(architecture, OSPlatform.OSX, "macOS", "osx", "DMG packaging");
+        return ResolveRidForPlatform(architecture, OSPlatform.OSX, "macOS", "osx", context);
     }
 
     private static Result<string> ResolveRidForPlatform(string? architecture, OSPlatform targetPlatform, string targetName, string ridPrefix, string context)

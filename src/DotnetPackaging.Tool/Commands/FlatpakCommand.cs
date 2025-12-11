@@ -14,6 +14,7 @@ namespace DotnetPackaging.Tool.Commands;
 
 public static class FlatpakCommand
 {
+#pragma warning disable CA1416
     private static readonly System.IO.Abstractions.FileSystem FileSystem = new();
 
     public static Command GetCommand()
@@ -215,72 +216,11 @@ public static class FlatpakCommand
                 "flatpak-from-project",
                 outFile.FullName,
                 prj,
-                null, // Architecture is handled inside due to Flatpak specifics? No, we can pass null and let RidUtils fail?
-                // Wait, FlatpakCommand ignores the arch arg for RID resolution?
-                // Original code: var ridResult = RidUtils.ResolveLinuxRid(archVal, "AppImage packaging"); <-- Wait, that was AppImage.
-                // Original Flatpak code: 
-                // var publisher = new DotnetPackaging.Publish.DotnetPublisher(Maybe<ILogger>.From(logger));
-                // var req = ... { SelfContained = false, ... } <-- It does NOT set RID?
-                // It relies on implicit RID or portable publish?
-                // Let's re-read the original code.
-                // Req: SelfContained=false, Configuration="Release". Rid is NOT set in ProjectPublishRequest in original code!
-                // It publishes as portable?
-                // "var pub = await publisher.Publish(req);"
-                // Then it does "BuildUtils.GetArch(setup, execRes.Value)" which inspects the binary?
+
                 
-                // If I use ExecuteWithPublishedProject, it forces RID resolution if I pass one.
-                // If I pass null for architecture, RidUtils.ResolveLinuxRid(null) will return "linux-x64" or similar if on Linux, or fail if on Windows.
-                // BUT FlatpakCommand original code DOES NOT CALL RidUtils.ResolveLinuxRid.
-                // It blindly publishes without RID.
-                // This means it produces a Framework-dependent build?
-                // Checking line 218: SelfContained = false.
-                
-                // If I force a RID, it might change behavior (e.g. self-contained true/false).
-                // My helper sets RID if resolved.
-                // Helpers ProjectPublishRequest: Rid = architectureResult.Value.
-                // And SelfContained = selfContained arg.
-                
-                // FlatpakCommand passes "false" for self-contained validation?
-                // The Flatpak logic seems to be: Publish (portable?), then inspect binary to find Arch, then build Flatpak.
-                
-                // To support this, I might need to allow skipping RID resolution in the wrapper or pass a "neutral" architecture?
-                // Or maybe I should just use the wrapper but pass a custom ridResolver that always returns success/empty?
-                // But the wrapper uses the result of ridResolver to set the RID in the request.
-                
-                // If I want to match original behavior EXACTLY (no RID), I need the wrapper to support "No RID".
-                // RidUtils.ResolveLinuxRid returns a string.
-                // If I pass null to wrapper's architecture, and use a dummy resolver?
-                
-                // Alternative: The wrapper *requires* a ridResolver.
-                // If I provide `(a, c) => Result.Success("linux-x64")` it will force linux-x64.
-                // Original code didn't force RID.
-                
-                // Let's look at `ExecuteWithPublishedProject` again.
-                // `Rid = string.IsNullOrWhiteSpace(architecture) ? Maybe<string>.None : Maybe<string>.From(ridResult.Value)`
-                // If I pass `architecture: null`, then `Rid` becomes `None`.
-                // BUT, `ridResult` is calculated first: `var ridResult = ridResolver(architecture, commandName);`
-                // And checked: `if (ridResult.IsFailure) ... return;`
-                
-                // So if I pass `architecture: null`, the resolver MUST succeed.
-                // `RidUtils.ResolveLinuxRid(null)` fails on Windows ("--arch required...").
-                // But Flatpak command is cross-platform tool!
-                
-                // So I need a "DoNothing" resolver?
-                // `(arch, ctx) => Result.Success("")`
-                // Then `Rid` becomes `None` (if arch is null) OR `From("")`.
-                // Wait. `Rid = string.IsNullOrWhiteSpace(architecture) ? ...` uses the INPUT architecture string.
-                // If input `architecture` is null, `Rid` is `None`.
-                // So I just need the resolver to NOT fail.
-                
-                // So I can pass `(_, _) => Result.Success("")`.
-                
-                // Let's verify leak fix.
-                // I need to ensure `tmpAppDir` and `tmpRepoDir` are deleted.
-                // Using `DisposableDirectory`? I don't see one in the codebase.
-                // I'll implement `try...finally` with a local `DeleteRecursively` helper or just `Directory.Delete`.
-                
+                parseResult.GetValue(fpArch) ?? "x64",
                 "flatpak-packaging",
-                (_, _) => Result.Success("ignored"), // Bypass RID resolution to match original behavior (portable publish)
+                RidUtils.ResolveLinuxRid,
                 false, // SelfContained = false
                 "Release",
                 false, // SingleFile
@@ -290,7 +230,7 @@ public static class FlatpakCommand
                     var root = pub;
                     var setup = new FromDirectoryOptions();
                     setup.From(opt);
-                    setup.IsTerminal = opt.IsTerminal; // IsTerminal was missing in original From mapping? No, checked standard binder.
+                    setup.WithIsTerminal(opt.IsTerminal.GetValueOrDefault(false));
 
                     var execRes = await BuildUtils.GetExecutable(root, setup, l);
                     if (execRes.IsFailure) return Result.Failure(execRes.Error);

@@ -2,6 +2,9 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging.Publish;
 using Zafiro.DivineBytes;
 using System.IO;
+using System.Diagnostics;
+using Serilog;
+using Serilog.Context;
 
 namespace DotnetPackaging.Tool.Commands;
 
@@ -52,7 +55,7 @@ public static class ExecutionWrapper
              var publisher = new DotnetPackaging.Publish.DotnetPublisher(Maybe<ILogger>.From(logger));
              var req = new DotnetPackaging.Publish.ProjectPublishRequest(projectFile.FullName)
              {
-                 Rid = string.IsNullOrWhiteSpace(architecture) ? Maybe<string>.None : Maybe<string>.From(ridResult.Value),
+                 Rid = Maybe<string>.From(ridResult.Value),
                  SelfContained = selfContained,
                  Configuration = configuration,
                  SingleFile = singleFile,
@@ -81,3 +84,4 @@ public static class ExecutionWrapper
              }
          });
     }
+}

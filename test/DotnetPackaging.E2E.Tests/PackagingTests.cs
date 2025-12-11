@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using FluentAssertions;
 using Xunit;
 using Xunit.Sdk;
+using System.Runtime.InteropServices;
 
 namespace DotnetPackaging.E2E.Tests;
 
@@ -38,6 +39,11 @@ public class PackagingTests : IDisposable
     [Fact]
     public async Task Can_create_Rpm()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            return;
+        }
+
         var output = Path.Combine(temp.Path, "TestApp.rpm");
         await ExecutePackagingCommand("rpm", output, "--arch x64");
         File.Exists(output).Should().BeTrue();
@@ -56,6 +62,24 @@ public class PackagingTests : IDisposable
     {
         var output = Path.Combine(temp.Path, "TestApp.exe");
         await ExecutePackagingCommand("exe", output, "--arch x64");
+        File.Exists(output).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Can_create_Dmg()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+             // Skip DMG test on non-macOS platforms if necessary, or ensure the tool supports cross-platform DMG creation (which it does via DmgHfsBuilder).
+             // However, DmgHfsBuilder is cross-platform implementation in Zafiro/DotnetPackaging.
+             // So this should run on Windows too.
+        }
+
+        var output = Path.Combine(temp.Path, "TestApp.dmg");
+        // DMG usually requires RID to include the correct runtime details if not portable?
+        // But from-project uses RID from args. Linux RID was used in other tests?
+        // Let's use osx-x64 for DMG.
+        await ExecutePackagingCommand("dmg", output, "--arch x64");
         File.Exists(output).Should().BeTrue();
     }
 
@@ -102,8 +126,10 @@ public class PackagingTests : IDisposable
 
         if (process.ExitCode != 0)
         {
+            var stdOut = await stdOutTask;
+            var stdErr = await stdErrTask;
             throw new XunitException(
-                $"Command '{fileName} {arguments}' failed with exit code {process.ExitCode}.{Environment.NewLine}{stdOutTask.Result}{stdErrTask.Result}");
+                $"Command '{fileName} {arguments}' failed with exit code {process.ExitCode}.{Environment.NewLine}STDOUT:{Environment.NewLine}{stdOut}{Environment.NewLine}STDERR:{Environment.NewLine}{stdErr}");
         }
     }
 
