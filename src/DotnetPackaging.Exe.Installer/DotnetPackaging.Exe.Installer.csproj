@@ -33,9 +33,9 @@
     <PackageReference Include="ReactiveUI.Avalonia" />
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Sinks.File" />
-    <ProjectReference Include="../../../Zafiro.Avalonia/src/Zafiro.Avalonia/Zafiro.Avalonia.csproj" />
-    <ProjectReference Include="../../../Zafiro.Avalonia/src/Zafiro.Avalonia.Dialogs/Zafiro.Avalonia.Dialogs.csproj" />
-    <ProjectReference Include="../../../Zafiro.Avalonia/src/Zafiro.Avalonia.Generators/Zafiro.Avalonia.Generators.csproj" />
+    <PackageReference Include="Zafiro.Avalonia" />
+    <PackageReference Include="Zafiro.Avalonia.Dialogs" />
+    <PackageReference Include="Zafiro.Avalonia.Generators" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Steps\Welcome\WelcomeView.axaml.cs">

@@ -12,9 +12,6 @@
     <PackageReference Include="NuGet.Versioning" />
     <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" />
     <PackageReference Include="System.IO.Abstractions" />
-    <ProjectReference Include="../../../Zafiro/src/Zafiro.DivineBytes/Zafiro.DivineBytes.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Internal\" />
+    <PackageReference Include="Zafiro.DivineBytes" />
   </ItemGroup>
 </Project>
