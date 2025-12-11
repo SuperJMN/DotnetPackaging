@@ -2,6 +2,7 @@ using System;
 using CSharpFunctionalExtensions;
 using System.IO;
 using System.Runtime.InteropServices;
+using DotnetPackaging;
 using DotnetPackaging.Publish;
 using Serilog;
 using System.IO.Abstractions;
@@ -143,22 +144,18 @@ public sealed class ExePackagingService
 
     private Maybe<ProjectMetadata> ReadProjectMetadata(FileInfo projectFile)
     {
-        var metadataResult = ProjectMetadataReader.Read(projectFile);
-        if (metadataResult.IsFailure)
-        {
-            logger.Warning(
-                "Unable to read project metadata from {ProjectFile}: {Error}",
-                projectFile.FullName,
-                metadataResult.Error);
-            return Maybe<ProjectMetadata>.None;
-        }
-
-        return Maybe<ProjectMetadata>.From(metadataResult.Value);
+        return ProjectMetadataReader.TryRead(projectFile, logger);
     }
 
     private async Task<Result<IContainer>> Build(ExePackagingRequest request)
     {
         var inferredExecutable = InferExecutableName(request.PublishDirectory, request.ProjectName);
+
+        var primaryExecutable = request.Options.ExecutableName.Or(() => inferredExecutable);
+        if (primaryExecutable.HasNoValue)
+        {
+            return Result.Failure<IContainer>("No executable was found in the publish directory.");
+        }
 
         var metadata = BuildInstallerMetadata(
             request.Options,
@@ -249,16 +246,12 @@ public sealed class ExePackagingService
         Maybe<ProjectMetadata> projectMetadata,
         Maybe<IByteSource> logoBytes)
     {
-        var metadataProduct = projectMetadata
-            .Bind(meta => meta.Product
-                .Or(() => meta.AssemblyName)
-                .Or(() => meta.AssemblyTitle));
-
-        // Prefer explicit --application-name, then project metadata, then project name (from publish), then publish directory name
-        var appName = options.Name
-            .Or(() => metadataProduct)
-            .Or(() => projectName)
-            .GetValueOrDefault("Application"); // We can't easily get directory name from IContainer
+        var executableForName = options.ExecutableName
+            .Or(() => inferredExecutable)
+            .Map(Path.GetFileName);
+        var appName = projectMetadata.HasValue
+            ? ApplicationNameResolver.FromProject(options.Name, projectMetadata, executableForName.GetValueOrDefault("Application"))
+            : ApplicationNameResolver.FromDirectory(options.Name, executableForName.GetValueOrDefault("Application"));
         var packageName = appName.ToLowerInvariant().Replace(" ", string.Empty).Replace("-", string.Empty);
         var appId = options.Id.GetValueOrDefault($"com.{packageName}");
         var version = options.Version.GetValueOrDefault("1.0.0");

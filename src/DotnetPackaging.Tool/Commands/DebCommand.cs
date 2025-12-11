@@ -1,5 +1,6 @@
 using System.CommandLine;
 using CSharpFunctionalExtensions;
+using DotnetPackaging;
 using DotnetPackaging.Deb.Archives.Deb;
 using Serilog;
 using Zafiro.DivineBytes;
@@ -121,8 +122,17 @@ public static class DebCommand
                 sc, cfg, sf, tr,
                 async (pub, l) =>
                 {
+                    var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
                     var name = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
-                    var built = await DotnetPackaging.Deb.DebFile.From().Container(pub, name).Configure(o => o.From(opt)).Build();
+                    var built = await DotnetPackaging.Deb.DebFile.From().Container(pub, name).Configure(o =>
+                        {
+                            o.From(opt);
+                            if (projectMetadata.HasValue)
+                            {
+                                o.WithProjectMetadata(projectMetadata.Value);
+                            }
+                        })
+                        .Build();
                     return await built.Bind(deb => DebMixin.ToByteSource(deb).WriteTo(outFile.FullName));
                 });
         });

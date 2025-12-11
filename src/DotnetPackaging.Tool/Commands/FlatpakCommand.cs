@@ -230,6 +230,11 @@ public static class FlatpakCommand
                     var root = pub;
                     var setup = new FromDirectoryOptions();
                     setup.From(opt);
+                    var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
+                    if (projectMetadata.HasValue)
+                    {
+                        setup.WithProjectMetadata(projectMetadata.Value);
+                    }
                     setup.WithIsTerminal(opt.IsTerminal.GetValueOrDefault(false));
 
                     var execRes = await BuildUtils.GetExecutable(root, setup, l);

@@ -1,5 +1,6 @@
 using System.CommandLine;
 using CSharpFunctionalExtensions;
+using DotnetPackaging;
 using DotnetPackaging.Rpm;
 using Serilog;
 using DotnetPackaging.Tool;
@@ -134,9 +135,17 @@ public static class RpmCommand
                 sc, cfg, sf, tr,
                 async (pub, l) =>
                 {
+                    var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
                     var name = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
                     var builder = RpmFile.From().Container(pub, name);
-                    return await builder.Configure(o => o.From(opt)).Build()
+                    return await builder.Configure(o =>
+                        {
+                            o.From(opt);
+                            if (projectMetadata.HasValue)
+                            {
+                                o.WithProjectMetadata(projectMetadata.Value);
+                            }
+                        }).Build()
                         .Bind(rpmFile => 
                         {
                             var rpmSource = ByteSource.FromStreamFactory(() => File.OpenRead(rpmFile.FullName));

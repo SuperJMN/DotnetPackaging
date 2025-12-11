@@ -1,6 +1,7 @@
 using System.IO;
 using System.CommandLine;
 using CSharpFunctionalExtensions;
+using DotnetPackaging;
 using DotnetPackaging.Exe;
 using Serilog;
 using Zafiro.DivineBytes;
@@ -9,6 +10,7 @@ using Directory = System.IO.Directory;
 using File = System.IO.File;
 using DotnetPackaging.Tool;
 using System.IO.Abstractions;
+
 namespace DotnetPackaging.Tool.Commands;
 
 public static class ExeCommand
@@ -246,11 +248,7 @@ public static class ExeCommand
                         ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasLogo.FullName)) 
                         : null;
 
-                    var projectMetadata = ProjectMetadataReader.Read(prj).Match(m => Maybe<ProjectMetadata>.From(m), error =>
-                    {
-                        l.Warning("Unable to read project metadata from {ProjectFile}: {Error}", prj.FullName, error);
-                        return Maybe<ProjectMetadata>.None;
-                    });
+                    var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
                     
                     var ridResult = RidUtils.ResolveWindowsRid(archVal, "EXE packaging");
                     
