@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.CommandLine.Completions;
 using System.CommandLine.Parsing;
 using DotnetPackaging.Tool.Commands;
 using Serilog;
@@ -32,15 +33,9 @@ static class Program
 
         using var _ = LogContext.PushProperty("ExecutionId", Guid.NewGuid());
         
-        var rootCommand = new RootCommand
-        {
-            Description = "Package published .NET applications into Linux-friendly formats.\n\n" +
-                          "Available verbs:\n" +
-                          "- deb: Build a Debian/Ubuntu .deb installer.\n" +
-                          "- rpm: Build an RPM (.rpm) package for Fedora, openSUSE and similar distributions.\n" +
-                          "- appimage: Build a portable AppImage (.AppImage) bundle or work with AppDir workflows.\n\n" +
-                          "Tip: run `dotnetpackaging <verb> --help` to see format-specific options."
-        };
+        var rootCommand = new RootCommand("Package published .NET applications into Linux, Windows, and macOS-friendly installers.");
+
+        AddSuggestDirective(rootCommand);
 
         // Global --verbose option (purely for discoverability; value already read above)
         var verboseOption = new Option<bool>("--verbose", "-v", "--debug", "-d")
@@ -138,4 +133,15 @@ static class Program
 
         return normalized;
     }
+
+    private static void AddSuggestDirective(RootCommand rootCommand)
+    {
+        if (rootCommand.Directives.OfType<SuggestDirective>().Any())
+        {
+            return;
+        }
+
+        rootCommand.Add(new SuggestDirective());
+    }
+
 }
