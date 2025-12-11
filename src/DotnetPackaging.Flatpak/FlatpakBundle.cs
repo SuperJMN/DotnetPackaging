@@ -18,7 +18,7 @@ public static class FlatpakBundle
     // Experimental: create an OSTree repo and bundle it (still unsigned)
     public static Result<IByteSource> CreateOstree(FlatpakBuildPlan plan)
     {
-        var repo = Ostree.OstreeRepoBuilder.Build(plan);
+        var repo = OstreeRepoBuilder.Build(plan);
         if (repo.IsFailure) return Result.Failure<IByteSource>(repo.Error);
         // Tar the repo directory as a single file .flatpak
         var tarEntries = new List<DotnetPackaging.Deb.Archives.Tar.TarEntry>();

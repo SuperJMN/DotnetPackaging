@@ -1,6 +1,6 @@
-using DotnetPackaging.Hfs.BTree;
+using DotnetPackaging.Dmg.Hfs.BTree;
 
-namespace DotnetPackaging.Hfs.Catalog;
+namespace DotnetPackaging.Dmg.Hfs.Catalog;
 
 /// <summary>
 /// HFS+ Catalog B-Tree.

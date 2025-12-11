@@ -1,4 +1,4 @@
-namespace DotnetPackaging.Hfs.Encoding;
+namespace DotnetPackaging.Dmg.Hfs.Encoding;
 
 /// <summary>
 /// HFS+ date and time values are stored as an unsigned 32-bit integer

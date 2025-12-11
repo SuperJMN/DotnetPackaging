@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using DotnetPackaging.Hfs.Builder;
+using DotnetPackaging.Dmg.Hfs.Builder;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;

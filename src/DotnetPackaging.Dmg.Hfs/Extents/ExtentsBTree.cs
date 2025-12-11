@@ -1,6 +1,6 @@
-using DotnetPackaging.Hfs.BTree;
+using DotnetPackaging.Dmg.Hfs.BTree;
 
-namespace DotnetPackaging.Hfs.Extents;
+namespace DotnetPackaging.Dmg.Hfs.Extents;
 
 /// <summary>
 /// HFS+ Extents Overflow B-Tree.

@@ -1,6 +1,6 @@
-using DotnetPackaging.Hfs.BTree;
+using DotnetPackaging.Dmg.Hfs.BTree;
 
-namespace DotnetPackaging.Hfs.Attributes;
+namespace DotnetPackaging.Dmg.Hfs.Attributes;
 
 /// <summary>
 /// HFS+ Attributes B-Tree.

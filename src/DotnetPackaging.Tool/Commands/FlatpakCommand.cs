@@ -2,7 +2,6 @@ using System.CommandLine;
 using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Flatpak;
-using DotnetPackaging.Flatpak.Ostree;
 using Serilog;
 using Zafiro.DivineBytes.System.IO;
 using DotnetPackaging.Tool;

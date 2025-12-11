@@ -1,6 +1,4 @@
-using System.Text;
-
-namespace DotnetPackaging.Flatpak.Ostree;
+namespace DotnetPackaging.Flatpak;
 
 internal static class OstreeEncoders
 {

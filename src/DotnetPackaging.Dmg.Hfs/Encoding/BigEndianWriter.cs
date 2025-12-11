@@ -1,4 +1,4 @@
-namespace DotnetPackaging.Hfs.Encoding;
+namespace DotnetPackaging.Dmg.Hfs.Encoding;
 
 /// <summary>
 /// Functional big-endian binary writer for HFS+ structures.

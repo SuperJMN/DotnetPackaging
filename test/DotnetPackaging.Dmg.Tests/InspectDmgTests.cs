@@ -1,7 +1,5 @@
 using System.Buffers.Binary;
 using System.Text;
-using DotnetPackaging.Hfs.BTree;
-using DotnetPackaging.Hfs.Encoding;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;

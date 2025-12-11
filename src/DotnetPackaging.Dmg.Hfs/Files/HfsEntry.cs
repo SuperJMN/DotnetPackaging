@@ -1,4 +1,4 @@
-namespace DotnetPackaging.Hfs.Files;
+namespace DotnetPackaging.Dmg.Hfs.Files;
 
 /// <summary>
 /// Base class for HFS+ file system entries.

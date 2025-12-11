@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
 
-namespace DotnetPackaging.Flatpak.Ostree;
+namespace DotnetPackaging.Flatpak;
 
 // Simplified object kinds with pluggable encoders (GVariant to be added)
 internal abstract record OstreeObject(string Type)

@@ -1,4 +1,4 @@
-namespace DotnetPackaging.Hfs;
+namespace DotnetPackaging.Dmg.Hfs;
 
 /// <summary>
 /// HFS+ Allocation File.

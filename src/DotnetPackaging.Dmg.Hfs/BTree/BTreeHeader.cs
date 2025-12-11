@@ -1,6 +1,6 @@
-using DotnetPackaging.Hfs.Encoding;
+using DotnetPackaging.Dmg.Hfs.Encoding;
 
-namespace DotnetPackaging.Hfs.BTree;
+namespace DotnetPackaging.Dmg.Hfs.BTree;
 
 /// <summary>
 /// B-Tree Header Record (106 bytes).

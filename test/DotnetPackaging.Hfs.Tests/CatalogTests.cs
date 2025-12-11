@@ -1,5 +1,5 @@
-using DotnetPackaging.Hfs.Catalog;
-using DotnetPackaging.Hfs.Encoding;
+using DotnetPackaging.Dmg.Hfs.Catalog;
+using DotnetPackaging.Dmg.Hfs.Encoding;
 using FluentAssertions;
 using Xunit;
 

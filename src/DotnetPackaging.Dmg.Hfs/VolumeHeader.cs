@@ -1,7 +1,7 @@
-using DotnetPackaging.Hfs.Encoding;
-using DotnetPackaging.Hfs.Extents;
+using DotnetPackaging.Dmg.Hfs.Encoding;
+using DotnetPackaging.Dmg.Hfs.Extents;
 
-namespace DotnetPackaging.Hfs;
+namespace DotnetPackaging.Dmg.Hfs;
 
 /// <summary>
 /// HFS+ Volume Header (512 bytes).

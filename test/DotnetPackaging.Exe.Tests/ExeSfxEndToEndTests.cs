@@ -1,16 +1,10 @@
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Text.Json;
-using System.Threading.Tasks;
-using DotnetPackaging.Exe;
 using System.Reactive.Linq;
+using System.Text.Json;
 using FluentAssertions;
-using Xunit;
-using Zafiro.DivineBytes.System.IO;
 using Path = System.IO.Path;
 
-namespace DotnetPackaging.Exe.E2E.Tests;
+namespace DotnetPackaging.Exe.Tests;
 
 public class ExeSfxEndToEndTests
 {

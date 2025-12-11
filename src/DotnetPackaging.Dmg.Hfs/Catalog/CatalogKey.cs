@@ -1,6 +1,6 @@
-using DotnetPackaging.Hfs.Encoding;
+using DotnetPackaging.Dmg.Hfs.Encoding;
 
-namespace DotnetPackaging.Hfs.Catalog;
+namespace DotnetPackaging.Dmg.Hfs.Catalog;
 
 /// <summary>
 /// HFS+ Catalog Key.

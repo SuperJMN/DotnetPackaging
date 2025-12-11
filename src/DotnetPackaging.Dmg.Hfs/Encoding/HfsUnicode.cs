@@ -1,6 +1,4 @@
-using System.Globalization;
-
-namespace DotnetPackaging.Hfs.Encoding;
+namespace DotnetPackaging.Dmg.Hfs.Encoding;
 
 /// <summary>
 /// HFS+ Unicode string encoding.
