@@ -8,7 +8,6 @@
   <Import Project="..\Common.props" />
   <ItemGroup>
     <PackageReference Include="SharpCompress" />
-    <PackageReference Include="SixLabors.ImageSharp" />
     <PackageReference Include="SharpZipLib" />
   </ItemGroup>
   <ItemGroup>

@@ -6,19 +6,7 @@
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 	<Import Project="..\Common.props" />
-	<ItemGroup>
-	  <Compile Remove="Options.cs" />
-	  <Compile Remove="AppImage.cs" />
-	  <Compile Remove="Builder\**" />
-	  <Compile Remove="Core\**" />
-	  <Compile Include="Core\AppImageContainer.cs" />
-	  <Compile Include="Core\AppImageExtensions.cs" />
-	  <Compile Include="Core\IRuntime.cs" />
-	  <Compile Include="Core\Runtime.cs" />
-	  <Compile Include="Core\RuntimeFactory.cs" />
-	  <Compile Include="Core\SquashFS.cs" />
-	  <Compile Include="Core\IRuntimeProvider.cs" />
-	</ItemGroup>
+	
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Http" />
 		<PackageReference Include="NyaFs" />

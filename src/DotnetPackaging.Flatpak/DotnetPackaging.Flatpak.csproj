@@ -8,8 +8,8 @@
 	<Import Project="..\Common.props" />
 
 	<ItemGroup>
-		<ProjectReference Include="..\\DotnetPackaging\\DotnetPackaging.csproj" />
-		<ProjectReference Include="..\\DotnetPackaging.Deb\\DotnetPackaging.Deb.csproj" />
+		<ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
+		<ProjectReference Include="..\DotnetPackaging.Deb\DotnetPackaging.Deb.csproj" />
 	</ItemGroup>
 
 </Project>
