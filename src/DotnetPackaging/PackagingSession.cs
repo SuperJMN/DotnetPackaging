@@ -7,11 +7,6 @@ using Zafiro.DivineBytes;
 
 namespace DotnetPackaging;
 
-public interface IPackagingSession : IDisposable
-{
-    IObservable<Result<INamedByteSource>> Packages { get; }
-}
-
 public class PackagingSession : IPackagingSession
 {
     private readonly CompositeDisposable disposables;
