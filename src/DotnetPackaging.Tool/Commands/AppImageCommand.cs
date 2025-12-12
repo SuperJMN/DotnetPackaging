@@ -3,6 +3,7 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage;
 using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.AppImage.Metadata;
+using DotnetPackaging;
 using Serilog;
 using Zafiro.DivineBytes.System.IO;
 using DotnetPackaging.Tool;
@@ -37,34 +38,47 @@ public static class AppImageCommand
         var container = new DirectoryContainer(dirInfo);
         var root = container.AsRoot();
 
-        var metadata = BuildAppImageMetadata(options, inputDir);
-        var factory = new AppImageFactory();
-
-        return factory.Create(root, metadata)
+        return BuildAppImageMetadata(options, root, Maybe<ProjectMetadata>.None, logger)
+            .Bind(metadata => new AppImageFactory().Create(root, metadata))
             .Bind(x => x.ToByteSource())
             .Bind(source => source.WriteTo(outputFile.FullName))
             .WriteResult();
     }
 
-    private static AppImageMetadata BuildAppImageMetadata(Options options, DirectoryInfo contextDir)
+    private static Task<Result<AppImageMetadata>> BuildAppImageMetadata(Options options, IContainer applicationRoot, Maybe<ProjectMetadata> projectMetadata, ILogger logger)
     {
-        var appName = options.Name.GetValueOrDefault(contextDir.Name);
-        var packageName = appName.ToLowerInvariant().Replace(" ", "").Replace("-", "");
-        var appId = options.Id.GetValueOrDefault($"com.{packageName}");
-
-        return new AppImageMetadata(appId, appName, packageName)
+        var setup = new FromDirectoryOptions();
+        setup.From(options);
+        if (projectMetadata.HasValue)
         {
-            Summary = options.Summary,
-            Comment = options.Comment,
-            Description = options.Comment, // use comment if no separate description is provided
-            Version = options.Version,
-            Homepage = options.HomePage.Map(u => u.ToString()),
-            ProjectLicense = options.License,
-            Keywords = options.Keywords,
-            StartupWmClass = options.StartupWmClass,
-            IsTerminal = options.IsTerminal.GetValueOrDefault(false),
-            Categories = BuildCategories(options)
-        };
+            setup.WithProjectMetadata(projectMetadata.Value);
+        }
+
+        return BuildUtils.GetExecutable(applicationRoot, setup, logger)
+            .Bind(exec =>
+            {
+                var appName = projectMetadata.HasValue
+                    ? ApplicationNameResolver.FromProject(options.Name, projectMetadata, exec.Name)
+                    : ApplicationNameResolver.FromDirectory(options.Name, exec.Name);
+                var packageName = appName.ToLowerInvariant().Replace(" ", "").Replace("-", "");
+                var appId = options.Id.GetValueOrDefault($"com.{packageName}");
+
+                var metadata = new AppImageMetadata(appId, appName, packageName)
+                {
+                    Summary = options.Summary,
+                    Comment = options.Comment,
+                    Description = options.Comment, // use comment if no separate description is provided
+                    Version = options.Version,
+                    Homepage = options.HomePage.Map(u => u.ToString()),
+                    ProjectLicense = options.License,
+                    Keywords = options.Keywords,
+                    StartupWmClass = options.StartupWmClass,
+                    IsTerminal = options.IsTerminal.GetValueOrDefault(false),
+                    Categories = BuildCategories(options)
+                };
+
+                return Result.Success(metadata);
+            });
     }
 
     private static Maybe<IEnumerable<string>> BuildCategories(Options options)
@@ -78,6 +92,8 @@ public static class AppImageCommand
     private static void AddAppImageSubcommands(Command appImageCommand)
     {
         var appName = new Option<string>("--application-name") { Description = "Application name", Required = false };
+        appName.Aliases.Add("--productName");
+        appName.Aliases.Add("--appName");
         var startupWmClass = new Option<string>("--wm-class") { Description = "Startup WM Class", Required = false };
         var mainCategory = new Option<MainCategory?>("--main-category") { Description = "Main category", Required = false, Arity = ArgumentArity.ZeroOrOne };
         var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories") { Description = "Additional categories", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
@@ -187,10 +203,8 @@ public static class AppImageCommand
         var container = new DirectoryContainer(dirInfo);
         var root = container.AsRoot();
 
-        var metadata = BuildAppImageMetadata(options, inputDir);
-        var factory = new AppImageFactory();
-
-        return factory.BuildAppDir(root, metadata)
+        return BuildAppImageMetadata(options, root, Maybe<ProjectMetadata>.None, logger)
+            .Bind(metadata => new AppImageFactory().BuildAppDir(root, metadata))
             .Bind(rootDir => rootDir.WriteTo(outputDir.FullName))
             .WriteResult();
     }
@@ -200,11 +214,10 @@ public static class AppImageCommand
         logger.Debug("Packaging AppImage from AppDir {Directory}", appDir.FullName);
         var dirInfo = FileSystem.DirectoryInfo.New(appDir.FullName);
         var container = new DirectoryContainer(dirInfo);
+        var root = container.AsRoot();
 
-        var metadata = BuildAppImageMetadata(options, appDir);
-        var factory = new AppImageFactory();
-
-        return factory.CreateFromAppDir(container, metadata, executableRelativePath, null)
+        return BuildAppImageMetadata(options, root, Maybe<ProjectMetadata>.None, logger)
+            .Bind(metadata => new AppImageFactory().CreateFromAppDir(root, metadata, executableRelativePath, null))
             .Bind(x => x.ToByteSource())
             .Bind(source => source.WriteTo(outputFile.FullName))
             .WriteResult();
@@ -223,6 +236,8 @@ public static class AppImageCommand
         var output = new Option<FileInfo>("--output") { Description = "Output .AppImage file", Required = true };
 
         var appName = new Option<string>("--application-name") { Description = "Application name", Required = false };
+        appName.Aliases.Add("--productName");
+        appName.Aliases.Add("--appName");
         var startupWmClass = new Option<string>("--wm-class") { Description = "Startup WM Class", Required = false };
         var mainCategory = new Option<MainCategory?>("--main-category") { Description = "Main category", Required = false, Arity = ArgumentArity.ZeroOrOne };
         var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories") { Description = "Additional categories", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
@@ -276,53 +291,28 @@ public static class AppImageCommand
             var opt = optionsBinder.Bind(parseResult);
             var archVal = parseResult.GetValue(arch);
 
-            await ExecutionWrapper.ExecuteWithLogging("appimage-from-project", outFile.FullName, async logger =>
-            {
-                var ridResult = RidUtils.ResolveLinuxRid(archVal, "AppImage packaging");
-                if (ridResult.IsFailure)
+            await ExecutionWrapper.ExecuteWithPublishedProject(
+                "appimage-from-project",
+                outFile.FullName,
+                prj,
+                archVal,
+                RidUtils.ResolveLinuxRid,
+                sc, cfg, sf, tr,
+                async (pub, l) =>
                 {
-                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                    var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
+                    var metadataResult = await BuildAppImageMetadata(opt, pub, projectMetadata, l);
+                    var appImageResult = await metadataResult
+                        .Bind(metadata => new AppImageFactory().Create(pub, metadata))
+                        .Bind(x => x.ToByteSource());
 
-                var publisher = new DotnetPackaging.Publish.DotnetPublisher(Maybe<ILogger>.From(logger));
-                var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
-                {
-                    Rid = string.IsNullOrWhiteSpace(archVal) ? Maybe<string>.None : Maybe<string>.From(ridResult.Value),
-                    SelfContained = sc,
-                    Configuration = cfg,
-                    SingleFile = sf,
-                    Trimmed = tr
-                };
-
-                var pubResult = await publisher.Publish(req);
-                if (pubResult.IsFailure)
-                {
-                    logger.Error("Publish failed: {Error}", pubResult.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                using var pub = pubResult.Value;
-                var root = pub.Container;
-                var ctxDir = new DirectoryInfo(pub.OutputDirectory);
-                var metadata = BuildAppImageMetadata(opt, ctxDir);
-                var factory = new AppImageFactory();
-                var res = await factory.Create(root, metadata)
-                    .Bind(x => x.ToByteSource())
-                    .Bind(bytes => bytes.WriteTo(outFile.FullName));
-
-                if (res.IsFailure)
-                {
-                    logger.Error("AppImage creation failed: {Error}", res.Error);
-                    Environment.ExitCode = 1;
-                }
-                else
-                {
-                    logger.Information("{OutputFile}", outFile.FullName);
-                }
-            });
+                    return appImageResult.Map(bytes =>
+                    {
+                        var resource = new Resource(outFile.Name, bytes);
+                        var package = (IPackage)new Package(resource.Name, resource, pub);
+                        return package;
+                    });
+                });
         });
 
         appImageCommand.Add(fromProject);

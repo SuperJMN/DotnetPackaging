@@ -1,5 +1,4 @@
-using DotnetPackaging.Hfs.BTree;
-using DotnetPackaging.Hfs.Catalog;
+using DotnetPackaging.Dmg.Hfs.Catalog;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;

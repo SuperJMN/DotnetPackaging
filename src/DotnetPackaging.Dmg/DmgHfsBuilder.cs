@@ -2,9 +2,9 @@ using System.Buffers.Binary;
 using System.Reactive.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Dmg.Hfs.Builder;
+using DotnetPackaging.Dmg.Hfs.Files;
 using DotnetPackaging.Formats.Dmg.Udif;
-using DotnetPackaging.Hfs.Builder;
-using DotnetPackaging.Hfs.Files;
 using Zafiro.DivineBytes;
 using Path = System.IO.Path;
 

@@ -1,5 +1,6 @@
 using System.CommandLine;
 using CSharpFunctionalExtensions;
+using DotnetPackaging;
 using DotnetPackaging.Deb.Archives.Deb;
 using Serilog;
 using Zafiro.DivineBytes;
@@ -58,6 +59,8 @@ public static class DebCommand
         var output = new Option<FileInfo>("--output") { Description = "Destination path for the generated .deb", Required = true };
 
         var appName = new Option<string>("--application-name") { Description = "Application name", Required = false };
+        appName.Aliases.Add("--productName");
+        appName.Aliases.Add("--appName");
         var startupWmClass = new Option<string>("--wm-class") { Description = "Startup WM Class", Required = false };
         var mainCategory = new Option<MainCategory?>("--main-category") { Description = "Main category", Required = false, Arity = ArgumentArity.ZeroOrOne, };
         var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories") { Description = "Additional categories", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
@@ -111,54 +114,34 @@ public static class DebCommand
             var opt = optionsBinder.Bind(parseResult);
             var archVal = parseResult.GetValue(arch);
 
-            await ExecutionWrapper.ExecuteWithLogging("deb-from-project", outFile.FullName, async logger =>
-            {
-                var ridResult = RidUtils.ResolveLinuxRid(archVal, "DEB packaging");
-                if (ridResult.IsFailure)
+            await ExecutionWrapper.ExecuteWithPublishedProject(
+                "deb-from-project",
+                outFile.FullName,
+                prj,
+                archVal,
+                RidUtils.ResolveLinuxRid,
+                sc, cfg, sf, tr,
+                async (pub, l) =>
                 {
-                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                    var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
+                    var name = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
+                    var built = await DotnetPackaging.Deb.DebFile.From().Container(pub, name).Configure(o =>
+                        {
+                            o.From(opt);
+                            if (projectMetadata.HasValue)
+                            {
+                                o.WithProjectMetadata(projectMetadata.Value);
+                            }
+                        })
+                        .Build();
 
-                var publisher = new DotnetPackaging.Publish.DotnetPublisher();
-                var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
-                {
-                    Rid = string.IsNullOrWhiteSpace(archVal) ? Maybe<string>.None : Maybe<string>.From(ridResult.Value),
-                    SelfContained = sc,
-                    Configuration = cfg,
-                    SingleFile = sf,
-                    Trimmed = tr
-                };
-
-                var pubResult = await publisher.Publish(req);
-                if (pubResult.IsFailure)
-                {
-                    logger.Error("Publish failed: {Error}", pubResult.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                using var pub = pubResult.Value;
-                var container = pub.Container;
-                var name = pub.Name.Match(value => value, () => (string?)null);
-                var built = await DotnetPackaging.Deb.DebFile.From().Container(container, name).Configure(o => o.From(opt)).Build();
-                if (built.IsFailure)
-                {
-                    logger.Error("Deb creation failed: {Error}", built.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                var write = await DebMixin.ToByteSource(built.Value).WriteTo(outFile.FullName);
-                if (write.IsFailure)
-                {
-                    logger.Error("Could not write deb file: {Error}", write.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-                logger.Information("{OutputFile}", outFile.FullName);
-            });
+                    return built.Map(deb =>
+                    {
+                        var resource = new Resource(outFile.Name, DebMixin.ToByteSource(deb));
+                        var package = (IPackage)new Package(resource.Name, resource, pub);
+                        return package;
+                    });
+                });
         });
 
         debCommand.Add(fromProject);

@@ -6,6 +6,7 @@ using DotnetPackaging.Dmg;
 using Serilog;
 using Zafiro.DivineBytes;
 using Path = System.IO.Path;
+using System.Reactive.Disposables;
 
 namespace DotnetPackaging.Tool.Commands;
 
@@ -92,6 +93,8 @@ public static class DmgCommand
 
         // Reuse metadata options to get volume name from --application-name if present
         var appName = new Option<string>("--application-name") { Description = "Application name / volume name", Required = false };
+        appName.Aliases.Add("--productName");
+        appName.Aliases.Add("--appName");
         var dmgIconOption = new Option<IIcon?>("--icon") { Description = "Path to the application icon" };
         dmgIconOption.CustomParser = OptionsBinder.GetIcon;
 
@@ -137,43 +140,52 @@ public static class DmgCommand
             var compressVal = parseResult.GetValue(compress);
             var useDefaultLayout = opt.UseDefaultLayout.GetValueOrDefault(true);
 
-            await ExecutionWrapper.ExecuteWithLogging("dmg-from-project", outFile.FullName, async logger =>
-            {
-                var ridResult = RidUtils.ResolveMacRid(ridVal);
-                if (ridResult.IsFailure)
+            await ExecutionWrapper.ExecuteWithPublishedProject(
+                "dmg-from-project",
+                outFile.FullName,
+                prj,
+                ridVal,
+                RidUtils.ResolveMacRid,
+                sc, cfg, sf, tr,
+                async (pub, l) =>
                 {
-                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                var publisher = new DotnetPackaging.Publish.DotnetPublisher();
-                var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
-                {
-                    Rid = Maybe<string>.From(ridResult.Value),
-                    SelfContained = sc,
-                    Configuration = cfg,
-                    SingleFile = sf,
-                    Trimmed = tr
-                };
-
-                var pub = await publisher.Publish(req);
-                if (pub.IsFailure)
-                {
-                    logger.Error("Publish failed: {Error}", pub.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                var volName = opt.Name.GetValueOrDefault(pub.Value.Name.GetValueOrDefault("App"));
+                    var inferredName = Path.GetFileNameWithoutExtension(prj.Name);
+                    var volName = opt.Name.GetValueOrDefault(inferredName);
                 
-                // Prioritize user override, then the detected Assembly Name (via DotnetPublisher), then null (fallback to DmgHfsBuilder guessing)
-                var executableName = opt.ExecutableName.GetValueOrDefault(pub.Value.Name.GetValueOrDefault());
+                    // Prioritize user override, then the detected Assembly Name (via DotnetPublisher), then null (fallback to DmgHfsBuilder guessing)
+                    var executableName = opt.ExecutableName.GetValueOrDefault(inferredName);
                 
-                var icon = await ResolveIcon(opt, prj.Directory!, logger);
-                await DmgHfsBuilder.Create(pub.Value.OutputDirectory, outFile.FullName, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon, executableName: executableName);
-                logger.Information("Success");
-            });
+                    var icon = await ResolveIcon(opt, prj.Directory!, l);
+
+                    var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+                    var dmgPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dp-dmg-{Guid.NewGuid():N}-{outFile.Name}");
+                    try 
+                    {
+                        var writeResult = await pub.WriteTo(tempDir);
+                        if (writeResult.IsFailure)
+                        {
+                            l.Error("Failed to write publish output to temp dir: {Error}", writeResult.Error);
+                            return Result.Failure<IPackage>("Failed to write publish output to temp dir");
+                        }
+
+                        await DmgHfsBuilder.Create(tempDir, dmgPath, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon, executableName: executableName);
+                        var resource = new Resource(outFile.Name, ByteSource.FromStreamFactory(() => File.OpenRead(dmgPath)));
+                        var cleanup = Disposable.Create(() =>
+                        {
+                            if (File.Exists(dmgPath))
+                            {
+                                File.Delete(dmgPath);
+                            }
+                        });
+                        var composite = new CompositeDisposable { pub, cleanup };
+                        var package = (IPackage)new Package(resource.Name, resource, composite);
+                        return Result.Success(package);
+                    }
+                    finally
+                    {
+                        if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+                    }
+                });
         });
 
         dmgCommand.Add(fromProject);

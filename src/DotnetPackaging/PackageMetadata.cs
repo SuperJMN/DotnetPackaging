@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Zafiro.DivineBytes;
+﻿using Zafiro.DivineBytes;
 
 namespace DotnetPackaging;
 

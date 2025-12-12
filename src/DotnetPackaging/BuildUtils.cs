@@ -1,12 +1,7 @@
-using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Reactive.Linq;
-using System.Reactive.Threading.Tasks;
-using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
-using Zafiro.Mixins;
-using Zafiro.Reactive;
 using DivinePath = Zafiro.DivineBytes.Path;
 
 namespace DotnetPackaging;
@@ -72,9 +67,9 @@ public static class BuildUtils
         var svgIcon = iconPlan.Svg.Map(svg => (IByteSource)svg);
         var icon = discoveredIcon;
         var version = setup.Version.GetValueOrDefault("1.0.0");
-        var suggestedName = containerName.GetValueOrDefault(exec.Name);
-        var defaultName = HumanizeAppName(StripCommonSuffixes(suggestedName));
-        var name = setup.Name.GetValueOrDefault(defaultName);
+        var name = setup.ProjectMetadata.HasValue
+            ? ApplicationNameResolver.FromProject(setup.Name, setup.ProjectMetadata, exec.Name)
+            : ApplicationNameResolver.FromDirectory(setup.Name, exec.Name);
 
         var packageMetadata = new PackageMetadata(name, architecture, isTerminal, package, version)
         {
@@ -154,11 +149,9 @@ public static class BuildUtils
     {
         var log = logger ?? Log.Logger;
         log.Debug("No executable has been specified. Looking up for candidates.");
-        var rootResources = container.Resources
-            .Select(resource => (INamedByteSourceWithPath)new ResourceWithPath(DivinePath.Empty, resource))
-            .ToList();
+        var resources = container.ResourcesWithPathsRecursive().ToList();
 
-        var execFiles = await rootResources
+        var execFiles = await resources
             .ToObservable()
             .Select(resource => Observable.FromAsync(async () => await resource.IsElf())
                 .Map(isElf => new { IsElf = isElf, Resource = resource }))
@@ -167,7 +160,13 @@ public static class BuildUtils
             .Where(x => x.IsElf && !x.Resource.Name.EndsWith(".so", StringComparison.OrdinalIgnoreCase) && x.Resource.Name != "createdump")
             .Select(x => x.Resource)
             .ToList();
-        return execFiles
+
+        var ordered = execFiles
+            .OrderBy(r => r.FullPath().RouteFragments.Count())
+            .ThenBy(r => r.FullPath().ToString().Length)
+            .ToList();
+
+        return ordered
             .TryFirst()
             .ToResult("Could not find any executable file in the container root")
             .Tap(resource => log.Debug("Choosing {Executable}", RelativePath(resource)));
@@ -225,33 +224,5 @@ public static class BuildUtils
         }
 
         return Maybe.From("No description provided");
-    }
-
-    private static string StripCommonSuffixes(string name)
-    {
-        var s = name;
-        // Remove common build/publish suffixes
-        var patterns = new[] { "-publish", "_publish", " publish", "-appdir", "_appdir", " appdir" };
-        foreach (var p in patterns)
-        {
-            if (s.EndsWith(p, StringComparison.OrdinalIgnoreCase))
-            {
-                s = s.Substring(0, s.Length - p.Length);
-                break;
-            }
-        }
-        return s;
-    }
-
-    private static string HumanizeAppName(string value)
-    {
-        // Replace separators with spaces
-        var cleaned = Regex.Replace(value, "[._-]+", " ");
-        cleaned = Regex.Replace(cleaned, "\\s+", " ").Trim();
-        // Title case
-        var lower = cleaned.ToLowerInvariant();
-        var ti = System.Globalization.CultureInfo.CurrentCulture.TextInfo;
-        var titled = ti.ToTitleCase(lower);
-        return titled;
     }
 }

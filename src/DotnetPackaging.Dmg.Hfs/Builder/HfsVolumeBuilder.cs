@@ -1,9 +1,6 @@
-using DotnetPackaging.Hfs.Attributes;
-using DotnetPackaging.Hfs.Catalog;
-using DotnetPackaging.Hfs.Extents;
-using DotnetPackaging.Hfs.Files;
+using DotnetPackaging.Dmg.Hfs.Files;
 
-namespace DotnetPackaging.Hfs.Builder;
+namespace DotnetPackaging.Dmg.Hfs.Builder;
 
 /// <summary>
 /// Builder for creating HFS+ volumes.

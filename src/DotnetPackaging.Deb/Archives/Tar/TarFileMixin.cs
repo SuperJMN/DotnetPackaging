@@ -1,5 +1,4 @@
 ﻿using System.Formats.Tar;
-using System.IO;
 using Zafiro.DivineBytes;
 using SystemTarEntry = System.Formats.Tar.TarEntry;
 using SystemGnuTarEntry = System.Formats.Tar.GnuTarEntry;

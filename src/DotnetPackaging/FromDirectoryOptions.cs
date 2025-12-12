@@ -31,6 +31,7 @@ public class FromDirectoryOptions
     public Maybe<long> InstalledSize { get; private set; } = Maybe<long>.None;
     public Maybe<DateTimeOffset> ModificationTime { get; private set; } = Maybe<DateTimeOffset>.None;
     public bool IsTerminal { get; private set; }
+    public Maybe<ProjectMetadata> ProjectMetadata { get; private set; } = Maybe<ProjectMetadata>.None;
 
     public FromDirectoryOptions WithPackage(string package)
     {
@@ -235,5 +236,11 @@ public class FromDirectoryOptions
     public void WithIsTerminal(bool isTerminalValue)
     {
         IsTerminal = isTerminalValue;
+    }
+
+    public FromDirectoryOptions WithProjectMetadata(ProjectMetadata projectMetadata)
+    {
+        ProjectMetadata = Maybe<ProjectMetadata>.From(projectMetadata ?? throw new ArgumentNullException(nameof(projectMetadata)));
+        return this;
     }
 }

@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
+using DotnetPackaging.Dmg.Hfs;
+using DotnetPackaging.Dmg.Hfs.Extents;
 using DotnetPackaging.Hfs;
-using DotnetPackaging.Hfs.Extents;
 using FluentAssertions;
 using Xunit;
 

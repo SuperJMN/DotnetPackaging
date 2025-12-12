@@ -1,7 +1,6 @@
-using System.Buffers.Binary;
-using DotnetPackaging.Hfs.Encoding;
+using DotnetPackaging.Dmg.Hfs.Encoding;
 
-namespace DotnetPackaging.Hfs.BTree;
+namespace DotnetPackaging.Dmg.Hfs.BTree;
 
 /// <summary>
 /// Represents a complete B-tree file.

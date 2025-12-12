@@ -2,12 +2,15 @@ using System;
 using CSharpFunctionalExtensions;
 using System.IO;
 using System.Runtime.InteropServices;
+using DotnetPackaging;
 using DotnetPackaging.Publish;
 using Serilog;
 using System.IO.Abstractions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
 using RuntimeArchitecture = System.Runtime.InteropServices.Architecture;
+using System.Linq;
+using System.Reactive.Linq;
 using Path = System.IO.Path;
 
 namespace DotnetPackaging.Exe;
@@ -46,7 +49,7 @@ public sealed class ExePackagingService
         this.stubProvider = stubProvider ?? throw new ArgumentNullException(nameof(stubProvider));
     }
 
-    public Task<Result<IContainer>> BuildFromDirectory(
+    public Task<Result<IPackage>> BuildFromDirectory(
         IContainer publishDirectory,
         string outputName,
         Options options,
@@ -66,10 +69,35 @@ public sealed class ExePackagingService
             Maybe<ProjectMetadata>.None,
             ToMaybe(setupLogo));
 
-        return Build(request);
+        return Build(request).Bind(container => ToPackage(container, outputName, null));
     }
 
-    public async Task<Result<IContainer>> BuildFromProject(
+    public Task<Result<IPackage>> BuildFromDirectory(
+        IContainer publishDirectory,
+        string outputName,
+        Options options,
+        string? vendor,
+        string? runtimeIdentifier,
+        IByteSource? stubFile,
+        IByteSource? setupLogo,
+        Maybe<string> projectName,
+        Maybe<ProjectMetadata> projectMetadata)
+    {
+        var request = new ExePackagingRequest(
+            publishDirectory,
+            outputName,
+            options,
+            ToMaybe(vendor),
+            ToMaybe(runtimeIdentifier),
+            ToMaybe(stubFile),
+            projectName,
+            projectMetadata,
+            ToMaybe(setupLogo));
+
+        return Build(request).Bind(container => ToPackage(container, outputName, null));
+    }
+
+    public async Task<Result<IPackage>> BuildFromProject(
         FileInfo projectFile,
         string? runtimeIdentifier,
         bool selfContained,
@@ -94,51 +122,46 @@ public sealed class ExePackagingService
         var publishResult = await publisher.Publish(publishRequest);
         if (publishResult.IsFailure)
         {
-            return Result.Failure<IContainer>(publishResult.Error);
+            return Result.Failure<IPackage>(publishResult.Error);
         }
 
-        using var pub = publishResult.Value;
         var projectMetadata = ReadProjectMetadata(projectFile);
 
-        var publishDir = new DirectoryInfo(pub.OutputDirectory);
-        var containerResult = BuildContainer(publishDir);
-        if (containerResult.IsFailure)
-        {
-            return Result.Failure<IContainer>(containerResult.Error);
-        }
-
         var request = new ExePackagingRequest(
-            containerResult.Value,
+            publishResult.Value,
             outputName,
             options,
             ToMaybe(vendor),
             ToMaybe(runtimeIdentifier),
             ToMaybe(stubFile),
-            pub.Name,
+            Maybe<string>.From(Path.GetFileNameWithoutExtension(projectFile.Name)),
             projectMetadata,
             ToMaybe(setupLogo));
 
-        return await Build(request);
+        var buildResult = await Build(request);
+        if (buildResult.IsFailure)
+        {
+            publishResult.Value.Dispose();
+            return Result.Failure<IPackage>(buildResult.Error);
+        }
+
+        return ToPackage(buildResult.Value, outputName, publishResult.Value);
     }
 
     private Maybe<ProjectMetadata> ReadProjectMetadata(FileInfo projectFile)
     {
-        var metadataResult = ProjectMetadataReader.Read(projectFile);
-        if (metadataResult.IsFailure)
-        {
-            logger.Warning(
-                "Unable to read project metadata from {ProjectFile}: {Error}",
-                projectFile.FullName,
-                metadataResult.Error);
-            return Maybe<ProjectMetadata>.None;
-        }
-
-        return Maybe<ProjectMetadata>.From(metadataResult.Value);
+        return ProjectMetadataReader.TryRead(projectFile, logger);
     }
 
     private async Task<Result<IContainer>> Build(ExePackagingRequest request)
     {
         var inferredExecutable = InferExecutableName(request.PublishDirectory, request.ProjectName);
+
+        var primaryExecutable = request.Options.ExecutableName.Or(() => inferredExecutable);
+        if (primaryExecutable.HasNoValue)
+        {
+            return Result.Failure<IContainer>("No executable was found in the publish directory.");
+        }
 
         var metadata = BuildInstallerMetadata(
             request.Options,
@@ -194,6 +217,18 @@ public sealed class ExePackagingService
             : Result.Failure<IContainer>(stubPathResult.Error);
     }
 
+    private static Result<IPackage> ToPackage(IContainer container, string outputName, IDisposable? cleanup)
+    {
+        var resource = container.Resources.FirstOrDefault();
+        if (resource is null)
+        {
+            return Result.Failure<IPackage>("No installer artifact was produced");
+        }
+
+        var package = (IPackage)new Package(resource.Name, resource, cleanup);
+        return Result.Success(package);
+    }
+
 
     private static Maybe<T> ToMaybe<T>(T? value) where T : class
     {
@@ -229,16 +264,12 @@ public sealed class ExePackagingService
         Maybe<ProjectMetadata> projectMetadata,
         Maybe<IByteSource> logoBytes)
     {
-        var metadataProduct = projectMetadata
-            .Bind(meta => meta.Product
-                .Or(() => meta.AssemblyName)
-                .Or(() => meta.AssemblyTitle));
-
-        // Prefer explicit --application-name, then project metadata, then project name (from publish), then publish directory name
-        var appName = options.Name
-            .Or(() => metadataProduct)
-            .Or(() => projectName)
-            .GetValueOrDefault("Application"); // We can't easily get directory name from IContainer
+        var executableForName = options.ExecutableName
+            .Or(() => inferredExecutable)
+            .Map(Path.GetFileName);
+        var appName = projectMetadata.HasValue
+            ? ApplicationNameResolver.FromProject(options.Name, projectMetadata, executableForName.GetValueOrDefault("Application"))
+            : ApplicationNameResolver.FromDirectory(options.Name, executableForName.GetValueOrDefault("Application"));
         var packageName = appName.ToLowerInvariant().Replace(" ", string.Empty).Replace("-", string.Empty);
         var appId = options.Id.GetValueOrDefault($"com.{packageName}");
         var version = options.Version.GetValueOrDefault("1.0.0");
@@ -405,15 +436,39 @@ public sealed class ExePackagingService
         }
 
         using var pub = publishResult.Value;
-        var stubPath = ResolveStubOutputPath(projectPath.Value, pub.OutputDirectory);
-        if (stubPath.HasNoValue)
+        
+        var assemblyName = Path.GetFileNameWithoutExtension(projectPath.Value);
+        var stubResource = pub.Resources
+            .FirstOrDefault(r => r.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && 
+                                 (string.IsNullOrWhiteSpace(assemblyName) || 
+                                  Path.GetFileNameWithoutExtension(r.Name).Equals(assemblyName, StringComparison.OrdinalIgnoreCase)));
+
+        if (stubResource == null)
         {
-            return Result.Failure<Maybe<IByteSource>>($"Installer stub was published but no executable was located under {pub.OutputDirectory}.");
+             // Fallback: any exe that is not createdump
+             stubResource = pub.Resources
+                .FirstOrDefault(r => r.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && 
+                                     !Path.GetFileName(r.Name).Equals("createdump.exe", StringComparison.OrdinalIgnoreCase));
         }
 
-        logger.Information("Using locally built installer stub at {StubPath}", stubPath.Value);
-        var bytes = await File.ReadAllBytesAsync(stubPath.Value);
-        return Result.Success(Maybe<IByteSource>.From(ByteSource.FromBytes(bytes)));
+        if (stubResource == null)
+        {
+            return Result.Failure<Maybe<IByteSource>>($"Installer stub was published but no executable was located in the output container.");
+        }
+
+        var chunks = await stubResource.Bytes.ToList();
+        
+        // List<byte[]> to byte[]:
+        var totalBytes = chunks.Sum(cb => cb.Length);
+        var buffer = new byte[totalBytes];
+        var offset = 0;
+        foreach (var chunk in chunks)
+        {
+            Buffer.BlockCopy(chunk, 0, buffer, offset, chunk.Length);
+            offset += chunk.Length;
+        }
+
+        return Result.Success(Maybe<IByteSource>.From(ByteSource.FromBytes(buffer)));
     }
 
     private Maybe<string> FindLocalStubProject()

@@ -1,14 +1,18 @@
 using System.IO;
 using System.CommandLine;
 using CSharpFunctionalExtensions;
+using DotnetPackaging;
 using DotnetPackaging.Exe;
 using Serilog;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
+using System.Linq;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
 using DotnetPackaging.Tool;
 using System.IO.Abstractions;
+using System.Reactive.Disposables;
+
 namespace DotnetPackaging.Tool.Commands;
 
 public static class ExeCommand
@@ -45,6 +49,8 @@ public static class ExeCommand
             Description = "Application name",
             Required = false
         };
+        exAppName.Aliases.Add("--productName");
+        exAppName.Aliases.Add("--appName");
         var exComment = new Option<string>("--comment")
         {
             Description = "Comment / long description",
@@ -65,6 +71,7 @@ public static class ExeCommand
             Description = "Vendor/Publisher",
             Required = false
         };
+        exVendor.Aliases.Add("--company");
         var exExecutableName = new Option<string>("--executable-name")
         {
             Description = "Name of your application's executable",
@@ -154,7 +161,14 @@ public static class ExeCommand
                     return;
                 }
 
-                await result.Value.WriteTo(outFile.DirectoryName ?? Directory.GetCurrentDirectory());
+                using var package = result.Value;
+                var writeResult = await package.WriteTo(outFile.FullName);
+                if (writeResult.IsFailure)
+                {
+                    logger.Error("Failed to persist installer: {Error}", writeResult.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
                 logger.Information("{OutputFile}", outFile.FullName);
             });
         });
@@ -226,37 +240,54 @@ public static class ExeCommand
             var vendorOpt = parseResult.GetValue(exVendor);
             var opt = optionsBinder.Bind(parseResult);
 
-            await ExecutionWrapper.ExecuteWithLogging("exe-from-project", extrasOutput.FullName, async logger =>
-            {
-                var ridResult = RidUtils.ResolveWindowsRid(archVal, "EXE packaging");
-                if (ridResult.IsFailure)
+            await ExecutionWrapper.ExecuteWithPublishedProject(
+                "exe-from-project",
+                extrasOutput.FullName,
+                prj,
+                archVal,
+                RidUtils.ResolveWindowsRid,
+                sc, cfg, sf, tr,
+                async (pub, l) =>
                 {
-                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                    var exeService = new ExePackagingService(l);
+                    
+                    var stubBytes = extrasStub != null 
+                        ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasStub.FullName)) 
+                        : null;
 
-                var exeService = new ExePackagingService(logger);
-                
-                var stubBytes = extrasStub != null 
-                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasStub.FullName)) 
-                    : null;
+                    var logoBytes = extrasLogo != null 
+                        ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasLogo.FullName)) 
+                        : null;
 
-                var logoBytes = extrasLogo != null 
-                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasLogo.FullName)) 
-                    : null;
+                    var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
+                    
+                    var ridResult = RidUtils.ResolveWindowsRid(archVal, "EXE packaging");
+                    if (ridResult.IsFailure)
+                    {
+                        return Result.Failure<IPackage>(ridResult.Error);
+                    }
 
-                var result = await exeService.BuildFromProject(prj, ridResult.Value, sc, cfg, sf, tr, extrasOutput.Name, opt, vendorOpt, stubBytes, logoBytes);
-                if (result.IsFailure)
-                {
-                    logger.Error("EXE from project packaging failed: {Error}", result.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                    var result = await exeService.BuildFromDirectory(
+                        pub,
+                        extrasOutput.Name,
+                        opt,
+                        vendorOpt,
+                        ridResult.Value,
+                        stubBytes,
+                        logoBytes,
+                        Maybe<string>.From(System.IO.Path.GetFileNameWithoutExtension(prj.Name)),
+                        projectMetadata);
 
-                await result.Value.WriteTo(extrasOutput.DirectoryName ?? Directory.GetCurrentDirectory());
-                logger.Information("{OutputFile}", extrasOutput.FullName);
-            });
+                    if (result.IsFailure)
+                    {
+                        return result.ConvertFailure<IPackage>();
+                    }
+
+                    var package = result.Value;
+                    var composite = new CompositeDisposable { pub };
+                    var wrapped = (IPackage)new Package(package.Name, package, composite);
+                    return Result.Success(wrapped);
+                });
         });
 
         exeCommand.Add(exFromProject);

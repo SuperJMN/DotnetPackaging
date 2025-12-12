@@ -1,15 +1,13 @@
-using System.IO.Abstractions;
-using System.Runtime.InteropServices;
+using System.Collections.Concurrent;
 using Zafiro.Commands;
-using Zafiro.DivineBytes.System.IO;
 using Zafiro.Mixins;
-using DotnetPackaging.Internal;
-using Zafiro.DivineBytes;
+using Result = CSharpFunctionalExtensions.Result;
 
 namespace DotnetPackaging.Publish;
 
 public sealed class DotnetPublisher : IPublisher
 {
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> PublishLocks = new(StringComparer.OrdinalIgnoreCase);
     private readonly ICommand command;
     private readonly Maybe<ILogger> logger;
 
@@ -27,8 +25,11 @@ public sealed class DotnetPublisher : IPublisher
         this.logger = logger;
     }
 
-    public async Task<Result<PublishResult>> Publish(ProjectPublishRequest request)
+    public async Task<Result<IDisposableContainer>> Publish(ProjectPublishRequest request)
     {
+        var projectKey = System.IO.Path.GetFullPath(request.ProjectPath);
+        var gate = PublishLocks.GetOrAdd(projectKey, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
         try
         {
             logger.Information("Preparing to publish project {ProjectPath}", request.ProjectPath);
@@ -38,13 +39,13 @@ public sealed class DotnetPublisher : IPublisher
             {
                 var error = $"RID is required when publishing self-contained applications. Please specify a RID for project {request.ProjectPath}";
                 logger.Error(error);
-                return Result.Failure<PublishResult>(error);
+                return Result.Failure<IDisposableContainer>(error);
             }
 
             var outputDirResult = PrepareOutputDirectory();
             if (outputDirResult.IsFailure)
             {
-                return Result.Failure<PublishResult>(outputDirResult.Error);
+                return Result.Failure<IDisposableContainer>(outputDirResult.Error);
             }
 
             var outputDir = outputDirResult.Value;
@@ -55,24 +56,24 @@ public sealed class DotnetPublisher : IPublisher
             if (run.IsFailure)
             {
                 logger.Error("dotnet publish failed for {ProjectPath}: {Error}", request.ProjectPath, run.Error);
-                return Result.Failure<PublishResult>(run.Error);
+                return Result.Failure<IDisposableContainer>(run.Error);
             }
 
             logger.Information("dotnet publish completed for {ProjectPath}", request.ProjectPath);
 
-            var fileSystem = new FileSystem();
-            var wrapper = new DirectoryInfoWrapper(fileSystem, new DirectoryInfo(outputDir));
-            var container = new DirectoryContainer(wrapper).AsRoot();
-
             var name = await DeriveName(request.ProjectPath);
             logger.Information("Publish succeeded for {ProjectPath} (Name: {Name})", request.ProjectPath, name.GetValueOrDefault("unknown"));
 
-            return Result.Success(new PublishResult(container, name, outputDir, new TemporaryDirectory(outputDir, logger.GetValueOrDefault(Log.Logger))));
+            return Result.Success<IDisposableContainer>(new DisposableDirectoryContainer(outputDir, logger.GetValueOrDefault(Log.Logger)));
         }
         catch (Exception ex)
         {
             logger.Error(ex, "Unexpected failure during publish for {ProjectPath}", request.ProjectPath);
-            return Result.Failure<PublishResult>($"Unexpected error during publish: {ex.Message}");
+            return Result.Failure<IDisposableContainer>($"Unexpected error during publish: {ex.Message}");
+        }
+        finally
+        {
+            gate.Release();
         }
     }
 

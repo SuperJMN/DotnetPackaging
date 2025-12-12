@@ -1,4 +1,4 @@
-namespace DotnetPackaging.Flatpak.Ostree;
+namespace DotnetPackaging.Flatpak;
 
 // Minimal GVariant builder (scaffold). Not spec-complete; replace incrementally.
 internal sealed class GVariant

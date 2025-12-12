@@ -2,18 +2,19 @@ using System.CommandLine;
 using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Flatpak;
-using DotnetPackaging.Flatpak.Ostree;
 using Serilog;
 using Zafiro.DivineBytes.System.IO;
 using DotnetPackaging.Tool;
 using DotnetPackaging;
 using Zafiro.DivineBytes;
 using Zafiro.CSharpFunctionalExtensions;
+using System.Reactive.Disposables;
 
 namespace DotnetPackaging.Tool.Commands;
 
 public static class FlatpakCommand
 {
+#pragma warning disable CA1416
     private static readonly System.IO.Abstractions.FileSystem FileSystem = new();
 
     public static Command GetCommand()
@@ -27,6 +28,8 @@ public static class FlatpakCommand
     {
         // Common options for metadata
         var appName = new Option<string>("--application-name") { Description = "Application name", Required = false };
+        appName.Aliases.Add("--productName");
+        appName.Aliases.Add("--appName");
         var startupWmClass = new Option<string>("--wm-class") { Description = "Startup WM Class", Required = false };
         var mainCategory = new Option<MainCategory?>("--main-category") { Description = "Main category", Required = false, Arity = ArgumentArity.ZeroOrOne };
         var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories") { Description = "Additional categories", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
@@ -211,123 +214,103 @@ public static class FlatpakCommand
             var opt = binder.Bind(parseResult);
             var fopt = fpBinder.Bind(parseResult);
 
-            await ExecutionWrapper.ExecuteWithLogging("flatpak-from-project", outFile.FullName, async logger =>
-            {
-                var publisher = new DotnetPackaging.Publish.DotnetPublisher(Maybe<ILogger>.From(logger));
-                var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
+            await ExecutionWrapper.ExecuteWithPublishedProject(
+                "flatpak-from-project",
+                outFile.FullName,
+                prj,
+
+                
+                parseResult.GetValue(fpArch) ?? "x64",
+                RidUtils.ResolveLinuxRid,
+                false, // SelfContained = false
+                "Release",
+                false, // SingleFile
+                false, // Trimmed
+                async (pub, l) =>
                 {
-                    SelfContained = false,
-                    Configuration = "Release",
-                    SingleFile = false,
-                    Trimmed = false
-                };
+                    var root = pub;
+                    var setup = new FromDirectoryOptions();
+                    setup.From(opt);
+                    var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
+                    if (projectMetadata.HasValue)
+                    {
+                        setup.WithProjectMetadata(projectMetadata.Value);
+                    }
+                    setup.WithIsTerminal(opt.IsTerminal.GetValueOrDefault(false));
 
-                var pub = await publisher.Publish(req);
-                if (pub.IsFailure)
-                {
-                    logger.Error("Failed publishing project {Project}: {Error}", prj.FullName, pub.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                    var execRes = await BuildUtils.GetExecutable(root, setup, l);
+                    if (execRes.IsFailure) return Result.Failure<IPackage>(execRes.Error);
+                    
+                    var archRes = await BuildUtils.GetArch(setup, execRes.Value);
+                    if (archRes.IsFailure) return Result.Failure<IPackage>(archRes.Error);
 
-                var root = pub.Value.Container;
-                var setup = new FromDirectoryOptions();
-                setup.From(opt);
+                    var projectName = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
+                    var pm = await BuildUtils.CreateMetadata(setup, root, archRes.Value, execRes.Value, opt.IsTerminal.GetValueOrDefault(false), Maybe<string>.From(projectName), l);
+                    var planRes = await new FlatpakFactory().BuildPlan(root, pm, fopt);
+                    if (planRes.IsFailure) return Result.Failure<IPackage>(planRes.Error);
 
-                var execRes = await BuildUtils.GetExecutable(root, setup, logger);
-                if (execRes.IsFailure)
-                {
-                    logger.Error("Executable discovery failed: {Error}", execRes.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                    var plan = planRes.Value;
 
-                var archRes = await BuildUtils.GetArch(setup, execRes.Value);
-                if (archRes.IsFailure)
-                {
-                    logger.Error("Architecture detection failed: {Error}", archRes.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                    if (!useSystemBundler)
+                    {
+                        var internalBytes = FlatpakBundle.CreateOstree(plan);
+                        return internalBytes.Map(bytes =>
+                        {
+                            var resource = new Resource(outFile.Name, bytes);
+                            var package = (IPackage)new Package(resource.Name, resource, pub);
+                            return package;
+                        });
+                    }
 
-                var pm = await BuildUtils.CreateMetadata(setup, root, archRes.Value, execRes.Value, opt.IsTerminal.GetValueOrDefault(false), pub.Value.Name, logger);
-                var planRes = await new FlatpakFactory().BuildPlan(root, pm, fopt);
-                if (planRes.IsFailure)
-                {
-                    logger.Error("Flatpak plan generation failed: {Error}", planRes.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                    // System bundler with cleanup
+                    var tmpAppDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-app-" + Guid.NewGuid());
+                    var tmpRepoDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-repo-" + Guid.NewGuid());
+                    var bundlePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dp-flatpak-{Guid.NewGuid():N}-{outFile.Name}");
+                    
+                    try
+                    {
+                        Directory.CreateDirectory(tmpAppDir);
+                        Directory.CreateDirectory(tmpRepoDir);
 
-                var plan = planRes.Value;
+                        var write = await plan.ToRootContainer().WriteTo(tmpAppDir);
+                        if (write.IsFailure) return Result.Failure<IPackage>(write.Error);
 
-                if (!useSystemBundler)
-                {
-                    var internalBytes = FlatpakBundle.CreateOstree(plan);
-                if (internalBytes.IsFailure)
-                {
-                    logger.Error("Internal bundler failed: {Error}", internalBytes.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                        ProcessUtils.MakeExecutable(System.IO.Path.Combine(tmpAppDir, "files", "bin", plan.CommandName));
+                        ProcessUtils.MakeExecutable(System.IO.Path.Combine(tmpAppDir, "files", plan.ExecutableTargetPath.Replace('/', System.IO.Path.DirectorySeparatorChar)));
 
-                var wr = await internalBytes.Value.WriteTo(outFile.FullName);
-                if (wr.IsFailure)
-                {
-                    logger.Error("Failed writing bundle: {Error}", wr.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                        var effArch = fopt.ArchitectureOverride.GetValueOrDefault(plan.Metadata.Architecture).PackagePrefix;
+                        var cmd = fopt.CommandOverride.GetValueOrDefault(plan.CommandName);
+                        var finishArgs = $"build-finish \"{tmpAppDir}\" --command={cmd} {string.Join(" ", fopt.Shared.Select(s => $"--share={s}"))} {string.Join(" ", fopt.Sockets.Select(s => $"--socket={s}"))} {string.Join(" ", fopt.Devices.Select(d => $"--device={d}"))} {string.Join(" ", fopt.Filesystems.Select(f => $"--filesystem={f}"))}";
+                        
+                        var finish = ProcessUtils.Run("flatpak", finishArgs);
+                        if (finish.IsFailure) return Result.Failure<IPackage>(finish.Error);
 
-                    logger.Information("{OutputFile}", outFile.FullName);
-                    return;
-                }
+                        var export = ProcessUtils.Run("flatpak", $"build-export --arch={effArch} \"{tmpRepoDir}\" \"{tmpAppDir}\" {fopt.Branch}");
+                        if (export.IsFailure) return Result.Failure<IPackage>(export.Error);
 
-                var tmpAppDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-app-" + Guid.NewGuid());
-                var tmpRepoDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "dp-flatpak-repo-" + Guid.NewGuid());
-                Directory.CreateDirectory(tmpAppDir);
-                Directory.CreateDirectory(tmpRepoDir);
+                        var bundle = ProcessUtils.Run("flatpak", $"build-bundle \"{tmpRepoDir}\" \"{bundlePath}\" {plan.AppId} {fopt.Branch} --arch={effArch}");
+                        if (bundle.IsFailure) return Result.Failure<IPackage>(bundle.Error);
 
-                var write = await plan.ToRootContainer().WriteTo(tmpAppDir);
-                if (write.IsFailure)
-                {
-                    logger.Error("Failed materializing Flatpak plan: {Error}", write.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                        var byteSource = ByteSource.FromStreamFactory(() => File.OpenRead(bundlePath));
+                        var resource = new Resource(outFile.Name, byteSource);
+                        var cleanup = Disposable.Create(() =>
+                        {
+                            if (File.Exists(bundlePath))
+                            {
+                                File.Delete(bundlePath);
+                            }
+                        });
 
-                ProcessUtils.MakeExecutable(System.IO.Path.Combine(tmpAppDir, "files", "bin", plan.CommandName));
-                ProcessUtils.MakeExecutable(System.IO.Path.Combine(tmpAppDir, "files", plan.ExecutableTargetPath.Replace('/', System.IO.Path.DirectorySeparatorChar)));
-
-                var effArch = fopt.ArchitectureOverride.GetValueOrDefault(plan.Metadata.Architecture).PackagePrefix;
-                var cmd = fopt.CommandOverride.GetValueOrDefault(plan.CommandName);
-                var finishArgs = $"build-finish \"{tmpAppDir}\" --command={cmd} {string.Join(" ", fopt.Shared.Select(s => $"--share={s}"))} {string.Join(" ", fopt.Sockets.Select(s => $"--socket={s}"))} {string.Join(" ", fopt.Devices.Select(d => $"--device={d}"))} {string.Join(" ", fopt.Filesystems.Select(f => $"--filesystem={f}"))}";
-                var finish = ProcessUtils.Run("flatpak", finishArgs);
-                if (finish.IsFailure)
-                {
-                    logger.Error("flatpak build-finish failed: {Error}", finish.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                var export = ProcessUtils.Run("flatpak", $"build-export --arch={effArch} \"{tmpRepoDir}\" \"{tmpAppDir}\" {fopt.Branch}");
-                if (export.IsFailure)
-                {
-                    logger.Error("flatpak build-export failed: {Error}", export.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                var bundle = ProcessUtils.Run("flatpak", $"build-bundle \"{tmpRepoDir}\" \"{outFile.FullName}\" {plan.AppId} {fopt.Branch} --arch={effArch}");
-                if (bundle.IsFailure)
-                {
-                    logger.Error("flatpak build-bundle failed: {Error}", bundle.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                logger.Information("{OutputFile}", outFile.FullName);
-            });
+                        var composite = new CompositeDisposable { pub, cleanup };
+                        var package = (IPackage)new Package(resource.Name, resource, composite);
+                        return Result.Success(package);
+                    }
+                    finally
+                    {
+                        if (Directory.Exists(tmpAppDir)) Directory.Delete(tmpAppDir, true);
+                        if (Directory.Exists(tmpRepoDir)) Directory.Delete(tmpRepoDir, true);
+                    }
+                });
         });
 
         flatpakCommand.Add(fromProjectCmd);

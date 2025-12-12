@@ -1,11 +1,13 @@
 using System.CommandLine;
 using CSharpFunctionalExtensions;
+using DotnetPackaging;
 using DotnetPackaging.Rpm;
 using Serilog;
 using DotnetPackaging.Tool;
 using System.IO.Abstractions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
+using System.Reactive.Disposables;
 
 namespace DotnetPackaging.Tool.Commands;
 public static class RpmCommand
@@ -71,6 +73,8 @@ public static class RpmCommand
         var output = new Option<FileInfo>("--output") { Description = "Destination path for the generated .rpm", Required = true };
 
         var appName = new Option<string>("--application-name") { Description = "Application name", Required = false };
+        appName.Aliases.Add("--productName");
+        appName.Aliases.Add("--appName");
         var startupWmClass = new Option<string>("--wm-class") { Description = "Startup WM Class", Required = false };
         var mainCategory = new Option<MainCategory?>("--main-category") { Description = "Main category", Required = false, Arity = ArgumentArity.ZeroOrOne, };
         var additionalCategories = new Option<IEnumerable<AdditionalCategory>>("--additional-categories") { Description = "Additional categories", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
@@ -124,63 +128,45 @@ public static class RpmCommand
             var opt = optionsBinder.Bind(parseResult);
             var archVal = parseResult.GetValue(arch);
 
-            await ExecutionWrapper.ExecuteWithLogging("rpm-from-project", outFile.FullName, async logger =>
-            {
-                var ridResult = RidUtils.ResolveLinuxRid(archVal, "RPM packaging");
-                if (ridResult.IsFailure)
+            await ExecutionWrapper.ExecuteWithPublishedProject(
+                "rpm-from-project",
+                outFile.FullName,
+                prj,
+                archVal,
+                RidUtils.ResolveLinuxRid,
+                sc, cfg, sf, tr,
+                async (pub, l) =>
                 {
-                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
+                    var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
+                    var name = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
+                    var builder = RpmFile.From().Container(pub, name);
+                    var rpmResult = await builder.Configure(o =>
+                        {
+                            o.From(opt);
+                            if (projectMetadata.HasValue)
+                            {
+                                o.WithProjectMetadata(projectMetadata.Value);
+                            }
+                        }).Build();
 
-                var publisher = new DotnetPackaging.Publish.DotnetPublisher();
-                var req = new DotnetPackaging.Publish.ProjectPublishRequest(prj.FullName)
-                {
-                    Rid = string.IsNullOrWhiteSpace(archVal) ? Maybe<string>.None : Maybe<string>.From(ridResult.Value),
-                    SelfContained = sc,
-                    Configuration = cfg,
-                    SingleFile = sf,
-                    Trimmed = tr
-                };
+                    if (rpmResult.IsFailure)
+                    {
+                        return rpmResult.ConvertFailure<IPackage>();
+                    }
 
-                var pubResult = await publisher.Publish(req);
-                if (pubResult.IsFailure)
-                {
-                    logger.Error("Publish failed: {Error}", pubResult.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                using var pub = pubResult.Value;
-                var container = pub.Container;
-                var name = pub.Name.Match(value => value, () => (string?)null);
-                var builder = RpmFile.From().Container(container, name);
-                var built = await builder.Configure(o => o.From(opt)).Build();
-                if (built.IsFailure)
-                {
-                    logger.Error("Rpm creation failed: {Error}", built.Error);
-                    Environment.ExitCode = 1;
-                    return;
-                }
-
-                // RpmFile points to a file on disk (created by rpmbuild), we need to read it as a ByteSource, detach it, and then write it to the output.
-                // However, RpmFile is a FileInfo wrapper effectively.
-                // Let's see RpmFile definition. Ah, it returns a FileInfo. 
-                // We can open it as a stream, detach, and then copy.
-
-                var rpmSource = ByteSource.FromStreamFactory(() => File.OpenRead(built.Value.FullName));
-                var write = await rpmSource.WriteTo(outFile.FullName);
-                if (write.IsFailure)
-                {
-                    logger.Error("Failed writing Rpm file: {Error}", write.Error);
-                    Environment.ExitCode = 1;
-                }
-                else
-                {
-                    logger.Information("{OutputFile}", outFile.FullName);
-                }
-            });
+                    var rpmSource = ByteSource.FromStreamFactory(() => File.OpenRead(rpmResult.Value.FullName));
+                    var resource = new Resource(outFile.Name, rpmSource);
+                    var cleanup = Disposable.Create(() =>
+                    {
+                        if (File.Exists(rpmResult.Value.FullName))
+                        {
+                            File.Delete(rpmResult.Value.FullName);
+                        }
+                    });
+                    var composite = new CompositeDisposable { pub, cleanup };
+                    var package = (IPackage)new Package(resource.Name, resource, composite);
+                    return Result.Success(package);
+                });
         });
 
         rpmCommand.Add(fromProject);

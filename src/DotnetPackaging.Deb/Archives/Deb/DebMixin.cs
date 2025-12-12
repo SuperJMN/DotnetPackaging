@@ -2,7 +2,6 @@
 using DotnetPackaging.Deb.Archives.Ar;
 using DotnetPackaging.Deb.Archives.Tar;
 using Zafiro.DivineBytes;
-using Zafiro.Mixins;
 
 namespace DotnetPackaging.Deb.Archives.Deb;
 

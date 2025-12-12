@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace DotnetPackaging.Deb.Archives.Tar;
 
 public static class UnixPermissions

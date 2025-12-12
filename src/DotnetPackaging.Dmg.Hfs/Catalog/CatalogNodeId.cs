@@ -1,4 +1,4 @@
-namespace DotnetPackaging.Hfs.Catalog;
+namespace DotnetPackaging.Dmg.Hfs.Catalog;
 
 /// <summary>
 /// Catalog Node ID (CNID) - unique identifier for files and folders.

@@ -56,7 +56,7 @@
     <PackageVersion Include="NuGet.Versioning" Version="7.0.1" />
     <PackageVersion Include="Zafiro.Avalonia.Generators" Version="44.0.2" />
     <PackageVersion Include="Zafiro" Version="44.0.4" />
-    <PackageVersion Include="Zafiro.DivineBytes" Version="44.0.4" />
+    <PackageVersion Include="Zafiro.DivineBytes" Version="44.0.5" />
     <PackageVersion Include="DiscUtils" Version="0.16.13" />
     <PackageVersion Include="Xunit.SkippableFact" Version="1.5.23" />
   </ItemGroup>

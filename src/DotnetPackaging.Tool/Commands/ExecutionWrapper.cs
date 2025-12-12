@@ -1,6 +1,9 @@
-using System;
+using CSharpFunctionalExtensions;
+using DotnetPackaging;
+using DotnetPackaging.Publish;
+using Zafiro.DivineBytes;
+using System.IO;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using Serilog;
 using Serilog.Context;
 
@@ -24,5 +27,68 @@ public static class ExecutionWrapper
             Log.Error(ex, "{Command} failed for {Target}", commandName, target);
             throw;
         }
+    }
+    
+    // Actually, I will implement a cleaner version directly in the code block below.
+    public static async Task ExecuteWithPublishedProject(
+        string commandName,
+        string outputFile,
+        FileInfo projectFile,
+        string? architecture,
+        Func<string?, string, Result<string>> ridResolver,
+        bool selfContained,
+        string configuration,
+        bool singleFile,
+        bool trimmed,
+        Func<IDisposableContainer, ILogger, Task<Result<IPackage>>> packageAction)
+    {
+         await ExecuteWithLogging(commandName, outputFile, async logger =>
+         {
+             var ridResult = ridResolver(architecture, commandName);
+             if (ridResult.IsFailure)
+             {
+                 logger.Error("Invalid architecture: {Error}", ridResult.Error);
+                 Environment.ExitCode = 1;
+                 return;
+             }
+
+             var publisher = new DotnetPackaging.Publish.DotnetPublisher(Maybe<ILogger>.From(logger));
+             var req = new DotnetPackaging.Publish.ProjectPublishRequest(projectFile.FullName)
+             {
+                 Rid = Maybe<string>.From(ridResult.Value),
+                 SelfContained = selfContained,
+                 Configuration = configuration,
+                 SingleFile = singleFile,
+                 Trimmed = trimmed
+             };
+
+             var pubResult = await publisher.Publish(req);
+             if (pubResult.IsFailure)
+             {
+                 logger.Error("Publish failed: {Error}", pubResult.Error);
+                 Environment.ExitCode = 1;
+                 return;
+             }
+
+             var packageResult = await packageAction(pubResult.Value, logger);
+             if (packageResult.IsFailure)
+             {
+                 logger.Error("Packaging failed: {Error}", packageResult.Error);
+                 pubResult.Value.Dispose();
+                 Environment.ExitCode = 1;
+                 return;
+             }
+
+             using var package = packageResult.Value;
+             var writeResult = await package.WriteTo(outputFile);
+             if (writeResult.IsFailure)
+             {
+                 logger.Error("Failed to persist package: {Error}", writeResult.Error);
+                 Environment.ExitCode = 1;
+                 return;
+             }
+
+             logger.Information("{OutputFile}", outputFile);
+         });
     }
 }

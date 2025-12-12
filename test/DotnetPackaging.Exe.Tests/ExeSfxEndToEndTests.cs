@@ -1,16 +1,10 @@
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Text.Json;
-using System.Threading.Tasks;
-using DotnetPackaging.Exe;
 using System.Reactive.Linq;
+using System.Text.Json;
 using FluentAssertions;
-using Xunit;
-using Zafiro.DivineBytes.System.IO;
 using Path = System.IO.Path;
 
-namespace DotnetPackaging.Exe.E2E.Tests;
+namespace DotnetPackaging.Exe.Tests;
 
 public class ExeSfxEndToEndTests
 {
@@ -32,8 +26,13 @@ public class ExeSfxEndToEndTests
         var service = new ExePackagingService();
         var result = await service.BuildFromProject(new FileInfo(projectPath), "win-x64", true, "Release", true, false, outputExe, new Options(), vendor: null, stubFile: null, setupLogo: null);
         result.IsSuccess.Should().BeTrue(result.IsFailure ? result.Error : string.Empty);
+        using var package = result.Value;
 
-        await result.Value.WriteTo(tmpDir);
+        await using var output = File.Create(outputExe);
+        await foreach (var chunk in package.Bytes.ToAsyncEnumerable())
+        {
+            await output.WriteAsync(chunk, 0, chunk.Length);
+        }
 
         // Run the produced installer with the env hook to dump metadata and exit
         var psi = new ProcessStartInfo

@@ -1,6 +1,6 @@
-using DotnetPackaging.Hfs.Encoding;
+using DotnetPackaging.Dmg.Hfs.Encoding;
 
-namespace DotnetPackaging.Hfs.Extents;
+namespace DotnetPackaging.Dmg.Hfs.Extents;
 
 /// <summary>
 /// HFS+ Extent Descriptor (8 bytes).
