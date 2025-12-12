@@ -1,12 +1,7 @@
-using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Reactive.Linq;
-using System.Reactive.Threading.Tasks;
-using Serilog;
 using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
-using Zafiro.Mixins;
-using Zafiro.Reactive;
 using DivinePath = Zafiro.DivineBytes.Path;
 
 namespace DotnetPackaging;

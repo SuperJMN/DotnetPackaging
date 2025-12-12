@@ -1,5 +1,5 @@
+using System.Collections.Concurrent;
 using Zafiro.Commands;
-using Zafiro.DivineBytes;
 using Zafiro.Mixins;
 using Result = CSharpFunctionalExtensions.Result;
 
@@ -7,6 +7,7 @@ namespace DotnetPackaging.Publish;
 
 public sealed class DotnetPublisher : IPublisher
 {
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> PublishLocks = new(StringComparer.OrdinalIgnoreCase);
     private readonly ICommand command;
     private readonly Maybe<ILogger> logger;
 
@@ -26,6 +27,9 @@ public sealed class DotnetPublisher : IPublisher
 
     public async Task<Result<IDisposableContainer>> Publish(ProjectPublishRequest request)
     {
+        var projectKey = System.IO.Path.GetFullPath(request.ProjectPath);
+        var gate = PublishLocks.GetOrAdd(projectKey, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
         try
         {
             logger.Information("Preparing to publish project {ProjectPath}", request.ProjectPath);
@@ -66,6 +70,10 @@ public sealed class DotnetPublisher : IPublisher
         {
             logger.Error(ex, "Unexpected failure during publish for {ProjectPath}", request.ProjectPath);
             return Result.Failure<IDisposableContainer>($"Unexpected error during publish: {ex.Message}");
+        }
+        finally
+        {
+            gate.Release();
         }
     }
 

@@ -1,5 +1,3 @@
-using CSharpFunctionalExtensions;
-
 namespace DotnetPackaging.Publish;
 
 public sealed class ProjectPublishRequest
