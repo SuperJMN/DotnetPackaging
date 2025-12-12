@@ -6,8 +6,6 @@ using System.IO;
 using System.Diagnostics;
 using Serilog;
 using Serilog.Context;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
 
 namespace DotnetPackaging.Tool.Commands;
 
@@ -42,7 +40,7 @@ public static class ExecutionWrapper
         string configuration,
         bool singleFile,
         bool trimmed,
-        Func<IDisposableContainer, ILogger, Task<Result<PackagingArtifacts>>> packageAction)
+        Func<IDisposableContainer, ILogger, Task<Result<IPackage>>> packageAction)
     {
          await ExecuteWithLogging(commandName, outputFile, async logger =>
          {
@@ -72,33 +70,16 @@ public static class ExecutionWrapper
                  return;
              }
 
-             var artifactsResult = await packageAction(pubResult.Value, logger);
-             if (artifactsResult.IsFailure)
+             var packageResult = await packageAction(pubResult.Value, logger);
+             if (packageResult.IsFailure)
              {
-                 logger.Error("Packaging failed: {Error}", artifactsResult.Error);
+                 logger.Error("Packaging failed: {Error}", packageResult.Error);
                  pubResult.Value.Dispose();
                  Environment.ExitCode = 1;
                  return;
              }
 
-             var composite = new CompositeDisposable { pubResult.Value };
-             foreach (var disposable in artifactsResult.Value.Disposables)
-             {
-                 composite.Add(disposable);
-             }
-
-             using var session = new PackagingSession(artifactsResult.Value.Resources, composite);
-             var package = await session.Resources
-                 .Take(1)
-                 .FirstOrDefaultAsync();
-
-             if (package is null)
-             {
-                 logger.Error("Packaging failed: {Error}", "No packages were produced");
-                 Environment.ExitCode = 1;
-                 return;
-             }
-
+             using var package = packageResult.Value;
              var writeResult = await package.WriteTo(outputFile);
              if (writeResult.IsFailure)
              {

@@ -11,6 +11,7 @@ using Directory = System.IO.Directory;
 using File = System.IO.File;
 using DotnetPackaging.Tool;
 using System.IO.Abstractions;
+using System.Reactive.Disposables;
 
 namespace DotnetPackaging.Tool.Commands;
 
@@ -160,7 +161,14 @@ public static class ExeCommand
                     return;
                 }
 
-                await result.Value.WriteTo(outFile.DirectoryName ?? Directory.GetCurrentDirectory());
+                using var package = result.Value;
+                var writeResult = await package.WriteTo(outFile.FullName);
+                if (writeResult.IsFailure)
+                {
+                    logger.Error("Failed to persist installer: {Error}", writeResult.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
                 logger.Information("{OutputFile}", outFile.FullName);
             });
         });
@@ -256,7 +264,7 @@ public static class ExeCommand
                     var ridResult = RidUtils.ResolveWindowsRid(archVal, "EXE packaging");
                     if (ridResult.IsFailure)
                     {
-                        return Result.Failure<PackagingArtifacts>(ridResult.Error);
+                        return Result.Failure<IPackage>(ridResult.Error);
                     }
 
                     var result = await exeService.BuildFromDirectory(
@@ -270,7 +278,15 @@ public static class ExeCommand
                         Maybe<string>.From(System.IO.Path.GetFileNameWithoutExtension(prj.Name)),
                         projectMetadata);
 
-                    return result.Map(container => PackagingArtifacts.FromPackages(container.Resources));
+                    if (result.IsFailure)
+                    {
+                        return result.ConvertFailure<IPackage>();
+                    }
+
+                    var package = result.Value;
+                    var composite = new CompositeDisposable { pub };
+                    var wrapped = (IPackage)new Package(package.Name, package, composite);
+                    return Result.Success(wrapped);
                 });
         });
 

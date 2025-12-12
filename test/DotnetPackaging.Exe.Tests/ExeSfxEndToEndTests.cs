@@ -26,12 +26,10 @@ public class ExeSfxEndToEndTests
         var service = new ExePackagingService();
         var result = await service.BuildFromProject(new FileInfo(projectPath), "win-x64", true, "Release", true, false, outputExe, new Options(), vendor: null, stubFile: null, setupLogo: null);
         result.IsSuccess.Should().BeTrue(result.IsFailure ? result.Error : string.Empty);
-        using var session = result.Value;
-        var package = await session.Resources.FirstAsync();
-        package.IsSuccess.Should().BeTrue(package.IsFailure ? package.Error : string.Empty);
+        using var package = result.Value;
 
         await using var output = File.Create(outputExe);
-        await foreach (var chunk in package.Value.Bytes.ToAsyncEnumerable())
+        await foreach (var chunk in package.Bytes.ToAsyncEnumerable())
         {
             await output.WriteAsync(chunk, 0, chunk.Length);
         }

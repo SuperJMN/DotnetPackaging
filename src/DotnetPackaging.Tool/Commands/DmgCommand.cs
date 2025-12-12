@@ -165,11 +165,11 @@ public static class DmgCommand
                         if (writeResult.IsFailure)
                         {
                             l.Error("Failed to write publish output to temp dir: {Error}", writeResult.Error);
-                            return Result.Failure<PackagingArtifacts>("Failed to write publish output to temp dir");
+                            return Result.Failure<IPackage>("Failed to write publish output to temp dir");
                         }
 
                         await DmgHfsBuilder.Create(tempDir, dmgPath, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon, executableName: executableName);
-                        var package = new Resource(outFile.Name, ByteSource.FromStreamFactory(() => File.OpenRead(dmgPath)));
+                        var resource = new Resource(outFile.Name, ByteSource.FromStreamFactory(() => File.OpenRead(dmgPath)));
                         var cleanup = Disposable.Create(() =>
                         {
                             if (File.Exists(dmgPath))
@@ -177,7 +177,9 @@ public static class DmgCommand
                                 File.Delete(dmgPath);
                             }
                         });
-                        return Result.Success(PackagingArtifacts.FromPackage(package, cleanup));
+                        var composite = new CompositeDisposable { pub, cleanup };
+                        var package = (IPackage)new Package(resource.Name, resource, composite);
+                        return Result.Success(package);
                     }
                     finally
                     {

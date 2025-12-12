@@ -149,19 +149,23 @@ public static class RpmCommand
                             }
                         }).Build();
 
-                    return rpmResult.Map(rpmFile =>
+                    if (rpmResult.IsFailure)
                     {
-                        var rpmSource = ByteSource.FromStreamFactory(() => File.OpenRead(rpmFile.FullName));
-                        var package = new Resource(outFile.Name, rpmSource);
-                        var cleanup = Disposable.Create(() =>
+                        return rpmResult.ConvertFailure<IPackage>();
+                    }
+
+                    var rpmSource = ByteSource.FromStreamFactory(() => File.OpenRead(rpmResult.Value.FullName));
+                    var resource = new Resource(outFile.Name, rpmSource);
+                    var cleanup = Disposable.Create(() =>
+                    {
+                        if (File.Exists(rpmResult.Value.FullName))
                         {
-                            if (File.Exists(rpmFile.FullName))
-                            {
-                                File.Delete(rpmFile.FullName);
-                            }
-                        });
-                        return PackagingArtifacts.FromPackage(package, cleanup);
+                            File.Delete(rpmResult.Value.FullName);
+                        }
                     });
+                    var composite = new CompositeDisposable { pub, cleanup };
+                    var package = (IPackage)new Package(resource.Name, resource, composite);
+                    return Result.Success(package);
                 });
         });
 

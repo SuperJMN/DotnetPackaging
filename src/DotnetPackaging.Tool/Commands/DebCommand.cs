@@ -137,8 +137,9 @@ public static class DebCommand
 
                     return built.Map(deb =>
                     {
-                        var package = new Resource(outFile.Name, DebMixin.ToByteSource(deb));
-                        return PackagingArtifacts.FromPackage(package);
+                        var resource = new Resource(outFile.Name, DebMixin.ToByteSource(deb));
+                        var package = (IPackage)new Package(resource.Name, resource, pub);
+                        return package;
                     });
                 });
         });

@@ -42,11 +42,11 @@ public class DetachedInstallerTests
             setupLogo: null);
 
         result.IsSuccess.Should().BeTrue();
-        var artifact = result.Value.Resources.Should().ContainSingle().Subject;
+        using var package = result.Value;
         Directory.Delete(tempRoot, true);
 
         var outputPath = IOPath.Combine(IOPath.GetTempPath(), $"dp-exe-installer-{Guid.NewGuid():N}.exe");
-        var writeResult = await artifact.WriteTo(outputPath);
+        var writeResult = await package.WriteTo(outputPath);
 
         writeResult.IsSuccess.Should().BeTrue();
         File.Exists(outputPath).Should().BeTrue();

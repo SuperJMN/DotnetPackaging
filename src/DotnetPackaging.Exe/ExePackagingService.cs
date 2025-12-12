@@ -9,9 +9,8 @@ using System.IO.Abstractions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
 using RuntimeArchitecture = System.Runtime.InteropServices.Architecture;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
 using System.Linq;
+using System.Reactive.Linq;
 using Path = System.IO.Path;
 
 namespace DotnetPackaging.Exe;
@@ -50,7 +49,7 @@ public sealed class ExePackagingService
         this.stubProvider = stubProvider ?? throw new ArgumentNullException(nameof(stubProvider));
     }
 
-    public Task<Result<IContainer>> BuildFromDirectory(
+    public Task<Result<IPackage>> BuildFromDirectory(
         IContainer publishDirectory,
         string outputName,
         Options options,
@@ -70,10 +69,10 @@ public sealed class ExePackagingService
             Maybe<ProjectMetadata>.None,
             ToMaybe(setupLogo));
 
-        return Build(request);
+        return Build(request).Bind(container => ToPackage(container, outputName, null));
     }
 
-    public Task<Result<IContainer>> BuildFromDirectory(
+    public Task<Result<IPackage>> BuildFromDirectory(
         IContainer publishDirectory,
         string outputName,
         Options options,
@@ -95,10 +94,10 @@ public sealed class ExePackagingService
             projectMetadata,
             ToMaybe(setupLogo));
 
-        return Build(request);
+        return Build(request).Bind(container => ToPackage(container, outputName, null));
     }
 
-    public async Task<Result<IResourceSession>> BuildFromProject(
+    public async Task<Result<IPackage>> BuildFromProject(
         FileInfo projectFile,
         string? runtimeIdentifier,
         bool selfContained,
@@ -123,10 +122,9 @@ public sealed class ExePackagingService
         var publishResult = await publisher.Publish(publishRequest);
         if (publishResult.IsFailure)
         {
-            return Result.Failure<IResourceSession>(publishResult.Error);
+            return Result.Failure<IPackage>(publishResult.Error);
         }
 
-        var disposables = new CompositeDisposable { publishResult.Value };
         var projectMetadata = ReadProjectMetadata(projectFile);
 
         var request = new ExePackagingRequest(
@@ -143,12 +141,11 @@ public sealed class ExePackagingService
         var buildResult = await Build(request);
         if (buildResult.IsFailure)
         {
-            disposables.Dispose();
-            return Result.Failure<IResourceSession>(buildResult.Error);
+            publishResult.Value.Dispose();
+            return Result.Failure<IPackage>(buildResult.Error);
         }
 
-        var packages = buildResult.Value.Resources.ToObservable();
-        return Result.Success<IResourceSession>(new PackagingSession(packages, disposables));
+        return ToPackage(buildResult.Value, outputName, publishResult.Value);
     }
 
     private Maybe<ProjectMetadata> ReadProjectMetadata(FileInfo projectFile)
@@ -218,6 +215,18 @@ public sealed class ExePackagingService
         return stubPathResult.IsSuccess
             ? await BuildWithStub(ByteSource.FromStreamFactory(() => File.OpenRead(stubPathResult.Value)))
             : Result.Failure<IContainer>(stubPathResult.Error);
+    }
+
+    private static Result<IPackage> ToPackage(IContainer container, string outputName, IDisposable? cleanup)
+    {
+        var resource = container.Resources.FirstOrDefault();
+        if (resource is null)
+        {
+            return Result.Failure<IPackage>("No installer artifact was produced");
+        }
+
+        var package = (IPackage)new Package(resource.Name, resource, cleanup);
+        return Result.Success(package);
     }
 
 

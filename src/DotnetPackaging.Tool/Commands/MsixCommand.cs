@@ -87,8 +87,9 @@ public static class MsixCommand
                     var msixResult = DotnetPackaging.Msix.Msix.FromDirectory(pub, Maybe<Serilog.ILogger>.From(logger));
                     return Task.FromResult(msixResult.Map(bytes =>
                     {
-                        var package = new Resource(outFile.Name, bytes);
-                        return PackagingArtifacts.FromPackage(package);
+                        var resource = new Resource(outFile.Name, bytes);
+                        var package = (IPackage)new Package(resource.Name, resource, pub);
+                        return package;
                     }));
                 });
         });
