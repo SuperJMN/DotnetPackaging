@@ -270,11 +270,7 @@ public static class ExeCommand
                         Maybe<string>.From(System.IO.Path.GetFileNameWithoutExtension(prj.Name)),
                         projectMetadata);
 
-                    return result.Map(container =>
-                    {
-                        var packages = container.Resources.Select(Result.Success<INamedByteSource>);
-                        return PackagingArtifacts.FromPackages(packages);
-                    });
+                    return result.Map(container => PackagingArtifacts.FromPackages(container.Resources));
                 });
         });
 

@@ -87,20 +87,19 @@ public static class ExecutionWrapper
                  composite.Add(disposable);
              }
 
-             using var session = new PackagingSession(artifactsResult.Value.Packages, composite);
-             var package = await session.Packages
+             using var session = new PackagingSession(artifactsResult.Value.Resources, composite);
+             var package = await session.Resources
                  .Take(1)
-                 .DefaultIfEmpty(Result.Failure<INamedByteSource>("No packages were produced"))
-                 .FirstAsync();
+                 .FirstOrDefaultAsync();
 
-             if (package.IsFailure)
+             if (package is null)
              {
-                 logger.Error("Packaging failed: {Error}", package.Error);
+                 logger.Error("Packaging failed: {Error}", "No packages were produced");
                  Environment.ExitCode = 1;
                  return;
              }
 
-             var writeResult = await package.Value.WriteTo(outputFile);
+             var writeResult = await package.WriteTo(outputFile);
              if (writeResult.IsFailure)
              {
                  logger.Error("Failed to persist package: {Error}", writeResult.Error);

@@ -98,7 +98,7 @@ public sealed class ExePackagingService
         return Build(request);
     }
 
-    public async Task<Result<IPackagingSession>> BuildFromProject(
+    public async Task<Result<IResourceSession>> BuildFromProject(
         FileInfo projectFile,
         string? runtimeIdentifier,
         bool selfContained,
@@ -123,7 +123,7 @@ public sealed class ExePackagingService
         var publishResult = await publisher.Publish(publishRequest);
         if (publishResult.IsFailure)
         {
-            return Result.Failure<IPackagingSession>(publishResult.Error);
+            return Result.Failure<IResourceSession>(publishResult.Error);
         }
 
         var disposables = new CompositeDisposable { publishResult.Value };
@@ -144,12 +144,11 @@ public sealed class ExePackagingService
         if (buildResult.IsFailure)
         {
             disposables.Dispose();
-            return Result.Failure<IPackagingSession>(buildResult.Error);
+            return Result.Failure<IResourceSession>(buildResult.Error);
         }
 
-        var packages = buildResult.Value.Resources.Select(Result.Success<INamedByteSource>).ToObservable();
-
-        return Result.Success<IPackagingSession>(new PackagingSession(packages, disposables));
+        var packages = buildResult.Value.Resources.ToObservable();
+        return Result.Success<IResourceSession>(new PackagingSession(packages, disposables));
     }
 
     private Maybe<ProjectMetadata> ReadProjectMetadata(FileInfo projectFile)

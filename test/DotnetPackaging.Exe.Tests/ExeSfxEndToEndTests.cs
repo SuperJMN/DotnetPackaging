@@ -27,7 +27,7 @@ public class ExeSfxEndToEndTests
         var result = await service.BuildFromProject(new FileInfo(projectPath), "win-x64", true, "Release", true, false, outputExe, new Options(), vendor: null, stubFile: null, setupLogo: null);
         result.IsSuccess.Should().BeTrue(result.IsFailure ? result.Error : string.Empty);
         using var session = result.Value;
-        var package = await session.Packages.FirstAsync();
+        var package = await session.Resources.FirstAsync();
         package.IsSuccess.Should().BeTrue(package.IsFailure ? package.Error : string.Empty);
 
         await using var output = File.Create(outputExe);

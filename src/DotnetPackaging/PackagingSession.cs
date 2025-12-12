@@ -2,22 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Disposables;
-using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging;
 
-public class PackagingSession : IPackagingSession
+public class PackagingSession : IResourceSession
 {
     private readonly CompositeDisposable disposables;
 
-    public PackagingSession(IObservable<Result<INamedByteSource>> packages, IEnumerable<IDisposable> disposables)
+    public PackagingSession(IObservable<INamedByteSource> resources, IEnumerable<IDisposable> disposables)
     {
-        Packages = packages ?? throw new ArgumentNullException(nameof(packages));
+        Resources = resources ?? throw new ArgumentNullException(nameof(resources));
         this.disposables = new CompositeDisposable((disposables ?? Enumerable.Empty<IDisposable>()).ToArray());
     }
 
-    public IObservable<Result<INamedByteSource>> Packages { get; }
+    public IObservable<INamedByteSource> Resources { get; }
 
     public void Dispose()
     {
