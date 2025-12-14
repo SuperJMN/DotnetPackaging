@@ -38,7 +38,7 @@ public sealed class ExePackagingService
     }
 
     public ExePackagingService(DotnetPublisher publisher, ILogger? logger)
-        : this(publisher, logger, new InstallerStubProvider(logger ?? Log.Logger))
+        : this(publisher, logger, new InstallerStubProvider(logger ?? Log.Logger, null, publisher))
     {
     }
 
@@ -199,22 +199,10 @@ public sealed class ExePackagingService
             return Result.Failure<IContainer>(ridResult.Error);
         }
 
-        var localStubResult = await TryResolveLocalStub(ridResult.Value);
-        if (localStubResult.IsFailure)
-        {
-            return Result.Failure<IContainer>(localStubResult.Error);
-        }
-
-        var localStub = localStubResult.Value;
-        if (localStub.HasValue)
-        {
-            return await BuildWithStub(localStub.Value);
-        }
-
-        var stubPathResult = await stubProvider.GetStub(ridResult.Value);
-        return stubPathResult.IsSuccess
-            ? await BuildWithStub(ByteSource.FromStreamFactory(() => File.OpenRead(stubPathResult.Value)))
-            : Result.Failure<IContainer>(stubPathResult.Error);
+        var stubResult = await stubProvider.ResolveStub(ridResult.Value);
+        return stubResult.IsSuccess
+            ? await BuildWithStub(stubResult.Value)
+            : Result.Failure<IContainer>(stubResult.Error);
     }
 
     private static Result<IPackage> ToPackage(IContainer container, string outputName, IDisposable? cleanup)
@@ -384,205 +372,8 @@ public sealed class ExePackagingService
         return Result.Failure<string>("--arch is required when building EXE on non-Windows hosts (x64/arm64).");
     }
 
-    private async Task<Result<Maybe<IByteSource>>> TryResolveLocalStub(string rid)
-    {
-        var projectPath = FindLocalStubProject();
-        if (projectPath.HasNoValue)
-        {
-            return Result.Success(Maybe<IByteSource>.None);
-        }
 
-        logger.Information("Building installer stub locally from {ProjectPath} for {RID}.", projectPath.Value, rid);
-        var publishRequest = new ProjectPublishRequest(projectPath.Value)
-        {
-            Rid = ToMaybe(rid),
-            SelfContained = true,
-            Configuration = "Release",
-            SingleFile = true,
-            Trimmed = false,
-            MsBuildProperties = new Dictionary<string, string>
-            {
-                ["IncludeNativeLibrariesForSelfExtract"] = "true",
-                ["IncludeAllContentForSelfExtract"] = "true",
-                ["PublishTrimmed"] = "false",
-                ["DebugType"] = "embedded",
-                ["EnableCompressionInSingleFile"] = "true"
-            }
-        };
 
-        // We need a separate publish for the uninstaller stub which must NOT be SingleFile to avoid 
-        // the "AppHost with embedded payload corrupted" issue when used as a raw binary.
-        // BUT, we actually want the SingleFile stub to be the installer itself.
-        // The problem is we are using the SAME file for both the "Installer Stub" (wrapper) and the "Uninstaller Stub" (embedded).
-
-        // If we use the SingleFile output as the embedded uninstaller, it seems to crash when extracted.
-        // This might be because SingleFile apps rely on the bundle signature at the end of the file.
-        // When we embed it in a zip, and then extract it, it should be identical.
-
-        // However, maybe we should publish it WITHOUT SingleFile for the purpose of embedding?
-        // But we want a single Uninstall.exe.
-
-        // The issue is likely that the SingleFile host has issues when it was previously part of a larger bundle? No.
-
-        // Let's try publishing it as a non-SingleFile app? No, then it's a folder.
-
-        // What if we publish it as SingleFile but disable compression?
-        // MsBuildProperties["EnableCompressionInSingleFile"] = "false";
-
-        var publishResult = await publisher.Publish(publishRequest);
-        if (publishResult.IsFailure)
-        {
-            return Result.Failure<Maybe<IByteSource>>($"Failed to publish installer stub from {projectPath.Value}: {publishResult.Error}");
-        }
-
-        using var pub = publishResult.Value;
-        
-        var assemblyName = Path.GetFileNameWithoutExtension(projectPath.Value);
-        var stubResource = pub.Resources
-            .FirstOrDefault(r => r.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && 
-                                 (string.IsNullOrWhiteSpace(assemblyName) || 
-                                  Path.GetFileNameWithoutExtension(r.Name).Equals(assemblyName, StringComparison.OrdinalIgnoreCase)));
-
-        if (stubResource == null)
-        {
-             // Fallback: any exe that is not createdump
-             stubResource = pub.Resources
-                .FirstOrDefault(r => r.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && 
-                                     !Path.GetFileName(r.Name).Equals("createdump.exe", StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (stubResource == null)
-        {
-            return Result.Failure<Maybe<IByteSource>>($"Installer stub was published but no executable was located in the output container.");
-        }
-
-        var chunks = await stubResource.Bytes.ToList();
-        
-        // List<byte[]> to byte[]:
-        var totalBytes = chunks.Sum(cb => cb.Length);
-        var buffer = new byte[totalBytes];
-        var offset = 0;
-        foreach (var chunk in chunks)
-        {
-            Buffer.BlockCopy(chunk, 0, buffer, offset, chunk.Length);
-            offset += chunk.Length;
-        }
-
-        return Result.Success(Maybe<IByteSource>.From(ByteSource.FromBytes(buffer)));
-    }
-
-    private Maybe<string> FindLocalStubProject()
-    {
-        var currentDirectory = Directory.GetCurrentDirectory();
-        var repositoryRoot = LocateRepositoryRoot(currentDirectory);
-        var searchRoots = BuildSearchRoots(currentDirectory, repositoryRoot);
-
-        foreach (var root in searchRoots)
-        {
-            var match = TryFindStubProjectUnder(root);
-            if (match.HasValue)
-            {
-                return match;
-            }
-        }
-
-        return Maybe<string>.None;
-    }
-
-    private IEnumerable<string> BuildSearchRoots(string currentDirectory, Maybe<string> repositoryRoot)
-    {
-        if (repositoryRoot.HasValue)
-        {
-            yield return repositoryRoot.Value;
-            if (!PathsEqual(repositoryRoot.Value, currentDirectory))
-            {
-                yield return currentDirectory;
-            }
-        }
-        else
-        {
-            yield return currentDirectory;
-        }
-    }
-
-    private Maybe<string> TryFindStubProjectUnder(string root)
-    {
-        var normalizedRoot = Path.GetFullPath(root);
-        var directCandidate = Path.Combine(normalizedRoot, "src", "DotnetPackaging.Exe.Installer", "DotnetPackaging.Exe.Installer.csproj");
-        if (File.Exists(directCandidate))
-        {
-            return Maybe<string>.From(directCandidate);
-        }
-
-        try
-        {
-            var match = Directory
-                .EnumerateFiles(normalizedRoot, "DotnetPackaging.Exe.Installer.csproj", SearchOption.AllDirectories)
-                .OrderBy(path => path.Length)
-                .FirstOrDefault();
-            return match is null ? Maybe<string>.None : Maybe<string>.From(Path.GetFullPath(match));
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            logger.Debug(ex, "Unable to enumerate DotnetPackaging.Exe.Installer.csproj under {Directory}", normalizedRoot);
-            return Maybe<string>.None;
-        }
-    }
-
-    private static bool PathsEqual(string left, string right)
-    {
-        var l = Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        var r = Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        return string.Equals(l, r, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
-    }
-
-    private Maybe<string> LocateRepositoryRoot(string startDirectory)
-    {
-        try
-        {
-            var dir = Path.GetFullPath(startDirectory);
-            while (!string.IsNullOrWhiteSpace(dir))
-            {
-                var gitDir = Path.Combine(dir, ".git");
-                if (Directory.Exists(gitDir) || File.Exists(gitDir))
-                {
-                    return Maybe<string>.From(dir);
-                }
-
-                var parent = Directory.GetParent(dir);
-                if (parent is null)
-                {
-                    break;
-                }
-                dir = parent.FullName;
-            }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            logger.Debug(ex, "Unable to determine git repository root from {Directory}", startDirectory);
-        }
-
-        return Maybe<string>.None;
-    }
-
-    private static Maybe<string> ResolveStubOutputPath(string projectPath, string publishDirectory)
-    {
-        var assemblyName = Path.GetFileNameWithoutExtension(projectPath);
-        if (!string.IsNullOrWhiteSpace(assemblyName))
-        {
-            var candidate = Path.Combine(publishDirectory, $"{assemblyName}.exe");
-            if (File.Exists(candidate))
-            {
-                return Maybe<string>.From(candidate);
-            }
-        }
-
-        var fallback = Directory
-            .EnumerateFiles(publishDirectory, "*.exe", SearchOption.AllDirectories)
-            .FirstOrDefault(file => !string.Equals(Path.GetFileName(file), "createdump.exe", StringComparison.OrdinalIgnoreCase));
-
-        return fallback is null ? Maybe<string>.None : Maybe<string>.From(fallback);
-    }
 
     private sealed record ExePackagingRequest(
         IContainer PublishDirectory,
