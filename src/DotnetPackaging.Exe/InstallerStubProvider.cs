@@ -135,29 +135,34 @@ public sealed class InstallerStubProvider
             }
             else
             {
-                foreach (var tag in version.TagCandidates())
+                // Fix: If the version is the default assembly version (1.0.0 or 1.0.0.0), 
+                // skip tag probing to fallback to "latest" instead of trying to download the potentially ancient v1.0.0 tag.
+                if (version.AssetVersion != "1.0.0" && version.AssetVersion != "1.0.0.0")
                 {
-                    var candidateBase = $"https://github.com/SuperJMN/DotnetPackaging/releases/download/{tag}/";
-                    var candidateSha = candidateBase + shaName;
-                    try
+                    foreach (var tag in version.TagCandidates())
                     {
-                        logger.Debug("Probing checksum: {Url}", candidateSha);
-                        using var resp = await httpClient.GetAsync(candidateSha);
-                        if (resp.IsSuccessStatusCode)
+                        var candidateBase = $"https://github.com/SuperJMN/DotnetPackaging/releases/download/{tag}/";
+                        var candidateSha = candidateBase + shaName;
+                        try
                         {
-                            var shaTextProbe = await resp.Content.ReadAsStringAsync();
-                            if (!string.IsNullOrWhiteSpace(shaTextProbe))
+                            logger.Debug("Probing checksum: {Url}", candidateSha);
+                            using var resp = await httpClient.GetAsync(candidateSha);
+                            if (resp.IsSuccessStatusCode)
                             {
-                                cachedShaText = shaTextProbe;
-                                exeUrl = candidateBase + assetName;
-                                shaUrl = candidateSha;
-                                break;
+                                var shaTextProbe = await resp.Content.ReadAsStringAsync();
+                                if (!string.IsNullOrWhiteSpace(shaTextProbe))
+                                {
+                                    cachedShaText = shaTextProbe;
+                                    exeUrl = candidateBase + assetName;
+                                    shaUrl = candidateSha;
+                                    break;
+                                }
                             }
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Debug(ex, "Probe failed for {Url}", candidateSha);
+                        catch (Exception ex)
+                        {
+                            logger.Debug(ex, "Probe failed for {Url}", candidateSha);
+                        }
                     }
                 }
             }
