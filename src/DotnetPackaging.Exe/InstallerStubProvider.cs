@@ -8,21 +8,50 @@ using NuGet.Versioning;
 using Serilog;
 using Path = System.IO.Path;
 
+using System.Runtime.InteropServices;
+using System.Reactive.Linq;
+using DotnetPackaging.Publish;
+using Zafiro.DivineBytes;
+
 namespace DotnetPackaging.Exe;
 
 public sealed class InstallerStubProvider
 {
     private readonly ILogger logger;
     private readonly HttpClient httpClient;
+    private readonly DotnetPublisher? publisher;
 
-    public InstallerStubProvider(ILogger logger, HttpClient? httpClient = null)
+    public InstallerStubProvider(ILogger logger, HttpClient? httpClient = null, DotnetPublisher? publisher = null)
     {
         this.logger = logger ?? Log.Logger;
         this.httpClient = httpClient ?? new HttpClient();
+        this.publisher = publisher;
         if (!this.httpClient.DefaultRequestHeaders.UserAgent.Any())
         {
             this.httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("DotnetPackaging.Tool");
         }
+    }
+
+    public async Task<Result<IByteSource>> ResolveStub(string rid, string? versionOverride = null)
+    {
+        var localResult = await TryResolveLocalStub(rid);
+        if (localResult.IsFailure)
+        {
+            return Result.Failure<IByteSource>(localResult.Error);
+        }
+
+        if (localResult.Value.HasValue)
+        {
+            return Result.Success(localResult.Value.Value);
+        }
+
+        var webResult = await GetStub(rid, versionOverride);
+        if (webResult.IsFailure)
+        {
+            return Result.Failure<IByteSource>(webResult.Error);
+        }
+
+        return Result.Success<IByteSource>(ByteSource.FromStreamFactory(() => File.OpenRead(webResult.Value)));
     }
 
     public Task<Result<string>> GetStub(string rid, string? versionOverride = null)
@@ -106,29 +135,34 @@ public sealed class InstallerStubProvider
             }
             else
             {
-                foreach (var tag in version.TagCandidates())
+                // Fix: If the version is the default assembly version (1.0.0 or 1.0.0.0), 
+                // skip tag probing to fallback to "latest" instead of trying to download the potentially ancient v1.0.0 tag.
+                if (version.AssetVersion != "1.0.0" && version.AssetVersion != "1.0.0.0")
                 {
-                    var candidateBase = $"https://github.com/SuperJMN/DotnetPackaging/releases/download/{tag}/";
-                    var candidateSha = candidateBase + shaName;
-                    try
+                    foreach (var tag in version.TagCandidates())
                     {
-                        logger.Debug("Probing checksum: {Url}", candidateSha);
-                        using var resp = await httpClient.GetAsync(candidateSha);
-                        if (resp.IsSuccessStatusCode)
+                        var candidateBase = $"https://github.com/SuperJMN/DotnetPackaging/releases/download/{tag}/";
+                        var candidateSha = candidateBase + shaName;
+                        try
                         {
-                            var shaTextProbe = await resp.Content.ReadAsStringAsync();
-                            if (!string.IsNullOrWhiteSpace(shaTextProbe))
+                            logger.Debug("Probing checksum: {Url}", candidateSha);
+                            using var resp = await httpClient.GetAsync(candidateSha);
+                            if (resp.IsSuccessStatusCode)
                             {
-                                cachedShaText = shaTextProbe;
-                                exeUrl = candidateBase + assetName;
-                                shaUrl = candidateSha;
-                                break;
+                                var shaTextProbe = await resp.Content.ReadAsStringAsync();
+                                if (!string.IsNullOrWhiteSpace(shaTextProbe))
+                                {
+                                    cachedShaText = shaTextProbe;
+                                    exeUrl = candidateBase + assetName;
+                                    shaUrl = candidateSha;
+                                    break;
+                                }
                             }
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Debug(ex, "Probe failed for {Url}", candidateSha);
+                        catch (Exception ex)
+                        {
+                            logger.Debug(ex, "Probe failed for {Url}", candidateSha);
+                        }
                     }
                 }
             }
@@ -207,6 +241,173 @@ public sealed class InstallerStubProvider
         {
             return Result.Failure<string>(ex.Message);
         }
+    }
+
+    private async Task<Result<Maybe<IByteSource>>> TryResolveLocalStub(string rid)
+    {
+        if (publisher is null)
+        {
+            return Result.Success(Maybe<IByteSource>.None);
+        }
+
+        var projectPath = FindLocalStubProject();
+        if (projectPath.HasNoValue)
+        {
+            return Result.Success(Maybe<IByteSource>.None);
+        }
+
+        logger.Information("Building installer stub locally from {ProjectPath} for {RID}.", projectPath.Value, rid);
+        var publishRequest = new DotnetPackaging.Publish.ProjectPublishRequest(projectPath.Value)
+        {
+            Rid = Maybe<string>.From(rid),
+            SelfContained = true,
+            Configuration = "Release",
+            SingleFile = true,
+            Trimmed = false,
+            MsBuildProperties = new Dictionary<string, string>
+            {
+                ["IncludeNativeLibrariesForSelfExtract"] = "true",
+                ["IncludeAllContentForSelfExtract"] = "true",
+                ["PublishTrimmed"] = "false",
+                ["DebugType"] = "embedded",
+                ["EnableCompressionInSingleFile"] = "true"
+            }
+        };
+
+        var publishResult = await publisher.Publish(publishRequest);
+        if (publishResult.IsFailure)
+        {
+            return Result.Failure<Maybe<IByteSource>>($"Failed to publish installer stub from {projectPath.Value}: {publishResult.Error}");
+        }
+
+        using var pub = publishResult.Value;
+
+        var assemblyName = Path.GetFileNameWithoutExtension(projectPath.Value);
+        var stubResource = pub.Resources
+            .FirstOrDefault(r => r.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+                                 (string.IsNullOrWhiteSpace(assemblyName) ||
+                                  Path.GetFileNameWithoutExtension(r.Name).Equals(assemblyName, StringComparison.OrdinalIgnoreCase)));
+
+        if (stubResource == null)
+        {
+            // Fallback: any exe that is not createdump
+            stubResource = pub.Resources
+               .FirstOrDefault(r => r.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+                                    !Path.GetFileName(r.Name).Equals("createdump.exe", StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (stubResource == null)
+        {
+            return Result.Failure<Maybe<IByteSource>>($"Installer stub was published but no executable was located in the output container.");
+        }
+
+        var chunks = await stubResource.Bytes.ToList();
+
+        // List<byte[]> to byte[]:
+        var totalBytes = chunks.Sum(cb => cb.Length);
+        var buffer = new byte[totalBytes];
+        var offset = 0;
+        foreach (var chunk in chunks)
+        {
+            Buffer.BlockCopy(chunk, 0, buffer, offset, chunk.Length);
+            offset += chunk.Length;
+        }
+
+        return Result.Success(Maybe<IByteSource>.From(ByteSource.FromBytes(buffer)));
+    }
+
+    private Maybe<string> FindLocalStubProject()
+    {
+        var currentDirectory = Directory.GetCurrentDirectory();
+        var repositoryRoot = LocateRepositoryRoot(currentDirectory);
+        var searchRoots = BuildSearchRoots(currentDirectory, repositoryRoot);
+
+        foreach (var root in searchRoots)
+        {
+            var match = TryFindStubProjectUnder(root);
+            if (match.HasValue)
+            {
+                return match;
+            }
+        }
+
+        return Maybe<string>.None;
+    }
+
+    private IEnumerable<string> BuildSearchRoots(string currentDirectory, Maybe<string> repositoryRoot)
+    {
+        if (repositoryRoot.HasValue)
+        {
+            yield return repositoryRoot.Value;
+            if (!PathsEqual(repositoryRoot.Value, currentDirectory))
+            {
+                yield return currentDirectory;
+            }
+        }
+        else
+        {
+            yield return currentDirectory;
+        }
+    }
+
+    private Maybe<string> TryFindStubProjectUnder(string root)
+    {
+        var normalizedRoot = Path.GetFullPath(root);
+        var directCandidate = Path.Combine(normalizedRoot, "src", "DotnetPackaging.Exe.Installer", "DotnetPackaging.Exe.Installer.csproj");
+        if (File.Exists(directCandidate))
+        {
+            return Maybe<string>.From(directCandidate);
+        }
+
+        try
+        {
+            var match = Directory
+                .EnumerateFiles(normalizedRoot, "DotnetPackaging.Exe.Installer.csproj", SearchOption.AllDirectories)
+                .OrderBy(path => path.Length)
+                .FirstOrDefault();
+            return match is null ? Maybe<string>.None : Maybe<string>.From(Path.GetFullPath(match));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.Debug(ex, "Unable to enumerate DotnetPackaging.Exe.Installer.csproj under {Directory}", normalizedRoot);
+            return Maybe<string>.None;
+        }
+    }
+
+    private static bool PathsEqual(string left, string right)
+    {
+        var l = Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var r = Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return string.Equals(l, r, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    }
+
+    private Maybe<string> LocateRepositoryRoot(string startDirectory)
+    {
+        try
+        {
+            var dir = Path.GetFullPath(startDirectory);
+            while (!string.IsNullOrWhiteSpace(dir))
+            {
+                var gitDir = Path.Combine(dir, ".git");
+                if (Directory.Exists(gitDir) || File.Exists(gitDir))
+                {
+                    return Maybe<string>.From(dir);
+                }
+
+                var parent = Directory.GetParent(dir);
+                if (parent is null)
+                {
+                    break;
+                }
+                dir = parent.FullName;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.Debug(ex, "Unable to determine git repository root from {Directory}", startDirectory);
+        }
+
+        return Maybe<string>.None;
     }
 
     private async Task<Result<ReleaseAssetSelection>> ResolveLatestRelease(string rid, StubVersion version)
