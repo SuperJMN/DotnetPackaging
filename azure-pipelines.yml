@@ -72,7 +72,7 @@ steps:
       $rid = 'win-x64'
       $out = "$(Build.SourcesDirectory)\artifacts\stubs\$rid"
       mkdir $out -Force | Out-Null
-      dotnet publish "$(StubProject)" -c "$(BuildConfiguration)" -r $rid -p:PublishSingleFile=true -p:SelfContained=true -p:IncludeNativeLibrariesForSelfExtract=true -p:IncludeAllContentForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=embedded -o $out --nologo
+      dotnet publish "$(StubProject)" -c "$(BuildConfiguration)" -r $rid -p:PublishSingleFile=true -p:SelfContained=true -p:IncludeNativeLibrariesForSelfExtract=true -p:IncludeAllContentForSelfExtract=true -p:PublishTrimmed=false -p:EnableCompressionInSingleFile=true -p:DebugType=embedded -o $out --nologo
     displayName: 'Publish stub (win-x64)'
     condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
 
@@ -81,7 +81,7 @@ steps:
       $rid = 'win-arm64'
       $out = "$(Build.SourcesDirectory)\artifacts\stubs\$rid"
       mkdir $out -Force | Out-Null
-      dotnet publish "$(StubProject)" -c "$(BuildConfiguration)" -r $rid -p:PublishSingleFile=true -p:SelfContained=true -p:IncludeNativeLibrariesForSelfExtract=true -p:IncludeAllContentForSelfExtract=true -p:PublishTrimmed=false -p:DebugType=embedded -o $out --nologo
+      dotnet publish "$(StubProject)" -c "$(BuildConfiguration)" -r $rid -p:PublishSingleFile=true -p:SelfContained=true -p:IncludeNativeLibrariesForSelfExtract=true -p:IncludeAllContentForSelfExtract=true -p:PublishTrimmed=false -p:EnableCompressionInSingleFile=true -p:DebugType=embedded -o $out --nologo
     displayName: 'Publish stub (win-arm64)'
     condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
 
