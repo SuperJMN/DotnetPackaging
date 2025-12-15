@@ -8,6 +8,7 @@ using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
 using System.IO.Abstractions;
 using IOPath = System.IO.Path;
+using DotnetPackaging.Publish;
 
 namespace DotnetPackaging.Exe.Tests;
 
@@ -30,7 +31,7 @@ public class DetachedInstallerTests
             Version = Maybe<string>.From("1.0.0"),
         };
 
-        var service = new ExePackagingService();
+        var service = CreateService();
         var stub = ByteSource.FromString("stub-bytes");
         var result = await service.BuildFromDirectory(
             publishContainer,
@@ -51,5 +52,19 @@ public class DetachedInstallerTests
         writeResult.IsSuccess.Should().BeTrue();
         File.Exists(outputPath).Should().BeTrue();
         File.Delete(outputPath);
+    }
+
+    private static ExePackagingService CreateService()
+    {
+        var logger = Serilog.Log.Logger;
+        var publisher = new DotnetPublisher();
+        var httpFactory = new FakeHttpClientFactory();
+        var stubProvider = new InstallerStubProvider(logger, httpFactory, publisher);
+        return new ExePackagingService(publisher, stubProvider, logger);
+    }
+
+    private class FakeHttpClientFactory : System.Net.Http.IHttpClientFactory
+    {
+        public System.Net.Http.HttpClient CreateClient(string name) => new System.Net.Http.HttpClient();
     }
 }

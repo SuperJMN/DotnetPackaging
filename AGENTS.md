@@ -27,6 +27,8 @@ Precedencia de reglas
 - Preferir programación funcional y reactiva cuando no complique en exceso.
 - Validación: preferir ReactiveUI.Validations.
 - Result handling: usar CSharpFunctionalExtensions cuando sea posible.
+  - Preferir métodos idiomáticos (`Bind`, `Map`, `Tap`, `Ensure`, `Try`, `MapTry`, `Compensate`) frente a comprobaciones de estado (`IsFailure`, `IsSuccess`).
+  - Evitar `Match` salvo que aporte mayor claridad.
 - Convenciones:
   - No usar sufijo “Async” en métodos que devuelven Task.
   - No usar guiones bajos para campos privados.

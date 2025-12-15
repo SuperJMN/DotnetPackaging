@@ -1,8 +1,10 @@
 using System.IO;
+using System.Net.Http;
 using System.CommandLine;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
 using DotnetPackaging.Exe;
+using DotnetPackaging.Publish;
 using Serilog;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
@@ -141,16 +143,19 @@ public static class ExeCommand
                     return;
                 }
 
-                var exeService = new ExePackagingService(logger);
+                var httpClientFactory = new SimpleHttpClientFactory();
+                var publisher = new DotnetPublisher(Maybe<ILogger>.From(logger));
+                var stubProvider = new InstallerStubProvider(logger, httpClientFactory, publisher);
+                var exeService = new ExePackagingService(publisher, stubProvider, logger);
 
                 var containerResult = new DirectoryContainer(new DirectoryInfoWrapper(new FileSystem(), inDir)).AsRoot();
 
-                var stubBytes = stub != null 
-                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(stub.FullName)) 
+                var stubBytes = stub != null
+                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(stub.FullName))
                     : null;
 
-                var logoBytes = logo != null 
-                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(logo.FullName)) 
+                var logoBytes = logo != null
+                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(logo.FullName))
                     : null;
 
                 var result = await exeService.BuildFromDirectory(containerResult, outFile.Name, opt, vendorOpt, ridResult.Value, stubBytes, logoBytes);
@@ -249,18 +254,21 @@ public static class ExeCommand
                 sc, cfg, sf, tr,
                 async (pub, l) =>
                 {
-                    var exeService = new ExePackagingService(l);
-                    
-                    var stubBytes = extrasStub != null 
-                        ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasStub.FullName)) 
+                    var httpClientFactory = new SimpleHttpClientFactory();
+                    var publisher = new DotnetPublisher(Maybe<ILogger>.From(l));
+                    var stubProvider = new InstallerStubProvider(l, httpClientFactory, publisher);
+                    var exeService = new ExePackagingService(publisher, stubProvider, l);
+
+                    var stubBytes = extrasStub != null
+                        ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasStub.FullName))
                         : null;
 
-                    var logoBytes = extrasLogo != null 
-                        ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasLogo.FullName)) 
+                    var logoBytes = extrasLogo != null
+                        ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasLogo.FullName))
                         : null;
 
                     var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
-                    
+
                     var ridResult = RidUtils.ResolveWindowsRid(archVal, "EXE packaging");
                     if (ridResult.IsFailure)
                     {
@@ -293,5 +301,13 @@ public static class ExeCommand
         exeCommand.Add(exFromProject);
 
         return exeCommand;
+    }
+
+    private class SimpleHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name)
+        {
+            return new HttpClient();
+        }
     }
 }

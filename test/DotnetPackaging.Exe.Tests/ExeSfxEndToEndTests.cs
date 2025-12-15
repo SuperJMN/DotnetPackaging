@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Reactive.Linq;
 using System.Text.Json;
 using FluentAssertions;
+using DotnetPackaging.Publish;
 using Path = System.IO.Path;
 
 namespace DotnetPackaging.Exe.Tests;
@@ -23,7 +24,7 @@ public class ExeSfxEndToEndTests
         var metadataJsonPath = Path.Combine(tmpDir, "metadata.json");
 
         // Act: build the SFX installer from the project
-        var service = new ExePackagingService();
+        var service = CreateService();
         var result = await service.BuildFromProject(new FileInfo(projectPath), "win-x64", true, "Release", true, false, outputExe, new Options(), vendor: null, stubFile: null, setupLogo: null);
         result.IsSuccess.Should().BeTrue(result.IsFailure ? result.Error : string.Empty);
         using var package = result.Value;
@@ -54,5 +55,19 @@ public class ExeSfxEndToEndTests
         var root = doc.RootElement;
         root.TryGetProperty("ApplicationName", out var appNameProp).Should().BeTrue("metadata should include ApplicationName");
         appNameProp.GetString().Should().Be("TestApp.Desktop");
+    }
+
+    private static ExePackagingService CreateService()
+    {
+        var logger = Serilog.Log.Logger;
+        var publisher = new DotnetPublisher();
+        var httpFactory = new FakeHttpClientFactory();
+        var stubProvider = new InstallerStubProvider(logger, httpFactory, publisher);
+        return new ExePackagingService(publisher, stubProvider, logger);
+    }
+
+    private class FakeHttpClientFactory : System.Net.Http.IHttpClientFactory
+    {
+        public System.Net.Http.HttpClient CreateClient(string name) => new System.Net.Http.HttpClient();
     }
 }

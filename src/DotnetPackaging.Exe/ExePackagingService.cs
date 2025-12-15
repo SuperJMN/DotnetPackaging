@@ -22,31 +22,11 @@ public sealed class ExePackagingService
     private readonly ILogger logger;
     private readonly InstallerStubProvider stubProvider;
 
-    public ExePackagingService()
-        : this(new DotnetPublisher(), Log.Logger)
-    {
-    }
-
-    public ExePackagingService(ILogger? logger)
-        : this(new DotnetPublisher(ToMaybe(logger)), logger)
-    {
-    }
-
-    public ExePackagingService(DotnetPublisher publisher)
-        : this(publisher, null)
-    {
-    }
-
-    public ExePackagingService(DotnetPublisher publisher, ILogger? logger)
-        : this(publisher, logger, new InstallerStubProvider(logger ?? Log.Logger, null, publisher))
-    {
-    }
-
-    public ExePackagingService(DotnetPublisher publisher, ILogger? logger, InstallerStubProvider stubProvider)
+    public ExePackagingService(DotnetPublisher publisher, InstallerStubProvider stubProvider, ILogger? logger = null)
     {
         this.publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
-        this.logger = logger ?? Log.Logger;
         this.stubProvider = stubProvider ?? throw new ArgumentNullException(nameof(stubProvider));
+        this.logger = logger ?? Log.Logger;
     }
 
     public Task<Result<IPackage>> BuildFromDirectory(

@@ -7,7 +7,6 @@ using CSharpFunctionalExtensions;
 using NuGet.Versioning;
 using Serilog;
 using Path = System.IO.Path;
-
 using System.Runtime.InteropServices;
 using System.Reactive.Linq;
 using DotnetPackaging.Publish;
@@ -15,59 +14,29 @@ using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Exe;
 
-public sealed class InstallerStubProvider
+public sealed class InstallerStubProvider(ILogger logger, IHttpClientFactory httpClientFactory, DotnetPublisher? publisher = null)
 {
-    private readonly ILogger logger;
-    private readonly HttpClient httpClient;
-    private readonly DotnetPublisher? publisher;
+    private readonly IHttpClientFactory httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
 
-    public InstallerStubProvider(ILogger logger, HttpClient? httpClient = null, DotnetPublisher? publisher = null)
+    public Task<Result<IByteSource>> ResolveStub(string rid, string? versionOverride = null)
     {
-        this.logger = logger ?? Log.Logger;
-        this.httpClient = httpClient ?? new HttpClient();
-        this.publisher = publisher;
-        if (!this.httpClient.DefaultRequestHeaders.UserAgent.Any())
-        {
-            this.httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("DotnetPackaging.Tool");
-        }
-    }
-
-    public async Task<Result<IByteSource>> ResolveStub(string rid, string? versionOverride = null)
-    {
-        var localResult = await TryResolveLocalStub(rid);
-        if (localResult.IsFailure)
-        {
-            return Result.Failure<IByteSource>(localResult.Error);
-        }
-
-        if (localResult.Value.HasValue)
-        {
-            return Result.Success(localResult.Value.Value);
-        }
-
-        var webResult = await GetStub(rid, versionOverride);
-        if (webResult.IsFailure)
-        {
-            return Result.Failure<IByteSource>(webResult.Error);
-        }
-
-        return Result.Success<IByteSource>(ByteSource.FromStreamFactory(() => File.OpenRead(webResult.Value)));
+        return TryResolveLocalStub(rid)
+            .Bind(maybeLocal => maybeLocal.HasValue
+                ? Task.FromResult(Result.Success(maybeLocal.Value))
+                : GetStub(rid, versionOverride)
+                    .Map(path => ByteSource.FromStreamFactory(() => File.OpenRead(path))));
     }
 
     public Task<Result<string>> GetStub(string rid, string? versionOverride = null)
     {
-        var versionResult = DetermineVersion(versionOverride);
-        if (versionResult.IsFailure)
-        {
-            return Task.FromResult(Result.Failure<string>(versionResult.Error));
-        }
-
-        return GetOrDownloadStub(rid, versionResult.Value);
+        return DetermineVersion(versionOverride)
+            .Bind(v => GetOrDownloadStub(rid, v));
     }
 
     private Result<StubVersion> DetermineVersion(string? versionOverride)
     {
         var raw = versionOverride;
+
         if (string.IsNullOrWhiteSpace(raw))
         {
             raw = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_VERSION");
@@ -96,128 +65,139 @@ public sealed class InstallerStubProvider
         return version is null ? "0.0.0" : new Version(version.Major, version.Minor, version.Build < 0 ? 0 : version.Build).ToString();
     }
 
-    private async Task<Result<string>> GetOrDownloadStub(string rid, StubVersion version)
+    private Task<Result<string>> GetOrDownloadStub(string rid, StubVersion version)
+    {
+        return GetOverridePath()
+            .Or(() => GetCachePath(rid, version))
+            .ToResult("Stub not found locally")
+            .OnFailureCompensate(() => DownloadAndCacheStub(rid, version));
+    }
+
+    private Maybe<string> GetOverridePath()
+    {
+        var overridePath = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_PATH");
+        return !string.IsNullOrWhiteSpace(overridePath) && File.Exists(overridePath)
+            ? Maybe<string>.From(Path.GetFullPath(overridePath))
+            : Maybe<string>.None;
+    }
+
+    private Maybe<string> GetCachePath(string rid, StubVersion version)
+    {
+        var cacheBase = GetCacheBase();
+        var cacheDir = Path.Combine(cacheBase, rid, version.AssetVersion);
+        var targetPath = Path.Combine(cacheDir, "InstallerStub.exe");
+
+        if (File.Exists(targetPath))
+        {
+            return Maybe<string>.From(targetPath);
+        }
+
+        return Maybe<string>.None;
+    }
+
+    private static string GetCacheBase()
+    {
+        var cacheBase = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_CACHE");
+        return string.IsNullOrWhiteSpace(cacheBase) ? GetDefaultCacheDir() : cacheBase;
+    }
+
+    private async Task<Result<string>> DownloadAndCacheStub(string rid, StubVersion version)
+    {
+        var cacheBase = GetCacheBase();
+        var cacheDir = Path.Combine(cacheBase, rid, version.AssetVersion);
+        Directory.CreateDirectory(cacheDir);
+        var targetPath = Path.Combine(cacheDir, "InstallerStub.exe");
+
+        logger.Information("Downloading installer stub for {RID} v{Version}. This may take a while the first time. Cache: {CacheDir}", rid, version.AssetVersion, cacheDir);
+
+        return await ResolveDownloadUrls(rid, version)
+            .Bind(urls => DownloadAndVerify(urls.ExeUrl, urls.ShaUrl, version.AssetName(rid), targetPath));
+    }
+
+    private async Task<Result<(string ExeUrl, string ShaUrl)>> ResolveDownloadUrls(string rid, StubVersion version)
+    {
+        var configuredBase = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_URL_BASE");
+        if (!string.IsNullOrWhiteSpace(configuredBase))
+        {
+            var baseUrl = configuredBase.EndsWith('/') ? configuredBase : configuredBase + "/";
+            return Result.Success((baseUrl + version.AssetName(rid), baseUrl + version.ChecksumName(rid)));
+        }
+
+        // Try probing tags
+        if (version.AssetVersion != "1.0.0" && version.AssetVersion != "1.0.0.0")
+        {
+            foreach (var tag in version.TagCandidates())
+            {
+                var candidateBase = $"https://github.com/SuperJMN/DotnetPackaging/releases/download/{tag}/";
+                var candidateSha = candidateBase + version.ChecksumName(rid);
+                var probeResult = await TryProbeUrl(candidateSha);
+                if (probeResult.IsSuccess)
+                {
+                    return Result.Success((candidateBase + version.AssetName(rid), candidateSha));
+                }
+            }
+        }
+
+        // Fallback to latest
+        return await ResolveLatestRelease(rid, version)
+            .Map(selection => (selection.ExeUrl, selection.ShaUrl));
+    }
+
+    private async Task<Result> TryProbeUrl(string url)
     {
         try
         {
-            var overridePath = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_PATH");
-            if (!string.IsNullOrWhiteSpace(overridePath) && File.Exists(overridePath))
-            {
-                return Result.Success(Path.GetFullPath(overridePath));
-            }
+            logger.Debug("Probing checksum: {Url}", url);
+            using var client = CreateClient();
+            using var resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+            return resp.IsSuccessStatusCode ? Result.Success() : Result.Failure("Not found");
+        }
+        catch (Exception ex)
+        {
+            logger.Debug(ex, "Probe failed for {Url}", url);
+            return Result.Failure(ex.Message);
+        }
+    }
 
-            var cacheBase = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_CACHE");
-            if (string.IsNullOrWhiteSpace(cacheBase)) cacheBase = GetDefaultCacheDir();
+    private async Task<Result<string>> DownloadAndVerify(string exeUrl, string shaUrl, string assetName, string targetPath)
+    {
+        try
+        {
+            using var client = CreateClient();
 
-            var configuredBase = Environment.GetEnvironmentVariable("DOTNETPACKAGING_STUB_URL_BASE");
+            // Download SHA
+            logger.Debug("Downloading checksum: {Url}", shaUrl);
+            var shaTextFinal = await client.GetStringAsync(shaUrl);
 
-            var assetName = version.AssetName(rid);
-            var shaName = version.ChecksumName(rid);
-            var cacheDir = Path.Combine(cacheBase, rid, version.AssetVersion);
-            Directory.CreateDirectory(cacheDir);
-            var targetPath = Path.Combine(cacheDir, "InstallerStub.exe");
-            if (File.Exists(targetPath))
-            {
-                return Result.Success(targetPath);
-            }
+            var expected = shaTextFinal
+                .Trim()
+                .Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .FirstOrDefault();
 
-            logger.Information("Downloading installer stub for {RID} v{Version}. This may take a while the first time. Cache: {CacheDir}", rid, version.AssetVersion, cacheDir);
-
-            string? exeUrl = null;
-            string? shaUrl = null;
-            string? cachedShaText = null;
-
-            if (!string.IsNullOrWhiteSpace(configuredBase))
-            {
-                var baseUrl = configuredBase.EndsWith('/') ? configuredBase : configuredBase + "/";
-                exeUrl = baseUrl + assetName;
-                shaUrl = baseUrl + shaName;
-            }
-            else
-            {
-                // Fix: If the version is the default assembly version (1.0.0 or 1.0.0.0), 
-                // skip tag probing to fallback to "latest" instead of trying to download the potentially ancient v1.0.0 tag.
-                if (version.AssetVersion != "1.0.0" && version.AssetVersion != "1.0.0.0")
-                {
-                    foreach (var tag in version.TagCandidates())
-                    {
-                        var candidateBase = $"https://github.com/SuperJMN/DotnetPackaging/releases/download/{tag}/";
-                        var candidateSha = candidateBase + shaName;
-                        try
-                        {
-                            logger.Debug("Probing checksum: {Url}", candidateSha);
-                            using var resp = await httpClient.GetAsync(candidateSha);
-                            if (resp.IsSuccessStatusCode)
-                            {
-                                var shaTextProbe = await resp.Content.ReadAsStringAsync();
-                                if (!string.IsNullOrWhiteSpace(shaTextProbe))
-                                {
-                                    cachedShaText = shaTextProbe;
-                                    exeUrl = candidateBase + assetName;
-                                    shaUrl = candidateSha;
-                                    break;
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.Debug(ex, "Probe failed for {Url}", candidateSha);
-                        }
-                    }
-                }
-            }
-
-            if (exeUrl is null || shaUrl is null)
-            {
-                var latestResult = await ResolveLatestRelease(rid, version);
-                if (latestResult.IsFailure)
-                {
-                    return Result.Failure<string>(latestResult.Error);
-                }
-
-                var latest = latestResult.Value;
-                exeUrl = latest.ExeUrl;
-                shaUrl = latest.ShaUrl;
-
-                var effectiveVersion = latest.AssetVersion ?? version.AssetVersion;
-                cacheDir = Path.Combine(cacheBase, rid, effectiveVersion);
-                Directory.CreateDirectory(cacheDir);
-                targetPath = Path.Combine(cacheDir, "InstallerStub.exe");
-            }
-
-            string? shaTextFinal = cachedShaText;
-            if (shaTextFinal is null)
-            {
-                logger.Debug("Downloading checksum: {Url}", shaUrl);
-                shaTextFinal = await httpClient.GetStringAsync(shaUrl!);
-            }
-            if (string.IsNullOrWhiteSpace(shaTextFinal))
-            {
-                return Result.Failure<string>($"Failed to download checksum: {shaUrl}");
-            }
-
-            var firstToken = shaTextFinal.Trim().Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-            if (string.IsNullOrWhiteSpace(firstToken))
+            if (string.IsNullOrWhiteSpace(expected))
             {
                 return Result.Failure<string>("Invalid .sha256 file contents");
             }
-            var expected = firstToken!.Trim();
 
+            // Download Exe to temp
             var tmpDir = Path.Combine(Path.GetTempPath(), "dp-stub-dl-" + Guid.NewGuid());
             Directory.CreateDirectory(tmpDir);
             var tmpPath = Path.Combine(tmpDir, assetName);
+
             try
             {
-                await using (var outFs = File.Create(tmpPath))
+                logger.Debug("Downloading stub: {Url}", exeUrl);
+                using (var resp = await client.GetAsync(exeUrl, HttpCompletionOption.ResponseHeadersRead))
                 {
-                    logger.Debug("Downloading stub: {Url}", exeUrl);
-                    using var resp = await httpClient.GetAsync(exeUrl!, HttpCompletionOption.ResponseHeadersRead);
                     if (!resp.IsSuccessStatusCode)
                         return Result.Failure<string>($"Failed to download stub: {exeUrl} (HTTP {(int)resp.StatusCode})");
+
                     await using var stream = await resp.Content.ReadAsStreamAsync();
+                    await using var outFs = File.Create(tmpPath);
                     await stream.CopyToAsync(outFs);
                 }
 
+                // Verify
                 await using (var fs = File.OpenRead(tmpPath))
                 {
                     using var sha = SHA256.Create();
@@ -229,6 +209,7 @@ public sealed class InstallerStubProvider
                     }
                 }
 
+                // Move
                 File.Move(tmpPath, targetPath, overwrite: true);
                 return Result.Success(targetPath);
             }
@@ -274,46 +255,43 @@ public sealed class InstallerStubProvider
             }
         };
 
-        var publishResult = await publisher.Publish(publishRequest);
-        if (publishResult.IsFailure)
+        return await publisher.Publish(publishRequest)
+            .Bind(pub => ExtractStubFromPublish(pub, projectPath.Value));
+    }
+
+    private static Result<Maybe<IByteSource>> ExtractStubFromPublish(DotnetPackaging.Publish.IDisposableContainer pub, string projectPath)
+    {
+        using (pub)
         {
-            return Result.Failure<Maybe<IByteSource>>($"Failed to publish installer stub from {projectPath.Value}: {publishResult.Error}");
+            var assemblyName = Path.GetFileNameWithoutExtension(projectPath);
+            var stubResource = pub.Resources
+                .FirstOrDefault(r => r.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+                                     (string.IsNullOrWhiteSpace(assemblyName) ||
+                                      Path.GetFileNameWithoutExtension(r.Name).Equals(assemblyName, StringComparison.OrdinalIgnoreCase)));
+
+            if (stubResource == null)
+            {
+                // Fallback: any exe that is not createdump
+                stubResource = pub.Resources
+                   .FirstOrDefault(r => r.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+                                        !Path.GetFileName(r.Name).Equals("createdump.exe", StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (stubResource == null)
+            {
+                return Result.Failure<Maybe<IByteSource>>($"Installer stub was published but no executable was located in the output container.");
+            }
+
+            // Ideally we would return a stream/factory directly, but IByteSource needs to be safe.
+            // Since `pub` is disposed at end of block, we MUST copy data now.
+            var stream = new MemoryStream();
+            // sync copy for now as Bytes is likely IEnumerable
+            foreach (var chunk in stubResource.Bytes.ToEnumerable())
+            {
+                stream.Write(chunk, 0, chunk.Length);
+            }
+            return Result.Success(Maybe<IByteSource>.From(ByteSource.FromBytes(stream.ToArray())));
         }
-
-        using var pub = publishResult.Value;
-
-        var assemblyName = Path.GetFileNameWithoutExtension(projectPath.Value);
-        var stubResource = pub.Resources
-            .FirstOrDefault(r => r.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
-                                 (string.IsNullOrWhiteSpace(assemblyName) ||
-                                  Path.GetFileNameWithoutExtension(r.Name).Equals(assemblyName, StringComparison.OrdinalIgnoreCase)));
-
-        if (stubResource == null)
-        {
-            // Fallback: any exe that is not createdump
-            stubResource = pub.Resources
-               .FirstOrDefault(r => r.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
-                                    !Path.GetFileName(r.Name).Equals("createdump.exe", StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (stubResource == null)
-        {
-            return Result.Failure<Maybe<IByteSource>>($"Installer stub was published but no executable was located in the output container.");
-        }
-
-        var chunks = await stubResource.Bytes.ToList();
-
-        // List<byte[]> to byte[]:
-        var totalBytes = chunks.Sum(cb => cb.Length);
-        var buffer = new byte[totalBytes];
-        var offset = 0;
-        foreach (var chunk in chunks)
-        {
-            Buffer.BlockCopy(chunk, 0, buffer, offset, chunk.Length);
-            offset += chunk.Length;
-        }
-
-        return Result.Success(Maybe<IByteSource>.From(ByteSource.FromBytes(buffer)));
     }
 
     private Maybe<string> FindLocalStubProject()
@@ -416,7 +394,8 @@ public sealed class InstallerStubProvider
         {
             logger.Warning("Could not locate a release tag for v{Version}. Falling back to the latest release.", version.ReleaseTag);
             var latestApi = "https://api.github.com/repos/SuperJMN/DotnetPackaging/releases/latest";
-            using var latestResp = await httpClient.GetAsync(latestApi);
+            using var client = CreateClient();
+            using var latestResp = await client.GetAsync(latestApi);
             if (!latestResp.IsSuccessStatusCode)
             {
                 return Result.Failure<ReleaseAssetSelection>($"Could not locate a release tag for v{version.ReleaseTag} and failed to query latest release (HTTP {(int)latestResp.StatusCode}).");
@@ -539,6 +518,16 @@ public sealed class InstallerStubProvider
     {
         [JsonPropertyName("tag_name")] public string TagName { get; set; } = string.Empty;
         [JsonPropertyName("assets")] public List<GhAsset> Assets { get; set; } = new();
+    }
+
+    private HttpClient CreateClient()
+    {
+        var client = httpClientFactory.CreateClient("DotnetPackaging.Tool");
+        if (!client.DefaultRequestHeaders.UserAgent.Any())
+        {
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("DotnetPackaging.Tool");
+        }
+        return client;
     }
 
     private sealed class GhAsset

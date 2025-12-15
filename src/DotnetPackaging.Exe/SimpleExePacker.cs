@@ -65,7 +65,7 @@ public static class SimpleExePacker
             pair => pair.Key,
             pair => (pair.Key == "metadata.json" || pair.Key == BrandingLogoEntry)
                 ? CompressionLevel.NoCompression
-                : CompressionLevel.Optimal);
+                : CompressionLevel.SmallestSize);
 
         return await CreateZip(files, entries);
     }
@@ -81,7 +81,7 @@ public static class SimpleExePacker
         var compression = new Dictionary<string, CompressionLevel>(StringComparer.Ordinal)
         {
             ["metadata.json"] = CompressionLevel.NoCompression,
-            ["Support/Uninstaller.exe"] = CompressionLevel.Optimal
+            ["Support/Uninstaller.exe"] = CompressionLevel.SmallestSize
         };
 
         return await CreateZip(files, compression);

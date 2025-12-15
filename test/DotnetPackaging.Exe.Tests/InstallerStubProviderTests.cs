@@ -21,12 +21,12 @@ public class InstallerStubProviderTests
         var expectedHash = Convert.ToHexString(SHA256.HashData(exeBytes));
 
         var handler = new StubHttpMessageHandler();
-        var httpClient = new HttpClient(handler);
+        var factory = new FakeHttpClientFactory(handler);
         var logger = new LoggerConfiguration().CreateLogger();
-        var provider = new InstallerStubProvider(logger, httpClient);
+        var provider = new InstallerStubProvider(logger, factory);
 
-        var shaUrl = baseUrl + $"DotnetPackaging.Exe.Installer-{rid}-v8.0.75.exe.sha256";
-        var exeUrl = baseUrl + $"DotnetPackaging.Exe.Installer-{rid}-v8.0.75.exe";
+        var shaUrl = baseUrl + $"DotnetPackaging.Exe.Installer-{rid}-v8.0.75.0.exe.sha256";
+        var exeUrl = baseUrl + $"DotnetPackaging.Exe.Installer-{rid}-v8.0.75.0.exe";
 
         handler.Register(shaUrl, () => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(expectedHash) });
         handler.Register(exeUrl, () => new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(exeBytes) });
@@ -90,6 +90,21 @@ public class InstallerStubProviderTests
             {
                 Environment.SetEnvironmentVariable(pair.Key, pair.Value);
             }
+        }
+    }
+
+    private class FakeHttpClientFactory : IHttpClientFactory
+    {
+        private readonly HttpMessageHandler handler;
+
+        public FakeHttpClientFactory(HttpMessageHandler handler)
+        {
+            this.handler = handler;
+        }
+
+        public HttpClient CreateClient(string name)
+        {
+            return new HttpClient(handler, disposeHandler: false);
         }
     }
 }

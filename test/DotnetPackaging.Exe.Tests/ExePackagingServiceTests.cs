@@ -4,6 +4,8 @@ using System.Reflection;
 using System.Text;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Exe;
+using DotnetPackaging.Publish;
+using Microsoft.Extensions.Logging.Abstractions;
 using FluentAssertions;
 using Zafiro.DivineBytes;
 using Xunit;
@@ -27,7 +29,7 @@ public class ExePackagingServiceTests
             "runtimes/win-x64/native/createdump.exe",
             "tools/helper.exe");
 
-        var service = new ExePackagingService();
+        var service = CreateService();
         var inferred = InvokeInferExecutableName(service, publishOutput, Maybe<string>.From("TestApp.Desktop"));
 
         inferred.HasValue.Should().BeTrue();
@@ -41,7 +43,7 @@ public class ExePackagingServiceTests
             "win-x64/publish/Application.exe",
             "win-x64/publish/Application.dll");
 
-        var service = new ExePackagingService();
+        var service = CreateService();
         var inferred = InvokeInferExecutableName(service, publishOutput, Maybe<string>.None);
 
         var expected = new DivinePath("win-x64/publish/Application.exe")
@@ -60,7 +62,7 @@ public class ExePackagingServiceTests
             "tools/cli/Helper.exe",
             "Helper.exe");
 
-        var service = new ExePackagingService();
+        var service = CreateService();
         var inferred = InvokeInferExecutableName(service, publishOutput, Maybe<string>.None);
 
         inferred.HasValue.Should().BeTrue();
@@ -74,7 +76,7 @@ public class ExePackagingServiceTests
             "createdump.exe",
             "runtimes/win-x64/native/createdump.exe");
 
-        var service = new ExePackagingService();
+        var service = CreateService();
         var inferred = InvokeInferExecutableName(service, publishOutput, Maybe<string>.None);
 
         inferred.HasValue.Should().BeFalse();
@@ -157,5 +159,19 @@ public class ExePackagingServiceTests
             var payload = Encoding.UTF8.GetBytes($"{extension}:{relative}");
             parent.AddResource(new Resource(filePath.Name(), ByteSource.FromBytes(payload)));
         }
+    }
+
+    private static ExePackagingService CreateService()
+    {
+        var logger = Serilog.Log.Logger;
+        var publisher = new DotnetPublisher();
+        var httpFactory = new FakeHttpClientFactory();
+        var stubProvider = new InstallerStubProvider(logger, httpFactory, publisher);
+        return new ExePackagingService(publisher, stubProvider, logger);
+    }
+
+    private class FakeHttpClientFactory : System.Net.Http.IHttpClientFactory
+    {
+        public System.Net.Http.HttpClient CreateClient(string name) => new System.Net.Http.HttpClient();
     }
 }
