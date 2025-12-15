@@ -15,6 +15,7 @@
     <PackageReference Include="System.CommandLine" />
     <PackageReference Include="System.IO.Abstractions" />
     <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" />
+    <PackageReference Include="Zafiro" />
   </ItemGroup>
   <!-- Always reference local projects within this repo -->
   <ItemGroup>

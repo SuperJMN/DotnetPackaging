@@ -17,7 +17,7 @@ public class PackagingTests : IDisposable
     {
         temp = new TempDirectory();
         repoRoot = GetRepositoryRoot();
-        projectPath = Path.Combine(repoRoot, "test-input", "TestApp", "TestApp.csproj");
+        projectPath = Path.Combine(repoRoot, "test", "test-input", "TestApp", "TestApp.csproj");
     }
 
     [Fact]
@@ -70,9 +70,9 @@ public class PackagingTests : IDisposable
     {
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-             // Skip DMG test on non-macOS platforms if necessary, or ensure the tool supports cross-platform DMG creation (which it does via DmgHfsBuilder).
-             // However, DmgHfsBuilder is cross-platform implementation in Zafiro/DotnetPackaging.
-             // So this should run on Windows too.
+            // Skip DMG test on non-macOS platforms if necessary, or ensure the tool supports cross-platform DMG creation (which it does via DmgHfsBuilder).
+            // However, DmgHfsBuilder is cross-platform implementation in Zafiro/DotnetPackaging.
+            // So this should run on Windows too.
         }
 
         var output = Path.Combine(temp.Path, "TestApp.dmg");

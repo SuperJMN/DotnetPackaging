@@ -2,7 +2,6 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
-using Zafiro.CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Tool;
@@ -65,13 +64,14 @@ public class OptionsBinder
     public Options Bind(ParseResult parseResult)
     {
         var icon = parseResult.GetValue(iconOption);
+        var mainCategory = parseResult.GetValue(mainCategoryOption);
         return new Options
         {
             Name = Maybe.From(parseResult.GetValue(appNameOption)!),
             StartupWmClass = Maybe.From(parseResult.GetValue(wmClassOption)!),
             Keywords = MaybeList(parseResult, keywordsOption),
             Comment = Maybe.From(parseResult.GetValue(commentOption)!),
-            MainCategory = MaybeEx.FromNullableStruct(parseResult.GetValue(mainCategoryOption)),
+            MainCategory = mainCategory.AsMaybe(),
             AdditionalCategories = MaybeList(parseResult, additionalCategoriesOption),
             Icon = Maybe<IIcon>.From(icon!),
             Version = Maybe.From(parseResult.GetValue(versionOption)!),
