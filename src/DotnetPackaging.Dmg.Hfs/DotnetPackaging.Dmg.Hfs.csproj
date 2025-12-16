@@ -10,6 +10,8 @@
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" />
     <PackageReference Include="System.Reactive" />
-    <ProjectReference Include="/mnt/fast/Repos/Zafiro/src/Zafiro.DivineBytes/Zafiro.DivineBytes.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
   </ItemGroup>
 </Project>

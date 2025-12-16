@@ -33,6 +33,7 @@
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="Zafiro.Avalonia" Version="44.0.2" />
     <PackageVersion Include="Zafiro.Avalonia.Dialogs" Version="44.0.2" />
+    <PackageVersion Include="Zafiro.DivineBytes" Version="45.0.3" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="Serilog.Sinks.XUnit" Version="3.0.19" />
     <PackageVersion Include="SharpCompress" Version="0.42.0" />
@@ -55,8 +56,7 @@
     <PackageVersion Include="DeflateBlockCompressor" Version="0.0.13" />
     <PackageVersion Include="NuGet.Versioning" Version="7.0.1" />
     <PackageVersion Include="Zafiro.Avalonia.Generators" Version="44.0.2" />
-    <PackageVersion Include="Zafiro" Version="45.0.2" />
-    <PackageVersion Include="Zafiro.DivineBytes" Version="45.0.2" />
+    <PackageVersion Include="Zafiro" Version="45.0.3" />
     <PackageVersion Include="DiscUtils" Version="0.16.13" />
     <PackageVersion Include="Xunit.SkippableFact" Version="1.5.23" />
   </ItemGroup>

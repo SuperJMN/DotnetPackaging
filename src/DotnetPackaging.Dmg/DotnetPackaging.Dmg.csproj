@@ -10,5 +10,6 @@
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
     <ProjectReference Include="..\DotnetPackaging.Dmg.Hfs\DotnetPackaging.Dmg.Hfs.csproj" />
     <ProjectReference Include="..\DotnetPackaging.Dmg.Udif\DotnetPackaging.Dmg.Udif.csproj" />
+    <PackageReference Include="Zafiro.DivineBytes" />
   </ItemGroup>
 </Project>

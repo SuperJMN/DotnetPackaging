@@ -8,6 +8,6 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="SharpCompress" />
-    <ProjectReference Include="/mnt/fast/Repos/Zafiro/src/Zafiro.DivineBytes/Zafiro.DivineBytes.csproj" />
+    <PackageReference Include="Zafiro.DivineBytes" />
   </ItemGroup>
 </Project>
