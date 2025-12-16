@@ -56,7 +56,9 @@ public static class ExePackager
                     options.Vendor,
                     ridResult.Value,
                     options.Stub,
-                    options.SetupLogo);
+                    options.SetupLogo,
+                    Maybe<string>.From(System.IO.Path.GetFileNameWithoutExtension(projectPath)),
+                    options.ProjectMetadata);
 
                 return result.Map(package => (IByteSource)package);
             });
@@ -103,4 +105,5 @@ public class ExeOptions
     public string? Vendor { get; set; }
     public IByteSource? Stub { get; set; }
     public IByteSource? SetupLogo { get; set; }
+    public Maybe<ProjectMetadata> ProjectMetadata { get; set; } = Maybe<ProjectMetadata>.None;
 }

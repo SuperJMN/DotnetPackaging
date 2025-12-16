@@ -139,43 +139,37 @@ public static class DmgCommand
             var ridVal = parseResult.GetValue(arch);
             var compressVal = parseResult.GetValue(compress);
             var useDefaultLayout = opt.UseDefaultLayout.GetValueOrDefault(true);
+            var logger = Log.ForContext("command", "dmg-from-project");
 
-            await ExecutionWrapper.ExecuteWithPublishedProjectAsync(
-                "dmg-from-project",
+            var inferredName = Path.GetFileNameWithoutExtension(prj.Name);
+            var icon = await ResolveIcon(opt, prj.Directory!, logger);
+
+            var result = await Dmg.DmgPackager.PackProject(
+                prj.FullName,
                 outFile.FullName,
-                prj,
-                ridVal,
-                RidUtils.ResolveMacRid,
-                sc, cfg, sf, tr,
-                async (pub, l) =>
+                dmgOpt =>
                 {
-                    var inferredName = Path.GetFileNameWithoutExtension(prj.Name);
-                    var volName = opt.Name.GetValueOrDefault(inferredName);
-
-                    // Prioritize user override, then the detected Assembly Name (via DotnetPublisher), then null (fallback to DmgHfsBuilder guessing)
-                    var executableName = opt.ExecutableName.GetValueOrDefault(inferredName);
-
-                    var icon = await ResolveIcon(opt, prj.Directory!, l);
-
-                    var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-                    var dmgPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dp-dmg-{Guid.NewGuid():N}-{outFile.Name}");
-                    try
+                    dmgOpt.VolumeName = opt.Name.GetValueOrDefault(inferredName);
+                    dmgOpt.ExecutableName = opt.ExecutableName.GetValueOrDefault(inferredName);
+                    dmgOpt.Compress = compressVal;
+                    dmgOpt.IncludeDefaultLayout = useDefaultLayout;
+                    dmgOpt.Icon = icon;
+                },
+                pub =>
+                {
+                    pub.SelfContained = sc;
+                    pub.Configuration = cfg;
+                    pub.SingleFile = sf;
+                    pub.Trimmed = tr;
+                    if (ridVal != null)
                     {
-                        var writeResult = await pub.WriteTo(tempDir);
-                        if (writeResult.IsFailure)
-                        {
-                            l.Error("Failed to write publish output to temp dir: {Error}", writeResult.Error);
-                            return Result.Failure<IByteSource>("Failed to write publish output to temp dir");
-                        }
+                        var ridResult = RidUtils.ResolveMacRid(ridVal, "dmg");
+                        if (ridResult.IsSuccess) pub.Rid = ridResult.Value;
+                    }
+                },
+                logger);
 
-                        await DmgHfsBuilder.Create(tempDir, dmgPath, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon, executableName: executableName);
-                        return Result.Success<IByteSource>(ByteSource.FromStreamFactory(() => File.OpenRead(dmgPath)));
-                    }
-                    finally
-                    {
-                        if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
-                    }
-                });
+            result.WriteResult();
         });
 
         dmgCommand.Add(fromProject);

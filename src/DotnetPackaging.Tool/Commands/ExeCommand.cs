@@ -244,50 +244,47 @@ public static class ExeCommand
             var extrasLogo = parseResult.GetValue(exSetupLogo);
             var vendorOpt = parseResult.GetValue(exVendor);
             var opt = optionsBinder.Bind(parseResult);
+            var logger = Log.ForContext("command", "exe-from-project");
 
-            await ExecutionWrapper.ExecuteWithPublishedProjectAsync(
-                "exe-from-project",
+            var stubBytes = extrasStub != null
+                ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasStub.FullName))
+                : null;
+
+            var logoBytes = extrasLogo != null
+                ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasLogo.FullName))
+                : null;
+
+            var projectMetadata = ProjectMetadataReader.TryRead(prj, logger);
+
+            var result = await Exe.ExePackager.PackProject(
+                prj.FullName,
                 extrasOutput.FullName,
-                prj,
-                archVal,
-                RidUtils.ResolveWindowsRid,
-                sc, cfg, sf, tr,
-                async (pub, l) =>
+                exeOpt =>
                 {
-                    var httpClientFactory = new SimpleHttpClientFactory();
-                    var publisher = new DotnetPublisher(Maybe<ILogger>.From(l));
-                    var stubProvider = new InstallerStubProvider(l, httpClientFactory, publisher);
-                    var exeService = new ExePackagingService(publisher, stubProvider, l);
-
-                    var stubBytes = extrasStub != null
-                        ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasStub.FullName))
-                        : null;
-
-                    var logoBytes = extrasLogo != null
-                        ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasLogo.FullName))
-                        : null;
-
-                    var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
-
-                    var ridResult = RidUtils.ResolveWindowsRid(archVal, "EXE packaging");
-                    if (ridResult.IsFailure)
+                    if (opt.Name.HasValue) exeOpt.Name = opt.Name.Value;
+                    if (opt.Version.HasValue) exeOpt.Version = opt.Version.Value;
+                    if (opt.Comment.HasValue) exeOpt.Comment = opt.Comment.Value;
+                    if (opt.Id.HasValue) exeOpt.Id = opt.Id.Value;
+                    exeOpt.Vendor = vendorOpt;
+                    exeOpt.Stub = stubBytes;
+                    exeOpt.SetupLogo = logoBytes;
+                    exeOpt.ProjectMetadata = projectMetadata;
+                },
+                pub =>
+                {
+                    pub.SelfContained = sc;
+                    pub.Configuration = cfg;
+                    pub.SingleFile = sf;
+                    pub.Trimmed = tr;
+                    if (archVal != null)
                     {
-                        return Result.Failure<IByteSource>(ridResult.Error);
+                        var ridResult = RidUtils.ResolveWindowsRid(archVal, "exe");
+                        if (ridResult.IsSuccess) pub.Rid = ridResult.Value;
                     }
+                },
+                logger);
 
-                    var result = await exeService.BuildFromDirectory(
-                        pub,
-                        extrasOutput.Name,
-                        opt,
-                        vendorOpt,
-                        ridResult.Value,
-                        stubBytes,
-                        logoBytes,
-                        Maybe<string>.From(System.IO.Path.GetFileNameWithoutExtension(prj.Name)),
-                        projectMetadata);
-
-                    return result.Map(container => (IByteSource)container);
-                });
+            result.WriteResult();
         });
 
         exeCommand.Add(exFromProject);
@@ -297,9 +294,6 @@ public static class ExeCommand
 
     private class SimpleHttpClientFactory : IHttpClientFactory
     {
-        public HttpClient CreateClient(string name)
-        {
-            return new HttpClient();
-        }
+        public HttpClient CreateClient(string name) => new();
     }
 }
