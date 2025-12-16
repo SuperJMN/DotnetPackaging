@@ -128,7 +128,7 @@ public static class RpmCommand
             var opt = optionsBinder.Bind(parseResult);
             var archVal = parseResult.GetValue(arch);
 
-            await ExecutionWrapper.ExecuteWithPublishedProject(
+            await ExecutionWrapper.ExecuteWithPublishedProjectAsync(
                 "rpm-from-project",
                 outFile.FullName,
                 prj,
@@ -149,23 +149,8 @@ public static class RpmCommand
                             }
                         }).Build();
 
-                    if (rpmResult.IsFailure)
-                    {
-                        return rpmResult.ConvertFailure<IPackage>();
-                    }
-
-                    var rpmSource = ByteSource.FromStreamFactory(() => File.OpenRead(rpmResult.Value.FullName));
-                    var resource = new Resource(outFile.Name, rpmSource);
-                    var cleanup = Disposable.Create(() =>
-                    {
-                        if (File.Exists(rpmResult.Value.FullName))
-                        {
-                            File.Delete(rpmResult.Value.FullName);
-                        }
-                    });
-                    var composite = new CompositeDisposable { pub, cleanup };
-                    var package = (IPackage)new Package(resource.Name, resource, composite);
-                    return Result.Success(package);
+                    return rpmResult.Map(rpmFile =>
+                        ByteSource.FromStreamFactory(() => File.OpenRead(rpmFile.FullName)));
                 });
         });
 

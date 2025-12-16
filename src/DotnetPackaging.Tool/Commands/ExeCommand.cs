@@ -245,7 +245,7 @@ public static class ExeCommand
             var vendorOpt = parseResult.GetValue(exVendor);
             var opt = optionsBinder.Bind(parseResult);
 
-            await ExecutionWrapper.ExecuteWithPublishedProject(
+            await ExecutionWrapper.ExecuteWithPublishedProjectAsync(
                 "exe-from-project",
                 extrasOutput.FullName,
                 prj,
@@ -272,7 +272,7 @@ public static class ExeCommand
                     var ridResult = RidUtils.ResolveWindowsRid(archVal, "EXE packaging");
                     if (ridResult.IsFailure)
                     {
-                        return Result.Failure<IPackage>(ridResult.Error);
+                        return Result.Failure<IByteSource>(ridResult.Error);
                     }
 
                     var result = await exeService.BuildFromDirectory(
@@ -286,15 +286,7 @@ public static class ExeCommand
                         Maybe<string>.From(System.IO.Path.GetFileNameWithoutExtension(prj.Name)),
                         projectMetadata);
 
-                    if (result.IsFailure)
-                    {
-                        return result.ConvertFailure<IPackage>();
-                    }
-
-                    var package = result.Value;
-                    var composite = new CompositeDisposable { pub };
-                    var wrapped = (IPackage)new Package(package.Name, package, composite);
-                    return Result.Success(wrapped);
+                    return result.Map(container => (IByteSource)container);
                 });
         });
 

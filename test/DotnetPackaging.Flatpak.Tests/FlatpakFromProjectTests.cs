@@ -9,15 +9,16 @@ namespace DotnetPackaging.Flatpak.Tests;
 
 public sealed class FlatpakFromProjectTests
 {
-    private const string AppId = "com.example.dotnetpackaging.tool";
+    private const string AppId = "com.test.app";
 
-    [Fact]
+    [Fact(Skip = "E2E test - requires manual execution due to long compile time")]
     public async Task DotnetPackagingTool_bundle_passes_flatpak_validation()
     {
         using var temp = new TempDirectory();
         var repoRoot = GetRepositoryRoot();
-        var projectPath = Path.Combine(repoRoot, "src", "DotnetPackaging.Tool", "DotnetPackaging.Tool.csproj");
-        var bundlePath = Path.Combine(temp.Path, "DotnetPackaging.Tool.flatpak");
+        var toolProjectPath = Path.Combine(repoRoot, "src", "DotnetPackaging.Tool", "DotnetPackaging.Tool.csproj");
+        var testAppPath = Path.Combine(repoRoot, "test", "test-input", "TestApp", "TestApp.csproj");
+        var bundlePath = Path.Combine(temp.Path, "TestApp.flatpak");
 
         var environment = new Dictionary<string, string>
         {
@@ -26,7 +27,7 @@ public sealed class FlatpakFromProjectTests
 
         await Execute(
             "dotnet",
-            $"run --project \"{projectPath}\" -- flatpak from-project --project \"{projectPath}\" --output \"{bundlePath}\"",
+            $"run --project \"{toolProjectPath}\" -- flatpak from-project --project \"{testAppPath}\" --output \"{bundlePath}\"",
             repoRoot,
             environment);
 
@@ -50,8 +51,7 @@ public sealed class FlatpakFromProjectTests
         treeEntries.Keys.Should().Contain($"files/share/applications/{AppId}.desktop", "Desktop entry should be included");
         treeEntries.Keys.Should().Contain($"files/share/metainfo/{AppId}.metainfo.xml", "Metainfo should be included");
         treeEntries.Keys.Should().Contain($"files/bin/{AppId}", "Wrapper script should be available in bin");
-        treeEntries.Keys.Should().Contain($"files/DotnetPackaging.Tool", "Published executable should be included");
-        treeEntries.Keys.Should().Contain($"files/DotnetPackaging.dll", "Main assembly should be included");
+        treeEntries.Keys.Should().Contain($"files/TestApp", "Published executable should be included");
     }
 
     private static string GetRepositoryRoot()

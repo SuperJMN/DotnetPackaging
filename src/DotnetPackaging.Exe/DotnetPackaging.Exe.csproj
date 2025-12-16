@@ -16,6 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />
-    <PackageReference Include="Zafiro.DivineBytes" />
+    <ProjectReference Include="/mnt/fast/Repos/Zafiro/src/Zafiro.DivineBytes/Zafiro.DivineBytes.csproj" />
   </ItemGroup>
 </Project>

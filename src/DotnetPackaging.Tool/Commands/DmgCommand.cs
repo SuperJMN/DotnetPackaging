@@ -31,9 +31,9 @@ public static class DmgCommand
             "Create a macOS disk image (.dmg) with a native HFS+ payload wrapped in UDIF (DMG) format.",
             defaultLayoutOption,
             "pack-dmg");
-        
+
         AddDmgFromProjectSubcommand(dmgCommand);
-        
+
         // dmg verify subcommand
         var verifyFileOption = new Option<FileInfo>("--file")
         {
@@ -140,7 +140,7 @@ public static class DmgCommand
             var compressVal = parseResult.GetValue(compress);
             var useDefaultLayout = opt.UseDefaultLayout.GetValueOrDefault(true);
 
-            await ExecutionWrapper.ExecuteWithPublishedProject(
+            await ExecutionWrapper.ExecuteWithPublishedProjectAsync(
                 "dmg-from-project",
                 outFile.FullName,
                 prj,
@@ -151,35 +151,25 @@ public static class DmgCommand
                 {
                     var inferredName = Path.GetFileNameWithoutExtension(prj.Name);
                     var volName = opt.Name.GetValueOrDefault(inferredName);
-                
+
                     // Prioritize user override, then the detected Assembly Name (via DotnetPublisher), then null (fallback to DmgHfsBuilder guessing)
                     var executableName = opt.ExecutableName.GetValueOrDefault(inferredName);
-                
+
                     var icon = await ResolveIcon(opt, prj.Directory!, l);
 
                     var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString("N"));
                     var dmgPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dp-dmg-{Guid.NewGuid():N}-{outFile.Name}");
-                    try 
+                    try
                     {
                         var writeResult = await pub.WriteTo(tempDir);
                         if (writeResult.IsFailure)
                         {
                             l.Error("Failed to write publish output to temp dir: {Error}", writeResult.Error);
-                            return Result.Failure<IPackage>("Failed to write publish output to temp dir");
+                            return Result.Failure<IByteSource>("Failed to write publish output to temp dir");
                         }
 
                         await DmgHfsBuilder.Create(tempDir, dmgPath, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon, executableName: executableName);
-                        var resource = new Resource(outFile.Name, ByteSource.FromStreamFactory(() => File.OpenRead(dmgPath)));
-                        var cleanup = Disposable.Create(() =>
-                        {
-                            if (File.Exists(dmgPath))
-                            {
-                                File.Delete(dmgPath);
-                            }
-                        });
-                        var composite = new CompositeDisposable { pub, cleanup };
-                        var package = (IPackage)new Package(resource.Name, resource, composite);
-                        return Result.Success(package);
+                        return Result.Success<IByteSource>(ByteSource.FromStreamFactory(() => File.OpenRead(dmgPath)));
                     }
                     finally
                     {

@@ -114,7 +114,7 @@ public static class DebCommand
             var opt = optionsBinder.Bind(parseResult);
             var archVal = parseResult.GetValue(arch);
 
-            await ExecutionWrapper.ExecuteWithPublishedProject(
+            await ExecutionWrapper.ExecuteWithPublishedProjectAsync(
                 "deb-from-project",
                 outFile.FullName,
                 prj,
@@ -135,12 +135,7 @@ public static class DebCommand
                         })
                         .Build();
 
-                    return built.Map(deb =>
-                    {
-                        var resource = new Resource(outFile.Name, DebMixin.ToByteSource(deb));
-                        var package = (IPackage)new Package(resource.Name, resource, pub);
-                        return package;
-                    });
+                    return built.Map(deb => DebMixin.ToByteSource(deb));
                 });
         });
 

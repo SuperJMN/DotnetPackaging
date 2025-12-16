@@ -34,7 +34,7 @@ public static class MsixCommand
                 var container = new DirectoryContainer(dirInfo);
                 var result = await DotnetPackaging.Msix.Msix.FromDirectory(container, Maybe<Serilog.ILogger>.From(logger))
                     .Bind(bytes => bytes.WriteTo(outFile.FullName));
-                
+
                 if (result.IsFailure)
                 {
                     logger.Error("MSIX packaging failed: {Error}", result.Error);
@@ -82,16 +82,7 @@ public static class MsixCommand
                 archVal,
                 RidUtils.ResolveWindowsRid,
                 sc, cfg, sf, tr,
-                (pub, logger) =>
-                {
-                    var msixResult = DotnetPackaging.Msix.Msix.FromDirectory(pub, Maybe<Serilog.ILogger>.From(logger));
-                    return Task.FromResult(msixResult.Map(bytes =>
-                    {
-                        var resource = new Resource(outFile.Name, bytes);
-                        var package = (IPackage)new Package(resource.Name, resource, pub);
-                        return package;
-                    }));
-                });
+                (pub, logger) => DotnetPackaging.Msix.Msix.FromDirectory(pub, Maybe<Serilog.ILogger>.From(logger)));
         });
         msixCommand.Add(fromProject);
     }

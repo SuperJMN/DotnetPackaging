@@ -291,7 +291,7 @@ public static class AppImageCommand
             var opt = optionsBinder.Bind(parseResult);
             var archVal = parseResult.GetValue(arch);
 
-            await ExecutionWrapper.ExecuteWithPublishedProject(
+            await ExecutionWrapper.ExecuteWithPublishedProjectAsync(
                 "appimage-from-project",
                 outFile.FullName,
                 prj,
@@ -302,16 +302,9 @@ public static class AppImageCommand
                 {
                     var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
                     var metadataResult = await BuildAppImageMetadata(opt, pub, projectMetadata, l);
-                    var appImageResult = await metadataResult
+                    return await metadataResult
                         .Bind(metadata => new AppImageFactory().Create(pub, metadata))
                         .Bind(x => x.ToByteSource());
-
-                    return appImageResult.Map(bytes =>
-                    {
-                        var resource = new Resource(outFile.Name, bytes);
-                        var package = (IPackage)new Package(resource.Name, resource, pub);
-                        return package;
-                    });
                 });
         });
 
