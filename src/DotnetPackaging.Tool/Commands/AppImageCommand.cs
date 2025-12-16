@@ -290,22 +290,32 @@ public static class AppImageCommand
             var outFile = parseResult.GetValue(output)!;
             var opt = optionsBinder.Bind(parseResult);
             var archVal = parseResult.GetValue(arch);
+            var logger = Log.ForContext("command", "appimage-from-project");
 
-            await ExecutionWrapper.ExecuteWithPublishedProjectAsync(
-                "appimage-from-project",
+            var result = await AppImage.AppImagePackager.PackProject(
+                prj.FullName,
                 outFile.FullName,
-                prj,
-                archVal,
-                RidUtils.ResolveLinuxRid,
-                sc, cfg, sf, tr,
-                async (pub, l) =>
+                o =>
                 {
-                    var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
-                    var metadataResult = await BuildAppImageMetadata(opt, pub, projectMetadata, l);
-                    return await metadataResult
-                        .Bind(metadata => new AppImageFactory().Create(pub, metadata))
-                        .Bind(x => x.ToByteSource());
-                });
+                    o.From(opt);
+                    var pm = ProjectMetadataReader.TryRead(prj, logger);
+                    if (pm.HasValue) o.WithProjectMetadata(pm.Value);
+                },
+                pub =>
+                {
+                    pub.SelfContained = sc;
+                    pub.Configuration = cfg;
+                    pub.SingleFile = sf;
+                    pub.Trimmed = tr;
+                    if (archVal != null)
+                    {
+                        var ridResult = RidUtils.ResolveLinuxRid(archVal, "appimage");
+                        if (ridResult.IsSuccess) pub.Rid = ridResult.Value;
+                    }
+                },
+                logger);
+
+            result.WriteResult();
         });
 
         appImageCommand.Add(fromProject);

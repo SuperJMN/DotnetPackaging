@@ -74,15 +74,26 @@ public static class MsixCommand
             var tr = parseResult.GetValue(trimmed);
             var outFile = parseResult.GetValue(outMsix)!;
             var archVal = parseResult.GetValue(arch);
+            var logger = Log.ForContext("command", "msix-from-project");
 
-            await ExecutionWrapper.ExecuteWithPublishedProject(
-                "msix-from-project",
+            var result = await Msix.MsixProjectPackager.PackProject(
+                prj.FullName,
                 outFile.FullName,
-                prj,
-                archVal,
-                RidUtils.ResolveWindowsRid,
-                sc, cfg, sf, tr,
-                (pub, logger) => DotnetPackaging.Msix.Msix.FromDirectory(pub, Maybe<Serilog.ILogger>.From(logger)));
+                pub =>
+                {
+                    pub.SelfContained = sc;
+                    pub.Configuration = cfg;
+                    pub.SingleFile = sf;
+                    pub.Trimmed = tr;
+                    if (archVal != null)
+                    {
+                        var ridResult = RidUtils.ResolveWindowsRid(archVal, "msix");
+                        if (ridResult.IsSuccess) pub.Rid = ridResult.Value;
+                    }
+                },
+                logger);
+
+            result.WriteResult();
         });
         msixCommand.Add(fromProject);
     }
