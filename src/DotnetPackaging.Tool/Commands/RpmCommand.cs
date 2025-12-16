@@ -127,31 +127,32 @@ public static class RpmCommand
             var outFile = parseResult.GetValue(output)!;
             var opt = optionsBinder.Bind(parseResult);
             var archVal = parseResult.GetValue(arch);
+            var logger = Log.ForContext("command", "rpm-from-project");
 
-            await ExecutionWrapper.ExecuteWithPublishedProjectAsync(
-                "rpm-from-project",
+            var result = await Rpm.RpmPackager.PackProject(
+                prj.FullName,
                 outFile.FullName,
-                prj,
-                archVal,
-                RidUtils.ResolveLinuxRid,
-                sc, cfg, sf, tr,
-                async (pub, l) =>
+                o =>
                 {
-                    var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
-                    var name = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
-                    var builder = RpmFile.From().Container(pub, name);
-                    var rpmResult = await builder.Configure(o =>
-                        {
-                            o.From(opt);
-                            if (projectMetadata.HasValue)
-                            {
-                                o.WithProjectMetadata(projectMetadata.Value);
-                            }
-                        }).Build();
+                    o.From(opt);
+                    var pm = ProjectMetadataReader.TryRead(prj, logger);
+                    if (pm.HasValue) o.WithProjectMetadata(pm.Value);
+                },
+                pub =>
+                {
+                    pub.SelfContained = sc;
+                    pub.Configuration = cfg;
+                    pub.SingleFile = sf;
+                    pub.Trimmed = tr;
+                    if (archVal != null)
+                    {
+                        var ridResult = RidUtils.ResolveLinuxRid(archVal, "rpm");
+                        if (ridResult.IsSuccess) pub.Rid = ridResult.Value;
+                    }
+                },
+                logger);
 
-                    return rpmResult.Map(rpmFile =>
-                        ByteSource.FromStreamFactory(() => File.OpenRead(rpmFile.FullName)));
-                });
+            result.WriteResult();
         });
 
         rpmCommand.Add(fromProject);

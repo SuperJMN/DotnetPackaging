@@ -113,30 +113,32 @@ public static class DebCommand
             var outFile = parseResult.GetValue(output)!;
             var opt = optionsBinder.Bind(parseResult);
             var archVal = parseResult.GetValue(arch);
+            var logger = Log.ForContext("command", "deb-from-project");
 
-            await ExecutionWrapper.ExecuteWithPublishedProjectAsync(
-                "deb-from-project",
+            var result = await Deb.DebPackager.PackProject(
+                prj.FullName,
                 outFile.FullName,
-                prj,
-                archVal,
-                RidUtils.ResolveLinuxRid,
-                sc, cfg, sf, tr,
-                async (pub, l) =>
+                o =>
                 {
-                    var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
-                    var name = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
-                    var built = await DotnetPackaging.Deb.DebFile.From().Container(pub, name).Configure(o =>
-                        {
-                            o.From(opt);
-                            if (projectMetadata.HasValue)
-                            {
-                                o.WithProjectMetadata(projectMetadata.Value);
-                            }
-                        })
-                        .Build();
+                    o.From(opt);
+                    var pm = ProjectMetadataReader.TryRead(prj, logger);
+                    if (pm.HasValue) o.WithProjectMetadata(pm.Value);
+                },
+                pub =>
+                {
+                    pub.SelfContained = sc;
+                    pub.Configuration = cfg;
+                    pub.SingleFile = sf;
+                    pub.Trimmed = tr;
+                    if (archVal != null)
+                    {
+                        var ridResult = RidUtils.ResolveLinuxRid(archVal, "deb");
+                        if (ridResult.IsSuccess) pub.Rid = ridResult.Value;
+                    }
+                },
+                logger);
 
-                    return built.Map(deb => DebMixin.ToByteSource(deb));
-                });
+            result.WriteResult();
         });
 
         debCommand.Add(fromProject);
