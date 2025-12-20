@@ -2,7 +2,7 @@ using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Flatpak;
 
-public record FlatpakBuildPlan(
+internal record FlatpakBuildPlan(
     string CommandName,
     string ExecutableTargetPath,
     string AppId,

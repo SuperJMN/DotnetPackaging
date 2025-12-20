@@ -1,6 +1,5 @@
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
-using DotnetPackaging.Deb.Archives.Deb;
 using System.IO.Abstractions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
@@ -28,17 +27,17 @@ internal static class DebCommandRunner
             ExecutableName = Maybe.From("sample-app")
         };
 
-        var result = await DotnetPackaging.Deb.DebFile.From()
-            .Container(container, "Sample App")
-            .Configure(cfg => cfg.From(options))
-            .Build();
+        var metadata = new FromDirectoryOptions();
+        metadata.From(options);
+
+        var result = await new DotnetPackaging.Deb.DebPackager().Pack(container, metadata);
 
         if (result.IsFailure)
         {
             return -1;
         }
 
-        var data = DebMixin.ToByteSource(result.Value);
+        var data = result.Value;
         await using var stream = File.Open(outputFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
         var write = await data.WriteTo(stream);
         return write.IsSuccess ? 0 : -1;

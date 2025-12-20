@@ -217,8 +217,8 @@ Developer workflow tips
   - Set DOTNETPACKAGING_DEBUG=1 to dump AppImage intermediate artifacts (runtime + squashfs).
 
 Repository map (relevant)
-- src/DotnetPackaging.AppImage: AppImage core (AppImageFactory, RuntimeFactory, SquashFS).
-- src/DotnetPackaging.Deb: Debian packaging (Tar entries, DebFile).
+- src/DotnetPackaging.AppImage: AppImage packager + runtime/squashfs internals.
+- src/DotnetPackaging.Deb: Debian packager + tar/ar internals.
 - src/DotnetPackaging.Rpm: RPM packaging (layout builder and rpmbuild spec generation).
 - src/DotnetPackaging.Msix: MSIX packaging (builder and helpers).
 - src/DotnetPackaging.Exe: Windows SFX packer (concatenation and metadata).

@@ -1,4 +1,7 @@
-﻿using DotnetPackaging.Dmg;
+﻿using CSharpFunctionalExtensions;
+using DotnetPackaging.Dmg;
+using Zafiro.DivineBytes.System.IO;
+using Zafiro.DivineBytes;
 
 Console.WriteLine("Generating Output.dmg...");
 
@@ -10,11 +13,21 @@ var outputDmg = Path.Combine(startDir, "Output.dmg");
 var testFile = Path.Combine(sourceDir, "test.txt");
 File.WriteAllText(testFile, "Hello World from DMG Reproduction");
 
-await DmgHfsBuilder.Create(
-    sourceDir, 
-    outputDmg, 
-    "TestImage", 
-    compress: false // Start uncompressed to simplify debugging
-);
+var container = new DirectoryContainer(new System.IO.Abstractions.FileSystem().DirectoryInfo.New(sourceDir)).AsRoot();
+var metadata = new DmgPackagerMetadata
+{
+    VolumeName = Maybe.From("TestImage"),
+    Compress = Maybe.From(false)
+};
+
+var packager = new DmgPackager();
+var result = await packager.Pack(container, metadata);
+if (result.IsFailure)
+{
+    Console.WriteLine($"Failed to build DMG: {result.Error}");
+    return;
+}
+
+await result.Value.WriteTo(outputDmg);
 
 Console.WriteLine($"Generated: {outputDmg}");

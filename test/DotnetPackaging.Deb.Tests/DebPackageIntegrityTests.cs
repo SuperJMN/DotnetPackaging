@@ -2,8 +2,6 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
-using DotnetPackaging.Deb.Archives.Deb;
-using DotnetPackaging.Deb.Archives.Tar;
 using TarEntry = System.Formats.Tar.TarEntry;
 using TarReader = System.Formats.Tar.TarReader;
 using Zafiro.DivineBytes;
@@ -81,14 +79,13 @@ public class DebPackageIntegrityTests
             ExecutableName = Maybe.From("sample-app")
         };
 
-        var deb = await DotnetPackaging.Deb.DebFile.From()
-            .Container(root, "Sample App")
-            .Configure(cfg => cfg.From(options))
-            .Build();
+        var metadata = new FromDirectoryOptions();
+        metadata.From(options);
 
+        var deb = await new DotnetPackaging.Deb.DebPackager().Pack(root, metadata);
         deb.IsSuccess.Should().BeTrue();
 
-        var debBytes = DebMixin.ToByteSource(deb.Value);
+        var debBytes = deb.Value;
         var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"deb-long-{Guid.NewGuid():N}.deb");
         await using (var stream = File.Create(path))
         {

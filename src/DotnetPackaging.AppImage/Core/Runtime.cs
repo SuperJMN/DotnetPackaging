@@ -2,7 +2,7 @@ using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.AppImage.Core;
 
-public class Runtime(IByteSource source, Architecture architecture) : IRuntime
+internal class Runtime(IByteSource source, Architecture architecture) : IRuntime
 {
     public IByteSource Source { get; } = source;
     public Architecture Architecture { get; } = architecture;

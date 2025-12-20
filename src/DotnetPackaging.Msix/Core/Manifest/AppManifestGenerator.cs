@@ -32,7 +32,7 @@ public class AppManifestMetadata
     public bool RunFullTrust { get; set; } = true;
 }
 
-public class AppManifestGenerator
+internal class AppManifestGenerator
 {
     /// <summary>
     /// Generates a string with the XML content of the AppManifest from the provided metadata

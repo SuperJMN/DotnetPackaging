@@ -33,7 +33,7 @@ internal sealed record Commit(string TreeChecksum, string Subject, DateTimeOffse
     }
 }
 
-public static class OstreeRepoBuilder
+internal static class OstreeRepoBuilder
 {
     public static Result<RootContainer> Build(FlatpakBuildPlan plan)
     {

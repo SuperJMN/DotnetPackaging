@@ -104,11 +104,22 @@ public static class BuildUtils
         return packageMetadata;
     }
 
-    public static Task<Result<INamedByteSourceWithPath>> GetExecutable(IContainer container, FromDirectoryOptions setup, ILogger? logger = null)
+    public static async Task<Result<INamedByteSourceWithPath>> GetExecutable(IContainer container, FromDirectoryOptions setup, ILogger? logger = null)
     {
-        return setup.ExecutableName.Match(
-            s => ExecutableLookupByName(container, s, logger),
-            () => ExecutableLookupWithoutName(container, logger));
+        var log = logger ?? Log.Logger;
+
+        if (setup.ExecutableName.HasValue)
+        {
+            var named = await ExecutableLookupByName(container, setup.ExecutableName.Value, log);
+            if (named.IsSuccess)
+            {
+                return named;
+            }
+
+            log.Warning("Executable '{ExecName}' not found; falling back to auto-detection: {Error}", setup.ExecutableName.Value, named.Error);
+        }
+
+        return await ExecutableLookupWithoutName(container, log);
     }
 
     public static Task<Result<Architecture>> GetArch(FromDirectoryOptions setup, INamedByteSource exec)

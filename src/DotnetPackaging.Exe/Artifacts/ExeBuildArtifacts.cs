@@ -1,7 +1,7 @@
 using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
 
-namespace DotnetPackaging.Exe;
+namespace DotnetPackaging.Exe.Artifacts;
 
 public sealed record ExeBuildArtifacts(IByteSource Installer, IByteSource Uninstaller)
 {

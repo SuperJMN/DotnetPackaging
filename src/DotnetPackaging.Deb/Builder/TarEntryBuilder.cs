@@ -5,7 +5,7 @@ using DivinePath = Zafiro.DivineBytes.Path;
 
 namespace DotnetPackaging.Deb.Builder;
 
-public static class TarEntryBuilder
+internal static class TarEntryBuilder
 {
     public static IEnumerable<TarEntry> From(IContainer container, PackageMetadata metadata, INamedByteSourceWithPath executable)
     {

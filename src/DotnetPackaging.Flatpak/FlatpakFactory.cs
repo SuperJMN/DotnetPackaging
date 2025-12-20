@@ -4,7 +4,7 @@ using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Flatpak;
 
-public class FlatpakFactory
+internal class FlatpakFactory
 {
     public async Task<Result<FlatpakBuildPlan>> BuildPlan(
         IContainer applicationRoot,
@@ -12,31 +12,35 @@ public class FlatpakFactory
         FlatpakOptions? options = null)
     {
         var effectiveOptions = options ?? new FlatpakOptions();
-        
+
         var executableResult = await BuildUtils.GetExecutable(applicationRoot, new FromDirectoryOptions());
         if (executableResult.IsFailure)
         {
             return Result.Failure<FlatpakBuildPlan>(executableResult.Error);
         }
 
-        var executable = executableResult.Value;
+        return await BuildPlan(applicationRoot, metadata, executableResult.Value, effectiveOptions);
+    }
+
+    public async Task<Result<FlatpakBuildPlan>> BuildPlan(
+        IContainer applicationRoot,
+        PackageMetadata metadata,
+        INamedByteSourceWithPath executable,
+        FlatpakOptions? options = null)
+    {
+        var effectiveOptions = options ?? new FlatpakOptions();
         var appId = metadata.Id.GetValueOrDefault($"com.example.{metadata.Package}");
         var commandName = effectiveOptions.CommandOverride.GetValueOrDefault(appId);
         var executableTargetPath = ((INamedWithPath)executable).FullPath().ToString().Replace("\\", "/");
 
-        // Compute metadata and app ID (Flatpak requires at least two dots)
-        // appId computed above
-
-        var planResult = await BuildPlanInternal(
-            applicationRoot, 
-            metadata, 
-            executable, 
+        return await BuildPlanInternal(
+            applicationRoot,
+            metadata,
+            executable,
             effectiveOptions,
             appId,
             commandName,
             executableTargetPath);
-
-        return planResult;
     }
 
     private async Task<Result<FlatpakBuildPlan>> BuildPlanInternal(

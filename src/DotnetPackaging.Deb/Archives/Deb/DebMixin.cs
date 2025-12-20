@@ -5,7 +5,7 @@ using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Deb.Archives.Deb;
 
-public static class DebMixin
+internal static class DebMixin
 {
     public static IByteSource ToByteSource(this DebFile debFile)
     {

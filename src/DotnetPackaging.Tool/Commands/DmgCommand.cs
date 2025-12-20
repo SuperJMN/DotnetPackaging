@@ -3,10 +3,11 @@ using System.IO;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
 using DotnetPackaging.Dmg;
+using DotnetPackaging.Dmg.Verification;
 using Serilog;
 using Zafiro.DivineBytes;
+using Zafiro.DivineBytes.System.IO;
 using Path = System.IO.Path;
-using System.Reactive.Disposables;
 
 namespace DotnetPackaging.Tool.Commands;
 
@@ -31,9 +32,9 @@ public static class DmgCommand
             "Create a macOS disk image (.dmg) with a native HFS+ payload wrapped in UDIF (DMG) format.",
             defaultLayoutOption,
             "pack-dmg");
-        
+
         AddDmgFromProjectSubcommand(dmgCommand);
-        
+
         // dmg verify subcommand
         var verifyFileOption = new Option<FileInfo>("--file")
         {
@@ -69,9 +70,23 @@ public static class DmgCommand
     private static Task CreateDmg(DirectoryInfo inputDir, FileInfo outputFile, Options options, ILogger logger)
     {
         logger.Debug("Packaging DMG artifact from {Directory}", inputDir.FullName);
-        var name = options.Name.GetValueOrDefault(inputDir.Name);
-        var useDefaultLayout = options.UseDefaultLayout.GetValueOrDefault(true);
-        return DmgHfsBuilder.Create(inputDir.FullName, outputFile.FullName, name, compress: true, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: options.Icon);
+        var dirInfo = FileSystem.DirectoryInfo.New(inputDir.FullName);
+        var container = new DirectoryContainer(dirInfo).AsRoot();
+
+        var metadata = new DmgPackagerMetadata
+        {
+            VolumeName = options.Name.Or(Maybe.From(inputDir.Name)),
+            ExecutableName = options.ExecutableName,
+            IncludeDefaultLayout = options.UseDefaultLayout,
+            Icon = options.Icon,
+            Compress = Maybe.From(true),
+            AddApplicationsSymlink = Maybe.From(true)
+        };
+
+        var packager = new DmgPackager();
+        return packager.Pack(container, metadata, logger)
+            .Bind(bytes => bytes.WriteTo(outputFile.FullName))
+            .WriteResult();
     }
 
     private static void AddDmgFromProjectSubcommand(Command dmgCommand)
@@ -139,53 +154,37 @@ public static class DmgCommand
             var ridVal = parseResult.GetValue(arch);
             var compressVal = parseResult.GetValue(compress);
             var useDefaultLayout = opt.UseDefaultLayout.GetValueOrDefault(true);
+            var logger = Log.ForContext("command", "dmg-from-project");
 
-            await ExecutionWrapper.ExecuteWithPublishedProject(
-                "dmg-from-project",
+            var inferredName = Path.GetFileNameWithoutExtension(prj.Name);
+            var icon = await ResolveIcon(opt, prj.Directory!, logger);
+
+            var result = await new Dmg.DmgPackager().PackProject(
+                prj.FullName,
                 outFile.FullName,
-                prj,
-                ridVal,
-                RidUtils.ResolveMacRid,
-                sc, cfg, sf, tr,
-                async (pub, l) =>
+                dmgOpt =>
                 {
-                    var inferredName = Path.GetFileNameWithoutExtension(prj.Name);
-                    var volName = opt.Name.GetValueOrDefault(inferredName);
-                
-                    // Prioritize user override, then the detected Assembly Name (via DotnetPublisher), then null (fallback to DmgHfsBuilder guessing)
-                    var executableName = opt.ExecutableName.GetValueOrDefault(inferredName);
-                
-                    var icon = await ResolveIcon(opt, prj.Directory!, l);
-
-                    var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-                    var dmgPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dp-dmg-{Guid.NewGuid():N}-{outFile.Name}");
-                    try 
+                    dmgOpt.VolumeName = Maybe.From(opt.Name.GetValueOrDefault(inferredName));
+                    dmgOpt.ExecutableName = Maybe.From(opt.ExecutableName.GetValueOrDefault(inferredName));
+                    dmgOpt.Compress = Maybe.From(compressVal);
+                    dmgOpt.IncludeDefaultLayout = Maybe.From(useDefaultLayout);
+                    dmgOpt.Icon = icon;
+                },
+                pub =>
+                {
+                    pub.SelfContained = sc;
+                    pub.Configuration = cfg;
+                    pub.SingleFile = sf;
+                    pub.Trimmed = tr;
+                    if (ridVal != null)
                     {
-                        var writeResult = await pub.WriteTo(tempDir);
-                        if (writeResult.IsFailure)
-                        {
-                            l.Error("Failed to write publish output to temp dir: {Error}", writeResult.Error);
-                            return Result.Failure<IPackage>("Failed to write publish output to temp dir");
-                        }
+                        var ridResult = RidUtils.ResolveMacRid(ridVal, "dmg");
+                        if (ridResult.IsSuccess) pub.Rid = ridResult.Value;
+                    }
+                },
+                logger);
 
-                        await DmgHfsBuilder.Create(tempDir, dmgPath, volName, compressVal, addApplicationsSymlink: true, includeDefaultLayout: useDefaultLayout, icon: icon, executableName: executableName);
-                        var resource = new Resource(outFile.Name, ByteSource.FromStreamFactory(() => File.OpenRead(dmgPath)));
-                        var cleanup = Disposable.Create(() =>
-                        {
-                            if (File.Exists(dmgPath))
-                            {
-                                File.Delete(dmgPath);
-                            }
-                        });
-                        var composite = new CompositeDisposable { pub, cleanup };
-                        var package = (IPackage)new Package(resource.Name, resource, composite);
-                        return Result.Success(package);
-                    }
-                    finally
-                    {
-                        if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
-                    }
-                });
+            result.WriteResult();
         });
 
         dmgCommand.Add(fromProject);

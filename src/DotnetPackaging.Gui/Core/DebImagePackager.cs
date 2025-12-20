@@ -1,5 +1,4 @@
 using System.Threading.Tasks;
-using DotnetPackaging.Deb.Archives.Deb;
 using Zafiro.DataModel;
 using Zafiro.DivineBytes;
 using Zafiro.FileSystem.Core;
@@ -22,11 +21,11 @@ public class DebImagePackager : IPackager
             return Task.FromResult(Result.Failure(containerResult.Error));
         }
 
-        return Deb.DebFile
-            .From()
-            .Container(containerResult.Value, sourceDirectory.Name)
-            .Configure(x => x.From(options)).Build()
-            .Map(deb => deb.ToByteSource())
+        var metadata = new FromDirectoryOptions();
+        metadata.From(options);
+
+        var packager = new Deb.DebPackager();
+        return packager.Pack(containerResult.Value, metadata)
             .Bind(async data =>
             {
                 var bytes = data.Array();

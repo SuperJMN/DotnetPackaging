@@ -1,6 +1,6 @@
 ﻿namespace DotnetPackaging.Msix.Core.Compression;
 
-public static class StreamExtensions
+internal static class StreamExtensions
 {
     // Método de extensión que envuelve la lectura asíncrona sin el sufijo "Async"
     public static Task<int> Leer(this Stream stream, byte[] buffer, int offset, int count) =>

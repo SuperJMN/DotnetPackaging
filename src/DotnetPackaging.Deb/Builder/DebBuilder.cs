@@ -3,7 +3,7 @@ using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Deb.Builder;
 
-public class DebBuilder
+internal class DebBuilder
 {
     public FromContainerOptions Container(IContainer root, string? name = null)
     {

@@ -1,7 +1,7 @@
 namespace DotnetPackaging.Msix.Core.BlockMap;
 
 // Clases de modelo
-public class BlockMapModel
+internal class BlockMapModel
 {
     public string HashMethod { get; }
     public ImmutableList<FileBlockInfo> Files { get; }

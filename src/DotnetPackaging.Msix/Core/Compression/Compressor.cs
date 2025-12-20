@@ -5,7 +5,7 @@ using Zafiro.Reactive;
 
 namespace DotnetPackaging.Msix.Core.Compression;
 
-public static class Compressor
+internal static class Compressor
 {
     public static async Task<byte[]> Uncompress(byte[] compressedData)
     {

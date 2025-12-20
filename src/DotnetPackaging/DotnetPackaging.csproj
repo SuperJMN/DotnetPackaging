@@ -12,6 +12,7 @@
     <PackageReference Include="NuGet.Versioning" />
     <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" />
     <PackageReference Include="System.IO.Abstractions" />
+    <PackageReference Include="Zafiro" />
     <PackageReference Include="Zafiro.DivineBytes" />
   </ItemGroup>
 </Project>

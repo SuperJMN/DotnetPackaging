@@ -4,7 +4,7 @@ using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Exe;
 
-public static class PayloadAppender
+internal static class PayloadAppender
 {
     private const string Magic = "DPACKEXE1";
 

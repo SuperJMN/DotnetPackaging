@@ -1,6 +1,6 @@
 namespace DotnetPackaging.Msix.Core.BlockMap;
 
-public class CompressionBlockInfo
+internal class CompressionBlockInfo
 {
     public int BlockIndex { get; set; }
     public int CompressedSize { get; set; }

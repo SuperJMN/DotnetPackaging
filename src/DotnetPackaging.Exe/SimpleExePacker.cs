@@ -8,13 +8,15 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Exe.Artifacts;
+using DotnetPackaging.Exe.Metadata;
 using Zafiro.DivineBytes;
 
 using System.Reactive.Linq;
 
 namespace DotnetPackaging.Exe;
 
-public static class SimpleExePacker
+internal static class SimpleExePacker
 {
     private const string BrandingLogoEntry = "Branding/logo.png";
 

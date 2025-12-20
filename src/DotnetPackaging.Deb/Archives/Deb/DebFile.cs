@@ -2,7 +2,7 @@
 
 namespace DotnetPackaging.Deb.Archives.Deb;
 
-public record DebFile
+internal record DebFile
 {
     public PackageMetadata Metadata { get; }
     public TarEntry[] Entries { get; }
