@@ -1,5 +1,6 @@
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
+using DotnetPackaging.Exe.Metadata;
 using DotnetPackaging.Publish;
 using Serilog;
 using Zafiro.DivineBytes;

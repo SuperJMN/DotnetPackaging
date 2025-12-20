@@ -3,6 +3,7 @@ using System.CommandLine;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
 using DotnetPackaging.Exe;
+using DotnetPackaging.Exe.Metadata;
 using Serilog;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;

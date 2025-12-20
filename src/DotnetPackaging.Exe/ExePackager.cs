@@ -1,5 +1,6 @@
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
+using DotnetPackaging.Exe.Metadata;
 using DotnetPackaging.Publish;
 using Serilog;
 using System.Net.Http;
@@ -91,17 +92,5 @@ internal class ExeOptions
     public string? Vendor { get; set; }
     public IByteSource? Stub { get; set; }
     public IByteSource? SetupLogo { get; set; }
-    public Maybe<ProjectMetadata> ProjectMetadata { get; set; } = Maybe<ProjectMetadata>.None;
-}
-
-public sealed class ExePackagerMetadata
-{
-    public Options Options { get; set; } = new();
-    public Maybe<string> OutputName { get; set; } = Maybe<string>.None;
-    public Maybe<string> ProjectName { get; set; } = Maybe<string>.None;
-    public Maybe<string> Vendor { get; set; } = Maybe<string>.None;
-    public Maybe<string> RuntimeIdentifier { get; set; } = Maybe<string>.None;
-    public Maybe<IByteSource> Stub { get; set; } = Maybe<IByteSource>.None;
-    public Maybe<IByteSource> SetupLogo { get; set; } = Maybe<IByteSource>.None;
     public Maybe<ProjectMetadata> ProjectMetadata { get; set; } = Maybe<ProjectMetadata>.None;
 }

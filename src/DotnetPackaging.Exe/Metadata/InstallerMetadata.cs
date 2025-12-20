@@ -1,4 +1,4 @@
-namespace DotnetPackaging.Exe;
+namespace DotnetPackaging.Exe.Metadata;
 
 public sealed record InstallerMetadata(
     string AppId,

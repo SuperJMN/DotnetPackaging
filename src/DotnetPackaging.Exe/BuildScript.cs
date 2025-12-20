@@ -1,5 +1,6 @@
 using System.IO;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Exe.Metadata;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Exe;

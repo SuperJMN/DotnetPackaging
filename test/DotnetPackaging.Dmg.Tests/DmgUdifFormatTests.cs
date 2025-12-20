@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
+using DotnetPackaging.Formats.Dmg.Udif;
 using FluentAssertions;
 
 namespace DotnetPackaging.Dmg.Tests;

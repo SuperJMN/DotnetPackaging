@@ -3,6 +3,7 @@ using System.IO;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
 using DotnetPackaging.Dmg;
+using DotnetPackaging.Dmg.Verification;
 using Serilog;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;

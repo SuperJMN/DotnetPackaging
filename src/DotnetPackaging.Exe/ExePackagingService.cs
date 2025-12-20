@@ -3,6 +3,7 @@ using CSharpFunctionalExtensions;
 using System.IO;
 using System.Runtime.InteropServices;
 using DotnetPackaging;
+using DotnetPackaging.Exe.Metadata;
 using DotnetPackaging.Publish;
 using Serilog;
 using System.IO.Abstractions;

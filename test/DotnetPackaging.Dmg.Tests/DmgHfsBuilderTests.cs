@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using DotnetPackaging.Dmg;
+using DotnetPackaging.Formats.Dmg.Udif;
 using FluentAssertions;
 using Path = System.IO.Path;
 
@@ -151,4 +152,3 @@ public class DmgHfsBuilderTests
         return await udif.ExtractDataFork();
     }
 }
-
