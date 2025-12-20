@@ -3,11 +3,9 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging;
 using DotnetPackaging.Rpm;
 using Serilog;
-using DotnetPackaging.Tool;
 using System.IO.Abstractions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
-using System.Reactive.Disposables;
 
 namespace DotnetPackaging.Tool.Commands;
 public static class RpmCommand
@@ -33,31 +31,13 @@ public static class RpmCommand
         var fs = new FileSystem();
         var container = new DirectoryContainer(new DirectoryInfoWrapper(fs, inputDir)).AsRoot();
 
-        return RpmFile.From()
-            .Container(container)
-            .Configure(configuration => configuration.From(options))
-            .Build()
-            .Bind(rpmFile => CopyRpmToOutput(rpmFile, outputFile))
+        var metadata = new FromDirectoryOptions();
+        metadata.From(options);
+        var packager = new RpmPackager();
+
+        return packager.Pack(container, metadata, logger)
+            .Bind(bytes => bytes.WriteTo(outputFile.FullName))
             .WriteResult();
-    }
-
-    private static Result CopyRpmToOutput(FileInfo rpmFile, FileInfo outputFile)
-    {
-        try
-        {
-            var directory = outputFile.Directory;
-            if (directory != null && !directory.Exists)
-            {
-                directory.Create();
-            }
-
-            File.Copy(rpmFile.FullName, outputFile.FullName, true);
-            return Result.Success();
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure(ex.Message);
-        }
     }
 
     private static void AddFromProjectSubcommand(Command rpmCommand)
@@ -129,15 +109,10 @@ public static class RpmCommand
             var archVal = parseResult.GetValue(arch);
             var logger = Log.ForContext("command", "rpm-from-project");
 
-            var result = await Rpm.RpmPackager.PackProject(
+            var result = await new RpmPackager().PackProject(
                 prj.FullName,
                 outFile.FullName,
-                o =>
-                {
-                    o.From(opt);
-                    var pm = ProjectMetadataReader.TryRead(prj, logger);
-                    if (pm.HasValue) o.WithProjectMetadata(pm.Value);
-                },
+                o => o.From(opt),
                 pub =>
                 {
                     pub.SelfContained = sc;

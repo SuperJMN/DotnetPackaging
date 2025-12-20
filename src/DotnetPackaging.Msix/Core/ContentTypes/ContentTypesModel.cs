@@ -1,3 +1,3 @@
 namespace DotnetPackaging.Msix.Core.ContentTypes;
 
-public record ContentTypesModel(ImmutableList<DefaultContentType> Defaults, ImmutableList<OverrideContentType> Overrides);
+internal record ContentTypesModel(ImmutableList<DefaultContentType> Defaults, ImmutableList<OverrideContentType> Overrides);

@@ -2,7 +2,7 @@ using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.AppImage.Core;
 
-public static class RuntimeFactory
+internal static class RuntimeFactory
 {
     private static readonly Dictionary<Architecture, Uri> RuntimeUrls = new()
     {

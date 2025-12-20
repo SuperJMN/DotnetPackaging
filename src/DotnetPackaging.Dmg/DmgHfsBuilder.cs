@@ -14,7 +14,7 @@ namespace DotnetPackaging.Dmg;
 /// Cross-platform DMG builder using native HFS+ implementation.
 /// Produces proper .dmg files that mount on macOS without any external tools.
 /// </summary>
-public static class DmgHfsBuilder
+internal static class DmgHfsBuilder
 {
     private static readonly IReadOnlyDictionary<int, string> IcnsChunkTypes = new Dictionary<int, string>
     {

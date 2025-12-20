@@ -7,7 +7,7 @@ namespace DotnetPackaging.Msix.Core.ContentTypes;
 /// <summary>
 /// Genera el modelo de tipos de contenido ([Content_Types].xml) emulando el comportamiento de makeappx.
 /// </summary>
-public static class ContentTypesGenerator
+internal static class ContentTypesGenerator
 {
     private static readonly Dictionary<string, string> DefaultMappings = new(StringComparer.OrdinalIgnoreCase)
     {

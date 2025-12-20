@@ -4,11 +4,9 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging.Flatpak;
 using Serilog;
 using Zafiro.DivineBytes.System.IO;
-using DotnetPackaging.Tool;
 using DotnetPackaging;
 using Zafiro.DivineBytes;
 using Zafiro.CSharpFunctionalExtensions;
-using System.Reactive.Disposables;
 
 namespace DotnetPackaging.Tool.Commands;
 
@@ -246,7 +244,7 @@ public static class FlatpakCommand
 
                     var projectName = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
                     var pm = await BuildUtils.CreateMetadata(setup, root, archRes.Value, execRes.Value, opt.IsTerminal.GetValueOrDefault(false), Maybe<string>.From(projectName), l);
-                    var planRes = await new FlatpakFactory().BuildPlan(root, pm, fopt);
+                    var planRes = await new FlatpakFactory().BuildPlan(root, pm, execRes.Value, fopt);
                     if (planRes.IsFailure) return Result.Failure<IByteSource>(planRes.Error);
 
                     var plan = planRes.Value;
@@ -360,7 +358,7 @@ public static class FlatpakCommand
                 var archRes = await BuildUtils.GetArch(setup, execRes.Value);
                 if (archRes.IsFailure) { logger.Error("Architecture detection failed: {Error}", archRes.Error); Environment.ExitCode = 1; return; }
                 var pm = await BuildUtils.CreateMetadata(setup, root, archRes.Value, execRes.Value, setup.IsTerminal, Maybe<string>.From(inDir.Name), logger);
-                var planRes = await new FlatpakFactory().BuildPlan(root, pm, new FlatpakOptions());
+                var planRes = await new FlatpakFactory().BuildPlan(root, pm, execRes.Value, new FlatpakOptions());
                 if (planRes.IsFailure) { logger.Error("Flatpak plan generation failed: {Error}", planRes.Error); Environment.ExitCode = 1; return; }
                 var plan = planRes.Value;
 
@@ -443,13 +441,13 @@ public static class FlatpakCommand
         setup.From(options);
 
         return BuildUtils.GetExecutable(root, setup, logger)
-            .Bind(exec => BuildUtils.GetArch(setup, exec).Map(a => (exec, a)))
+            .Bind(exec => BuildUtils.GetArch(setup, exec).Map(arch => (exec, arch)))
             .Bind(async tuple =>
             {
-                var pm = await BuildUtils.CreateMetadata(setup, root, tuple.a, tuple.exec, options.IsTerminal.GetValueOrDefault(false), Maybe<string>.From(inputDir.Name), logger);
-                return Result.Success(pm);
+                var pm = await BuildUtils.CreateMetadata(setup, root, tuple.arch, tuple.exec, options.IsTerminal.GetValueOrDefault(false), Maybe<string>.From(inputDir.Name), logger);
+                return Result.Success((exec: tuple.exec, metadata: pm));
             })
-            .Bind(packageMetadata => new FlatpakFactory().BuildPlan(root, packageMetadata, flatpakOptions))
+            .Bind(payload => new FlatpakFactory().BuildPlan(root, payload.metadata, payload.exec, flatpakOptions))
             .Bind(plan => plan.ToRootContainer().WriteTo(outputDir.FullName))
             .WriteResult();
     }
@@ -465,13 +463,13 @@ public static class FlatpakCommand
         setup.From(options);
 
         return BuildUtils.GetExecutable(root, setup, logger)
-            .Bind(exec => BuildUtils.GetArch(setup, exec).Map(a => (exec, a)))
+            .Bind(exec => BuildUtils.GetArch(setup, exec).Map(arch => (exec, arch)))
             .Bind(async tuple =>
             {
-                var pm = await BuildUtils.CreateMetadata(setup, root, tuple.a, tuple.exec, options.IsTerminal.GetValueOrDefault(false), Maybe<string>.From(inputDir.Name), logger);
-                return Result.Success(pm);
+                var pm = await BuildUtils.CreateMetadata(setup, root, tuple.arch, tuple.exec, options.IsTerminal.GetValueOrDefault(false), Maybe<string>.From(inputDir.Name), logger);
+                return Result.Success((exec: tuple.exec, metadata: pm));
             })
-            .Bind(packageMetadata => new FlatpakFactory().BuildPlan(root, packageMetadata, flatpakOptions))
+            .Bind(payload => new FlatpakFactory().BuildPlan(root, payload.metadata, payload.exec, flatpakOptions))
             .Bind(plan =>
             {
                 if (!useSystem)
@@ -522,13 +520,13 @@ public static class FlatpakCommand
         setup.From(options);
 
         return BuildUtils.GetExecutable(root, setup, logger)
-            .Bind(exec => BuildUtils.GetArch(setup, exec).Map(a => (exec, a)))
+            .Bind(exec => BuildUtils.GetArch(setup, exec).Map(arch => (exec, arch)))
             .Bind(async tuple =>
             {
-                var pm = await BuildUtils.CreateMetadata(setup, root, tuple.a, tuple.exec, options.IsTerminal.GetValueOrDefault(false), Maybe<string>.From(inputDir.Name), logger);
-                return Result.Success(pm);
+                var pm = await BuildUtils.CreateMetadata(setup, root, tuple.arch, tuple.exec, options.IsTerminal.GetValueOrDefault(false), Maybe<string>.From(inputDir.Name), logger);
+                return Result.Success((exec: tuple.exec, metadata: pm));
             })
-            .Bind(packageMetadata => new FlatpakFactory().BuildPlan(root, packageMetadata, flatpakOptions))
+            .Bind(payload => new FlatpakFactory().BuildPlan(root, payload.metadata, payload.exec, flatpakOptions))
             .Bind(plan => OstreeRepoBuilder.Build(plan))
             .Bind(repo => repo.WriteTo(outputDir.FullName))
             .WriteResult();

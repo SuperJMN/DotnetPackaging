@@ -1,6 +1,6 @@
 namespace DotnetPackaging.Msix.Core;
 
-public class MsixEntry
+internal class MsixEntry
 {
     public required string FullPath { get; init; }
     public required CompressionLevel CompressionLevel { get; init; }

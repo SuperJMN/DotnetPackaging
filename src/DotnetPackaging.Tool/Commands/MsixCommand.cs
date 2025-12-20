@@ -1,9 +1,9 @@
 using System.CommandLine;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Msix;
+using DotnetPackaging.Msix.Core.Manifest;
 using Serilog;
 using Zafiro.DivineBytes.System.IO;
-using DotnetPackaging.Tool;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Tool.Commands;
@@ -32,7 +32,8 @@ public static class MsixCommand
             {
                 var dirInfo = new System.IO.Abstractions.FileSystem().DirectoryInfo.New(inDir.FullName);
                 var container = new DirectoryContainer(dirInfo);
-                var result = await DotnetPackaging.Msix.Msix.FromDirectory(container, Maybe<Serilog.ILogger>.From(logger))
+                var packager = new MsixPackager();
+                var result = await packager.Pack(container, Maybe<AppManifestMetadata>.None, logger)
                     .Bind(bytes => bytes.WriteTo(outFile.FullName));
 
                 if (result.IsFailure)
@@ -76,9 +77,10 @@ public static class MsixCommand
             var archVal = parseResult.GetValue(arch);
             var logger = Log.ForContext("command", "msix-from-project");
 
-            var result = await Msix.MsixProjectPackager.PackProject(
+            var result = await new MsixPackager().PackProject(
                 prj.FullName,
                 outFile.FullName,
+                null,
                 pub =>
                 {
                     pub.SelfContained = sc;

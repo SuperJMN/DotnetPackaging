@@ -6,7 +6,6 @@ using DotnetPackaging.AppImage.Metadata;
 using DotnetPackaging;
 using Serilog;
 using Zafiro.DivineBytes.System.IO;
-using DotnetPackaging.Tool;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Tool.Commands;
@@ -38,9 +37,11 @@ public static class AppImageCommand
         var container = new DirectoryContainer(dirInfo);
         var root = container.AsRoot();
 
-        return BuildAppImageMetadata(options, root, Maybe<ProjectMetadata>.None, logger)
-            .Bind(metadata => new AppImageFactory().Create(root, metadata))
-            .Bind(x => x.ToByteSource())
+        var metadata = new AppImagePackagerMetadata();
+        metadata.PackageOptions.From(options);
+        var packager = new AppImagePackager();
+
+        return packager.Pack(root, metadata, logger)
             .Bind(source => source.WriteTo(outputFile.FullName))
             .WriteResult();
     }
@@ -292,15 +293,10 @@ public static class AppImageCommand
             var archVal = parseResult.GetValue(arch);
             var logger = Log.ForContext("command", "appimage-from-project");
 
-            var result = await AppImage.AppImagePackager.PackProject(
+            var result = await new AppImage.AppImagePackager().PackProject(
                 prj.FullName,
                 outFile.FullName,
-                o =>
-                {
-                    o.From(opt);
-                    var pm = ProjectMetadataReader.TryRead(prj, logger);
-                    if (pm.HasValue) o.WithProjectMetadata(pm.Value);
-                },
+                o => o.PackageOptions.From(opt),
                 pub =>
                 {
                     pub.SelfContained = sc;

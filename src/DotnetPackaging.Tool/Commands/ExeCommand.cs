@@ -1,19 +1,14 @@
 using System.IO;
-using System.Net.Http;
 using System.CommandLine;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
 using DotnetPackaging.Exe;
-using DotnetPackaging.Publish;
 using Serilog;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
-using System.Linq;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
-using DotnetPackaging.Tool;
 using System.IO.Abstractions;
-using System.Reactive.Disposables;
 
 namespace DotnetPackaging.Tool.Commands;
 
@@ -143,11 +138,6 @@ public static class ExeCommand
                     return;
                 }
 
-                var httpClientFactory = new SimpleHttpClientFactory();
-                var publisher = new DotnetPublisher(Maybe<ILogger>.From(logger));
-                var stubProvider = new InstallerStubProvider(logger, httpClientFactory, publisher);
-                var exeService = new ExePackagingService(publisher, stubProvider, logger);
-
                 var containerResult = new DirectoryContainer(new DirectoryInfoWrapper(new FileSystem(), inDir)).AsRoot();
 
                 var stubBytes = stub != null
@@ -158,7 +148,18 @@ public static class ExeCommand
                     ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(logo.FullName))
                     : null;
 
-                var result = await exeService.BuildFromDirectory(containerResult, outFile.Name, opt, vendorOpt, ridResult.Value, stubBytes, logoBytes);
+                var packager = new ExePackager(logger: logger);
+                var metadata = new ExePackagerMetadata
+                {
+                    Options = opt,
+                    Vendor = Maybe.From(vendorOpt),
+                    RuntimeIdentifier = Maybe.From(ridResult.Value),
+                    Stub = stubBytes == null ? Maybe<IByteSource>.None : Maybe.From(stubBytes),
+                    SetupLogo = logoBytes == null ? Maybe<IByteSource>.None : Maybe.From(logoBytes),
+                    OutputName = Maybe.From(outFile.Name)
+                };
+
+                var result = await packager.Pack(containerResult, metadata);
                 if (result.IsFailure)
                 {
                     logger.Error("EXE packaging failed: {Error}", result.Error);
@@ -166,8 +167,7 @@ public static class ExeCommand
                     return;
                 }
 
-                using var package = result.Value;
-                var writeResult = await package.WriteTo(outFile.FullName);
+                var writeResult = await result.Value.WriteTo(outFile.FullName);
                 if (writeResult.IsFailure)
                 {
                     logger.Error("Failed to persist installer: {Error}", writeResult.Error);
@@ -254,21 +254,27 @@ public static class ExeCommand
                 ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasLogo.FullName))
                 : null;
 
-            var projectMetadata = ProjectMetadataReader.TryRead(prj, logger);
+            var ridHint = Maybe<string>.None;
+            if (archVal != null)
+            {
+                var ridResult = RidUtils.ResolveWindowsRid(archVal, "exe");
+                if (ridResult.IsSuccess)
+                {
+                    ridHint = Maybe.From(ridResult.Value);
+                }
+            }
 
-            var result = await Exe.ExePackager.PackProject(
+            var result = await new Exe.ExePackager().PackProject(
                 prj.FullName,
                 extrasOutput.FullName,
-                exeOpt =>
+                exeMetadata =>
                 {
-                    if (opt.Name.HasValue) exeOpt.Name = opt.Name.Value;
-                    if (opt.Version.HasValue) exeOpt.Version = opt.Version.Value;
-                    if (opt.Comment.HasValue) exeOpt.Comment = opt.Comment.Value;
-                    if (opt.Id.HasValue) exeOpt.Id = opt.Id.Value;
-                    exeOpt.Vendor = vendorOpt;
-                    exeOpt.Stub = stubBytes;
-                    exeOpt.SetupLogo = logoBytes;
-                    exeOpt.ProjectMetadata = projectMetadata;
+                    exeMetadata.Options = opt;
+                    exeMetadata.Vendor = Maybe.From(vendorOpt);
+                    exeMetadata.Stub = stubBytes == null ? Maybe<IByteSource>.None : Maybe.From(stubBytes);
+                    exeMetadata.SetupLogo = logoBytes == null ? Maybe<IByteSource>.None : Maybe.From(logoBytes);
+                    exeMetadata.RuntimeIdentifier = ridHint;
+                    exeMetadata.OutputName = Maybe.From(extrasOutput.Name);
                 },
                 pub =>
                 {
@@ -292,8 +298,4 @@ public static class ExeCommand
         return exeCommand;
     }
 
-    private class SimpleHttpClientFactory : IHttpClientFactory
-    {
-        public HttpClient CreateClient(string name) => new();
-    }
 }

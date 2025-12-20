@@ -11,7 +11,7 @@ using Zafiro.Reactive;
 
 namespace DotnetPackaging.Msix.Core;
 
-public class MsixPackager(Maybe<ILogger> logger)
+internal class MsixPackager(Maybe<ILogger> logger)
 {
     private static readonly HashSet<string> NonCompressibleExtensions = new(StringComparer.OrdinalIgnoreCase)
     {

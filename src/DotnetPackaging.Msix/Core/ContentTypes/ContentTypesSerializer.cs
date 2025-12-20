@@ -6,7 +6,7 @@ namespace DotnetPackaging.Msix.Core.ContentTypes;
 /// <summary>
 /// Serializa el modelo de tipos de contenido a un XML exactamente como lo hace makeappx.
 /// </summary>
-public static class ContentTypesSerializer
+internal static class ContentTypesSerializer
 {
     private const string Namespace = "http://schemas.openxmlformats.org/package/2006/content-types";
 

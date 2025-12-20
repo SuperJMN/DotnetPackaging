@@ -1,6 +1,6 @@
 ﻿namespace DotnetPackaging.Msix.Core.Compression;
 
-public class ObservableStream : Stream
+internal class ObservableStream : Stream
 {
     private readonly IObserver<byte[]> _observer;
 

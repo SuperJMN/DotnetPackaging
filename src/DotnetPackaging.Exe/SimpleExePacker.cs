@@ -14,7 +14,7 @@ using System.Reactive.Linq;
 
 namespace DotnetPackaging.Exe;
 
-public static class SimpleExePacker
+internal static class SimpleExePacker
 {
     private const string BrandingLogoEntry = "Branding/logo.png";
 

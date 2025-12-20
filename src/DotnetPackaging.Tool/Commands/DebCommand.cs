@@ -1,7 +1,7 @@
 using System.CommandLine;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
-using DotnetPackaging.Deb.Archives.Deb;
+using DotnetPackaging.Deb;
 using Serilog;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
@@ -33,16 +33,12 @@ public static class DebCommand
         var fs = new FileSystem();
         var container = new DirectoryContainer(new DirectoryInfoWrapper(fs, inputDir)).AsRoot();
 
-        return DotnetPackaging.Deb.DebFile.From()
-            .Container(container)
-            .Configure(configuration => configuration.From(options))
-            .Build()
-            .Bind(async deb =>
-            {
-                var data = DebMixin.ToByteSource(deb);
-                await using var fileSystemStream = outputFile.Open(FileMode.Create);
-                return await data.WriteTo(fileSystemStream);
-            })
+        var metadata = new FromDirectoryOptions();
+        metadata.From(options);
+        var packager = new Deb.DebPackager();
+
+        return packager.Pack(container, metadata, logger)
+            .Bind(bytes => bytes.WriteTo(outputFile.FullName))
             .WriteResult();
     }
 
@@ -115,15 +111,10 @@ public static class DebCommand
             var archVal = parseResult.GetValue(arch);
             var logger = Log.ForContext("command", "deb-from-project");
 
-            var result = await Deb.DebPackager.PackProject(
+            var result = await new Deb.DebPackager().PackProject(
                 prj.FullName,
                 outFile.FullName,
-                o =>
-                {
-                    o.From(opt);
-                    var pm = ProjectMetadataReader.TryRead(prj, logger);
-                    if (pm.HasValue) o.WithProjectMetadata(pm.Value);
-                },
+                o => o.From(opt),
                 pub =>
                 {
                     pub.SelfContained = sc;

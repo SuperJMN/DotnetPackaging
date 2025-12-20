@@ -1,6 +1,6 @@
 ﻿namespace DotnetPackaging.Msix.Core.Compression;
 
-public class Block
+internal class Block
 {
     /// <summary>
     /// Tamaño original del bloque antes de la compresión

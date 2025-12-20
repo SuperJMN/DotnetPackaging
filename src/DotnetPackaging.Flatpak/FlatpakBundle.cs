@@ -4,7 +4,7 @@ using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Flatpak;
 
-public static class FlatpakBundle
+internal static class FlatpakBundle
 {
     // Legacy simple tar of layout
     public static Result<IByteSource> Create(FlatpakBuildPlan plan)

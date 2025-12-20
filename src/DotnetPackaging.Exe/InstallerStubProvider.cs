@@ -14,7 +14,7 @@ using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Exe;
 
-public sealed class InstallerStubProvider(ILogger logger, IHttpClientFactory httpClientFactory, DotnetPublisher? publisher = null)
+internal sealed class InstallerStubProvider(ILogger logger, IHttpClientFactory httpClientFactory, DotnetPublisher? publisher = null)
 {
     private readonly IHttpClientFactory httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
 

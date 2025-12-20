@@ -10,7 +10,7 @@ using Zafiro.DivineBytes.Unix;
 
 namespace DotnetPackaging.AppImage;
 
-public class AppImageFactory
+internal class AppImageFactory
 {
     private readonly IRuntimeProvider runtimeProvider;
 
@@ -59,6 +59,43 @@ public class AppImageFactory
         }
 
         var unixDirectory = Result.Try(() => rootContainer.ToUnixDirectory(new MetadataResolver(executable)));
+        if (unixDirectory.IsFailure)
+        {
+            return Result.Failure<AppImageContainer>(unixDirectory.Error);
+        }
+
+        return Result.Success(new AppImageContainer(runtimeResult.Value, unixDirectory.Value));
+    }
+
+    internal async Task<Result<AppImageContainer>> Create(
+        IContainer applicationRoot,
+        AppImageMetadata appImageMetadata,
+        INamedByteSourceWithPath executable,
+        Architecture architecture,
+        AppImageOptions? options = null)
+    {
+        var effectiveOptions = options ?? new AppImageOptions();
+        var planResult = await BuildPlanInternal(applicationRoot, appImageMetadata, executable, effectiveOptions);
+        if (planResult.IsFailure)
+        {
+            return Result.Failure<AppImageContainer>(planResult.Error);
+        }
+
+        var rootContainer = planResult.Value.ToRootContainer();
+
+        var runtimeResult = await runtimeProvider.Create(architecture);
+        if (runtimeResult.IsFailure)
+        {
+            return Result.Failure<AppImageContainer>(runtimeResult.Error);
+        }
+
+        var executableInfo = new Executable
+        {
+            Resource = executable,
+            Architecture = architecture
+        };
+
+        var unixDirectory = Result.Try(() => rootContainer.ToUnixDirectory(new MetadataResolver(executableInfo)));
         if (unixDirectory.IsFailure)
         {
             return Result.Failure<AppImageContainer>(unixDirectory.Error);
@@ -237,7 +274,7 @@ public class AppImageFactory
     }
 }
 
-public class Executable
+internal class Executable
 {
     public INamedByteSource Resource { get; set; }
     public Architecture Architecture { get; set; }

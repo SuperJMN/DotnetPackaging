@@ -1,43 +1,30 @@
 using CSharpFunctionalExtensions;
-using DotnetPackaging.Publish;
+using DotnetPackaging.Msix.Core.Manifest;
 using Serilog;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Msix;
 
 /// <summary>
-/// High-level API for creating MSIX packages from .NET projects.
+/// MSIX packager.
 /// </summary>
-public static class MsixProjectPackager
+public sealed class MsixPackager
 {
     /// <summary>
-    /// Creates a lazy IByteSource that publishes the project and packages it as an MSIX on-demand.
+    /// Creates an MSIX package from a container and optional manifest metadata.
     /// </summary>
-    public static IByteSource FromProject(
-        string projectPath,
-        Action<ProjectPublishRequest>? publishConfigure = null,
-        ILogger? logger = null)
+    public Task<Result<IByteSource>> Pack(IContainer container, Maybe<AppManifestMetadata> metadata, ILogger? logger = null)
     {
-        var publishRequest = new ProjectPublishRequest(projectPath);
-        publishConfigure?.Invoke(publishRequest);
+        if (container == null)
+        {
+            throw new ArgumentNullException(nameof(container));
+        }
 
-        var publisher = new DotnetPublisher(Maybe<ILogger>.From(logger));
+        var log = Maybe<ILogger>.From(logger);
+        var result = metadata.HasValue
+            ? Msix.FromDirectoryAndMetadata(container, metadata.Value, log)
+            : Msix.FromDirectory(container, log);
 
-        return ByteSource.FromDisposableAsync(
-            () => publisher.Publish(publishRequest),
-            container => Msix.FromDirectory(container, Maybe<ILogger>.From(logger)));
-    }
-
-    /// <summary>
-    /// Publishes the project, packages it as an MSIX, and writes to the output path.
-    /// </summary>
-    public static async Task<Result> PackProject(
-        string projectPath,
-        string outputPath,
-        Action<ProjectPublishRequest>? publishConfigure = null,
-        ILogger? logger = null)
-    {
-        var source = FromProject(projectPath, publishConfigure, logger);
-        return await source.WriteTo(outputPath);
+        return Task.FromResult(result);
     }
 }

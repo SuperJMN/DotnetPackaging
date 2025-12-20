@@ -8,7 +8,7 @@ using Zafiro.Mixins;
 
 namespace DotnetPackaging.Msix.Core.BlockMap;
 
-public class BlockMapSerializer(Maybe<ILogger> logger)
+internal class BlockMapSerializer(Maybe<ILogger> logger)
 {
     private const string DefaultNamespace = "http://schemas.microsoft.com/appx/2010/blockmap";
     private const string BlockMap2021Namespace = "http://schemas.microsoft.com/appx/2021/blockmap";

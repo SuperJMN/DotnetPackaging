@@ -6,7 +6,7 @@ using UnixFile = Zafiro.DivineBytes.Unix.UnixFile;
 
 namespace DotnetPackaging.AppImage.Core;
 
-public static class SquashFS
+internal static class SquashFS
 {
     public static Result<IByteSource> Create(UnixDirectory container)
     {
