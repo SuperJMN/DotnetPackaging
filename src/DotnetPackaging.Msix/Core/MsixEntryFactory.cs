@@ -2,7 +2,7 @@ using DotnetPackaging.Msix.Core.Compression;
 
 namespace DotnetPackaging.Msix.Core;
 
-public static class MsixEntryFactory
+internal static class MsixEntryFactory
 {
     public static MsixEntry Compress(string entryName, IByteSource data)
     {

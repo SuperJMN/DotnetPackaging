@@ -24,7 +24,7 @@ All projects target .NET 8.
 
 ## Library usage
 
-Every library works with the `Zafiro` filesystem abstractions so you can build packages from real directories or in-memory containers. The helpers infer reasonable defaults (architecture, executable, icon files, metadata) while still letting you override everything.
+Every library works with the `Zafiro` filesystem abstractions so you can build packages from real directories or in-memory containers. The helpers infer reasonable defaults (architecture, executable, icon files, metadata) while still letting you override everything. Use the `*Packager` classes as the entry point; extension methods provide `FromProject` and `PackProject` conveniences.
 
 ### AppImage packages
 Key capabilities:
@@ -34,8 +34,8 @@ Key capabilities:
 
 ```csharp
 using DotnetPackaging.AppImage;
-using DotnetPackaging.AppImage.Metadata;
 using Zafiro.DivineBytes;
+using Zafiro.DivineBytes.System.IO;
 using Zafiro.FileSystem.Core;
 using Zafiro.FileSystem.Local;
 
@@ -43,29 +43,30 @@ var publishDir = new Directory(new FileSystem().DirectoryInfo.New("./bin/Release
 var appRoot = (await publishDir.ToDirectory()).Value;
 var container = new DirectoryContainer(appRoot);
 
-var metadata = new AppImageMetadata("com.example.myapp", "My App", "my-app")
-{
-    Version = "1.0.0",
-    Summary = "Cross-platform sample",
-    Comment = "Longer description shown in desktop menus",
-};
+var metadata = new AppImagePackagerMetadata();
+metadata.PackageOptions
+    .WithId("com.example.myapp")
+    .WithName("My App")
+    .WithPackage("my-app")
+    .WithVersion("1.0.0")
+    .WithSummary("Cross-platform sample")
+    .WithComment("Longer description shown in desktop menus");
 
-var factory = new AppImageFactory();
-var appImage = await factory.Create(container.AsRoot(), metadata);
+var packager = new AppImagePackager();
+var appImage = await packager.Pack(container.AsRoot(), metadata);
 if (appImage.IsSuccess)
 {
-    await appImage.Value.ToByteSource()
-        .Bind(bytes => bytes.WriteTo("./artifacts/MyApp.appimage"));
+    await appImage.Value.WriteTo("./artifacts/MyApp.appimage");
 }
 ```
 
-You can also call `factory.BuildAppDir(...)` to materialise an AppDir on disk, or `factory.CreateFromAppDir(...)` when you already have an AppDir layout.
+For AppDir workflows, use the CLI subcommands (`appimage appdir` and `appimage from-appdir`).
 
 ### Debian packages
 Key capabilities:
 - Build `.deb` archives from any container or directory that resembles the install root of your app.
 - Auto-detect the executable and architecture (with `FromDirectoryOptions` overrides when you know better).
-- Emit `IData` streams so you can persist packages to disk, upload them elsewhere, or plug them into other pipelines.
+- Emit `IByteSource` streams so you can persist packages to disk, upload them elsewhere, or plug them into other pipelines.
 
 ```csharp
 using System.IO.Abstractions;
@@ -75,20 +76,18 @@ using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
 
 var publishDir = new DirectoryContainer(new FileSystem().DirectoryInfo.New("./bin/Release/net8.0/linux-x64/publish"));
-var debResult = await DebFile.From()
-    .Container(publishDir.AsRoot(), publishDir.Name)
-    .Configure(options =>
-    {
-        options.WithName("My App")
-               .WithPackage("my-app")
-               .WithVersion("1.0.0")
-               .WithSummary("Cross-platform sample app");
-    })
-    .Build();
+var options = new FromDirectoryOptions()
+    .WithName("My App")
+    .WithPackage("my-app")
+    .WithVersion("1.0.0")
+    .WithSummary("Cross-platform sample app");
+
+var packager = new DebPackager();
+var debResult = await packager.Pack(publishDir.AsRoot(), options);
 
 if (debResult.IsSuccess)
 {
-    await debResult.Value.ToData().DumpTo("./artifacts/MyApp_1.0.0_amd64.deb");
+    await debResult.Value.WriteTo("./artifacts/MyApp_1.0.0_amd64.deb");
 }
 ```
 
@@ -97,24 +96,26 @@ if (debResult.IsSuccess)
 ### Flatpak packages
 Key capabilities:
 - Generate a Flatpak layout (metadata + files/) without external tools.
-- Bundle to a single `.flatpak` using the system `flatpak` if available (fallback to an internal OSTree-based bundler).
+- Bundle to a single `.flatpak` using the internal OSTree bundler (the CLI can optionally use system `flatpak`).
 - Defaults-first: autodetect executable, architecture and icons; sane permissions and org.freedesktop runtime (24.08) by default.
 
 Library (defaults-first):
 ```csharp
 using DotnetPackaging.Flatpak;
+using DotnetPackaging;
 using Zafiro.DivineBytes;
+using Zafiro.DivineBytes.System.IO;
 using Zafiro.FileSystem.Local;
 
 var fs = new System.IO.Abstractions.FileSystem();
 var container = new DirectoryContainer(fs.DirectoryInfo.New("./bin/Release/net8.0/linux-x64/publish"));
-var packer = new FlatpakPacker();
+var metadata = new FlatpakPackagerMetadata();
+metadata.PackageOptions
+    .WithId("com.example.myapp")
+    .WithName("My App");
 
-// Plan with sensible defaults (derives AppId, Name, icons, etc.)
-var plan = await packer.Plan(container.AsRoot());
-
-// Bundle: prefers system flatpak (build-export/build-bundle), falls back to internal bundler
-var bytes = await packer.Bundle(container.AsRoot());
+var packager = new FlatpakPackager();
+var bytes = await packager.Pack(container.AsRoot(), metadata);
 if (bytes.IsSuccess)
 {
     await bytes.Value.WriteTo("./artifacts/MyApp.flatpak");

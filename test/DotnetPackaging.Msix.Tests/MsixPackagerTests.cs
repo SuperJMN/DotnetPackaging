@@ -68,12 +68,12 @@ public class MsixPackagerTests
         var fs = new FileSystem();
         var directoryInfo = fs.DirectoryInfo.New($"TestFiles/MinimalNoMetadata/Contents");
         var dir = new DirectoryContainer(directoryInfo);
-        await Msix.FromDirectoryAndMetadata(dir, new AppManifestMetadata(), Maybe<ILogger>.None)
-            .Map(async source =>
-            {
-                await using var fileStream = File.Open("TestFiles/MinimalNoMetadata/Actual.msix", FileMode.Create);
-                return await source.WriteTo(fileStream);
-            });
+        var packager = new MsixPackager();
+        var result = await packager.Pack(dir, Maybe.From(new AppManifestMetadata()));
+        Assert.True(result.IsSuccess);
+
+        await using var fileStream = File.Open("TestFiles/MinimalNoMetadata/Actual.msix", FileMode.Create);
+        await result.Value.WriteTo(fileStream);
     }
 
     [Fact]
@@ -143,12 +143,9 @@ public class MsixPackagerTests
         var directoryInfo = fs.DirectoryInfo.New($"TestFiles/{folderName}/Contents");
         var directoryContainer = new DirectoryContainer(directoryInfo);
 
-        var result = Msix.FromDirectory(directoryContainer, Log.Logger.AsMaybe());
-
-        if (result.IsFailure)
-        {
-            Assert.True(false, $"Failed to create MSIX package: {result.Error}");
-        }
+        var packager = new MsixPackager();
+        var result = await packager.Pack(directoryContainer, Maybe<AppManifestMetadata>.None, Log.Logger);
+        Assert.True(result.IsSuccess);
 
         var outputPath = System.IO.Path.Combine("TestFiles", folderName, "Actual.msix");
         await using (var fileStream = File.Create(outputPath))

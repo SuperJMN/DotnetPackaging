@@ -3,7 +3,7 @@ using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.AppImage.Core;
 
-public static class AppImageExtensions
+internal static class AppImageExtensions
 {
     public static Task<Result<IByteSource>> ToByteSource(this AppImageContainer appImageContainer)
     {

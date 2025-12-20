@@ -1,7 +1,8 @@
 using System.Buffers.Binary;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Formats.Dmg.Udif;
 
-namespace DotnetPackaging.Dmg;
+namespace DotnetPackaging.Dmg.Verification;
 
 public static class DmgVerifier
 {

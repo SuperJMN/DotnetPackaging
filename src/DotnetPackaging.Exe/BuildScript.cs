@@ -1,10 +1,11 @@
 using System.IO;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Exe.Metadata;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Exe;
 
-public static class BuildScript
+internal static class BuildScript
 {
     public static async Task<Result> Build(
         IByteSource stub,

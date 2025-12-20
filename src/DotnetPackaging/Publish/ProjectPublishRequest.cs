@@ -9,10 +9,10 @@ public sealed class ProjectPublishRequest
     }
 
     public string ProjectPath { get; }
-    public Maybe<string> Rid { get; init; } = Maybe<string>.None;
-    public bool SelfContained { get; init; } = true;
-    public string Configuration { get; init; } = "Release";
-    public bool SingleFile { get; init; }
-    public bool Trimmed { get; init; }
-    public IReadOnlyDictionary<string, string>? MsBuildProperties { get; init; }
+    public Maybe<string> Rid { get; set; } = Maybe<string>.None;
+    public bool SelfContained { get; set; } = true;
+    public string Configuration { get; set; } = "Release";
+    public bool SingleFile { get; set; }
+    public bool Trimmed { get; set; }
+    public IReadOnlyDictionary<string, string>? MsBuildProperties { get; set; }
 }

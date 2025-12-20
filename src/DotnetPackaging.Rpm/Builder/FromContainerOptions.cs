@@ -3,7 +3,7 @@ using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Rpm.Builder;
 
-public class FromContainerOptions
+internal class FromContainerOptions
 {
     private readonly IContainer container;
     private readonly Maybe<string> containerName;

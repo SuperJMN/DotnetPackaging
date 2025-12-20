@@ -3,7 +3,7 @@ using DotnetPackaging.AppImage.Metadata;
 
 namespace DotnetPackaging.AppImage;
 
-public record AppImageBuildPlan(
+internal record AppImageBuildPlan(
     string ExecutableName,
     string ExecutableTargetPath,
     string IconName,

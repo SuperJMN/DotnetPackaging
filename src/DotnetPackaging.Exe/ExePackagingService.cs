@@ -3,6 +3,7 @@ using CSharpFunctionalExtensions;
 using System.IO;
 using System.Runtime.InteropServices;
 using DotnetPackaging;
+using DotnetPackaging.Exe.Metadata;
 using DotnetPackaging.Publish;
 using Serilog;
 using System.IO.Abstractions;
@@ -15,7 +16,7 @@ using Path = System.IO.Path;
 
 namespace DotnetPackaging.Exe;
 
-public sealed class ExePackagingService
+internal sealed class ExePackagingService
 {
     private const string BrandingLogoEntry = "Branding/logo.png";
     private readonly DotnetPublisher publisher;

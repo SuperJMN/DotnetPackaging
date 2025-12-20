@@ -8,11 +8,11 @@ using File = System.IO.File;
 
 namespace DotnetPackaging.Msix;
 
-public class Msix
+internal class Msix
 {
     public static Result<IByteSource> FromDirectory(IContainer container, Maybe<ILogger> logger)
     {
-        return new MsixPackager(logger).Pack(container);
+        return new Core.MsixPackager(logger).Pack(container);
     }
 
     public static Result<IByteSource> FromDirectoryAndMetadata(IContainer container, AppManifestMetadata metadata, Maybe<ILogger> logger)

@@ -6,7 +6,6 @@ using DotnetPackaging.AppImage.Metadata;
 using DotnetPackaging;
 using Serilog;
 using Zafiro.DivineBytes.System.IO;
-using DotnetPackaging.Tool;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Tool.Commands;
@@ -38,9 +37,11 @@ public static class AppImageCommand
         var container = new DirectoryContainer(dirInfo);
         var root = container.AsRoot();
 
-        return BuildAppImageMetadata(options, root, Maybe<ProjectMetadata>.None, logger)
-            .Bind(metadata => new AppImageFactory().Create(root, metadata))
-            .Bind(x => x.ToByteSource())
+        var metadata = new AppImagePackagerMetadata();
+        metadata.PackageOptions.From(options);
+        var packager = new AppImagePackager();
+
+        return packager.Pack(root, metadata, logger)
             .Bind(source => source.WriteTo(outputFile.FullName))
             .WriteResult();
     }
@@ -290,29 +291,27 @@ public static class AppImageCommand
             var outFile = parseResult.GetValue(output)!;
             var opt = optionsBinder.Bind(parseResult);
             var archVal = parseResult.GetValue(arch);
+            var logger = Log.ForContext("command", "appimage-from-project");
 
-            await ExecutionWrapper.ExecuteWithPublishedProject(
-                "appimage-from-project",
+            var result = await new AppImage.AppImagePackager().PackProject(
+                prj.FullName,
                 outFile.FullName,
-                prj,
-                archVal,
-                RidUtils.ResolveLinuxRid,
-                sc, cfg, sf, tr,
-                async (pub, l) =>
+                o => o.PackageOptions.From(opt),
+                pub =>
                 {
-                    var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
-                    var metadataResult = await BuildAppImageMetadata(opt, pub, projectMetadata, l);
-                    var appImageResult = await metadataResult
-                        .Bind(metadata => new AppImageFactory().Create(pub, metadata))
-                        .Bind(x => x.ToByteSource());
-
-                    return appImageResult.Map(bytes =>
+                    pub.SelfContained = sc;
+                    pub.Configuration = cfg;
+                    pub.SingleFile = sf;
+                    pub.Trimmed = tr;
+                    if (archVal != null)
                     {
-                        var resource = new Resource(outFile.Name, bytes);
-                        var package = (IPackage)new Package(resource.Name, resource, pub);
-                        return package;
-                    });
-                });
+                        var ridResult = RidUtils.ResolveLinuxRid(archVal, "appimage");
+                        if (ridResult.IsSuccess) pub.Rid = ridResult.Value;
+                    }
+                },
+                logger);
+
+            result.WriteResult();
         });
 
         appImageCommand.Add(fromProject);

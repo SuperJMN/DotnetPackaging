@@ -6,7 +6,9 @@ using System.Text.Json;
 using Path = System.IO.Path;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Exe;
+using DotnetPackaging.Exe.Artifacts;
 using DotnetPackaging.Exe.Installer.Core;
+using ExeInstallerMetadata = DotnetPackaging.Exe.Metadata.InstallerMetadata;
 using FluentAssertions;
 using Xunit;
 using Zafiro.DivineBytes;
@@ -29,7 +31,7 @@ public class SimpleExePackerTests
 
         File.WriteAllText(Path.Combine(publishDir.FullName, "App.exe"), "Dummy App");
 
-        var metadata = new InstallerMetadata("com.test.strip", "Test Strip", "1.0.0", "Test Vendor", "Desc", "App.exe");
+        var metadata = new ExeInstallerMetadata("com.test.strip", "Test Strip", "1.0.0", "Test Vendor", "Desc", "App.exe");
 
         var artifacts = await BuildArtifacts(publishDir, metadata);
         await WriteArtifacts(artifacts, outputInstaller, outputUninstaller);
@@ -70,7 +72,7 @@ public class SimpleExePackerTests
         var appContent = "Dummy App Content";
         File.WriteAllText(Path.Combine(publishDir.FullName, "App.exe"), appContent);
 
-        var metadata = new InstallerMetadata("com.test.extract", "Test Extract", "1.0.0", "Test Vendor", "Desc", "App.exe");
+        var metadata = new ExeInstallerMetadata("com.test.extract", "Test Extract", "1.0.0", "Test Vendor", "Desc", "App.exe");
 
         var artifacts = await BuildArtifacts(publishDir, metadata);
         await WriteArtifacts(artifacts, outputInstaller, Path.Combine(tempDir.FullName, "Uninstaller.exe"));
@@ -132,7 +134,7 @@ public class SimpleExePackerTests
 
         File.WriteAllText(Path.Combine(publishDir.FullName, "App.exe"), "Dummy App");
 
-        var metadata = new InstallerMetadata("com.test.boot", "Test Boot", "1.0.0", "Test Vendor", "Desc", "App.exe");
+        var metadata = new ExeInstallerMetadata("com.test.boot", "Test Boot", "1.0.0", "Test Vendor", "Desc", "App.exe");
         var artifacts = await BuildArtifacts(publishDir, metadata);
         await WriteArtifacts(artifacts, outputInstaller, Path.Combine(tempDir.FullName, "Uninstaller.exe"));
 
@@ -155,7 +157,7 @@ public class SimpleExePackerTests
         File.Exists(metadataDump).Should().BeTrue();
 
         var json = await File.ReadAllTextAsync(metadataDump);
-        var deserialized = JsonSerializer.Deserialize<InstallerMetadata>(json);
+        var deserialized = JsonSerializer.Deserialize<ExeInstallerMetadata>(json);
         deserialized.Should().NotBeNull();
         deserialized!.ApplicationName.Should().Be(metadata.ApplicationName);
 
@@ -175,7 +177,7 @@ public class SimpleExePackerTests
 
         File.WriteAllText(Path.Combine(publishDir.FullName, "App.exe"), "Dummy App");
 
-        var metadata = new InstallerMetadata("com.test.uninstall", "Test Uninstall", "1.0.0", "Test Vendor", "Desc", "App.exe");
+        var metadata = new ExeInstallerMetadata("com.test.uninstall", "Test Uninstall", "1.0.0", "Test Vendor", "Desc", "App.exe");
         var artifacts = await BuildArtifacts(publishDir, metadata);
         await WriteArtifacts(artifacts, outputInstaller, outputUninstaller);
 
@@ -204,7 +206,7 @@ public class SimpleExePackerTests
         File.Exists(metadataDump).Should().BeTrue();
 
         var json = await File.ReadAllTextAsync(metadataDump);
-        var deserialized = JsonSerializer.Deserialize<InstallerMetadata>(json);
+        var deserialized = JsonSerializer.Deserialize<ExeInstallerMetadata>(json);
         deserialized.Should().NotBeNull();
         deserialized!.ApplicationName.Should().Be(metadata.ApplicationName);
 
@@ -228,7 +230,7 @@ public class SimpleExePackerTests
 
         File.WriteAllText(Path.Combine(publishDir.FullName, "App.exe"), "Dummy App");
 
-        var metadata = new InstallerMetadata("com.test.dispatcher", "Test Dispatcher", "1.0.0", "Test Vendor", "Desc", "App.exe");
+        var metadata = new ExeInstallerMetadata("com.test.dispatcher", "Test Dispatcher", "1.0.0", "Test Vendor", "Desc", "App.exe");
         var artifacts = await BuildArtifacts(publishDir, metadata);
         await WriteArtifacts(artifacts, outputInstaller, Path.Combine(tempDir.FullName, "Uninstaller.exe"));
 
@@ -258,7 +260,7 @@ public class SimpleExePackerTests
     public async Task Metadata_payload_should_expose_logo_from_disk()
     {
         var tempDir = Directory.CreateTempSubdirectory("dp-meta-logo-");
-        var metadata = new InstallerMetadata("com.test.logo", "Test Logo", "1.0.0", "Test Vendor", HasLogo: true);
+        var metadata = new ExeInstallerMetadata("com.test.logo", "Test Logo", "1.0.0", "Test Vendor", HasLogo: true);
         var metadataPath = Path.Combine(tempDir.FullName, "metadata.json");
         await File.WriteAllTextAsync(metadataPath, JsonSerializer.Serialize(metadata));
 
@@ -284,7 +286,7 @@ public class SimpleExePackerTests
     [Fact]
     public async Task Payload_should_be_readable_without_disk_intermediates()
     {
-        var metadata = new InstallerMetadata("com.test.memory", "Memory Test", "1.0.0", "Vendor", ExecutableName: "App.exe");
+        var metadata = new ExeInstallerMetadata("com.test.memory", "Memory Test", "1.0.0", "Vendor", ExecutableName: "App.exe");
         var containerResult = new Dictionary<string, IByteSource>
         {
             ["App.exe"] = ByteSource.FromString("App content"),
@@ -323,7 +325,7 @@ public class SimpleExePackerTests
         }
     }
 
-    private async Task<ExeBuildArtifacts> BuildArtifacts(DirectoryInfo publishDir, InstallerMetadata metadata, Maybe<IByteSource>? logo = null)
+    private async Task<ExeBuildArtifacts> BuildArtifacts(DirectoryInfo publishDir, ExeInstallerMetadata metadata, Maybe<IByteSource>? logo = null)
     {
         var container = BuildContainer(publishDir);
         var stub = ByteSource.FromStreamFactory(() => File.OpenRead(ResolveStubPath()));

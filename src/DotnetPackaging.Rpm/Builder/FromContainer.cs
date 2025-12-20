@@ -4,7 +4,7 @@ using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Rpm.Builder;
 
-public class FromContainer
+internal class FromContainer
 {
     private readonly IContainer root;
     private readonly FromDirectoryOptions setup;

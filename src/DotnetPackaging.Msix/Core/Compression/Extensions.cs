@@ -2,7 +2,7 @@
 
 namespace DotnetPackaging.Msix.Core.Compression;
 
-public static class Extensions
+internal static class Extensions
 {
     public static IObservable<byte[]> ReadMyBytes(this Stream stream, long offset, int tamaño)
     {

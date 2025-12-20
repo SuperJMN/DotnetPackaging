@@ -3,7 +3,7 @@ using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Flatpak;
 
-public class FlatpakPacker
+internal class FlatpakPacker
 {
     // Build a plan with sensible defaults from a container only
     public async Task<Result<FlatpakBuildPlan>> Plan(IContainer applicationRoot, FromDirectoryOptions? setup = null, FlatpakOptions? options = null)
@@ -14,7 +14,7 @@ public class FlatpakPacker
         var archResult = await BuildUtils.GetArch(effectiveSetup, execResult.Value);
         if (archResult.IsFailure) return Result.Failure<FlatpakBuildPlan>(archResult.Error);
         var pm = await BuildUtils.CreateMetadata(effectiveSetup, applicationRoot, archResult.Value, execResult.Value, effectiveSetup.IsTerminal, Maybe<string>.None);
-        return await new FlatpakFactory().BuildPlan(applicationRoot, pm, options);
+        return await new FlatpakFactory().BuildPlan(applicationRoot, pm, execResult.Value, options);
     }
 
     // Bundle using system flatpak if available; fallback to internal OSTree bundle

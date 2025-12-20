@@ -9,7 +9,7 @@ namespace DotnetPackaging.Msix.Core;
 /// Implements the bare minimum to write local headers,
 /// the central directory, and the end of central directory record.
 /// </summary>
-public class MsixBuilder : IAsyncDisposable
+internal class MsixBuilder : IAsyncDisposable
 {
     private readonly Stream baseStream;
     private readonly Maybe<ILogger> logger;

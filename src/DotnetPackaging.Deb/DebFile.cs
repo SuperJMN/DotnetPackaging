@@ -2,7 +2,7 @@
 
 namespace DotnetPackaging.Deb;
 
-public static class DebFile
+internal static class DebFile
 {
     public static DebBuilder From() => new();
 }

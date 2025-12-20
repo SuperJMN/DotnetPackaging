@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Xml.Linq;
 
-namespace DotnetPackaging.Dmg;
+namespace DotnetPackaging.Formats.Dmg.Udif;
 
 public sealed class UdifImage
 {

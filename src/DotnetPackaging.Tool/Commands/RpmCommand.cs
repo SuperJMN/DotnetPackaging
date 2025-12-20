@@ -3,11 +3,9 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging;
 using DotnetPackaging.Rpm;
 using Serilog;
-using DotnetPackaging.Tool;
 using System.IO.Abstractions;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
-using System.Reactive.Disposables;
 
 namespace DotnetPackaging.Tool.Commands;
 public static class RpmCommand
@@ -33,31 +31,13 @@ public static class RpmCommand
         var fs = new FileSystem();
         var container = new DirectoryContainer(new DirectoryInfoWrapper(fs, inputDir)).AsRoot();
 
-        return RpmFile.From()
-            .Container(container)
-            .Configure(configuration => configuration.From(options))
-            .Build()
-            .Bind(rpmFile => CopyRpmToOutput(rpmFile, outputFile))
+        var metadata = new FromDirectoryOptions();
+        metadata.From(options);
+        var packager = new RpmPackager();
+
+        return packager.Pack(container, metadata, logger)
+            .Bind(bytes => bytes.WriteTo(outputFile.FullName))
             .WriteResult();
-    }
-
-    private static Result CopyRpmToOutput(FileInfo rpmFile, FileInfo outputFile)
-    {
-        try
-        {
-            var directory = outputFile.Directory;
-            if (directory != null && !directory.Exists)
-            {
-                directory.Create();
-            }
-
-            File.Copy(rpmFile.FullName, outputFile.FullName, true);
-            return Result.Success();
-        }
-        catch (Exception ex)
-        {
-            return Result.Failure(ex.Message);
-        }
     }
 
     private static void AddFromProjectSubcommand(Command rpmCommand)
@@ -127,46 +107,27 @@ public static class RpmCommand
             var outFile = parseResult.GetValue(output)!;
             var opt = optionsBinder.Bind(parseResult);
             var archVal = parseResult.GetValue(arch);
+            var logger = Log.ForContext("command", "rpm-from-project");
 
-            await ExecutionWrapper.ExecuteWithPublishedProject(
-                "rpm-from-project",
+            var result = await new RpmPackager().PackProject(
+                prj.FullName,
                 outFile.FullName,
-                prj,
-                archVal,
-                RidUtils.ResolveLinuxRid,
-                sc, cfg, sf, tr,
-                async (pub, l) =>
+                o => o.From(opt),
+                pub =>
                 {
-                    var projectMetadata = ProjectMetadataReader.TryRead(prj, l);
-                    var name = System.IO.Path.GetFileNameWithoutExtension(prj.Name);
-                    var builder = RpmFile.From().Container(pub, name);
-                    var rpmResult = await builder.Configure(o =>
-                        {
-                            o.From(opt);
-                            if (projectMetadata.HasValue)
-                            {
-                                o.WithProjectMetadata(projectMetadata.Value);
-                            }
-                        }).Build();
-
-                    if (rpmResult.IsFailure)
+                    pub.SelfContained = sc;
+                    pub.Configuration = cfg;
+                    pub.SingleFile = sf;
+                    pub.Trimmed = tr;
+                    if (archVal != null)
                     {
-                        return rpmResult.ConvertFailure<IPackage>();
+                        var ridResult = RidUtils.ResolveLinuxRid(archVal, "rpm");
+                        if (ridResult.IsSuccess) pub.Rid = ridResult.Value;
                     }
+                },
+                logger);
 
-                    var rpmSource = ByteSource.FromStreamFactory(() => File.OpenRead(rpmResult.Value.FullName));
-                    var resource = new Resource(outFile.Name, rpmSource);
-                    var cleanup = Disposable.Create(() =>
-                    {
-                        if (File.Exists(rpmResult.Value.FullName))
-                        {
-                            File.Delete(rpmResult.Value.FullName);
-                        }
-                    });
-                    var composite = new CompositeDisposable { pub, cleanup };
-                    var package = (IPackage)new Package(resource.Name, resource, composite);
-                    return Result.Success(package);
-                });
+            result.WriteResult();
         });
 
         rpmCommand.Add(fromProject);

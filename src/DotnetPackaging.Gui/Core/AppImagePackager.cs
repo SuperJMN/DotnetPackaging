@@ -1,5 +1,9 @@
 using System.Threading.Tasks;
-using DotnetPackaging.AppImage.Core;
+using AppImagePackagerCore = DotnetPackaging.AppImage.AppImagePackager;
+using AppImagePackagerMetadataCore = DotnetPackaging.AppImage.AppImagePackagerMetadata;
+using Zafiro.DataModel;
+using Zafiro.DivineBytes;
+using Zafiro.FileSystem.Core;
 using Zafiro.FileSystem.Mutable;
 using Zafiro.FileSystem.Readonly;
 
@@ -13,10 +17,33 @@ public class AppImagePackager : IPackager
 
     public Task<Result> CreatePackage(IDirectory sourceDirectory, IMutableFile outputFile, Options options)
     {
-        return AppImage.AppImage
-            .From()
-            .Directory(sourceDirectory)
-            .Configure(x => x.From(options)).Build()
-            .Bind(appImage => appImage.ToData().Bind(data => outputFile.SetContents(data)));
+        var containerResult = BuildContainer(sourceDirectory);
+        if (containerResult.IsFailure)
+        {
+            return Task.FromResult(Result.Failure(containerResult.Error));
+        }
+
+        var metadata = new AppImagePackagerMetadataCore();
+        metadata.PackageOptions.From(options);
+
+        var packager = new AppImagePackagerCore();
+        return packager.Pack(containerResult.Value, metadata)
+            .Bind(async data =>
+            {
+                var bytes = data.Array();
+                var content = Data.FromByteArray(bytes);
+                return await outputFile.SetContents(content);
+            });
+    }
+
+    private static Result<RootContainer> BuildContainer(IDirectory root)
+    {
+        var files = root.RootedFiles()
+            .ToDictionary(
+                file => file.Path == ZafiroPath.Empty ? file.Name : file.Path.Combine(file.Name).ToString(),
+                file => (IByteSource)ByteSource.FromByteObservable(file.Value.Bytes),
+                StringComparer.Ordinal);
+
+        return files.ToRootContainer();
     }
 }
