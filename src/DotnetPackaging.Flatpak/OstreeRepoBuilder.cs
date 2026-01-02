@@ -1,90 +1,89 @@
-using System.Security.Cryptography;
 using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Flatpak;
 
-// Simplified object kinds with pluggable encoders (GVariant to be added)
-internal abstract record OstreeObject(string Type)
-{
-    public abstract byte[] Serialize();
-}
-
-internal sealed record Blob(byte[] Content) : OstreeObject("blob")
-{
-    public override byte[] Serialize() => Content;
-}
-
-internal sealed record Tree(Dictionary<string, string> Entries) : OstreeObject("tree")
-{
-    public override byte[] Serialize()
-    {
-        // TODO: Replace with real GVariant tree encoding
-        return OstreeEncoders.EncodeTree(Entries);
-    }
-}
-
-internal sealed record Commit(string TreeChecksum, string Subject, DateTimeOffset Timestamp) : OstreeObject("commit")
-{
-    public override byte[] Serialize()
-    {
-        // TODO: Replace with real GVariant commit encoding
-        return OstreeEncoders.EncodeCommit(TreeChecksum, Subject, Timestamp);
-    }
-}
-
+/// <summary>
+/// Builds an OSTree repository structure from a Flatpak build plan.
+/// </summary>
 internal static class OstreeRepoBuilder
 {
+    // Default permissions for files and directories
+    private const uint DefaultUid = 0;
+    private const uint DefaultGid = 0;
+    private const uint DirectoryMode = 0x41ED; // drwxr-xr-x (16877)
+    private const uint RegularFileMode = 0x81A4; // -rw-r--r-- (33188)
+    private const uint ExecutableFileMode = 0x81ED; // -rwxr-xr-x (33261)
+
     public static Result<RootContainer> Build(FlatpakBuildPlan plan)
     {
-        // 1) Create blob objects from layout files under commit root (metadata, files/, export/)
-        var blobs = new Dictionary<string, (string checksum, IByteSource source)>(StringComparer.Ordinal);
-        foreach (var res in plan.ToRootContainer().ResourcesWithPathsRecursive())
+        var repoFiles = new Dictionary<string, IByteSource>(StringComparer.Ordinal);
+
+        // Build the content tree from the plan layout
+        var layout = plan.ToRootContainer();
+        var files = layout.ResourcesWithPathsRecursive().ToList();
+
+        // Create file content objects and collect file entries for dirtree
+        var fileEntries = new List<(string Name, byte[] Checksum)>();
+        foreach (var file in files)
         {
-            var bytes = res.Array();
-            var checksum = Sha256(bytes);
-            blobs[((INamedWithPath)res).FullPath().ToString()] = (checksum, ByteSource.FromBytes(bytes));
+            var relativePath = ((INamedWithPath)file).FullPath().ToString().Replace("\\", "/");
+            var content = file.Array();
+            var contentChecksum = OstreeEncoders.ComputeChecksum(content);
+            var checksumHex = OstreeEncoders.ChecksumToHex(contentChecksum);
+
+            // Store content object
+            var objectPath = $"objects/{checksumHex[..2]}/{checksumHex[2..]}.file";
+            repoFiles[objectPath] = ByteSource.FromBytes(content);
+
+            // Collect for dirtree
+            fileEntries.Add((relativePath, contentChecksum));
         }
 
-        // 2) Tree maps file paths to blob checksums (flat list)
-        var treeEntries = blobs.ToDictionary(k => k.Key, v => v.Value.checksum, StringComparer.Ordinal);
-        var tree = new Tree(treeEntries);
-        var treeBytes = tree.Serialize();
-        var treeChecksum = Sha256(treeBytes);
+        // Create root dirmeta object
+        var rootDirmeta = OstreeEncoders.EncodeDirMeta(DefaultUid, DefaultGid, DirectoryMode);
+        var rootDirmetaChecksum = OstreeEncoders.ComputeChecksum(rootDirmeta);
+        var rootDirmetaHex = OstreeEncoders.ChecksumToHex(rootDirmetaChecksum);
+        repoFiles[$"objects/{rootDirmetaHex[..2]}/{rootDirmetaHex[2..]}.dirmeta"] = ByteSource.FromBytes(rootDirmeta);
 
-        // 3) Commit referencing tree
-        var commit = new Commit(treeChecksum, plan.Metadata.Name, DateTimeOffset.Now);
-        var commitBytes = commit.Serialize();
-        var commitChecksum = Sha256(commitBytes);
+        // Create root dirtree object (flat structure - all files at root level conceptually)
+        var rootDirtree = OstreeEncoders.EncodeDirTree(
+            fileEntries,
+            Enumerable.Empty<(string, byte[], byte[])>()
+        );
+        var rootDirtreeChecksum = OstreeEncoders.ComputeChecksum(rootDirtree);
+        var rootDirtreeHex = OstreeEncoders.ChecksumToHex(rootDirtreeChecksum);
+        repoFiles[$"objects/{rootDirtreeHex[..2]}/{rootDirtreeHex[2..]}.dirtree"] = ByteSource.FromBytes(rootDirtree);
 
-        // 4) Build repo layout
-        var repoFiles = new Dictionary<string, IByteSource>(StringComparer.Ordinal)
-        {
-            ["config"] = ByteSource.FromString("[core]\nrepo_version=1\nmode=bare-user\n"),
-            [$"refs/heads/app/{plan.AppId}/{plan.Metadata.Architecture.PackagePrefix}/stable"] = ByteSource.FromString(commitChecksum),
-            ["summary"] = ByteSource.FromBytes(Array.Empty<byte>())
-        };
+        // Create commit object
+        var commit = OstreeEncoders.EncodeCommit(
+            treeContentsChecksum: rootDirtreeChecksum,
+            dirmetaChecksum: rootDirmetaChecksum,
+            subject: plan.Metadata.Name,
+            body: $"Version {plan.Metadata.Version}",
+            timestamp: DateTimeOffset.UtcNow,
+            parentChecksum: null,
+            metadata: null
+        );
+        var commitChecksum = OstreeEncoders.ComputeChecksum(commit);
+        var commitHex = OstreeEncoders.ChecksumToHex(commitChecksum);
+        repoFiles[$"objects/{commitHex[..2]}/{commitHex[2..]}.commit"] = ByteSource.FromBytes(commit);
 
-        // objects for blobs
-        foreach (var b in blobs)
-        {
-            var content = new Blob(b.Value.source.Array()).Serialize();
-            var chk = Sha256(content);
-            var path = $"objects/{chk.Substring(0,2)}/{chk.Substring(2)}";
-            repoFiles[path] = ByteSource.FromBytes(content);
-        }
+        // Create refs
+        var arch = plan.Metadata.Architecture.PackagePrefix;
+        var refPath = $"refs/heads/app/{plan.AppId}/{arch}/stable";
+        repoFiles[refPath] = ByteSource.FromString(commitHex);
 
-        // tree object
-        repoFiles[$"objects/{treeChecksum[..2]}/{treeChecksum[2..]}"] = ByteSource.FromBytes(treeBytes);
-        // commit object
-        repoFiles[$"objects/{commitChecksum[..2]}/{commitChecksum[2..]}"] = ByteSource.FromBytes(commitBytes);
+        // Create repo config
+        repoFiles["config"] = ByteSource.FromString(
+            "[core]\n" +
+            "repo_version=1\n" +
+            "mode=bare-user\n"
+        );
+
+        // Create empty summary (optional but expected)
+        repoFiles["summary"] = ByteSource.FromBytes(Array.Empty<byte>());
 
         return repoFiles.ToRootContainer();
-    }
-
-    private static string Sha256(byte[] bytes)
-    {
-        using var sha = SHA256.Create();
-        return Convert.ToHexString(sha.ComputeHash(bytes)).ToLowerInvariant();
     }
 }
