@@ -15,9 +15,8 @@ internal static class RpmArchiveWriter
         var compressedPayload = CompressGzip(payload);
 
         var header = RpmHeaderWriter.BuildMetadataHeader(metadata, fileList, payload.Length);
-        var headerPayload = Combine(header, compressedPayload);
 
-        var signature = RpmHeaderWriter.BuildSignatureHeader(headerPayload);
+        var signature = RpmHeaderWriter.BuildSignatureHeader(header, compressedPayload);
         var signaturePadded = PadToEight(signature);
 
         var lead = BuildLead(metadata);
@@ -28,7 +27,7 @@ internal static class RpmArchiveWriter
     {
         var lead = new byte[96];
         LeadMagic.CopyTo(lead, 0);
-        lead[4] = 0x03;
+        lead[4] = 0x04;
         lead[5] = 0x00;
 
         WriteInt16(lead.AsSpan(6, 2), 0);

@@ -55,17 +55,37 @@ internal static class RpmHeaderWriter
         return RpmHeaderBuilder.Build(headerEntries);
     }
 
-    public static byte[] BuildSignatureHeader(byte[] headerPayload)
+    public static byte[] BuildSignatureHeader(byte[] header, byte[] payload)
     {
+        var headerPayload = Combine(header, payload);
         var size = headerPayload.Length;
+
+        // Calculate checksums
         var md5 = MD5.HashData(headerPayload);
+        var sha1Header = SHA1.HashData(header);
+        var sha256Header = SHA256.HashData(header);
+
+        // Convert to hex strings (lowercase as per RPM convention)
+        var sha1String = Convert.ToHexString(sha1Header).ToLowerInvariant();
+        var sha256String = Convert.ToHexString(sha256Header).ToLowerInvariant();
+
         var entries = new List<RpmHeaderEntry>
         {
             RpmHeaderEntry.Int32(RpmSignatureTag.Size, size),
-            RpmHeaderEntry.Bin(RpmSignatureTag.Md5, md5)
+            RpmHeaderEntry.Bin(RpmSignatureTag.Md5, md5),
+            RpmHeaderEntry.String(RpmSignatureTag.Sha1Header, sha1String),
+            RpmHeaderEntry.String(RpmSignatureTag.Sha256Header, sha256String)
         };
 
         return RpmHeaderBuilder.Build(entries);
+    }
+
+    private static byte[] Combine(byte[] first, byte[] second)
+    {
+        var result = new byte[first.Length + second.Length];
+        Buffer.BlockCopy(first, 0, result, 0, first.Length);
+        Buffer.BlockCopy(second, 0, result, first.Length, second.Length);
+        return result;
     }
 
     private static string ResolveSummary(PackageMetadata metadata)
@@ -341,4 +361,6 @@ internal static class RpmSignatureTag
 {
     public const int Size = 257;
     public const int Md5 = 261;
+    public const int Sha1Header = 269;
+    public const int Sha256Header = 273;
 }
