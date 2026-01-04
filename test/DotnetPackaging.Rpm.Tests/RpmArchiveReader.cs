@@ -160,9 +160,9 @@ internal static class RpmArchiveReader
     }
 }
 
-internal sealed record RpmArchive(RpmHeader Header, byte[] Payload);
+public sealed record RpmArchive(RpmHeader Header, byte[] Payload);
 
-internal sealed class RpmHeader
+public sealed class RpmHeader
 {
     private readonly IReadOnlyDictionary<int, RpmTagValue> tags;
 
@@ -182,9 +182,9 @@ internal sealed class RpmHeader
     public byte[] GetByteArray(int tag) => (byte[])tags[tag].Value;
 }
 
-internal readonly record struct RpmTagValue(RpmTagType Type, object Value);
+public readonly record struct RpmTagValue(RpmTagType Type, object Value);
 
-internal enum RpmTagType
+public enum RpmTagType
 {
     Null = 0,
     Char = 1,

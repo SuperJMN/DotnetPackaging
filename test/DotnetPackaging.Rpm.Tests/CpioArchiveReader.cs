@@ -12,10 +12,13 @@ internal static class CpioArchiveReader
 
         while (position + 110 <= payload.Length)
         {
-            var magic = Encoding.ASCII.GetString(payload, position, 6);
+            var magicBytes = payload.AsSpan(position, 6).ToArray();
+            var magic = Encoding.ASCII.GetString(magicBytes);
+            var magicHex = BitConverter.ToString(magicBytes);
+
             if (magic != Magic && magic != MagicCrc)
             {
-                throw new InvalidDataException($"Unexpected cpio magic '{magic}'.");
+                throw new InvalidDataException($"Unexpected cpio magic. Expected '{Magic}' or '{MagicCrc}', got '{magic}' (hex: {magicHex}, length: {magic.Length})");
             }
 
             var inode = ReadHex(payload, position + 6);
@@ -35,7 +38,9 @@ internal static class CpioArchiveReader
             position += 110;
             var name = Encoding.UTF8.GetString(payload, position, nameSize - 1);
             position += nameSize;
-            position = Align(position, 4);
+            // Padding is based on nameSize, not on absolute position
+            var namePadding = nameSize % 4 == 0 ? 0 : 4 - (nameSize % 4);
+            position += namePadding;
 
             if (name == "TRAILER!!!")
             {
@@ -44,7 +49,9 @@ internal static class CpioArchiveReader
 
             var data = payload.AsSpan(position, fileSize).ToArray();
             position += fileSize;
-            position = Align(position, 4);
+            // Padding is based on fileSize, not on absolute position
+            var filePadding = fileSize % 4 == 0 ? 0 : 4 - (fileSize % 4);
+            position += filePadding;
 
             entries.Add(new CpioEntry(name, data, mode, uid, gid, mtime, inode, nlink, devMajor, devMinor, rdevMajor, rdevMinor, check));
         }
@@ -58,14 +65,10 @@ internal static class CpioArchiveReader
         return int.Parse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
     }
 
-    private static int Align(int value, int alignment)
-    {
-        var remainder = value % alignment;
-        return remainder == 0 ? value : value + (alignment - remainder);
-    }
+
 }
 
-internal sealed record CpioEntry(
+public sealed record CpioEntry(
     string Name,
     byte[] Data,
     int Mode,

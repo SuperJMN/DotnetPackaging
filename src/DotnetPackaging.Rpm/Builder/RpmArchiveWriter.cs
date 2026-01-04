@@ -56,6 +56,7 @@ internal static class RpmArchiveWriter
         using (var gzip = new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true))
         {
             gzip.Write(payload, 0, payload.Length);
+            gzip.Flush();
         }
 
         return output.ToArray();

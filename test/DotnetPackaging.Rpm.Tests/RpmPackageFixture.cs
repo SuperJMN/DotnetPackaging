@@ -1,6 +1,7 @@
 using DotnetPackaging;
 using DotnetPackaging.Rpm;
 using System.IO.Abstractions;
+using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
 
 namespace DotnetPackaging.Rpm.Tests;
@@ -12,12 +13,12 @@ public class RpmPackageCollection : ICollectionFixture<RpmPackageFixture>
 
 public sealed class RpmPackageFixture : IAsyncLifetime
 {
-    private readonly string workingDirectory = Path.Combine(Path.GetTempPath(), $"rpm-tests-{Guid.NewGuid():N}");
+    private readonly string workingDirectory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"rpm-tests-{Guid.NewGuid():N}");
     private readonly string sourceDirectory;
 
     public RpmPackageFixture()
     {
-        sourceDirectory = Path.Combine(workingDirectory, "publish");
+        sourceDirectory = System.IO.Path.Combine(workingDirectory, "publish");
     }
 
     public byte[] PackageBytes { get; private set; } = Array.Empty<byte>();
@@ -83,12 +84,12 @@ public sealed class RpmPackageFixture : IAsyncLifetime
 
     private static async Task WritePayloadAsync(string directory)
     {
-        var executablePath = Path.Combine(directory, "sample-app");
+        var executablePath = System.IO.Path.Combine(directory, "sample-app");
         await File.WriteAllBytesAsync(executablePath, CreateElfStub());
 
-        var configDir = Path.Combine(directory, "config");
+        var configDir = System.IO.Path.Combine(directory, "config");
         Directory.CreateDirectory(configDir);
-        await File.WriteAllTextAsync(Path.Combine(configDir, "settings.json"), "{ \"name\": \"demo\" }");
+        await File.WriteAllTextAsync(System.IO.Path.Combine(configDir, "settings.json"), "{ \"name\": \"demo\" }");
     }
 
     private static byte[] CreateElfStub()
