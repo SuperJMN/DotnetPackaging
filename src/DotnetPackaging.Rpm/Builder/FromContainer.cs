@@ -19,12 +19,12 @@ internal class FromContainer
         this.logger = logger ?? Log.Logger;
     }
 
-    public async Task<Result<FileInfo>> Build()
+    public async Task<Result<IByteSource>> Build()
     {
         var executableResult = await BuildUtils.GetExecutable(root, setup, logger);
         if (executableResult.IsFailure)
         {
-            return Result.Failure<FileInfo>(executableResult.Error);
+            return Result.Failure<IByteSource>(executableResult.Error);
         }
 
         var executable = executableResult.Value;
@@ -32,7 +32,7 @@ internal class FromContainer
         var architectureResult = await BuildUtils.GetArch(setup, executable);
         if (architectureResult.IsFailure)
         {
-            return Result.Failure<FileInfo>(architectureResult.Error);
+            return Result.Failure<IByteSource>(architectureResult.Error);
         }
 
         var architecture = architectureResult.Value;
