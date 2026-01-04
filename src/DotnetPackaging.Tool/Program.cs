@@ -13,7 +13,7 @@ static class Program
 {
     private const string VerboseEnvVar = "DOTNETPACKAGING_VERBOSE";
     private const string LegacyVerboseEnvVar = "DOTNETPACKAGING_DEBUG";
-    
+
     public static async Task<int> Main(string[] args)
     {
         Environment.ExitCode = 0;
@@ -31,7 +31,7 @@ static class Program
             .CreateLogger();
 
         using var _ = LogContext.PushProperty("ExecutionId", Guid.NewGuid());
-        
+
         var rootCommand = new RootCommand("Package published .NET applications into Linux, Windows, and macOS-friendly installers.");
 
         AddSuggestDirective(rootCommand);
@@ -48,11 +48,10 @@ static class Program
         rootCommand.Add(RpmCommand.GetCommand());
         rootCommand.Add(AppImageCommand.GetCommand());
         rootCommand.Add(DmgCommand.GetCommand());
-        rootCommand.Add(FlatpakCommand.GetCommand());
         rootCommand.Add(MsixCommand.GetCommand());
         rootCommand.Add(ExeCommand.GetCommand());
         
-        var parseResult = rootCommand.Parse(args, configuration: null);
+var parseResult = rootCommand.Parse(args, configuration: null);
         var exitCode = await parseResult.InvokeAsync(parseResult.InvocationConfiguration, CancellationToken.None);
         var finalExitCode = Environment.ExitCode != 0 ? Environment.ExitCode : exitCode;
         Environment.ExitCode = finalExitCode;
