@@ -21,7 +21,6 @@
   <ItemGroup>
     <ProjectReference Include="..\DotnetPackaging.AppImage\DotnetPackaging.AppImage.csproj" />
     <ProjectReference Include="..\DotnetPackaging.Deb\DotnetPackaging.Deb.csproj" />
-    <ProjectReference Include="..\DotnetPackaging.Flatpak\DotnetPackaging.Flatpak.csproj" />
     <ProjectReference Include="..\DotnetPackaging.Dmg\DotnetPackaging.Dmg.csproj" />
     <ProjectReference Include="..\DotnetPackaging.Rpm\DotnetPackaging.Rpm.csproj" />
     <ProjectReference Include="..\DotnetPackaging.Msix\DotnetPackaging.Msix.csproj" />
