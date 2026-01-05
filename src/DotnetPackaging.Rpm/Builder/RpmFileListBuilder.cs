@@ -28,7 +28,7 @@ internal static class RpmFileListBuilder
                 ? entry.Content?.Array() ?? throw new InvalidOperationException($"Entry '{entry.Path}' is missing content")
                 : Array.Empty<byte>();
 
-            var digest = entry.Type == RpmEntryType.File ? ComputeMd5Hex(data) : string.Empty;
+            var digest = entry.Type == RpmEntryType.File ? ComputeSha256Hex(data) : string.Empty;
             var size = entry.Type == RpmEntryType.File ? data.Length : 0;
 
             entries.Add(new RpmFileEntry(
@@ -102,9 +102,9 @@ internal static class RpmFileListBuilder
         return index;
     }
 
-    private static string ComputeMd5Hex(byte[] data)
+    private static string ComputeSha256Hex(byte[] data)
     {
-        var hash = MD5.HashData(data);
+        var hash = SHA256.HashData(data);
         var builder = new StringBuilder(hash.Length * 2);
         foreach (var value in hash)
         {

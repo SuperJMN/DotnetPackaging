@@ -49,6 +49,8 @@ public record PackageMetadata
     public Maybe<IEnumerable<Uri>> ScreenshotUrls { get; init; } = Maybe<IEnumerable<Uri>>.None;
     public Maybe<string> Summary { get; init; } = Maybe<string>.None;
     public Maybe<string> License { get; init; } = Maybe<string>.None;
+    public Maybe<string> Vendor { get; init; } = Maybe<string>.None;
+    public Maybe<Uri> Url { get; init; } = Maybe<Uri>.None;
 
 
     /// <summary>

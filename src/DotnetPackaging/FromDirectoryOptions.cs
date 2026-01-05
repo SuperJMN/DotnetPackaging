@@ -32,6 +32,8 @@ public class FromDirectoryOptions
     public Maybe<DateTimeOffset> ModificationTime { get; private set; } = Maybe<DateTimeOffset>.None;
     public bool IsTerminal { get; private set; }
     public Maybe<ProjectMetadata> ProjectMetadata { get; private set; } = Maybe<ProjectMetadata>.None;
+    public Maybe<string> Vendor { get; private set; } = Maybe<string>.None;
+    public Maybe<Uri> Url { get; private set; } = Maybe<Uri>.None;
 
     public FromDirectoryOptions WithPackage(string package)
     {
@@ -241,6 +243,18 @@ public class FromDirectoryOptions
     public FromDirectoryOptions WithProjectMetadata(ProjectMetadata projectMetadata)
     {
         ProjectMetadata = Maybe<ProjectMetadata>.From(projectMetadata ?? throw new ArgumentNullException(nameof(projectMetadata)));
+        return this;
+    }
+
+    public FromDirectoryOptions WithVendor(string vendor)
+    {
+        Vendor = Maybe<string>.From(vendor);
+        return this;
+    }
+
+    public FromDirectoryOptions WithUrl(Uri url)
+    {
+        Url = Maybe<Uri>.From(url);
         return this;
     }
 }

@@ -29,7 +29,7 @@ internal static class CpioArchiveWriter
         WriteHeader(stream, entry, nameSize, fileSize, nlink);
         stream.Write(nameBytes, 0, nameBytes.Length);
         stream.WriteByte(0);
-        PadToFour(stream, nameSize);
+        PadToFour(stream, 110 + nameSize);
 
         if (!entry.IsDirectory)
         {
@@ -60,7 +60,7 @@ internal static class CpioArchiveWriter
         WriteHeader(stream, entry, nameSize, 0, 1);
         stream.Write(nameBytes, 0, nameBytes.Length);
         stream.WriteByte(0);
-        PadToFour(stream, nameSize);
+        PadToFour(stream, 110 + nameSize);
     }
 
     private static void WriteHeader(Stream stream, RpmFileEntry entry, int nameSize, int fileSize, int nlink)

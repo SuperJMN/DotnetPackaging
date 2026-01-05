@@ -14,7 +14,7 @@ internal static class RpmArchiveWriter
         var payload = CpioArchiveWriter.Build(fileList.Entries);
         var compressedPayload = CompressGzip(payload);
 
-        var header = RpmHeaderWriter.BuildMetadataHeader(metadata, fileList, payload.Length);
+        var header = RpmHeaderWriter.BuildMetadataHeader(metadata, fileList, payload.Length, compressedPayload);
 
         var signature = RpmHeaderWriter.BuildSignatureHeader(header, compressedPayload);
         var signaturePadded = PadToEight(signature);

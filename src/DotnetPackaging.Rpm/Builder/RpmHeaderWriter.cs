@@ -1,12 +1,13 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
+using CSharpFunctionalExtensions;
 
 namespace DotnetPackaging.Rpm.Builder;
 
 internal static class RpmHeaderWriter
 {
-    public static byte[] BuildMetadataHeader(PackageMetadata metadata, RpmFileList fileList, int payloadSize)
+    public static byte[] BuildMetadataHeader(PackageMetadata metadata, RpmFileList fileList, int payloadSize, byte[] compressedPayload)
     {
         var summary = ResolveSummary(metadata);
         var description = ResolveDescription(metadata, summary);
@@ -33,6 +34,11 @@ internal static class RpmHeaderWriter
             RpmHeaderEntry.Int32(RpmTag.ArchiveSize, payloadSize),
             RpmHeaderEntry.String(RpmTag.PayloadFormat, "cpio"),
             RpmHeaderEntry.String(RpmTag.PayloadCompressor, "gzip"),
+            RpmHeaderEntry.Int32(RpmTag.FileDigestAlgo, 8), // SHA-256
+            RpmHeaderEntry.StringArray(RpmTag.PayloadDigest, new[] { ComputeSha256Hex(compressedPayload) }),
+            RpmHeaderEntry.Int32(RpmTag.PayloadDigestAlgo, 8), // SHA-256
+            metadata.Vendor.Map(v => RpmHeaderEntry.String(RpmTag.Vendor, v)).GetValueOrDefault(RpmHeaderEntry.String(RpmTag.Vendor, "Unknown")),
+            metadata.Url.Map(u => RpmHeaderEntry.String(RpmTag.Url, u.ToString())).GetValueOrDefault(RpmHeaderEntry.String(RpmTag.Url, "http://localhost")),
             RpmHeaderEntry.CharArray(RpmTag.FileStates, new byte[fileCount]),
             RpmHeaderEntry.Int32Array(RpmTag.FileSizes, entries.Select(entry => entry.Size).ToArray()),
             RpmHeaderEntry.Int16Array(RpmTag.FileModes, entries.Select(entry => unchecked((short)entry.Mode)).ToArray()),
@@ -138,6 +144,17 @@ internal static class RpmHeaderWriter
         }
 
         return architecture.PackagePrefix;
+    }
+
+    private static string ComputeSha256Hex(byte[] data)
+    {
+        var hash = SHA256.HashData(data);
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private static byte[] ComputeSha256(byte[] data)
+    {
+        return SHA256.HashData(data);
     }
 }
 
@@ -355,6 +372,11 @@ internal static class RpmTag
     public const int DirNames = 1118;
     public const int PayloadFormat = 1124;
     public const int PayloadCompressor = 1125;
+    public const int FileDigestAlgo = 5011;
+    public const int PayloadDigest = 5092;
+    public const int PayloadDigestAlgo = 5093;
+    public const int Vendor = 1011;
+    public const int Url = 1020;
 }
 
 internal static class RpmSignatureTag

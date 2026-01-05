@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Xml.Linq;
 using Zafiro.Commands;
 
@@ -6,12 +7,21 @@ namespace DotnetPackaging;
 public sealed record ProjectMetadata(
     Maybe<string> Product,
     Maybe<string> Company,
+    Maybe<string> Description,
+    Maybe<string> Authors,
+    Maybe<string> Copyright,
+    Maybe<string> PackageLicenseExpression,
+    Maybe<string> PackageProjectUrl,
+    Maybe<string> RepositoryUrl,
     Maybe<string> AssemblyName,
     Maybe<string> AssemblyTitle);
 
 public static class ProjectMetadataReader
 {
-    private static readonly string[] PropertiesToRead = new[] { "Product", "Company", "AssemblyName", "AssemblyTitle" };
+    private static readonly string[] PropertiesToRead = new[]
+    {
+        "Product", "Company", "Description", "Authors", "Copyright", "PackageLicenseExpression", "PackageProjectUrl", "RepositoryUrl", "AssemblyName", "AssemblyTitle"
+    };
 
     public static Result<ProjectMetadata> Read(FileInfo projectFile)
     {
@@ -66,14 +76,34 @@ public static class ProjectMetadataReader
             }
 
             var output = string.Join("\n", run.Value);
-            var values = ParseMsbuildOutput(output, PropertiesToRead);
+            Dictionary<string, Maybe<string>> values;
+
+            if (output.TrimStart().StartsWith("{"))
+            {
+                using var json = JsonDocument.Parse(output);
+                var properties = json.RootElement.GetProperty("Properties");
+                values = PropertiesToRead.ToDictionary(
+                    p => p,
+                    p => properties.TryGetProperty(p, out var element) ? Maybe<string>.From(element.GetString() ?? "") : Maybe<string>.None,
+                    StringComparer.OrdinalIgnoreCase);
+            }
+            else
+            {
+                values = ParseMsbuildOutput(output, PropertiesToRead);
+            }
 
             var product = values.GetValueOrDefault("Product");
             var company = values.GetValueOrDefault("Company");
+            var description = values.GetValueOrDefault("Description");
+            var authors = values.GetValueOrDefault("Authors");
+            var copyright = values.GetValueOrDefault("Copyright");
+            var license = values.GetValueOrDefault("PackageLicenseExpression");
+            var url = values.GetValueOrDefault("PackageProjectUrl");
+            var repo = values.GetValueOrDefault("RepositoryUrl");
             var assemblyName = values.GetValueOrDefault("AssemblyName");
             var assemblyTitle = values.GetValueOrDefault("AssemblyTitle");
 
-            return Result.Success(new ProjectMetadata(product, company, assemblyName, assemblyTitle));
+            return Result.Success(new ProjectMetadata(product, company, description, authors, copyright, license, url, repo, assemblyName, assemblyTitle));
         }
         catch (Exception ex)
         {
@@ -87,9 +117,15 @@ public static class ProjectMetadataReader
         var document = XDocument.Load(projectFile.FullName);
         var product = ReadProperty(document, "Product");
         var company = ReadProperty(document, "Company");
+        var description = ReadProperty(document, "Description");
+        var authors = ReadProperty(document, "Authors");
+        var copyright = ReadProperty(document, "Copyright");
+        var license = ReadProperty(document, "PackageLicenseExpression");
+        var url = ReadProperty(document, "PackageProjectUrl");
+        var repo = ReadProperty(document, "RepositoryUrl");
         var assemblyName = ReadProperty(document, "AssemblyName");
         var assemblyTitle = ReadProperty(document, "AssemblyTitle");
-        return new ProjectMetadata(product, company, assemblyName, assemblyTitle);
+        return new ProjectMetadata(product, company, description, authors, copyright, license, url, repo, assemblyName, assemblyTitle);
     }
 
     private static Dictionary<string, Maybe<string>> ParseMsbuildOutput(string output, IEnumerable<string> propertyNames)
