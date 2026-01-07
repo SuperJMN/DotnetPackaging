@@ -39,6 +39,8 @@ public static class FromDirectoryOptionsExtensions
         if (source.InstalledSize.HasValue) target.WithInstalledSize(source.InstalledSize.Value);
         if (source.ModificationTime.HasValue) target.WithModificationTime(source.ModificationTime.Value);
         if (source.ProjectMetadata.HasValue) target.WithProjectMetadata(source.ProjectMetadata.Value);
+        if (source.Vendor.HasValue) target.WithVendor(source.Vendor.Value);
+        if (source.Url.HasValue) target.WithUrl(source.Url.Value);
         target.WithIsTerminal(source.IsTerminal);
 
         return target;

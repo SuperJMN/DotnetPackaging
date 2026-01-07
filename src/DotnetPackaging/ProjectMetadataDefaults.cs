@@ -19,7 +19,34 @@ public static class ProjectMetadataDefaults
             ? overrides.ProjectMetadata
             : ProjectMetadataReader.TryRead(projectFile, logger);
 
-        projectMetadata.Execute(metadata => resolved.WithProjectMetadata(metadata));
+        projectMetadata.Execute(metadata =>
+        {
+            resolved.WithProjectMetadata(metadata);
+
+            if (resolved.Description.HasNoValue)
+            {
+                metadata.Description.Execute(d => resolved.WithDescription(d));
+            }
+            if (resolved.Maintainer.HasNoValue)
+            {
+                metadata.Authors.Execute(a => resolved.WithMaintainer(a));
+            }
+            if (resolved.License.HasNoValue)
+            {
+                metadata.PackageLicenseExpression.Execute(l => resolved.WithLicense(l));
+            }
+            if (resolved.Vendor.HasNoValue)
+            {
+                metadata.Company.Execute(c => resolved.WithVendor(c));
+            }
+            if (resolved.Url.HasNoValue)
+            {
+                metadata.PackageProjectUrl
+                    .Or(metadata.RepositoryUrl)
+                    .Bind(url => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? Maybe<Uri>.From(uri) : Maybe<Uri>.None)
+                    .Execute(uri => resolved.WithUrl(uri));
+            }
+        });
 
         if (resolved.ExecutableName.HasNoValue)
         {

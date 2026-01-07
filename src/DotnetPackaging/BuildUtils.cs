@@ -98,7 +98,9 @@ public static class BuildUtils
             VcsBrowser = setup.VcsBrowser,
             VcsGit = setup.VcsGit,
             InstalledSize = setup.InstalledSize,
-            ModificationTime = setup.ModificationTime.GetValueOrDefault(DateTimeOffset.Now)
+            ModificationTime = setup.ModificationTime.GetValueOrDefault(DateTimeOffset.Now),
+            Vendor = setup.Vendor,
+            Url = setup.Url
         };
 
         return packageMetadata;

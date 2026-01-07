@@ -122,8 +122,8 @@ Packaging formats: status and details
 - RPM .rpm (Linux)
   - Status: supported and used. Library: src/DotnetPackaging.Rpm; exposed via CLI.
   - How it works: stages files under /opt/<package>, writes a .desktop in /usr/share/applications and a wrapper in /usr/bin/<package>.
-  - Packaging: uses system rpmbuild to assemble the package. Requires rpm-build to be installed locally.
-  - Portability: auto-generated dependency/provides under /opt/<package> are excluded (using %global __requires_exclude_from/__provides_exclude_from), preventing hard Requires like liblttng-ust.so.0 and making self-contained .NET apps install across RPM-based distros.
+  - Packaging: fully managed (no external rpmbuild tooling required).
+  - Portability: no auto-generated dependency/provides are emitted, keeping self-contained .NET apps installable across RPM-based distros.
   - Ownership: the package only owns directories under /opt/<package>; system directories (/usr, /usr/bin, etc.) are not owned to avoid conflicts with filesystem packages.
 - MSIX (Windows)
   - Status: experimental/preview. Library: src/DotnetPackaging.Msix with tests in src/DotnetPackaging.Msix.Tests.
@@ -153,7 +153,7 @@ CLI tool (dotnet tool)
   - appimage from-project: publish a .NET project and build an AppImage.
   - deb: create a .deb from a directory (dotnet publish output). Detects executable; generates metadata, .desktop and wrapper.
   - deb from-project: publish a .NET project and build a .deb.
-  - rpm: create an .rpm from a directory (dotnet publish output). Uses rpmbuild; excludes auto-deps under /opt/<package> and avoids owning system dirs.
+  - rpm: create an .rpm from a directory (dotnet publish output). Fully managed; avoids owning system dirs.
   - rpm from-project: publish a .NET project and build an .rpm.
   - flatpak: layout, bundle (system or internal), repo, and pack (minimal UX).
   - flatpak from-project: publish a .NET project and build a .flatpak bundle.
@@ -208,8 +208,8 @@ Developer workflow tips
     - dmg: requires --arch (x64 o arm64). Host RID inference is intentionally not used to avoid producing non-mac binaries when running on Linux/Windows.
     - flatpak: framework-dependent by default; uses its own runtime. You can still publish self-contained by passing --self-contained and --arch if needed.
 - RPM prerequisites
-  - Install rpmbuild tooling: dnf install -y rpm-build (or the equivalent on your distro).
-  - The RPM builder excludes auto-deps/provides under /opt/<package> to keep self-contained .NET apps portable and avoid liblttng-ust.so.N issues across distros.
+  - No external tooling required.
+  - The RPM builder emits no auto-deps/provides, keeping self-contained .NET apps portable across distros.
   - The package does not own system directories; only /opt/<package> and files explicitly installed (wrapper under /usr/bin and .desktop in /usr/share/applications).
 - Icon handling
   - The CLI and libraries attempt to discover icons automatically. You can override via --icon or supply common names in the root (icon.svg, icon-256.png, icon.png).
@@ -219,12 +219,17 @@ Developer workflow tips
 Repository map (relevant)
 - src/DotnetPackaging.AppImage: AppImage packager + runtime/squashfs internals.
 - src/DotnetPackaging.Deb: Debian packager + tar/ar internals.
-- src/DotnetPackaging.Rpm: RPM packaging (layout builder and rpmbuild spec generation).
+- src/DotnetPackaging.Rpm: RPM packaging (layout builder and managed RPM writer).
 - src/DotnetPackaging.Msix: MSIX packaging (builder and helpers).
 - src/DotnetPackaging.Exe: Windows SFX packer (concatenation and metadata).
 - src/DotnetPackaging.Exe.Installer: Avalonia stub installer.
 - src/DotnetPackaging.Tool: CLI (dotnet tool) with commands appimage, deb, rpm, flatpak, msix, exe.
 - test/*: AppImage and Deb tests; src/DotnetPackaging.Msix.Tests for MSIX; test/DotnetPackaging.Exe.Tests for EXE packaging.
+
+Resumen de cambios recientes
+- RPM ahora se genera de forma totalmente administrada (lead/header/payload cpio+gzip), sin rpmbuild.
+- Se agregaron tests de RPM y se habilito el E2E de RPM en el proyecto de pruebas existente.
+- Se ajusto la documentacion para reflejar la eliminacion de tooling externo para RPM.
 
 Backlog / Future work
 - Add CLI E2E tests (including rpm/exe) and hook dotnet test in CI.

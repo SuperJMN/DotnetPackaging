@@ -227,7 +227,7 @@ public static class AppImageCommand
     private static void AddFromProjectSubcommand(Command appImageCommand)
     {
         var project = new Option<FileInfo>("--project") { Description = "Path to the .csproj file", Required = true };
-        var arch = new Option<string?>("--arch") { Description = "Target architecture (x64, arm64)" };
+        var arch = new Option<string?>("--arch") { Description = "Target architecture (x64, arm64). Auto-detects from current system if not specified." };
         var selfContained = new Option<bool>("--self-contained") { Description = "Publish self-contained" };
         selfContained.DefaultValueFactory = _ => true;
         var configuration = new Option<string>("--configuration") { Description = "Build configuration" };
@@ -293,6 +293,29 @@ public static class AppImageCommand
             var archVal = parseResult.GetValue(arch);
             var logger = Log.ForContext("command", "appimage-from-project");
 
+            // Auto-detect architecture if not specified
+            if (archVal == null)
+            {
+                archVal = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture switch
+                {
+                    System.Runtime.InteropServices.Architecture.X64 => "x64",
+                    System.Runtime.InteropServices.Architecture.Arm64 => "arm64",
+                    System.Runtime.InteropServices.Architecture.Arm => "arm",
+                    System.Runtime.InteropServices.Architecture.X86 => "x86",
+                    _ => null
+                };
+
+                if (archVal != null)
+                {
+                    logger.Information("Architecture not specified, auto-detected: {Arch}", archVal);
+                }
+                else
+                {
+                    logger.Error("Unable to auto-detect architecture. Please specify --arch explicitly (e.g., --arch x64)");
+                    return;
+                }
+            }
+
             var result = await new AppImage.AppImagePackager().PackProject(
                 prj.FullName,
                 outFile.FullName,
@@ -303,10 +326,15 @@ public static class AppImageCommand
                     pub.Configuration = cfg;
                     pub.SingleFile = sf;
                     pub.Trimmed = tr;
-                    if (archVal != null)
+                    var ridResult = RidUtils.ResolveLinuxRid(archVal, "appimage");
+                    if (ridResult.IsSuccess)
                     {
-                        var ridResult = RidUtils.ResolveLinuxRid(archVal, "appimage");
-                        if (ridResult.IsSuccess) pub.Rid = ridResult.Value;
+                        pub.Rid = ridResult.Value;
+                        logger.Debug("Using RID: {Rid}", pub.Rid);
+                    }
+                    else
+                    {
+                        logger.Error("Failed to resolve RID for architecture {Arch}: {Error}", archVal, ridResult.Error);
                     }
                 },
                 logger);

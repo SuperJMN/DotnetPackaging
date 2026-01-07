@@ -43,8 +43,7 @@ public sealed class RpmPackager
                     log);
 
                 var plan = RpmLayoutBuilder.Build(container, packageMetadata, tuple.exec);
-                var rpmResult = await Builder.RpmPackager.CreatePackage(packageMetadata, plan);
-                return rpmResult.Map(file => (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(file.FullName)));
+                return await Builder.RpmPackager.CreatePackage(packageMetadata, plan);
             });
     }
 }

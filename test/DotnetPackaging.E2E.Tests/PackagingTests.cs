@@ -39,11 +39,6 @@ public class PackagingTests : IDisposable
     [Fact]
     public async Task Can_create_Rpm()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            return;
-        }
-
         var output = Path.Combine(temp.Path, "TestApp.rpm");
         await ExecutePackagingCommand("rpm", output, "--arch x64");
         File.Exists(output).Should().BeTrue();
