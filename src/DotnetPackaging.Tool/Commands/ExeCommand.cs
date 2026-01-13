@@ -191,7 +191,7 @@ public static class ExeCommand
         };
         var exSelfContained = new Option<bool>("--self-contained")
         {
-            Description = "Publish self-contained"
+            Description = "Publish self-contained [Deprecated]"
         };
         exSelfContained.DefaultValueFactory = _ => true;
         var exConfiguration = new Option<string>("--configuration")
@@ -279,7 +279,7 @@ public static class ExeCommand
                 },
                 pub =>
                 {
-                    pub.SelfContained = sc;
+                    pub.SelfContained = true;
                     pub.Configuration = cfg;
                     pub.SingleFile = sf;
                     pub.Trimmed = tr;

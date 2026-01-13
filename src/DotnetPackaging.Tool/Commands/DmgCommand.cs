@@ -93,7 +93,7 @@ public static class DmgCommand
     {
         var project = new Option<FileInfo>("--project") { Description = "Path to the .csproj file", Required = true };
         var arch = new Option<string?>("--arch") { Description = "Target architecture (x64, arm64)" };
-        var selfContained = new Option<bool>("--self-contained") { Description = "Publish self-contained" };
+        var selfContained = new Option<bool>("--self-contained") { Description = "Publish self-contained [Deprecated]" };
         selfContained.DefaultValueFactory = _ => true;
         var configuration = new Option<string>("--configuration") { Description = "Build configuration" };
         configuration.DefaultValueFactory = _ => "Release";
@@ -172,7 +172,7 @@ public static class DmgCommand
                 },
                 pub =>
                 {
-                    pub.SelfContained = sc;
+                    pub.SelfContained = true;
                     pub.Configuration = cfg;
                     pub.SingleFile = sf;
                     pub.Trimmed = tr;

@@ -51,8 +51,8 @@ public static class MsixCommand
 
         var project = new Option<FileInfo>("--project") { Description = "Path to the .csproj file", Required = true };
         var arch = new Option<string?>("--arch") { Description = "Target architecture (x64, arm64)" };
-        var selfContained = new Option<bool>("--self-contained") { Description = "Publish self-contained" };
-        selfContained.DefaultValueFactory = _ => false;
+        var selfContained = new Option<bool>("--self-contained") { Description = "Publish self-contained [Deprecated]" };
+        selfContained.DefaultValueFactory = _ => true;
         var configuration = new Option<string>("--configuration") { Description = "Build configuration" };
         configuration.DefaultValueFactory = _ => "Release";
         var singleFile = new Option<bool>("--single-file") { Description = "Publish single-file" };
@@ -83,7 +83,7 @@ public static class MsixCommand
                 null,
                 pub =>
                 {
-                    pub.SelfContained = sc;
+                    pub.SelfContained = true;
                     pub.Configuration = cfg;
                     pub.SingleFile = sf;
                     pub.Trimmed = tr;
