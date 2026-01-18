@@ -81,6 +81,11 @@ public static class ExeCommand
         };
         exIconOption.CustomParser = OptionsBinder.GetIcon;
 
+        var homePage = new Option<Uri>("--homepage") { Description = "Home page of the application", Required = false };
+        homePage.CustomParser = OptionsBinder.GetUri;
+        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls") { Description = "Screenshot URLs", Required = false };
+        screenshotUrls.CustomParser = OptionsBinder.GetUris;
+
         var optionsBinder = new OptionsBinder(
             exAppName,
             new Option<string>("--wm-class"),
@@ -90,9 +95,9 @@ public static class ExeCommand
             new Option<IEnumerable<AdditionalCategory>>("--additional-categories"),
             exIconOption,
             exVersion,
-            new Option<Uri>("--homepage"),
+            homePage,
             new Option<string>("--license"),
-            new Option<IEnumerable<Uri>>("--screenshot-urls"),
+            screenshotUrls,
             new Option<string>("--summary"),
             exAppId,
             exExecutableName,
@@ -118,6 +123,8 @@ public static class ExeCommand
         exeCommand.Add(exVendor);
         exeCommand.Add(exExecutableName);
         exeCommand.Add(exArchTop);
+        exeCommand.Add(homePage);
+        exeCommand.Add(screenshotUrls);
 
         exeCommand.SetAction(async parseResult =>
         {

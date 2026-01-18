@@ -84,7 +84,9 @@ public static class ProjectMetadataReader
                 var properties = json.RootElement.GetProperty("Properties");
                 values = PropertiesToRead.ToDictionary(
                     p => p,
-                    p => properties.TryGetProperty(p, out var element) ? Maybe<string>.From(element.GetString() ?? "") : Maybe<string>.None,
+                    p => properties.TryGetProperty(p, out var element)
+                        ? (string.IsNullOrWhiteSpace(element.GetString()) ? Maybe<string>.None : Maybe<string>.From(element.GetString()!))
+                        : Maybe<string>.None,
                     StringComparer.OrdinalIgnoreCase);
             }
             else

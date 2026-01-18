@@ -226,14 +226,14 @@ public static class BuildUtils
             return setup.Description;
         }
 
-        if (setup.Summary.HasValue)
-        {
-            return setup.Summary;
-        }
-
         if (setup.Comment.HasValue)
         {
             return setup.Comment;
+        }
+
+        if (setup.Summary.HasValue)
+        {
+            return setup.Summary;
         }
 
         return Maybe.From("No description provided");
