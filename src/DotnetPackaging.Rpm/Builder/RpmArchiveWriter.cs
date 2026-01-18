@@ -27,11 +27,12 @@ internal static class RpmArchiveWriter
     {
         var lead = new byte[96];
         LeadMagic.CopyTo(lead, 0);
-        lead[4] = 0x04;
+        lead[4] = 0x03; // Major Version: 3. NOTE: Even for RPM v4 packages, the Lead version is kept at 3.0 for backward compatibility.
+                        // The Lead is considered legacy/obsolete, and modern RPM features are determined by the Header structure, not this Lead version.
         lead[5] = 0x00;
 
         WriteInt16(lead.AsSpan(6, 2), 0);
-        WriteInt16(lead.AsSpan(8, 2), 1);
+        WriteInt16(lead.AsSpan(8, 2), 0);  // Arch type 0
 
         var name = $"{metadata.Package}-{metadata.Version}-1";
         var nameBytes = Encoding.ASCII.GetBytes(name);
