@@ -41,6 +41,7 @@ public static class OptionsMixin
         if (options.HomePage.HasValue)
         {
             setup.WithHomepage(options.HomePage.Value);
+            setup.WithUrl(options.HomePage.Value);
         }
         if (options.License.HasValue)
         {

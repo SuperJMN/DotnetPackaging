@@ -64,8 +64,10 @@ public static class DebCommand
         var comment = new Option<string>("--comment") { Description = "Comment", Required = false };
         var version = new Option<string>("--version") { Description = "Version", Required = false };
         var homePage = new Option<Uri>("--homepage") { Description = "Home page of the application", Required = false };
+        homePage.CustomParser = OptionsBinder.GetUri;
         var license = new Option<string>("--license") { Description = "License of the application", Required = false };
         var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls") { Description = "Screenshot URLs", Required = false };
+        screenshotUrls.CustomParser = OptionsBinder.GetUris;
         var summary = new Option<string>("--summary") { Description = "Summary. Short description that should not end in a dot.", Required = false };
         var appId = new Option<string>("--appId") { Description = "Application Id. Usually a Reverse DNS name like com.SomeCompany.SomeApplication", Required = false };
         var executableName = new Option<string>("--executable-name") { Description = "Name of your application's executable", Required = false };

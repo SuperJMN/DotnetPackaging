@@ -71,6 +71,7 @@ public static class CommandFactory
             Description = "Home page of the application",
             Required = false
         };
+        homePage.CustomParser = OptionsBinder.GetUri;
         var license = new Option<string>("--license")
         {
             Description = "License of the application",
@@ -81,6 +82,7 @@ public static class CommandFactory
             Description = "Screenshot URLs",
             Required = false
         };
+        screenshotUrls.CustomParser = OptionsBinder.GetUris;
         var summary = new Option<string>("--summary")
         {
             Description = "Summary. Short description that should not end in a dot.",
@@ -143,23 +145,23 @@ public static class CommandFactory
         }
 
         var options = new OptionsBinder(
-            appName, 
-            startupWmClass, 
-            keywords, 
-            comment, 
-            mainCategory, 
-            additionalCategories, 
-            iconOption, 
-            version, 
-            homePage, 
-            license, 
-            screenshotUrls, 
-            summary, 
+            appName,
+            startupWmClass,
+            keywords,
+            comment,
+            mainCategory,
+            additionalCategories,
+            iconOption,
+            version,
+            homePage,
+            license,
+            screenshotUrls,
+            summary,
             appId,
-            executableName, 
+            executableName,
             isTerminal,
             defaultLayoutOption);
-        
+
         fromBuildDir.SetAction(async parseResult =>
         {
             var directory = parseResult.GetValue(buildDir)!;

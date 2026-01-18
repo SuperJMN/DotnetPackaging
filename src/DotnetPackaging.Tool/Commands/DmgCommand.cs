@@ -113,6 +113,11 @@ public static class DmgCommand
         var dmgIconOption = new Option<IIcon?>("--icon") { Description = "Path to the application icon" };
         dmgIconOption.CustomParser = OptionsBinder.GetIcon;
 
+        var homePage = new Option<Uri>("--homepage") { Description = "Home page of the application", Required = false };
+        homePage.CustomParser = OptionsBinder.GetUri;
+        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls") { Description = "Screenshot URLs", Required = false };
+        screenshotUrls.CustomParser = OptionsBinder.GetUris;
+
         var optionsBinder = new OptionsBinder(appName,
             new Option<string>("--wm-class"),
             new Option<IEnumerable<string>>("--keywords"),
@@ -121,9 +126,9 @@ public static class DmgCommand
             new Option<IEnumerable<AdditionalCategory>>("--additional-categories"),
             dmgIconOption,
             new Option<string>("--version"),
-            new Option<Uri>("--homepage"),
+            homePage,
             new Option<string>("--license"),
-            new Option<IEnumerable<Uri>>("--screenshot-urls"),
+            screenshotUrls,
             new Option<string>("--summary"),
             new Option<string>("--appId"),
             new Option<string>("--executable-name"),
@@ -141,6 +146,8 @@ public static class DmgCommand
         fromProject.Add(appName);
         fromProject.Add(compress);
         fromProject.Add(defaultLayoutOption);
+        fromProject.Add(homePage);
+        fromProject.Add(screenshotUrls);
 
         fromProject.SetAction(async parseResult =>
         {

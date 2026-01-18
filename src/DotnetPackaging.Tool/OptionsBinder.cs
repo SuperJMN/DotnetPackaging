@@ -125,4 +125,38 @@ public class OptionsBinder
             return null;
         }
     }
+
+    public static Uri? GetUri(ArgumentResult result)
+    {
+        if (result.Tokens.Count == 0)
+        {
+            return null;
+        }
+
+        var uriString = result.Tokens[0].Value;
+        if (Uri.TryCreate(uriString, UriKind.Absolute, out var uri))
+        {
+            return uri;
+        }
+
+        result.AddError($"Invalid URI '{uriString}'");
+        return null;
+    }
+
+    public static IEnumerable<Uri> GetUris(ArgumentResult result)
+    {
+        var uris = new List<Uri>();
+        foreach (var token in result.Tokens)
+        {
+            if (Uri.TryCreate(token.Value, UriKind.Absolute, out var uri))
+            {
+                uris.Add(uri);
+            }
+            else
+            {
+                result.AddError($"Invalid URI '{token.Value}'");
+            }
+        }
+        return uris;
+    }
 }
