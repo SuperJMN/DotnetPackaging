@@ -39,7 +39,8 @@ internal static class RpmHeaderWriter
             RpmHeaderEntry.Int32(RpmTag.PayloadDigestAlgo, 8), // SHA-256
             metadata.Vendor.Map(v => RpmHeaderEntry.String(RpmTag.Vendor, v)).GetValueOrDefault(RpmHeaderEntry.String(RpmTag.Vendor, "Unknown")),
             metadata.Url.Map(u => RpmHeaderEntry.String(RpmTag.Url, u.ToString())).GetValueOrDefault(RpmHeaderEntry.String(RpmTag.Url, "http://localhost")),
-            RpmHeaderEntry.CharArray(RpmTag.FileStates, new byte[fileCount]),
+            // NOTE: FileStates (1029) is NOT included - it's an internal RPM database tag populated during installation
+
             RpmHeaderEntry.Int32Array(RpmTag.FileSizes, entries.Select(entry => entry.Size).ToArray()),
             RpmHeaderEntry.Int16Array(RpmTag.FileModes, entries.Select(entry => unchecked((short)entry.Mode)).ToArray()),
             RpmHeaderEntry.Int16Array(RpmTag.FileRdevs, new short[fileCount]),
@@ -58,7 +59,7 @@ internal static class RpmHeaderWriter
             RpmHeaderEntry.StringArray(RpmTag.DirNames, fileList.DirNames.ToArray())
         };
 
-        return RpmHeaderBuilder.Build(headerEntries);
+        return RpmHeaderBuilder.BuildWithRegion(headerEntries, RpmTag.HeaderImmutable);
     }
 
     public static byte[] BuildSignatureHeader(byte[] header, byte[] payload)
@@ -66,7 +67,9 @@ internal static class RpmHeaderWriter
         var headerPayload = Combine(header, payload);
         var size = headerPayload.Length;
 
-        // Calculate checksums
+        // Calculate checksums - MD5 is REQUIRED per RPM v4 specification
+        // https://rpm-software-management.github.io/rpm/manual/format_v4.html
+        // "All packages carry at least HEADERSIGNATURES, (LONG)SIZE, MD5 and SHA1"
         var md5 = MD5.HashData(headerPayload);
         var sha1Header = SHA1.HashData(header);
         var sha256Header = SHA256.HashData(header);
@@ -75,6 +78,8 @@ internal static class RpmHeaderWriter
         var sha1String = Convert.ToHexString(sha1Header).ToLowerInvariant();
         var sha256String = Convert.ToHexString(sha256Header).ToLowerInvariant();
 
+        // Build signature header with region tag 62
+        // Required tags per spec: HEADERSIGNATURES (62), SIZE (257), MD5 (261), SHA1 (269), SHA256 (273)
         var entries = new List<RpmHeaderEntry>
         {
             RpmHeaderEntry.Int32(RpmSignatureTag.Size, size),
@@ -83,7 +88,7 @@ internal static class RpmHeaderWriter
             RpmHeaderEntry.String(RpmSignatureTag.Sha256Header, sha256String)
         };
 
-        return RpmHeaderBuilder.Build(entries);
+        return RpmHeaderBuilder.BuildWithRegion(entries, RpmSignatureTag.Reserved);
     }
 
     private static byte[] Combine(byte[] first, byte[] second)
@@ -254,7 +259,7 @@ internal readonly record struct RpmHeaderEntry(int Tag, RpmTagType Type, int Cou
         using var stream = new MemoryStream();
         foreach (var value in values)
         {
-            Span<byte> buffer = stackalloc byte[4];
+            var buffer = new byte[4];
             BinaryPrimitives.WriteInt32BigEndian(buffer, value);
             stream.Write(buffer);
         }
@@ -267,7 +272,7 @@ internal readonly record struct RpmHeaderEntry(int Tag, RpmTagType Type, int Cou
         using var stream = new MemoryStream();
         foreach (var value in values)
         {
-            Span<byte> buffer = stackalloc byte[2];
+            var buffer = new byte[2];
             BinaryPrimitives.WriteInt16BigEndian(buffer, value);
             stream.Write(buffer);
         }
@@ -282,9 +287,20 @@ internal static class RpmHeaderBuilder
 
     public static byte[] Build(IReadOnlyCollection<RpmHeaderEntry> entries)
     {
-        var ordered = entries.OrderBy(entry => entry.Tag).ToArray();
+        var ordered = entries.OrderBy(entry => entry.Tag).ToList();
+        
+        // Handle Immutable Region (Tags 62 or 63)
+        var immutableIndex = ordered.FindIndex(e => e.Tag is 62 or 63);
+        if (immutableIndex != -1)
+        {
+            var immutableEntry = ordered[immutableIndex];
+            // The data for the immutable region is a 16-byte entry representing the region itself.
+            // The Count in the main index is 16 (the size of the data).
+            ordered[immutableIndex] = immutableEntry with { Count = 16, Data = new byte[16] };
+        }
+
         using var data = new MemoryStream();
-        var indexEntries = new List<RpmHeaderIndexEntry>(ordered.Length);
+        var indexEntries = new List<RpmHeaderIndexEntry>(ordered.Count);
 
         foreach (var entry in ordered)
         {
@@ -298,23 +314,84 @@ internal static class RpmHeaderBuilder
             data.Write(entry.Data, 0, entry.Data.Length);
         }
 
-        using var header = new MemoryStream();
-        header.Write(HeaderMagic, 0, HeaderMagic.Length);
-        header.Write(new byte[4], 0, 4);
-        WriteInt32(header, ordered.Length);
-        WriteInt32(header, (int)data.Length);
+        // Now that we have the index entries, we must update the Immutable Region data if it exists.
+        if (immutableIndex != -1)
+        {
+            var ie = indexEntries[immutableIndex];
+            
+            // 1. Prepare Header Data (16 bytes)
+            var headData = new byte[16];
+            BinaryPrimitives.WriteInt32BigEndian(headData.AsSpan(0, 4), ie.Tag);
+            BinaryPrimitives.WriteInt32BigEndian(headData.AsSpan(4, 4), (int)ie.Type);
+            BinaryPrimitives.WriteInt32BigEndian(headData.AsSpan(8, 4), -(ordered.Count * 16));
+            BinaryPrimitives.WriteInt32BigEndian(headData.AsSpan(12, 4), ordered.Count);
+            
+            // 2. Prepare Trailer Data (16 bytes)
+            var trailData = new byte[16];
+            BinaryPrimitives.WriteInt32BigEndian(trailData.AsSpan(0, 4), ie.Tag);
+            BinaryPrimitives.WriteInt32BigEndian(trailData.AsSpan(4, 4), (int)ie.Type);
+            BinaryPrimitives.WriteInt32BigEndian(trailData.AsSpan(8, 4), -(ordered.Count * 16));
+            BinaryPrimitives.WriteInt32BigEndian(trailData.AsSpan(12, 4), 0); // Count is 0 for trailer
+            
+            // Re-write the data stream to include the correct header data and append the trailer
+            var currentData = data.ToArray();
+            
+            // Copy headData to its assigned offset
+            Buffer.BlockCopy(headData, 0, currentData, ie.Offset, 16);
+            
+            // Create final data stream (currentData + trailData)
+            var finalData = new byte[currentData.Length + 16];
+            Buffer.BlockCopy(currentData, 0, finalData, 0, currentData.Length);
+            Buffer.BlockCopy(trailData, 0, finalData, currentData.Length, 16);
+            
+            using var header = new MemoryStream();
+            header.Write(HeaderMagic, 0, HeaderMagic.Length);
+            header.Write(new byte[4], 0, 4);
+            WriteInt32(header, ordered.Count);
+            WriteInt32(header, finalData.Length);
+
+            for (int i = 0; i < indexEntries.Count; i++)
+            {
+                var indexEntry = indexEntries[i];
+                if (i == immutableIndex)
+                {
+                    // Special case for Region Tag: Offset points to the TRAILER
+                    var trailerOffset = currentData.Length;
+                    WriteInt32(header, indexEntry.Tag);
+                    WriteInt32(header, (int)indexEntry.Type);
+                    WriteInt32(header, trailerOffset);
+                    WriteInt32(header, indexEntry.Count);
+                }
+                else
+                {
+                    WriteInt32(header, indexEntry.Tag);
+                    WriteInt32(header, (int)indexEntry.Type);
+                    WriteInt32(header, indexEntry.Offset);
+                    WriteInt32(header, indexEntry.Count);
+                }
+            }
+
+            header.Write(finalData, 0, finalData.Length);
+            return header.ToArray();
+        }
+
+        using var finalHeader = new MemoryStream();
+        finalHeader.Write(HeaderMagic, 0, HeaderMagic.Length);
+        finalHeader.Write(new byte[4], 0, 4);
+        WriteInt32(finalHeader, ordered.Count);
+        WriteInt32(finalHeader, (int)data.Length);
 
         foreach (var indexEntry in indexEntries)
         {
-            WriteInt32(header, indexEntry.Tag);
-            WriteInt32(header, (int)indexEntry.Type);
-            WriteInt32(header, indexEntry.Offset);
-            WriteInt32(header, indexEntry.Count);
+            WriteInt32(finalHeader, indexEntry.Tag);
+            WriteInt32(finalHeader, (int)indexEntry.Type);
+            WriteInt32(finalHeader, indexEntry.Offset);
+            WriteInt32(finalHeader, indexEntry.Count);
         }
 
-        var dataBytes = data.ToArray();
-        header.Write(dataBytes, 0, dataBytes.Length);
-        return header.ToArray();
+        var finalDataBytes = data.ToArray();
+        finalHeader.Write(finalDataBytes, 0, finalDataBytes.Length);
+        return finalHeader.ToArray();
     }
 
     private static int Align(int offset, int alignment)
@@ -330,9 +407,82 @@ internal static class RpmHeaderBuilder
 
     private static void WriteInt32(Stream stream, int value)
     {
-        Span<byte> buffer = stackalloc byte[4];
+        var buffer = new byte[4];
         BinaryPrimitives.WriteInt32BigEndian(buffer, value);
         stream.Write(buffer);
+    }
+
+    /// <summary>
+    /// Builds a header with a region tag (62 for signatures, 63 for metadata).
+    /// The region tag has NO data in the normal data section.
+    /// The region tag offset points to a 16-byte trailer APPENDED at the end of the data section.
+    /// </summary>
+    public static byte[] BuildWithRegion(IReadOnlyCollection<RpmHeaderEntry> entries, int regionTag)
+    {
+        // Build the data section from regular entries FIRST (no placeholder)
+        var ordered = entries.OrderBy(entry => entry.Tag).ToList();
+        
+        using var data = new MemoryStream();
+        var indexEntries = new List<RpmHeaderIndexEntry>(ordered.Count + 1); // +1 for region tag
+
+        foreach (var entry in ordered)
+        {
+            var aligned = Align((int)data.Length, entry.Alignment);
+            if (aligned > data.Length)
+            {
+                data.Write(new byte[aligned - data.Length]);
+            }
+
+            indexEntries.Add(new RpmHeaderIndexEntry(entry.Tag, entry.Type, aligned, entry.Count));
+            data.Write(entry.Data, 0, entry.Data.Length);
+        }
+
+        // The trailer will be appended at the end of data
+        var trailerOffset = (int)data.Length;
+        
+        // Total number of entries = regular entries + 1 region tag
+        var totalEntries = ordered.Count + 1;
+        
+        // Create the region trailer (16 bytes) - this goes at the end of data section
+        // The trailer looks like an index entry: tag, type, negative_offset, count
+        // negative_offset = -(total_entries * 16) points back to start of index
+        var trailerData = new byte[16];
+        BinaryPrimitives.WriteInt32BigEndian(trailerData.AsSpan(0, 4), regionTag);
+        BinaryPrimitives.WriteInt32BigEndian(trailerData.AsSpan(4, 4), (int)RpmTagType.Bin);
+        BinaryPrimitives.WriteInt32BigEndian(trailerData.AsSpan(8, 4), -(totalEntries * 16));
+        BinaryPrimitives.WriteInt32BigEndian(trailerData.AsSpan(12, 4), 16); // Count = 16 (size of trailer)
+
+        // Append trailer to data
+        data.Write(trailerData, 0, 16);
+        
+        var finalData = data.ToArray();
+        var finalDataLength = finalData.Length;
+
+        // Build the header structure
+        using var header = new MemoryStream();
+        header.Write(HeaderMagic, 0, HeaderMagic.Length);
+        header.Write(new byte[4], 0, 4); // Reserved
+        WriteInt32(header, totalEntries);
+        WriteInt32(header, finalDataLength);
+
+        // Write region tag index entry FIRST (lowest tag number)
+        // It points to the trailer at the end of data section
+        WriteInt32(header, regionTag);
+        WriteInt32(header, (int)RpmTagType.Bin);
+        WriteInt32(header, trailerOffset);
+        WriteInt32(header, 16); // Count = 16 (size of trailer)
+
+        // Write remaining index entries
+        foreach (var ie in indexEntries)
+        {
+            WriteInt32(header, ie.Tag);
+            WriteInt32(header, (int)ie.Type);
+            WriteInt32(header, ie.Offset);
+            WriteInt32(header, ie.Count);
+        }
+
+        header.Write(finalData, 0, finalData.Length);
+        return header.ToArray();
     }
 }
 
@@ -341,6 +491,7 @@ internal readonly record struct RpmHeaderIndexEntry(int Tag, RpmTagType Type, in
 internal static class RpmTag
 {
     public const int HeaderI18nTable = 100;
+    public const int HeaderImmutable = 63;
     public const int Name = 1000;
     public const int Version = 1001;
     public const int Release = 1002;
@@ -382,6 +533,7 @@ internal static class RpmTag
 internal static class RpmSignatureTag
 {
     public const int Size = 257;
+    public const int Reserved = 62;
     public const int Md5 = 261;
     public const int Sha1Header = 269;
     public const int Sha256Header = 273;
