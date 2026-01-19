@@ -7,15 +7,28 @@ public static class ConsoleMixin
 {
     public static void WriteResult(this Result result)
     {
-        result
-            .Tap(() => Log.Information("Success"))
-            .TapError(Log.Error);
+        if (result.IsFailure)
+        {
+            Log.Error("Operation failed: {Error}", result.Error);
+            Environment.ExitCode = 1;
+        }
+        else
+        {
+            Log.Information("Operation completed successfully");
+        }
     }
     
-    public static async Task WriteResult(this Task<Result> result)
+    public static async Task WriteResult(this Task<Result> resultTask)
     {
-        await result
-            .Tap(() => Log.Information("Success"))
-            .TapError(Log.Error);
+        var result = await resultTask;
+        if (result.IsFailure)
+        {
+            Log.Error("Operation failed: {Error}", result.Error);
+            Environment.ExitCode = 1;
+        }
+        else
+        {
+            Log.Information("Operation completed successfully");
+        }
     }
 }

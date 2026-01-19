@@ -16,6 +16,7 @@ public static class AppStreamXmlGenerator
             new XElement("description", new XElement("p", options.Comment)),
             new XElement("launchable", new XAttribute("type", "desktop-id"), $"{options.Name}.desktop"),
             new XElement("url", new XAttribute("type", "homepage"), options.Homepage),
+            options.Vendor.Map(v => new XElement("developer_name", v)).GetValueOrDefault(),
             GenerateScreenshots(options),
             new XElement("provides", new XElement("id", $"{options.Name}.desktop"))
         );
