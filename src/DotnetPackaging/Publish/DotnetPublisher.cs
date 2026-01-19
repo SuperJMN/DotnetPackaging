@@ -55,8 +55,16 @@ public sealed class DotnetPublisher : IPublisher
             var run = await command.Execute("dotnet", args);
             if (run.IsFailure)
             {
-                logger.Error("dotnet publish failed for {ProjectPath}: {Error}", request.ProjectPath, run.Error);
-                return Result.Failure<IDisposableContainer>(run.Error);
+                var errorSummary = ExtractPublishErrors(run.Error);
+                logger.Error("dotnet publish failed for {ProjectPath}", request.ProjectPath);
+                
+                if (!string.IsNullOrEmpty(errorSummary))
+                {
+                    logger.Error("Build errors:\n{ErrorSummary}", errorSummary);
+                    return Result.Failure<IDisposableContainer>($"dotnet publish failed. Build errors:\n{errorSummary}");
+                }
+                
+                return Result.Failure<IDisposableContainer>($"dotnet publish failed: {run.Error}");
             }
 
             logger.Information("dotnet publish completed for {ProjectPath}", request.ProjectPath);
@@ -137,6 +145,60 @@ public sealed class DotnetPublisher : IPublisher
             request.SingleFile,
             request.Trimmed,
             ridDisplay);
+    }
+
+    private static string ExtractPublishErrors(string fullOutput)
+    {
+        if (string.IsNullOrWhiteSpace(fullOutput))
+        {
+            return string.Empty;
+        }
+
+        var lines = fullOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        var errorLines = new List<string>();
+        var seenErrors = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Patterns to identify error and warning lines
+        foreach (var line in lines)
+        {
+            var trimmedLine = line.Trim();
+            
+            // Skip empty lines and common noise
+            if (string.IsNullOrWhiteSpace(trimmedLine))
+                continue;
+
+            // Capture error lines (CS####, MSB####, NETSDK####, etc.)
+            if (trimmedLine.Contains(": error ") || 
+                trimmedLine.Contains(": warning ") ||
+                System.Text.RegularExpressions.Regex.IsMatch(trimmedLine, @"\b(CS\d{4}|MSB\d{4}|NETSDK\d{4})\b"))
+            {
+                if (seenErrors.Add(trimmedLine))
+                {
+                    errorLines.Add(trimmedLine);
+                }
+            }
+            // Capture "Build FAILED" summary line
+            else if (trimmedLine.Contains("Build FAILED", StringComparison.OrdinalIgnoreCase))
+            {
+                if (seenErrors.Add(trimmedLine))
+                {
+                    errorLines.Add(trimmedLine);
+                }
+            }
+        }
+
+        // If we found specific errors, return them
+        if (errorLines.Count > 0)
+        {
+            // Limit to first 20 errors to avoid overwhelming output
+            var limitedErrors = errorLines.Take(20);
+            return string.Join(Environment.NewLine, limitedErrors);
+        }
+
+        // If no specific errors found, return the last portion of the output
+        // which usually contains the summary
+        var lastLines = lines.Reverse().Take(30).Reverse();
+        return string.Join(Environment.NewLine, lastLines);
     }
 
     private static string BuildArgs(ProjectPublishRequest r, string outputDir)

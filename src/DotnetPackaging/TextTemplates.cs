@@ -20,6 +20,7 @@ public static class TextTemplates
             metadata.Categories.Map(x => $"Categories={x}"),
             metadata.Keywords.Map(keywords => $"Keywords={keywords.JoinWith(";")}"),
             Maybe.From(metadata.Version).Map(s => $"X-AppImage-Version={s}"),
+            metadata.Vendor.Map(v => $"X-Developer-Name={v}"),
         };
 
         return items.Compose() + "\n";

@@ -44,6 +44,10 @@ internal static class RpmLayoutBuilder
         var launcherContent = ByteSource.FromString(TextTemplates.RunScript(execAbsolutePath), Encoding.ASCII);
         result.Add(new RpmEntry(launcherPath, UnixFileProperties.ExecutableFileProperties(), launcherContent, RpmEntryType.File));
 
+        var appStreamPath = NormalizePath($"/usr/share/metainfo/{metadata.Package.ToLowerInvariant()}.metainfo.xml");
+        var appStreamContent = ByteSource.FromString(TextTemplates.AppStream(metadata), Encoding.UTF8);
+        result.Add(new RpmEntry(appStreamPath, UnixFileProperties.RegularFileProperties(), appStreamContent, RpmEntryType.File));
+
         foreach (var icon in metadata.IconFiles)
         {
             var iconPath = NormalizePath($"/{icon.Key}");
