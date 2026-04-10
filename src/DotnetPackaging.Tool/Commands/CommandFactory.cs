@@ -3,9 +3,11 @@ using Serilog;
 
 namespace DotnetPackaging.Tool.Commands;
 
+public record CommandSet(Command Root, Command FromDirectory);
+
 public static class CommandFactory
 {
-    public static Command CreateCommand(
+    public static CommandSet CreateCommand(
         string commandName,
         string friendlyName,
         string extension,
@@ -15,49 +17,85 @@ public static class CommandFactory
         Action<Options, ParseResult>? optionsPostProcessor = null,
         params string[] aliases)
     {
-        var buildDir = new Option<DirectoryInfo>("--directory")
+        var defaultDescription = description ??
+                                 $"Create a {friendlyName} from a directory with the published application contents. Everything is inferred. For .NET apps this is usually the 'publish' directory.";
+
+        // --- Base command (deprecated, backward-compatible) ---
+        var baseBuildDir = new Option<DirectoryInfo>("--directory")
         {
             Description = "Published application directory (for example: bin/Release/<tfm>/publish)",
             Required = true
         };
-        var outputFileOption = new Option<FileInfo>("--output")
+        var baseOutput = new Option<FileInfo>("--output")
         {
             Description = $"Destination path for the generated {extension} file",
             Required = true
         };
+        var baseMetadata = new MetadataOptionSet();
 
-        var metadata = new MetadataOptionSet();
-
-        var defaultDescription = description ??
-                                 $"Create a {friendlyName} from a directory with the published application contents. Everything is inferred. For .NET apps this is usually the 'publish' directory.";
-        var fromBuildDir = new Command(commandName, defaultDescription);
-
+        var rootCommand = new Command(commandName, defaultDescription);
         foreach (var alias in aliases)
         {
             if (!string.IsNullOrWhiteSpace(alias))
             {
-                fromBuildDir.Aliases.Add(alias);
+                rootCommand.Aliases.Add(alias);
             }
         }
 
-        fromBuildDir.Add(buildDir);
-        fromBuildDir.Add(outputFileOption);
-        metadata.AddTo(fromBuildDir);
+        rootCommand.Add(baseBuildDir);
+        rootCommand.Add(baseOutput);
+        baseMetadata.AddTo(rootCommand);
         if (defaultLayoutOption != null)
         {
-            fromBuildDir.Add(defaultLayoutOption);
+            rootCommand.Add(defaultLayoutOption);
         }
 
-        var options = metadata.CreateBinder(defaultLayoutOption);
+        var baseBinder = baseMetadata.CreateBinder(defaultLayoutOption);
 
-        fromBuildDir.SetAction(async parseResult =>
+        rootCommand.SetAction(async parseResult =>
         {
-            var directory = parseResult.GetValue(buildDir)!;
-            var output = parseResult.GetValue(outputFileOption)!;
-            var opts = options.Bind(parseResult);
+            Console.Error.WriteLine($"Warning: 'dotnetpackager {commandName} --directory' is deprecated and will be removed in a future version. Use 'dotnetpackager {commandName} from-directory' instead.");
+            var directory = parseResult.GetValue(baseBuildDir)!;
+            var output = parseResult.GetValue(baseOutput)!;
+            var opts = baseBinder.Bind(parseResult);
             optionsPostProcessor?.Invoke(opts, parseResult);
             await ExecutionWrapper.ExecuteWithLogging(commandName, output.FullName, logger => handler(directory, output, opts, logger));
         });
-        return fromBuildDir;
+
+        // --- from-directory subcommand (canonical path) ---
+        var fdBuildDir = new Option<DirectoryInfo>("--directory")
+        {
+            Description = "Published application directory (for example: bin/Release/<tfm>/publish)",
+            Required = true
+        };
+        var fdOutput = new Option<FileInfo>("--output")
+        {
+            Description = $"Destination path for the generated {extension} file",
+            Required = true
+        };
+        var fdMetadata = new MetadataOptionSet();
+
+        var fromDirectoryCommand = new Command("from-directory", $"Create a {friendlyName} from a published application directory.");
+        fromDirectoryCommand.Add(fdBuildDir);
+        fromDirectoryCommand.Add(fdOutput);
+        fdMetadata.AddTo(fromDirectoryCommand);
+        if (defaultLayoutOption != null)
+        {
+            fromDirectoryCommand.Add(defaultLayoutOption);
+        }
+
+        var fdBinder = fdMetadata.CreateBinder(defaultLayoutOption);
+
+        fromDirectoryCommand.SetAction(async parseResult =>
+        {
+            var directory = parseResult.GetValue(fdBuildDir)!;
+            var output = parseResult.GetValue(fdOutput)!;
+            var opts = fdBinder.Bind(parseResult);
+            optionsPostProcessor?.Invoke(opts, parseResult);
+            await ExecutionWrapper.ExecuteWithLogging(commandName, output.FullName, logger => handler(directory, output, opts, logger));
+        });
+
+        rootCommand.Add(fromDirectoryCommand);
+        return new CommandSet(rootCommand, fromDirectoryCommand);
     }
 }

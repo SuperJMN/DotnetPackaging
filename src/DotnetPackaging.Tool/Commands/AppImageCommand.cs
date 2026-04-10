@@ -16,7 +16,7 @@ public static class AppImageCommand
 
     public static Command GetCommand()
     {
-        var command = CommandFactory.CreateCommand(
+        var commands = CommandFactory.CreateCommand(
             "appimage",
             "AppImage package",
             ".AppImage",
@@ -26,9 +26,9 @@ public static class AppImageCommand
             null,
             "pack-appimage");
 
-        AddAppImageSubcommands(command);
-        AddFromProjectSubcommand(command);
-        return command;
+        AddAppImageSubcommands(commands.Root);
+        AddFromProjectSubcommand(commands.Root);
+        return commands.Root;
     }
 
     private static Task CreateAppImage(DirectoryInfo inputDir, FileInfo outputFile, Options options, ILogger logger)

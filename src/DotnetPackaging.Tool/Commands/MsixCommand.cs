@@ -21,7 +21,8 @@ public static class MsixCommand
     {
         var inputDir = new Option<DirectoryInfo>("--directory") { Description = "The input directory (publish output)", Required = true };
         var outputFile = new Option<FileInfo>("--output") { Description = "Output .msix file", Required = true };
-        var packCmd = new Command("pack") { Description = "Create an MSIX from a directory (expects AppxManifest.xml in the tree or pre-baked metadata). Experimental." };
+        var packCmd = new Command("from-directory") { Description = "Create an MSIX from a directory (expects AppxManifest.xml in the tree or pre-baked metadata). Experimental." };
+        packCmd.Aliases.Add("pack");
         packCmd.Add(inputDir);
         packCmd.Add(outputFile);
         packCmd.SetAction(async parseResult =>
