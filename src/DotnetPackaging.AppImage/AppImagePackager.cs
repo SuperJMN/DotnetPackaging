@@ -46,7 +46,7 @@ public sealed class AppImagePackager
                     container,
                     tuple.arch,
                     tuple.exec,
-                    setup.IsTerminal,
+                    setup.IsTerminal.GetValueOrDefault(false),
                     Maybe<string>.None,
                     log);
 
@@ -77,7 +77,7 @@ public sealed class AppImagePackager
             Homepage = packageMetadata.Homepage.Map(u => u.ToString()),
             ProjectLicense = packageMetadata.License,
             Keywords = packageMetadata.Keywords,
-            IsTerminal = setup.IsTerminal,
+            IsTerminal = setup.IsTerminal.GetValueOrDefault(false),
             Categories = packageMetadata.Categories.HasValue
                 ? Maybe<IEnumerable<string>>.From(GetCategoryStrings(packageMetadata.Categories.Value))
                 : Maybe<IEnumerable<string>>.None

@@ -54,6 +54,14 @@ public static class ProjectMetadataDefaults
             inferredExecutable.Execute(name => resolved.WithExecutableName(name));
         }
 
+        if (resolved.IsTerminal.HasNoValue)
+        {
+            projectMetadata
+                .Bind(m => m.OutputType)
+                .Execute(outputType => resolved.WithIsTerminal(
+                    string.Equals(outputType, "Exe", StringComparison.OrdinalIgnoreCase)));
+        }
+
         return resolved;
     }
 

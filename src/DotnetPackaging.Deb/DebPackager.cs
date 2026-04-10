@@ -39,7 +39,7 @@ public sealed class DebPackager
                     container,
                     tuple.arch,
                     tuple.exec,
-                    setup.IsTerminal,
+                    setup.IsTerminal.GetValueOrDefault(false),
                     Maybe<string>.None,
                     log);
 

@@ -30,7 +30,7 @@ public class FromDirectoryOptions
     public Maybe<string> VcsGit { get; private set; } = Maybe<string>.None;
     public Maybe<long> InstalledSize { get; private set; } = Maybe<long>.None;
     public Maybe<DateTimeOffset> ModificationTime { get; private set; } = Maybe<DateTimeOffset>.None;
-    public bool IsTerminal { get; private set; }
+    public Maybe<bool> IsTerminal { get; private set; } = Maybe<bool>.None;
     public Maybe<ProjectMetadata> ProjectMetadata { get; private set; } = Maybe<ProjectMetadata>.None;
     public Maybe<string> Vendor { get; private set; } = Maybe<string>.None;
     public Maybe<Uri> Url { get; private set; } = Maybe<Uri>.None;
@@ -237,7 +237,7 @@ public class FromDirectoryOptions
 
     public void WithIsTerminal(bool isTerminalValue)
     {
-        IsTerminal = isTerminalValue;
+        IsTerminal = Maybe<bool>.From(isTerminalValue);
     }
 
     public FromDirectoryOptions WithProjectMetadata(ProjectMetadata projectMetadata)
