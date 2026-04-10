@@ -38,7 +38,7 @@ internal class FromContainer
         var architecture = architectureResult.Value;
         logger.Information("Architecture resolved to {Arch}", architecture);
 
-        var metadata = await BuildUtils.CreateMetadata(setup, root, architecture, executable, setup.IsTerminal, containerName, logger);
+        var metadata = await BuildUtils.CreateMetadata(setup, root, architecture, executable, setup.IsTerminal.GetValueOrDefault(false), containerName, logger);
         var plan = RpmLayoutBuilder.Build(root, metadata, executable);
 
         return await RpmPackager.CreatePackage(metadata, plan);

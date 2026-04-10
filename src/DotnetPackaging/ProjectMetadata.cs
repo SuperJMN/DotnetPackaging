@@ -14,13 +14,14 @@ public sealed record ProjectMetadata(
     Maybe<string> PackageProjectUrl,
     Maybe<string> RepositoryUrl,
     Maybe<string> AssemblyName,
-    Maybe<string> AssemblyTitle);
+    Maybe<string> AssemblyTitle,
+    Maybe<string> OutputType);
 
 public static class ProjectMetadataReader
 {
     private static readonly string[] PropertiesToRead = new[]
     {
-        "Product", "Company", "Description", "Authors", "Copyright", "PackageLicenseExpression", "PackageProjectUrl", "RepositoryUrl", "AssemblyName", "AssemblyTitle"
+        "Product", "Company", "Description", "Authors", "Copyright", "PackageLicenseExpression", "PackageProjectUrl", "RepositoryUrl", "AssemblyName", "AssemblyTitle", "OutputType"
     };
 
     public static Result<ProjectMetadata> Read(FileInfo projectFile)
@@ -104,8 +105,9 @@ public static class ProjectMetadataReader
             var repo = values.GetValueOrDefault("RepositoryUrl");
             var assemblyName = values.GetValueOrDefault("AssemblyName");
             var assemblyTitle = values.GetValueOrDefault("AssemblyTitle");
+            var outputType = values.GetValueOrDefault("OutputType");
 
-            return Result.Success(new ProjectMetadata(product, company, description, authors, copyright, license, url, repo, assemblyName, assemblyTitle));
+            return Result.Success(new ProjectMetadata(product, company, description, authors, copyright, license, url, repo, assemblyName, assemblyTitle, outputType));
         }
         catch (Exception ex)
         {
@@ -127,7 +129,8 @@ public static class ProjectMetadataReader
         var repo = ReadProperty(document, "RepositoryUrl");
         var assemblyName = ReadProperty(document, "AssemblyName");
         var assemblyTitle = ReadProperty(document, "AssemblyTitle");
-        return new ProjectMetadata(product, company, description, authors, copyright, license, url, repo, assemblyName, assemblyTitle);
+        var outputType = ReadProperty(document, "OutputType");
+        return new ProjectMetadata(product, company, description, authors, copyright, license, url, repo, assemblyName, assemblyTitle, outputType);
     }
 
     private static Dictionary<string, Maybe<string>> ParseMsbuildOutput(string output, IEnumerable<string> propertyNames)

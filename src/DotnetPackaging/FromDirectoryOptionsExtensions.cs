@@ -41,7 +41,7 @@ public static class FromDirectoryOptionsExtensions
         if (source.ProjectMetadata.HasValue) target.WithProjectMetadata(source.ProjectMetadata.Value);
         if (source.Vendor.HasValue) target.WithVendor(source.Vendor.Value);
         if (source.Url.HasValue) target.WithUrl(source.Url.Value);
-        target.WithIsTerminal(source.IsTerminal);
+        if (source.IsTerminal.HasValue) target.WithIsTerminal(source.IsTerminal.Value);
 
         return target;
     }

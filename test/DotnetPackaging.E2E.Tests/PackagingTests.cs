@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.CommandLine.Parsing;
+using DotnetPackaging.Tool.Commands;
 using FluentAssertions;
 using Xunit;
 using Xunit.Sdk;
@@ -58,6 +60,32 @@ public class PackagingTests : IDisposable
         var output = Path.Combine(temp.Path, "TestApp.exe");
         await ExecutePackagingCommand("exe", output, "--arch x64");
         File.Exists(output).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Deb_command_should_accept_issue_163_arguments_with_summary_and_comment()
+    {
+        var summary = "ServiceMonitor is a lightweight, configuration\u2011driven monitoring tool for webpages";
+        var comment = "ServiceMonitor is a lightweight, configuration\u2011driven monitoring tool for webpages designed for Linux\u2011based systems (including QNAP NAS). It periodically checks a list of URLs and sends SMTP notifications when services become unreachable or return error states. The focus is on robustness, simplicity, and clean extensibility.";
+
+        var command = DebCommand.GetCommand();
+        var args = new[]
+        {
+            "--directory", "./publish/linux-x64",
+            "--output", "./$(AppName)_$(version)_amd64.deb",
+            "--application-name", "$(AppName)",
+            "--summary", summary,
+            "--comment", comment,
+            "--homepage", "https://github.com/saigkill/ServiceMonitor",
+            "--license", "MIT",
+            "--is-terminal", "true",
+            "--appId", "de.saschamanns.ServiceMonitor",
+            "--version", "$(version)"
+        };
+
+        var parseResult = command.Parse(args);
+        parseResult.Errors.Should().BeEmpty();
+        parseResult.UnmatchedTokens.Should().BeEmpty();
     }
 
     [Fact]

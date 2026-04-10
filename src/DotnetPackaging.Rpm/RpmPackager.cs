@@ -38,7 +38,7 @@ public sealed class RpmPackager
                     container,
                     tuple.arch,
                     tuple.exec,
-                    setup.IsTerminal,
+                    setup.IsTerminal.GetValueOrDefault(false),
                     Maybe<string>.None,
                     log);
 
