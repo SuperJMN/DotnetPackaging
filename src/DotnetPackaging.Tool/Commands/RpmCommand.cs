@@ -12,7 +12,7 @@ public static class RpmCommand
 {
     public static Command GetCommand()
     {
-        var command = CommandFactory.CreateCommand(
+        var commands = CommandFactory.CreateCommand(
             "rpm",
             "RPM package",
             ".rpm",
@@ -22,8 +22,8 @@ public static class RpmCommand
             null,
             "pack-rpm");
 
-        AddFromProjectSubcommand(command);
-        return command;
+        AddFromProjectSubcommand(commands.Root);
+        return commands.Root;
     }
 
     private static Task CreateRpm(DirectoryInfo inputDir, FileInfo outputFile, Options options, ILogger logger)
@@ -41,8 +41,7 @@ public static class RpmCommand
             .WriteResult();
     }
 
-    private static void AddFromProjectSubcommand(Command rpmCommand)
-    {
+    private static void AddFromProjectSubcommand(Command rpmCommand)    {
         var metadata = new MetadataOptionSet();
         var project = new ProjectOptionSet(".rpm");
 

@@ -24,7 +24,7 @@ public static class DmgCommand
         };
         defaultLayoutOption.DefaultValueFactory = _ => true;
 
-        var dmgCommand = CommandFactory.CreateCommand(
+        var commands = CommandFactory.CreateCommand(
             "dmg",
             "macOS disk image",
             ".dmg",
@@ -34,7 +34,7 @@ public static class DmgCommand
             null,
             "pack-dmg");
 
-        AddDmgFromProjectSubcommand(dmgCommand);
+        AddDmgFromProjectSubcommand(commands.Root);
 
         // dmg verify subcommand
         var verifyFileOption = new Option<FileInfo>("--file")
@@ -63,9 +63,9 @@ public static class DmgCommand
                 }
             });
         });
-        dmgCommand.Add(verifyCmd);
+        commands.Root.Add(verifyCmd);
 
-        return dmgCommand;
+        return commands.Root;
     }
 
     private static Task CreateDmg(DirectoryInfo inputDir, FileInfo outputFile, Options options, ILogger logger)

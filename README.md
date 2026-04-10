@@ -123,21 +123,28 @@ dotnet tool install --global DotnetPackaging.Tool
 ```
 
 ### Commands
-- `dotnetpackager appimage` – build an `.AppImage` file directly from a publish directory.
-- `dotnetpackager appimage appdir` – generate an AppDir folder structure for inspection/customisation.
-- `dotnetpackager appimage from-appdir` – package an existing AppDir into an AppImage.
-- `dotnetpackager deb` – build a Debian/Ubuntu `.deb` out of a publish directory (and `deb from-project` to publish + package in one step). Supports `--service` to install as a systemd daemon.
-- `dotnetpackager rpm` – build an RPM from a publish directory (`rpm from-project` also available) without owning system dirs.
-- `dotnetpackager msix` – experimental MSIX packing from a directory (`msix from-project` when you want it published for you).
-- `dotnetpackager dmg` – experimental macOS `.dmg` builder from a publish directory (`dmg from-project` to publish + package).
-- `dotnetpackager exe` – preview Windows self-extracting installer builder; supports `exe from-project` and stub auto-download.
+
+Every format command offers two subcommands:
+- **`from-directory`** – package from a pre-published directory (the output of `dotnet publish`).
+- **`from-project`** – publish a .NET project and package in one step.
+
+> **Deprecation notice:** invoking the base command directly with `--directory` (e.g. `dotnetpackager deb --directory`) still works for backward compatibility but is deprecated. Use `deb from-directory` instead. A future release will remove the deprecated form.
+
+| Format | From directory | From project | Extra subcommands |
+|---|---|---|---|
+| **appimage** | `appimage from-directory` | `appimage from-project` | `appdir`, `from-appdir` |
+| **deb** | `deb from-directory` | `deb from-project` | — |
+| **rpm** | `rpm from-directory` | `rpm from-project` | — |
+| **dmg** | `dmg from-directory` | `dmg from-project` | `verify` |
+| **exe** | `exe from-directory` | `exe from-project` | — |
+| **msix** | `msix from-directory` | `msix from-project` | — |
 
 Run `dotnetpackager <command> --help` to see the full list of shared options (`--application-name`, `--comment`, `--homepage`, `--keywords`, `--icon`, `--is-terminal`, etc.).
 
 ### Examples
-Build an AppImage in one go:
+Build an AppImage from a published directory:
 ```bash
-dotnetpackager appimage \
+dotnetpackager appimage from-directory \
   --directory ./bin/Release/net10.0/linux-x64/publish \
   --output ./artifacts/MyApp.appimage \
   --application-name "My App" \
@@ -160,7 +167,7 @@ dotnetpackager appimage from-appdir \
 
 Produce a Debian package with a custom name and version:
 ```bash
-dotnetpackager deb \
+dotnetpackager deb from-directory \
   --directory ./bin/Release/net10.0/linux-x64/publish \
   --output ./artifacts/MyApp_1.0.0_amd64.deb \
   --application-name "My App" \
@@ -195,7 +202,7 @@ dotnetpackager deb from-project \
 
 The `--service` flag also works from a pre-published directory:
 ```bash
-dotnetpackager deb \
+dotnetpackager deb from-directory \
   --directory ./bin/Release/net10.0/linux-x64/publish \
   --output ./artifacts/myapi.deb \
   --application-name myapi \

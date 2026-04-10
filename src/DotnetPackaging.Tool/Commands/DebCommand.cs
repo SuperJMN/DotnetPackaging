@@ -19,7 +19,7 @@ public static class DebCommand
         var serviceUserOption = new Option<string?>("--service-user") { Description = "User to run the service as" };
         var serviceEnvironmentOption = new Option<IEnumerable<string>>("--service-environment") { Description = "Environment variables (e.g., DOTNET_ENVIRONMENT=Production)", Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
 
-        var command = CommandFactory.CreateCommand(
+        var commands = CommandFactory.CreateCommand(
             "deb",
             "Debian package",
             ".deb",
@@ -30,14 +30,20 @@ public static class DebCommand
             "pack-deb",
             "debian");
 
-        command.Add(serviceOption);
-        command.Add(serviceTypeOption);
-        command.Add(serviceRestartOption);
-        command.Add(serviceUserOption);
-        command.Add(serviceEnvironmentOption);
+        commands.Root.Add(serviceOption);
+        commands.Root.Add(serviceTypeOption);
+        commands.Root.Add(serviceRestartOption);
+        commands.Root.Add(serviceUserOption);
+        commands.Root.Add(serviceEnvironmentOption);
 
-        AddFromProjectSubcommand(command, serviceOption, serviceTypeOption, serviceRestartOption, serviceUserOption, serviceEnvironmentOption);
-        return command;
+        commands.FromDirectory.Add(serviceOption);
+        commands.FromDirectory.Add(serviceTypeOption);
+        commands.FromDirectory.Add(serviceRestartOption);
+        commands.FromDirectory.Add(serviceUserOption);
+        commands.FromDirectory.Add(serviceEnvironmentOption);
+
+        AddFromProjectSubcommand(commands.Root, serviceOption, serviceTypeOption, serviceRestartOption, serviceUserOption, serviceEnvironmentOption);
+        return commands.Root;
     }
 
     private static void ApplyServiceOptions(Options opts, ParseResult parseResult, Option<bool> serviceOption, Option<string?> serviceTypeOption, Option<string?> serviceRestartOption, Option<string?> serviceUserOption, Option<IEnumerable<string>> serviceEnvironmentOption)

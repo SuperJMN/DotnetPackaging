@@ -67,6 +67,7 @@ public static class ExeCommand
 
         exeCommand.SetAction(async parseResult =>
         {
+            Console.Error.WriteLine("Warning: 'dotnetpackager exe --directory' is deprecated and will be removed in a future version. Use 'dotnetpackager exe from-directory' instead.");
             var inDir = parseResult.GetValue(exeInputDir)!;
             var outFile = parseResult.GetValue(exeOutput)!;
             var stub = parseResult.GetValue(stubPath);
@@ -124,6 +125,103 @@ public static class ExeCommand
                 logger.Information("{OutputFile}", outFile.FullName);
             });
         });
+
+        // exe from-directory (canonical path)
+        var fdInputDir = new Option<DirectoryInfo>("--directory")
+        {
+            Description = "The input directory (publish output)",
+            Required = true
+        };
+        var fdOutput = new Option<FileInfo>("--output")
+        {
+            Description = "Output installer .exe",
+            Required = true
+        };
+        var fdStub = new Option<FileInfo>("--stub")
+        {
+            Description = "Path to the prebuilt stub (WinExe) to concatenate (optional if repo layout is present)"
+        };
+        var fdSetupLogo = new Option<FileInfo?>("--setup-logo")
+        {
+            Description = "Path to a logo image displayed by the installer and uninstaller wizards"
+        };
+        var fdArch = new Option<string?>("--arch")
+        {
+            Description = "Target architecture for the stub (x64, arm64)"
+        };
+        var fdMetadata = new MetadataOptionSet();
+        var fdBinder = fdMetadata.CreateBinder();
+
+        var fromDirectory = new Command("from-directory") { Description = "Create a Windows self-extracting installer (.exe) from a published application directory." };
+        fromDirectory.Add(fdInputDir);
+        fromDirectory.Add(fdOutput);
+        fromDirectory.Add(fdStub);
+        fromDirectory.Add(fdSetupLogo);
+        fromDirectory.Add(exVendor);
+        fromDirectory.Add(fdArch);
+        fdMetadata.AddTo(fromDirectory);
+
+        fromDirectory.SetAction(async parseResult =>
+        {
+            var inDir = parseResult.GetValue(fdInputDir)!;
+            var outFile = parseResult.GetValue(fdOutput)!;
+            var stub = parseResult.GetValue(fdStub);
+            var logo = parseResult.GetValue(fdSetupLogo);
+            var opt = fdBinder.Bind(parseResult);
+            var vendorOpt = parseResult.GetValue(exVendor);
+            var archOpt = parseResult.GetValue(fdArch);
+
+            await ExecutionWrapper.ExecuteWithLogging("exe", outFile.FullName, async logger =>
+            {
+                var ridResult = RidUtils.ResolveWindowsRid(archOpt, "EXE packaging");
+                if (ridResult.IsFailure)
+                {
+                    logger.Error("Invalid architecture: {Error}", ridResult.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
+
+                var containerResult = new DirectoryContainer(new DirectoryInfoWrapper(new FileSystem(), inDir)).AsRoot();
+
+                var stubBytes = stub != null
+                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(stub.FullName))
+                    : null;
+
+                var logoBytes = logo != null
+                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(logo.FullName))
+                    : null;
+
+                var packager = new ExePackager(logger: logger);
+                var exeMetadata = new ExePackagerMetadata
+                {
+                    Options = opt,
+                    Vendor = Maybe.From(vendorOpt),
+                    RuntimeIdentifier = Maybe.From(ridResult.Value),
+                    Stub = stubBytes == null ? Maybe<IByteSource>.None : Maybe.From(stubBytes),
+                    SetupLogo = logoBytes == null ? Maybe<IByteSource>.None : Maybe.From(logoBytes),
+                    OutputName = Maybe.From(outFile.Name)
+                };
+
+                var result = await packager.Pack(containerResult, exeMetadata);
+                if (result.IsFailure)
+                {
+                    logger.Error("EXE packaging failed: {Error}", result.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
+
+                var writeResult = await result.Value.WriteTo(outFile.FullName);
+                if (writeResult.IsFailure)
+                {
+                    logger.Error("Failed to persist installer: {Error}", writeResult.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
+                logger.Information("{OutputFile}", outFile.FullName);
+            });
+        });
+
+        exeCommand.Add(fromDirectory);
 
         // exe from-project
         var project = new ProjectOptionSet(".exe");
