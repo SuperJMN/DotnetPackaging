@@ -48,6 +48,16 @@ internal static class DebMixin
             LastModification = deb.Metadata.ModificationTime,
         };
 
+        var executableProperties = new TarFileProperties()
+        {
+            Mode = UnixPermissions.Parse("755"),
+            GroupId = 0,
+            GroupName = "root",
+            OwnerId = 0,
+            OwnerUsername = "root",
+            LastModification = deb.Metadata.ModificationTime,
+        };
+
         var dirProperties = new TarDirectoryProperties()
         {
             Mode = UnixPermissions.Parse("755"),
@@ -73,11 +83,26 @@ internal static class DebMixin
 
         var file = ByteSource.FromString(content);
 
-        var entries = new TarEntry[]
+        var entries = new List<TarEntry>
         {
             new DirectoryTarEntry("./", dirProperties),
             new FileTarEntry("./control", file, fileProperties)
         };
+
+        if (deb.Scripts.PostInst.HasValue)
+        {
+            entries.Add(new FileTarEntry("./postinst", ByteSource.FromString(deb.Scripts.PostInst.Value), executableProperties));
+        }
+
+        if (deb.Scripts.PreRm.HasValue)
+        {
+            entries.Add(new FileTarEntry("./prerm", ByteSource.FromString(deb.Scripts.PreRm.Value), executableProperties));
+        }
+
+        if (deb.Scripts.PostRm.HasValue)
+        {
+            entries.Add(new FileTarEntry("./postrm", ByteSource.FromString(deb.Scripts.PostRm.Value), executableProperties));
+        }
 
         // TODO: Add other properties, too
         //Homepage: {deb.ControlMetadata.Homepage}

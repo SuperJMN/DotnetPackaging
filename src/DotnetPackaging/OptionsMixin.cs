@@ -73,5 +73,16 @@ public static class OptionsMixin
                 options.AdditionalCategories.GetValueOrDefault(Array.Empty<AdditionalCategory>()).ToArray());
             setup.WithCategories(categories);
         }
+
+        if (options.IsService.HasValue && options.IsService.Value)
+        {
+            setup.WithService(svc =>
+            {
+                if (options.ServiceType.HasValue) svc.WithType(options.ServiceType.Value);
+                if (options.ServiceRestart.HasValue) svc.WithRestart(options.ServiceRestart.Value);
+                if (options.ServiceUser.HasValue) svc.WithUser(options.ServiceUser.Value);
+                if (options.ServiceEnvironment.HasValue) svc.WithEnvironment(options.ServiceEnvironment.Value.ToArray());
+            });
+        }
     }
 }

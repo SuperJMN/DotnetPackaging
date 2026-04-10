@@ -21,11 +21,34 @@ internal static class TarEntryBuilder
 
     private static IEnumerable<FileTarEntry> ImplicitFileEntries(PackageMetadata metadata, string executablePath)
     {
-        return new FileTarEntry[]
+        var isService = metadata.Service.HasValue;
+        var entries = new List<FileTarEntry>();
+
+        if (!isService)
         {
-            new($"./usr/share/applications/{metadata.Package.ToLowerInvariant()}.desktop", ByteSource.FromString(TextTemplates.DesktopFileContents(executablePath, metadata), Encoding.ASCII), Misc.RegularFileProperties()),
-            new($"./usr/bin/{metadata.Package.ToLowerInvariant()}", ByteSource.FromString(TextTemplates.RunScript(executablePath), Encoding.ASCII), Misc.ExecutableFileProperties())
-        }.Concat(GetIconEntries(metadata));
+            entries.Add(new FileTarEntry(
+                $"./usr/share/applications/{metadata.Package.ToLowerInvariant()}.desktop",
+                ByteSource.FromString(TextTemplates.DesktopFileContents(executablePath, metadata), Encoding.ASCII),
+                Misc.RegularFileProperties()));
+        }
+
+        entries.Add(new FileTarEntry(
+            $"./usr/bin/{metadata.Package.ToLowerInvariant()}",
+            ByteSource.FromString(TextTemplates.RunScript(executablePath), Encoding.ASCII),
+            Misc.ExecutableFileProperties()));
+
+        if (isService)
+        {
+            var appDir = $"/opt/{metadata.Package}";
+            var unitContent = TextTemplates.SystemdUnitFile(executablePath, appDir, metadata);
+            entries.Add(new FileTarEntry(
+                $"./lib/systemd/system/{metadata.Package.ToLowerInvariant()}.service",
+                ByteSource.FromString(unitContent, Encoding.ASCII),
+                Misc.RegularFileProperties()));
+        }
+
+        entries.AddRange(GetIconEntries(metadata));
+        return entries;
     }
 
     private static IEnumerable<FileTarEntry> GetIconEntries(PackageMetadata metadata)

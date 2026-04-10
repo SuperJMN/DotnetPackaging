@@ -68,4 +68,5 @@ public record PackageMetadata
     public Maybe<string> VcsBrowser { get; init; } = Maybe<string>.None;
     public Maybe<long> InstalledSize { get; init; } = Maybe<long>.None;
     public required DateTimeOffset ModificationTime { get; init; }
+    public Maybe<ServiceDefinition> Service { get; init; } = Maybe<ServiceDefinition>.None;
 }

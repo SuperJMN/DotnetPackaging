@@ -34,6 +34,7 @@ public class FromDirectoryOptions
     public Maybe<ProjectMetadata> ProjectMetadata { get; private set; } = Maybe<ProjectMetadata>.None;
     public Maybe<string> Vendor { get; private set; } = Maybe<string>.None;
     public Maybe<Uri> Url { get; private set; } = Maybe<Uri>.None;
+    public Maybe<ServiceDefinition> Service { get; private set; } = Maybe<ServiceDefinition>.None;
 
     public FromDirectoryOptions WithPackage(string package)
     {
@@ -255,6 +256,14 @@ public class FromDirectoryOptions
     public FromDirectoryOptions WithUrl(Uri url)
     {
         Url = Maybe<Uri>.From(url);
+        return this;
+    }
+
+    public FromDirectoryOptions WithService(Action<ServiceDefinition>? configure = null)
+    {
+        var definition = new ServiceDefinition();
+        configure?.Invoke(definition);
+        Service = Maybe<ServiceDefinition>.From(definition);
         return this;
     }
 }

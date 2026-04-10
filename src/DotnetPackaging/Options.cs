@@ -18,4 +18,9 @@ public class Options
     public Maybe<string> ExecutableName { get; set; }
     public Maybe<bool> IsTerminal { get; set; }
     public Maybe<bool> UseDefaultLayout { get; set; }
+    public Maybe<bool> IsService { get; set; }
+    public Maybe<ServiceType> ServiceType { get; set; }
+    public Maybe<RestartPolicy> ServiceRestart { get; set; }
+    public Maybe<string> ServiceUser { get; set; }
+    public Maybe<IEnumerable<string>> ServiceEnvironment { get; set; }
 }
