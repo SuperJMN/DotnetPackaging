@@ -49,32 +49,17 @@ public static class MsixCommand
         });
         msixCommand.Add(packCmd);
 
-        var project = new Option<FileInfo>("--project") { Description = "Path to the .csproj file", Required = true };
-        var arch = new Option<string?>("--arch") { Description = "Target architecture (x64, arm64)" };
-        var selfContained = new Option<bool>("--self-contained") { Description = "Publish self-contained [Deprecated]" };
-        selfContained.DefaultValueFactory = _ => true;
-        var configuration = new Option<string>("--configuration") { Description = "Build configuration" };
-        configuration.DefaultValueFactory = _ => "Release";
-        var singleFile = new Option<bool>("--single-file") { Description = "Publish single-file" };
-        var trimmed = new Option<bool>("--trimmed") { Description = "Enable trimming" };
-        var outMsix = new Option<FileInfo>("--output") { Description = "Output .msix file", Required = true };
+        var project = new ProjectOptionSet(".msix");
         var fromProject = new Command("from-project") { Description = "Publish a .NET project and build an MSIX from the published output (expects manifest/assets)." };
-        fromProject.Add(project);
-        fromProject.Add(arch);
-        fromProject.Add(selfContained);
-        fromProject.Add(configuration);
-        fromProject.Add(singleFile);
-        fromProject.Add(trimmed);
-        fromProject.Add(outMsix);
+        project.AddTo(fromProject);
         fromProject.SetAction(async parseResult =>
         {
-            var prj = parseResult.GetValue(project)!;
-            var sc = parseResult.GetValue(selfContained);
-            var cfg = parseResult.GetValue(configuration)!;
-            var sf = parseResult.GetValue(singleFile);
-            var tr = parseResult.GetValue(trimmed);
-            var outFile = parseResult.GetValue(outMsix)!;
-            var archVal = parseResult.GetValue(arch);
+            var prj = parseResult.GetValue(project.Project)!;
+            var cfg = parseResult.GetValue(project.Configuration)!;
+            var sf = parseResult.GetValue(project.SingleFile);
+            var tr = parseResult.GetValue(project.Trimmed);
+            var outFile = parseResult.GetValue(project.Output)!;
+            var archVal = parseResult.GetValue(project.Arch);
             var logger = Log.ForContext("command", "msix-from-project");
 
             var result = await new MsixPackager().PackProject(

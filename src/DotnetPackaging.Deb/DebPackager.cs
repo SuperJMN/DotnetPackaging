@@ -44,8 +44,22 @@ public sealed class DebPackager
                     log);
 
                 var entries = TarEntryBuilder.From(container, packageMetadata, tuple.exec).ToArray();
-                var deb = new Archives.Deb.DebFile(packageMetadata, entries);
+                var scripts = BuildMaintainerScripts(packageMetadata);
+                var deb = new Archives.Deb.DebFile(packageMetadata, entries, scripts);
                 return Result.Success<IByteSource>(DebMixin.ToByteSource(deb));
             });
+    }
+
+    private static MaintainerScripts BuildMaintainerScripts(PackageMetadata metadata)
+    {
+        if (!metadata.Service.HasValue)
+        {
+            return MaintainerScripts.None;
+        }
+
+        return new MaintainerScripts(
+            PostInst: TextTemplates.PostInstScript(metadata.Package),
+            PreRm: TextTemplates.PreRmScript(metadata.Package),
+            PostRm: TextTemplates.PostRmScript(metadata.Package));
     }
 }

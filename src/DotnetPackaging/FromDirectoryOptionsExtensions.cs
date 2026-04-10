@@ -42,6 +42,21 @@ public static class FromDirectoryOptionsExtensions
         if (source.Vendor.HasValue) target.WithVendor(source.Vendor.Value);
         if (source.Url.HasValue) target.WithUrl(source.Url.Value);
         if (source.IsTerminal.HasValue) target.WithIsTerminal(source.IsTerminal.Value);
+        if (source.Service.HasValue)
+        {
+            target.WithService(svc =>
+            {
+                var src = source.Service.Value;
+                if (src.Type.HasValue) svc.WithType(src.Type.Value);
+                if (src.Restart.HasValue) svc.WithRestart(src.Restart.Value);
+                if (src.RestartSec.HasValue) svc.WithRestartSec(src.RestartSec.Value);
+                if (src.User.HasValue) svc.WithUser(src.User.Value);
+                if (src.Group.HasValue) svc.WithGroup(src.Group.Value);
+                if (src.After.HasValue) svc.WithAfter(src.After.Value);
+                if (src.WantedBy.HasValue) svc.WithWantedBy(src.WantedBy.Value);
+                if (src.Environment.HasValue) svc.WithEnvironment(src.Environment.Value.ToArray());
+            });
+        }
 
         return target;
     }

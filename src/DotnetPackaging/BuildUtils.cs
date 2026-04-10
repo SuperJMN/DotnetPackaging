@@ -100,7 +100,8 @@ public static class BuildUtils
             InstalledSize = setup.InstalledSize,
             ModificationTime = setup.ModificationTime.GetValueOrDefault(DateTimeOffset.Now),
             Vendor = setup.Vendor,
-            Url = setup.Url
+            Url = setup.Url,
+            Service = setup.Service
         };
 
         return packageMetadata;

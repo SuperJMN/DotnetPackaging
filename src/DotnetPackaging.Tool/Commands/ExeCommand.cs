@@ -40,91 +40,30 @@ public static class ExeCommand
         {
             Description = "Target architecture for the stub (x64, arm64)"
         };
-
-        // Reuse metadata options
-        var exAppName = new Option<string>("--application-name")
-        {
-            Description = "Application name",
-            Required = false
-        };
-        exAppName.Aliases.Add("--productName");
-        exAppName.Aliases.Add("--appName");
-        var exComment = new Option<string>("--comment")
-        {
-            Description = "Comment / long description",
-            Required = false
-        };
-        var exVersion = new Option<string>("--version")
-        {
-            Description = "Version",
-            Required = false
-        };
-        var exAppId = new Option<string>("--appId")
-        {
-            Description = "Application Id (Reverse DNS typical)",
-            Required = false
-        };
         var exVendor = new Option<string>("--vendor")
         {
             Description = "Vendor/Publisher",
             Required = false
         };
         exVendor.Aliases.Add("--company");
-        var exExecutableName = new Option<string>("--executable-name")
-        {
-            Description = "Name of your application's executable",
-            Required = false
-        };
-        var exIconOption = new Option<IIcon?>("--icon")
-        {
-            Description = "Path to the application icon"
-        };
-        exIconOption.CustomParser = OptionsBinder.GetIcon;
 
-        var homePage = new Option<Uri>("--homepage") { Description = "Home page of the application", Required = false };
-        homePage.CustomParser = OptionsBinder.GetUri;
-        var screenshotUrls = new Option<IEnumerable<Uri>>("--screenshot-urls") { Description = "Screenshot URLs", Required = false };
-        screenshotUrls.CustomParser = OptionsBinder.GetUris;
-
-        var optionsBinder = new OptionsBinder(
-            exAppName,
-            new Option<string>("--wm-class"),
-            new Option<IEnumerable<string>>("--keywords"),
-            exComment,
-            new Option<MainCategory?>("--main-category"),
-            new Option<IEnumerable<AdditionalCategory>>("--additional-categories"),
-            exIconOption,
-            exVersion,
-            homePage,
-            new Option<string>("--license"),
-            screenshotUrls,
-            new Option<string>("--summary"),
-            exAppId,
-            exExecutableName,
-            new Option<bool>("--is-terminal")
-        );
+        var metadata = new MetadataOptionSet();
+        var optionsBinder = metadata.CreateBinder();
 
         exeCommand.Add(exeInputDir);
         exeCommand.Add(exeOutput);
         exeCommand.Add(stubPath);
         exeCommand.Add(setupLogo);
-        // Make metadata options global so subcommands can use them without re-adding
-        exAppName.Recursive = true;
-        exComment.Recursive = true;
-        exVersion.Recursive = true;
-        exAppId.Recursive = true;
+        metadata.ApplicationName.Recursive = true;
+        metadata.Comment.Recursive = true;
+        metadata.Version.Recursive = true;
+        metadata.AppId.Recursive = true;
         exVendor.Recursive = true;
-        exExecutableName.Recursive = true;
+        metadata.ExecutableName.Recursive = true;
         setupLogo.Recursive = true;
-        exeCommand.Add(exAppName);
-        exeCommand.Add(exComment);
-        exeCommand.Add(exVersion);
-        exeCommand.Add(exAppId);
+        metadata.AddTo(exeCommand);
         exeCommand.Add(exVendor);
-        exeCommand.Add(exExecutableName);
         exeCommand.Add(exArchTop);
-        exeCommand.Add(homePage);
-        exeCommand.Add(screenshotUrls);
 
         exeCommand.SetAction(async parseResult =>
         {
@@ -157,7 +96,7 @@ public static class ExeCommand
                     : null;
 
                 var packager = new ExePackager(logger: logger);
-                var metadata = new ExePackagerMetadata
+                var exeMetadata = new ExePackagerMetadata
                 {
                     Options = opt,
                     Vendor = Maybe.From(vendorOpt),
@@ -167,7 +106,7 @@ public static class ExeCommand
                     OutputName = Maybe.From(outFile.Name)
                 };
 
-                var result = await packager.Pack(containerResult, metadata);
+                var result = await packager.Pack(containerResult, exeMetadata);
                 if (result.IsFailure)
                 {
                     logger.Error("EXE packaging failed: {Error}", result.Error);
@@ -187,38 +126,7 @@ public static class ExeCommand
         });
 
         // exe from-project
-        var exProject = new Option<FileInfo>("--project")
-        {
-            Description = "Path to the .csproj file",
-            Required = true
-        };
-        var exArch = new Option<string?>("--arch")
-        {
-            Description = "Target architecture (x64, arm64)"
-        };
-        var exSelfContained = new Option<bool>("--self-contained")
-        {
-            Description = "Publish self-contained [Deprecated]"
-        };
-        exSelfContained.DefaultValueFactory = _ => true;
-        var exConfiguration = new Option<string>("--configuration")
-        {
-            Description = "Build configuration"
-        };
-        exConfiguration.DefaultValueFactory = _ => "Release";
-        var exSingleFile = new Option<bool>("--single-file")
-        {
-            Description = "Publish single-file"
-        };
-        var exTrimmed = new Option<bool>("--trimmed")
-        {
-            Description = "Enable trimming"
-        };
-        var exOut = new Option<FileInfo>("--output")
-        {
-            Description = "Output installer .exe",
-            Required = true
-        };
+        var project = new ProjectOptionSet(".exe");
         var exStub = new Option<FileInfo>("--stub")
         {
             Description = "Path to the prebuilt stub (WinExe) to concatenate (optional if repo layout is present)"
@@ -229,25 +137,18 @@ public static class ExeCommand
         };
 
         var exFromProject = new Command("from-project") { Description = "Publish a .NET project and build a Windows self-extracting installer (.exe). If --stub is not provided, the tool downloads the appropriate stub from GitHub Releases." };
-        exFromProject.Add(exProject);
-        exFromProject.Add(exArch);
-        exFromProject.Add(exSelfContained);
-        exFromProject.Add(exConfiguration);
-        exFromProject.Add(exSingleFile);
-        exFromProject.Add(exTrimmed);
-        exFromProject.Add(exOut);
+        project.AddTo(exFromProject);
         exFromProject.Add(exStub);
         exFromProject.Add(exSetupLogo);
 
         exFromProject.SetAction(async parseResult =>
         {
-            var prj = parseResult.GetValue(exProject)!;
-            var archVal = parseResult.GetValue(exArch);
-            var sc = parseResult.GetValue(exSelfContained);
-            var cfg = parseResult.GetValue(exConfiguration)!;
-            var sf = parseResult.GetValue(exSingleFile);
-            var tr = parseResult.GetValue(exTrimmed);
-            var extrasOutput = parseResult.GetValue(exOut)!;
+            var prj = parseResult.GetValue(project.Project)!;
+            var archVal = parseResult.GetValue(project.Arch);
+            var cfg = parseResult.GetValue(project.Configuration)!;
+            var sf = parseResult.GetValue(project.SingleFile);
+            var tr = parseResult.GetValue(project.Trimmed);
+            var extrasOutput = parseResult.GetValue(project.Output)!;
             var extrasStub = parseResult.GetValue(exStub);
             var extrasLogo = parseResult.GetValue(exSetupLogo);
             var vendorOpt = parseResult.GetValue(exVendor);
