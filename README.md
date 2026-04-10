@@ -20,7 +20,7 @@ Shipping .NET apps shouldn’t require juggling half a dozen platform tools. Dot
 - `src/DotnetPackaging.Tool`: the `dotnetpackager` CLI that consumes the libraries.
 - `src/DotnetPackaging.DeployerTool` and `src/DotnetPackaging.Deployment`: optional utilities for publishing packages from CI setups.
 
-All projects target .NET 8.
+All projects target .NET 10.
 
 ## Library usage
 
@@ -39,7 +39,7 @@ using Zafiro.DivineBytes.System.IO;
 using Zafiro.FileSystem.Core;
 using Zafiro.FileSystem.Local;
 
-var publishDir = new Directory(new FileSystem().DirectoryInfo.New("./bin/Release/net8.0/linux-x64/publish"));
+var publishDir = new Directory(new FileSystem().DirectoryInfo.New("./bin/Release/net10.0/linux-x64/publish"));
 var appRoot = (await publishDir.ToDirectory()).Value;
 var container = new DirectoryContainer(appRoot);
 
@@ -67,6 +67,7 @@ Key capabilities:
 - Build `.deb` archives from any container or directory that resembles the install root of your app.
 - Auto-detect the executable and architecture (with `FromDirectoryOptions` overrides when you know better).
 - Emit `IByteSource` streams so you can persist packages to disk, upload them elsewhere, or plug them into other pipelines.
+- **Install as a systemd service/daemon** with a single method call — generates the unit file, maintainer scripts, and automatic enable/start on install.
 
 ```csharp
 using System.IO.Abstractions;
@@ -75,7 +76,7 @@ using DotnetPackaging;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
 
-var publishDir = new DirectoryContainer(new FileSystem().DirectoryInfo.New("./bin/Release/net8.0/linux-x64/publish"));
+var publishDir = new DirectoryContainer(new FileSystem().DirectoryInfo.New("./bin/Release/net10.0/linux-x64/publish"));
 var options = new FromDirectoryOptions()
     .WithName("My App")
     .WithPackage("my-app")
@@ -90,6 +91,23 @@ if (debResult.IsSuccess)
     await debResult.Value.WriteTo("./artifacts/MyApp_1.0.0_amd64.deb");
 }
 ```
+
+To install the application as a systemd service, call `WithService()`:
+
+```csharp
+var options = new FromDirectoryOptions()
+    .WithName("My API")
+    .WithPackage("my-api")
+    .WithVersion("2.0.0")
+    .WithSummary("Web API backend")
+    .WithService(svc => svc
+        .WithType(ServiceType.Notify)
+        .WithRestart(RestartPolicy.Always)
+        .WithUser("www-data")
+        .WithEnvironment("DOTNET_ENVIRONMENT=Production", "ASPNETCORE_URLS=http://+:5000"));
+```
+
+The generated `.deb` will include a systemd unit file at `/lib/systemd/system/{package}.service` and maintainer scripts that `daemon-reload`, `enable`, and `start` the service on install, `stop` and `disable` on removal, and clean up on purge. This is the Linux equivalent of a Windows service — designed so .NET developers don't have to learn systemd internals.
 
 `FromDirectoryOptions` exposes many more helpers (`WithExecutableName`, `WithIcon`, `WithHomepage`, `WithCategories`, `WithMaintainer`, etc.) so you can describe the package metadata you need.
 
@@ -108,7 +126,7 @@ dotnet tool install --global DotnetPackaging.Tool
 - `dotnetpackager appimage` – build an `.AppImage` file directly from a publish directory.
 - `dotnetpackager appimage appdir` – generate an AppDir folder structure for inspection/customisation.
 - `dotnetpackager appimage from-appdir` – package an existing AppDir into an AppImage.
-- `dotnetpackager deb` – build a Debian/Ubuntu `.deb` out of a publish directory (and `deb from-project` to publish + package in one step).
+- `dotnetpackager deb` – build a Debian/Ubuntu `.deb` out of a publish directory (and `deb from-project` to publish + package in one step). Supports `--service` to install as a systemd daemon.
 - `dotnetpackager rpm` – build an RPM from a publish directory (`rpm from-project` also available) without owning system dirs.
 - `dotnetpackager msix` – experimental MSIX packing from a directory (`msix from-project` when you want it published for you).
 - `dotnetpackager dmg` – experimental macOS `.dmg` builder from a publish directory (`dmg from-project` to publish + package).
@@ -120,7 +138,7 @@ Run `dotnetpackager <command> --help` to see the full list of shared options (`-
 Build an AppImage in one go:
 ```bash
 dotnetpackager appimage \
-  --directory ./bin/Release/net8.0/linux-x64/publish \
+  --directory ./bin/Release/net10.0/linux-x64/publish \
   --output ./artifacts/MyApp.appimage \
   --application-name "My App" \
   --summary "Cross-platform sample" \
@@ -130,7 +148,7 @@ dotnetpackager appimage \
 Stage an AppDir and inspect it before packaging:
 ```bash
 dotnetpackager appimage appdir \
-  --directory ./bin/Release/net8.0/linux-x64/publish \
+  --directory ./bin/Release/net10.0/linux-x64/publish \
   --output-dir ./artifacts/MyApp.AppDir
 
 # ...modify the AppDir contents if needed...
@@ -143,7 +161,7 @@ dotnetpackager appimage from-appdir \
 Produce a Debian package with a custom name and version:
 ```bash
 dotnetpackager deb \
-  --directory ./bin/Release/net8.0/linux-x64/publish \
+  --directory ./bin/Release/net10.0/linux-x64/publish \
   --output ./artifacts/MyApp_1.0.0_amd64.deb \
   --application-name "My App" \
   --summary "Cross-platform sample" \
@@ -153,10 +171,49 @@ dotnetpackager deb \
   --version 1.0.0
 ```
 
-All commands work on Windows, macOS or Linux, but the produced artifacts target Linux desktops.
+Package a .NET project as a systemd service (publish + package in one step):
+```bash
+dotnetpackager deb from-project \
+  --project ./src/MyApi/MyApi.csproj \
+  --output ./artifacts/myapi.deb \
+  --service
+```
+
+That single `--service` flag generates a systemd unit file, maintainer scripts for `daemon-reload`/`enable`/`start` on install and `stop`/`disable` on removal. Sensible defaults (`Type=simple`, `Restart=on-failure`) mean you rarely need anything else, but you can fine-tune:
+
+```bash
+dotnetpackager deb from-project \
+  --project ./src/MyApi/MyApi.csproj \
+  --output ./artifacts/myapi.deb \
+  --service \
+  --service-type notify \
+  --service-restart always \
+  --service-user www-data \
+  --service-environment DOTNET_ENVIRONMENT=Production \
+  --service-environment ASPNETCORE_URLS=http://+:5000
+```
+
+The `--service` flag also works from a pre-published directory:
+```bash
+dotnetpackager deb \
+  --directory ./bin/Release/net10.0/linux-x64/publish \
+  --output ./artifacts/myapi.deb \
+  --application-name myapi \
+  --service
+```
+
+| Service option | Default | Values |
+|---|---|---|
+| `--service` | *(off)* | Flag — enables systemd service mode |
+| `--service-type` | `simple` | `simple`, `notify`, `forking`, `oneshot`, `idle` |
+| `--service-restart` | `on-failure` | `no`, `always`, `on-failure`, `on-abnormal`, `on-abort`, `on-watchdog` |
+| `--service-user` | *(none)* | Any Linux username |
+| `--service-environment` | *(none)* | `KEY=VALUE` pairs (repeatable) |
+
+All commands work on Windows, macOS or Linux, but the produced artifacts target Linux desktops (or Linux servers when using `--service`).
 
 ## Working on the repository
-- Use the solution `DotnetPackaging.sln` and .NET SDK 8.0 or later.
+- Use the solution `DotnetPackaging.sln` and .NET SDK 10.0 or later.
 - Unit tests live under `test/` (AppImage, Deb, Msix, etc.).
 - `DotnetPackaging.DeployerTool` automates publishing NuGet packages and GitHub releases; see `azure-pipelines.yml` for a full CI example.
 
