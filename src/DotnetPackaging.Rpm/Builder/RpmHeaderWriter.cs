@@ -59,6 +59,17 @@ internal static class RpmHeaderWriter
             RpmHeaderEntry.StringArray(RpmTag.DirNames, fileList.DirNames.ToArray())
         };
 
+        if (metadata.Service.HasValue)
+        {
+            var package = metadata.Package;
+            headerEntries.Add(RpmHeaderEntry.String(RpmTag.PostIn, RpmScriptlets.PostInstall(package)));
+            headerEntries.Add(RpmHeaderEntry.String(RpmTag.PostInProg, "/bin/sh"));
+            headerEntries.Add(RpmHeaderEntry.String(RpmTag.PreUn, RpmScriptlets.PreUninstall(package)));
+            headerEntries.Add(RpmHeaderEntry.String(RpmTag.PreUnProg, "/bin/sh"));
+            headerEntries.Add(RpmHeaderEntry.String(RpmTag.PostUn, RpmScriptlets.PostUninstall(package)));
+            headerEntries.Add(RpmHeaderEntry.String(RpmTag.PostUnProg, "/bin/sh"));
+        }
+
         return RpmHeaderBuilder.BuildWithRegion(headerEntries, RpmTag.HeaderImmutable);
     }
 
@@ -539,6 +550,14 @@ internal static class RpmTag
     public const int Vendor = 1011;
     public const int Url = 1020;
     public const int Group = 1016;
+    public const int PreIn = 1023;
+    public const int PostIn = 1024;
+    public const int PreUn = 1025;
+    public const int PostUn = 1026;
+    public const int PreInProg = 1085;
+    public const int PostInProg = 1086;
+    public const int PreUnProg = 1087;
+    public const int PostUnProg = 1088;
 }
 
 internal static class RpmSignatureTag

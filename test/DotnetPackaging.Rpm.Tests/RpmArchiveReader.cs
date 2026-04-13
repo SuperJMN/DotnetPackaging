@@ -171,6 +171,8 @@ public sealed class RpmHeader
         this.tags = tags;
     }
 
+    public bool HasTag(int tag) => tags.ContainsKey(tag);
+
     public string GetString(int tag) => (string)tags[tag].Value;
 
     public string[] GetStringArray(int tag) => (string[])tags[tag].Value;

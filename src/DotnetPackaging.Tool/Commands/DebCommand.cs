@@ -13,11 +13,7 @@ public static class DebCommand
 {
     public static Command GetCommand()
     {
-        var serviceOption = new Option<bool>("--service") { Description = "Install as a systemd service/daemon" };
-        var serviceTypeOption = new Option<string?>("--service-type") { Description = "systemd service type: simple (default), notify, forking, oneshot" };
-        var serviceRestartOption = new Option<string?>("--service-restart") { Description = "Restart policy: on-failure (default), always, no, on-abnormal, on-abort" };
-        var serviceUserOption = new Option<string?>("--service-user") { Description = "User to run the service as" };
-        var serviceEnvironmentOption = new Option<IEnumerable<string>>("--service-environment") { Description = "Environment variables (e.g., DOTNET_ENVIRONMENT=Production)", Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
+        var serviceOptions = new ServiceOptionSet();
 
         var commands = CommandFactory.CreateCommand(
             "deb",
@@ -26,40 +22,15 @@ public static class DebCommand
             CreateDeb,
             "Create a Debian (.deb) installer for Debian and Ubuntu based distributions.",
             null,
-            (opts, parseResult) => ApplyServiceOptions(opts, parseResult, serviceOption, serviceTypeOption, serviceRestartOption, serviceUserOption, serviceEnvironmentOption),
+            serviceOptions.Apply,
             "pack-deb",
             "debian");
 
-        commands.Root.Add(serviceOption);
-        commands.Root.Add(serviceTypeOption);
-        commands.Root.Add(serviceRestartOption);
-        commands.Root.Add(serviceUserOption);
-        commands.Root.Add(serviceEnvironmentOption);
+        serviceOptions.AddTo(commands.Root);
+        serviceOptions.AddTo(commands.FromDirectory);
 
-        commands.FromDirectory.Add(serviceOption);
-        commands.FromDirectory.Add(serviceTypeOption);
-        commands.FromDirectory.Add(serviceRestartOption);
-        commands.FromDirectory.Add(serviceUserOption);
-        commands.FromDirectory.Add(serviceEnvironmentOption);
-
-        AddFromProjectSubcommand(commands.Root, serviceOption, serviceTypeOption, serviceRestartOption, serviceUserOption, serviceEnvironmentOption);
+        AddFromProjectSubcommand(commands.Root, serviceOptions);
         return commands.Root;
-    }
-
-    private static void ApplyServiceOptions(Options opts, ParseResult parseResult, Option<bool> serviceOption, Option<string?> serviceTypeOption, Option<string?> serviceRestartOption, Option<string?> serviceUserOption, Option<IEnumerable<string>> serviceEnvironmentOption)
-    {
-        var isServiceEnabled = parseResult.GetValue(serviceOption);
-        if (!isServiceEnabled) return;
-
-        opts.IsService = true;
-        var svcType = parseResult.GetValue(serviceTypeOption);
-        if (svcType != null) opts.ServiceType = ParseServiceType(svcType);
-        var svcRestart = parseResult.GetValue(serviceRestartOption);
-        if (svcRestart != null) opts.ServiceRestart = ParseRestartPolicy(svcRestart);
-        var svcUser = parseResult.GetValue(serviceUserOption);
-        if (svcUser != null) opts.ServiceUser = svcUser;
-        var svcEnv = parseResult.GetValue(serviceEnvironmentOption)?.ToList();
-        if (svcEnv != null && svcEnv.Count > 0) opts.ServiceEnvironment = Maybe<IEnumerable<string>>.From(svcEnv);
     }
 
     private static Task CreateDeb(DirectoryInfo inputDir, FileInfo outputFile, Options options, ILogger logger)
@@ -77,7 +48,7 @@ public static class DebCommand
             .WriteResult();
     }
 
-    private static void AddFromProjectSubcommand(Command debCommand, Option<bool> serviceOption, Option<string?> serviceTypeOption, Option<string?> serviceRestartOption, Option<string?> serviceUserOption, Option<IEnumerable<string>> serviceEnvironmentOption)
+    private static void AddFromProjectSubcommand(Command debCommand, ServiceOptionSet serviceOptions)
     {
         var metadata = new MetadataOptionSet();
         var project = new ProjectOptionSet(".deb");
@@ -85,11 +56,7 @@ public static class DebCommand
         var fromProject = new Command("from-project") { Description = "Publish a .NET project and build a Debian .deb from the published output." };
         project.AddTo(fromProject);
         metadata.AddTo(fromProject);
-        fromProject.Add(serviceOption);
-        fromProject.Add(serviceTypeOption);
-        fromProject.Add(serviceRestartOption);
-        fromProject.Add(serviceUserOption);
-        fromProject.Add(serviceEnvironmentOption);
+        serviceOptions.AddTo(fromProject);
 
         var binder = metadata.CreateBinder();
 
@@ -104,7 +71,7 @@ public static class DebCommand
             var archVal = parseResult.GetValue(project.Arch);
             var logger = Log.ForContext("command", "deb-from-project");
 
-            ApplyServiceOptions(opt, parseResult, serviceOption, serviceTypeOption, serviceRestartOption, serviceUserOption, serviceEnvironmentOption);
+            serviceOptions.Apply(opt, parseResult);
 
             if (archVal == null)
             {
@@ -141,24 +108,4 @@ public static class DebCommand
         debCommand.Add(fromProject);
     }
 
-    private static ServiceType ParseServiceType(string value) => value.ToLowerInvariant() switch
-    {
-        "simple" => ServiceType.Simple,
-        "notify" => ServiceType.Notify,
-        "forking" => ServiceType.Forking,
-        "oneshot" => ServiceType.OneShot,
-        "idle" => ServiceType.Idle,
-        _ => ServiceType.Simple
-    };
-
-    private static RestartPolicy ParseRestartPolicy(string value) => value.ToLowerInvariant() switch
-    {
-        "no" => RestartPolicy.No,
-        "always" => RestartPolicy.Always,
-        "on-failure" => RestartPolicy.OnFailure,
-        "on-abnormal" => RestartPolicy.OnAbnormal,
-        "on-abort" => RestartPolicy.OnAbort,
-        "on-watchdog" => RestartPolicy.OnWatchdog,
-        _ => RestartPolicy.OnFailure
-    };
 }
