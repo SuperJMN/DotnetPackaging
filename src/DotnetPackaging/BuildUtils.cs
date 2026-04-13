@@ -44,7 +44,7 @@ public static class BuildUtils
         {
             log.Information("Found icon in resource {Resource}", RelativePath(iconPlan.Svg.Value));
         }
-        else
+        else if (setup.Icon.HasNoValue)
         {
             log.Warning("Icon autodetection: Could not find any icon in '{Label}'. Looked for candidates such as icon.svg, icon.png, icon-256.png", label);
         }
