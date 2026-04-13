@@ -10,6 +10,12 @@ internal static class RpmTestTags
     public const int Description = 1005;
     public const int Os = 1021;
     public const int Arch = 1022;
+    public const int PostIn = 1024;
+    public const int PreUn = 1025;
+    public const int PostUn = 1026;
+    public const int PostInProg = 1086;
+    public const int PreUnProg = 1087;
+    public const int PostUnProg = 1088;
     public const int FileSizes = 1028;
     public const int FileModes = 1030;
     public const int DirIndexes = 1116;

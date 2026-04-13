@@ -35,14 +35,27 @@ internal static class RpmLayoutBuilder
 
     private static IEnumerable<RpmEntry> ImplicitFiles(PackageMetadata metadata, string execAbsolutePath)
     {
+        var isService = metadata.Service.HasValue;
         var result = new List<RpmEntry>();
-        var desktopPath = NormalizePath($"/usr/share/applications/{metadata.Package.ToLowerInvariant()}.desktop");
-        var desktopContent = ByteSource.FromString(TextTemplates.DesktopFileContents(execAbsolutePath, metadata), Encoding.ASCII);
-        result.Add(new RpmEntry(desktopPath, UnixFileProperties.RegularFileProperties(), desktopContent, RpmEntryType.File));
+
+        if (!isService)
+        {
+            var desktopPath = NormalizePath($"/usr/share/applications/{metadata.Package.ToLowerInvariant()}.desktop");
+            var desktopContent = ByteSource.FromString(TextTemplates.DesktopFileContents(execAbsolutePath, metadata), Encoding.ASCII);
+            result.Add(new RpmEntry(desktopPath, UnixFileProperties.RegularFileProperties(), desktopContent, RpmEntryType.File));
+        }
 
         var launcherPath = NormalizePath($"/usr/bin/{metadata.Package.ToLowerInvariant()}");
         var launcherContent = ByteSource.FromString(TextTemplates.RunScript(execAbsolutePath), Encoding.ASCII);
         result.Add(new RpmEntry(launcherPath, UnixFileProperties.ExecutableFileProperties(), launcherContent, RpmEntryType.File));
+
+        if (isService)
+        {
+            var appDir = $"/opt/{metadata.Package}";
+            var unitContent = TextTemplates.SystemdUnitFile(execAbsolutePath, appDir, metadata);
+            var unitPath = NormalizePath($"/usr/lib/systemd/system/{metadata.Package.ToLowerInvariant()}.service");
+            result.Add(new RpmEntry(unitPath, UnixFileProperties.RegularFileProperties(), ByteSource.FromString(unitContent, Encoding.ASCII), RpmEntryType.File));
+        }
 
         var appStreamPath = NormalizePath($"/usr/share/metainfo/{metadata.Package.ToLowerInvariant()}.metainfo.xml");
         var appStreamContent = ByteSource.FromString(TextTemplates.AppStream(metadata), Encoding.UTF8);

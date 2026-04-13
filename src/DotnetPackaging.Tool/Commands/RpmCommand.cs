@@ -12,6 +12,8 @@ public static class RpmCommand
 {
     public static Command GetCommand()
     {
+        var serviceOptions = new ServiceOptionSet();
+
         var commands = CommandFactory.CreateCommand(
             "rpm",
             "RPM package",
@@ -19,10 +21,13 @@ public static class RpmCommand
             CreateRpm,
             "Create an RPM (.rpm) package suitable for Fedora, openSUSE, and other RPM-based distributions.",
             null,
-            null,
+            serviceOptions.Apply,
             "pack-rpm");
 
-        AddFromProjectSubcommand(commands.Root);
+        serviceOptions.AddTo(commands.Root);
+        serviceOptions.AddTo(commands.FromDirectory);
+
+        AddFromProjectSubcommand(commands.Root, serviceOptions);
         return commands.Root;
     }
 
@@ -41,13 +46,15 @@ public static class RpmCommand
             .WriteResult();
     }
 
-    private static void AddFromProjectSubcommand(Command rpmCommand)    {
+    private static void AddFromProjectSubcommand(Command rpmCommand, ServiceOptionSet serviceOptions)
+    {
         var metadata = new MetadataOptionSet();
         var project = new ProjectOptionSet(".rpm");
 
         var fromProject = new Command("from-project") { Description = "Publish a .NET project and build an RPM from the published output (no code duplication; library drives the pipeline)." };
         project.AddTo(fromProject);
         metadata.AddTo(fromProject);
+        serviceOptions.AddTo(fromProject);
 
         var binder = metadata.CreateBinder();
 
@@ -61,6 +68,8 @@ public static class RpmCommand
             var opt = binder.Bind(parseResult);
             var archVal = parseResult.GetValue(project.Arch);
             var logger = Log.ForContext("command", "rpm-from-project");
+
+            serviceOptions.Apply(opt, parseResult);
 
             if (archVal == null)
             {
