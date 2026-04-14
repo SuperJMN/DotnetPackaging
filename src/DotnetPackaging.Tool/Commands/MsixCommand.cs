@@ -34,6 +34,15 @@ public static class MsixCommand
             var outFile = parseResult.GetValue(outputFile)!;
             await ExecutionWrapper.ExecuteWithLogging("msix-pack", outFile.FullName, async logger =>
             {
+                var storeValidation = msixOptions.ValidateForStore(parseResult);
+                if (storeValidation.IsFailure)
+                {
+                    logger.Error(storeValidation.Error);
+                    Environment.ExitCode = 1;
+                    return;
+                }
+
+                var forStore = parseResult.GetValue(msixOptions.ForStore);
                 var dirInfo = new System.IO.Abstractions.FileSystem().DirectoryInfo.New(inDir.FullName);
                 var container = new DirectoryContainer(dirInfo);
                 var metadata = msixOptions.Bind(parseResult);
@@ -52,7 +61,7 @@ public static class MsixCommand
                 else
                 {
                     logger.Information("Success");
-                    LogSigningInfo(logger, signing, metadata);
+                    LogSigningInfo(logger, signing, metadata, forStore);
                 }
             });
         });
@@ -73,6 +82,15 @@ public static class MsixCommand
             var archVal = parseResult.GetValue(project.Arch);
             var logger = Log.ForContext("command", "msix-from-project");
 
+            var storeValidation = fromProjectOptions.ValidateForStore(parseResult);
+            if (storeValidation.IsFailure)
+            {
+                logger.Error(storeValidation.Error);
+                Environment.ExitCode = 1;
+                return;
+            }
+
+            var forStore = parseResult.GetValue(fromProjectOptions.ForStore);
             var metadata = fromProjectOptions.Bind(parseResult);
             var signing = fromProjectOptions.BindSigning(parseResult);
             var icon = fromProjectOptions.BindIcon(parseResult);
@@ -119,13 +137,13 @@ public static class MsixCommand
             result.WriteResult();
             if (result.IsSuccess)
             {
-                LogSigningInfo(logger, signing, metadata);
+                LogSigningInfo(logger, signing, metadata, forStore);
             }
         });
         msixCommand.Add(fromProject);
     }
 
-    private static void LogSigningInfo(ILogger logger, Maybe<SigningOptions> signing, Maybe<AppManifestMetadata> metadata)
+    private static void LogSigningInfo(ILogger logger, Maybe<SigningOptions> signing, Maybe<AppManifestMetadata> metadata, bool forStore)
     {
         if (!signing.HasValue)
         {
@@ -139,36 +157,47 @@ public static class MsixCommand
 
         logger.Information("");
         logger.Information("============================================================");
-        logger.Information("  MSIX SIGNING SUMMARY");
-        logger.Information("============================================================");
 
-        if (usedPfx)
+        if (forStore)
         {
-            logger.Information("  Signed with PFX certificate: {PfxPath}", signing.Value.PfxPath.Value);
+            logger.Information("  STORE-READY MSIX PACKAGE");
+            logger.Information("============================================================");
+
+            if (usedPfx)
+                logger.Information("  Signed with PFX certificate: {PfxPath}", signing.Value.PfxPath.Value);
+            else
+                logger.Information("  Signed with self-signed certificate.");
+
+            logger.Information("  Publisher: {Publisher}", publisher);
+            logger.Information("");
+            logger.Information("  This package is ready for Microsoft Store submission.");
+            logger.Information("  The Store will replace your signature with its own.");
+            logger.Information("  Make sure the Publisher above matches your Partner Center identity.");
         }
         else
         {
-            logger.Information("  Signed with a self-signed certificate ({Publisher}).", publisher);
-            logger.Information("  This is fine for development and for Microsoft Store submission.");
+            logger.Information("  MSIX PACKAGE (development build)");
+            logger.Information("============================================================");
+
+            if (usedPfx)
+                logger.Information("  Signed with PFX certificate: {PfxPath}", signing.Value.PfxPath.Value);
+            else
+                logger.Information("  Signed with self-signed certificate ({Publisher}).", publisher);
+
+            logger.Information("");
+            logger.Information("  This package works for development and sideloading.");
+            logger.Information("  To submit to the Microsoft Store, add --for-store:");
+            logger.Information("");
+            logger.Information("    --for-store --publisher \"CN=YOUR-PARTNER-CENTER-PUBLISHER-ID\"");
+            logger.Information("");
+            logger.Information("  To find your Publisher ID:");
+            logger.Information("    1. Go to https://partner.microsoft.com");
+            logger.Information("    2. Navigate to your app > Product Identity");
+            logger.Information("    3. Copy the 'Package/Identity/Publisher' value");
         }
 
         logger.Information("");
-        logger.Information("  MICROSOFT STORE SUBMISSION");
-        logger.Information("  --------------------------");
-        logger.Information("  The Store will REPLACE your signature with its own. However,");
-        logger.Information("  the Publisher identity in the manifest MUST match the one");
-        logger.Information("  assigned to you in Partner Center.");
-        logger.Information("");
-        logger.Information("  To find your Publisher ID:");
-        logger.Information("    1. Go to https://partner.microsoft.com");
-        logger.Information("    2. Navigate to your app > Product Identity");
-        logger.Information("    3. Copy the 'Package/Identity/Publisher' value (e.g. CN=XXXXXXXX-...)");
-        logger.Information("");
-        logger.Information("  Then re-package with:");
-        logger.Information("    --publisher \"CN=YOUR-PARTNER-CENTER-PUBLISHER-ID\"");
-        logger.Information("");
         logger.Information("  OTHER OPTIONS");
-        logger.Information("  -------------");
         logger.Information("  Custom certificate:  --pfx mycert.pfx --pfx-password secret");
         logger.Information("  Skip signing:        --sign false");
         logger.Information("  Set app identity:    --appId com.company.myapp --version 1.0.0.0");
@@ -191,6 +220,7 @@ public class MsixOptionSet
     public Option<string?> PfxPassword { get; } = new("--pfx-password") { Description = "Password for PFX certificate" };
     public Option<string> BackgroundColor { get; } = new("--background-color") { Description = "Tile background color (default: transparent)" };
     public Option<bool> Sign { get; } = new("--sign") { Description = "Sign the package (default: true)", DefaultValueFactory = _ => true };
+    public Option<bool> ForStore { get; } = new("--for-store") { Description = "Validate that the package is ready for Microsoft Store submission (requires --publisher)" };
 
     internal const string DefaultPublisher = "CN=DeveloperPackage";
 
@@ -214,6 +244,7 @@ public class MsixOptionSet
         command.Add(PfxPassword);
         command.Add(BackgroundColor);
         command.Add(Sign);
+        command.Add(ForStore);
     }
 
     public Maybe<AppManifestMetadata> Bind(ParseResult parseResult)
@@ -304,5 +335,35 @@ public class MsixOptionSet
             return Maybe<byte[]>.None;
 
         return Maybe<byte[]>.From(File.ReadAllBytes(iconFile.FullName));
+    }
+
+    public Result ValidateForStore(ParseResult parseResult)
+    {
+        if (!parseResult.GetValue(ForStore))
+            return Result.Success();
+
+        var publisher = parseResult.GetValue(Publisher);
+        if (string.IsNullOrWhiteSpace(publisher))
+        {
+            return Result.Failure(
+                "--for-store requires --publisher with your Partner Center identity.\n" +
+                "\n" +
+                "  To find your Publisher ID:\n" +
+                "    1. Go to https://partner.microsoft.com\n" +
+                "    2. Navigate to your app > Product Identity\n" +
+                "    3. Copy the 'Package/Identity/Publisher' value\n" +
+                "\n" +
+                "  Example:\n" +
+                "    --for-store --publisher \"CN=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX\"");
+        }
+
+        if (publisher == DefaultPublisher)
+        {
+            return Result.Failure(
+                $"--for-store cannot use the default publisher ({DefaultPublisher}).\n" +
+                "  Please provide your actual Partner Center publisher identity.");
+        }
+
+        return Result.Success();
     }
 }
