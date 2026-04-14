@@ -144,7 +144,7 @@ public class MsixPackagerTests
         var directoryContainer = new DirectoryContainer(directoryInfo);
 
         var packager = new MsixPackager();
-        var result = await packager.Pack(directoryContainer, Maybe<AppManifestMetadata>.None, Log.Logger);
+        var result = await packager.Pack(directoryContainer, Maybe<AppManifestMetadata>.None, logger: Log.Logger);
         Assert.True(result.IsSuccess);
 
         var outputPath = System.IO.Path.Combine("TestFiles", folderName, "Actual.msix");

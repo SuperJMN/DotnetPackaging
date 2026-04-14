@@ -1,19 +1,7 @@
 ﻿namespace DotnetPackaging.Msix.Core.Compression;
 
-internal class Block
+internal class MsixBlock
 {
-    /// <summary>
-    /// Tamaño original del bloque antes de la compresión
-    /// </summary>
-    public byte[] UncompressedData { get; set; }
-
-    /// <summary>
-    /// Datos comprimidos
-    /// </summary>
-    public byte[] CompressedData { get; set; }
-
-    /// <summary>
-    /// Posición del bloque en la secuencia original
-    /// </summary>
-    public long BlockPosition { get; set; }
+    public required byte[] OriginalData { get; init; }
+    public required byte[] CompressedData { get; init; }
 }

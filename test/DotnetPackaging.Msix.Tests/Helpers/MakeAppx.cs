@@ -49,6 +49,14 @@ public static class MakeAppx
                 return makeAppxResult;
             }
         }
+        else
+        {
+            var makeMsixResult = await TryRunMakeMsixAsync(msixPath, outputDirectory, workingDir, timeoutSeconds);
+            if (makeMsixResult != null)
+            {
+                return makeMsixResult;
+            }
+        }
 
         return ExtractWithZipArchive(msixPath, outputDirectory);
     }
@@ -145,6 +153,121 @@ public static class MakeAppx
                 Exception = ex
             };
         }
+    }
+
+    private static async Task<MsixUnpackResult?> TryRunMakeMsixAsync(
+        string msixPath,
+        string outputDirectory,
+        string workingDirectory,
+        int timeoutSeconds)
+    {
+        var makeMsixPath = FindMakeMsix();
+        if (makeMsixPath is null)
+        {
+            return null;
+        }
+
+        var libDir = Path.GetDirectoryName(Path.GetDirectoryName(makeMsixPath));
+        var ldLibPath = libDir != null ? Path.Combine(libDir, "lib") : null;
+
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = makeMsixPath,
+                Arguments = $"unpack -p \"{msixPath}\" -d \"{outputDirectory}\" -ss",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WorkingDirectory = workingDirectory
+            }
+        };
+
+        if (ldLibPath != null && Directory.Exists(ldLibPath))
+        {
+            var existing = Environment.GetEnvironmentVariable("LD_LIBRARY_PATH") ?? "";
+            process.StartInfo.Environment["LD_LIBRARY_PATH"] = string.IsNullOrEmpty(existing)
+                ? ldLibPath
+                : $"{ldLibPath}:{existing}";
+        }
+
+        try
+        {
+            if (!process.Start())
+            {
+                return null;
+            }
+
+            var stdOutTask = process.StandardOutput.ReadToEndAsync();
+            var stdErrTask = process.StandardError.ReadToEndAsync();
+
+            if (timeoutSeconds > 0)
+            {
+                var delayTask = Task.Delay(TimeSpan.FromSeconds(timeoutSeconds));
+                var finishedTask = await Task.WhenAny(process.WaitForExitAsync(), delayTask);
+                if (finishedTask == delayTask)
+                {
+                    try { process.Kill(entireProcessTree: true); } catch { }
+                    return new MsixUnpackResult
+                    {
+                        Success = false,
+                        ExitCode = -1,
+                        ErrorMessage = "makemsix timed out"
+                    };
+                }
+            }
+            else
+            {
+                await process.WaitForExitAsync();
+            }
+
+            var standardOutput = await stdOutTask.ConfigureAwait(false);
+            var errorOutput = await stdErrTask.ConfigureAwait(false);
+
+            return new MsixUnpackResult
+            {
+                Success = process.ExitCode == 0,
+                ExitCode = process.ExitCode,
+                StandardOutput = standardOutput,
+                ErrorOutput = errorOutput,
+                ErrorMessage = process.ExitCode != 0
+                    ? $"makemsix unpack failed with exit code {process.ExitCode}: {errorOutput}"
+                    : null
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? FindMakeMsix()
+    {
+        var envPath = Environment.GetEnvironmentVariable("MAKEMSIX_PATH");
+        if (!string.IsNullOrEmpty(envPath) && File.Exists(envPath))
+        {
+            return envPath;
+        }
+
+        var pathEnv = Environment.GetEnvironmentVariable("PATH");
+        if (!string.IsNullOrWhiteSpace(pathEnv))
+        {
+            foreach (var directory in pathEnv.Split(Path.PathSeparator))
+            {
+                try
+                {
+                    var trimmed = directory.Trim();
+                    if (trimmed.Length == 0) continue;
+
+                    var candidate = Path.Combine(trimmed, "makemsix");
+                    if (File.Exists(candidate)) return candidate;
+                }
+                catch { }
+            }
+        }
+
+        return null;
     }
 
     private static MsixUnpackResult ExtractWithZipArchive(string msixPath, string outputDirectory)

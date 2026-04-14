@@ -13,12 +13,12 @@ public static class MsixPackagerExtensions
         string projectPath,
         Action<AppManifestMetadata>? metadataConfigure = null,
         Action<ProjectPublishRequest>? publishConfigure = null,
+        Maybe<SigningOptions> signingOptions = default,
+        Maybe<byte[]> sourceIcon = default,
         ILogger? logger = null)
     {
         if (packager == null)
-        {
             throw new ArgumentNullException(nameof(packager));
-        }
 
         var publishRequest = new ProjectPublishRequest(projectPath);
         publishConfigure?.Invoke(publishRequest);
@@ -30,7 +30,7 @@ public static class MsixPackagerExtensions
 
         return ByteSource.FromDisposableAsync(
             () => publisher.Publish(publishRequest),
-            container => packager.Pack(container, metadata, logger));
+            container => packager.Pack(container, metadata, signingOptions, sourceIcon, logger));
     }
 
     public static Task<Result> PackProject(
@@ -39,9 +39,11 @@ public static class MsixPackagerExtensions
         string outputPath,
         Action<AppManifestMetadata>? metadataConfigure = null,
         Action<ProjectPublishRequest>? publishConfigure = null,
+        Maybe<SigningOptions> signingOptions = default,
+        Maybe<byte[]> sourceIcon = default,
         ILogger? logger = null)
     {
-        var source = packager.FromProject(projectPath, metadataConfigure, publishConfigure, logger);
+        var source = packager.FromProject(projectPath, metadataConfigure, publishConfigure, signingOptions, sourceIcon, logger);
         return source.WriteTo(outputPath);
     }
 
