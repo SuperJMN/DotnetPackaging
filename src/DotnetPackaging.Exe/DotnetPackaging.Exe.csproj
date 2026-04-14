@@ -6,6 +6,9 @@
     <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="DotnetPackaging.Exe.Tests" />
+  </ItemGroup>
   <Import Project="..\Common.props" />
   <ItemGroup>
     <PackageReference Include="NuGet.Versioning" />
@@ -13,6 +16,7 @@
     <PackageReference Include="System.IO.Abstractions" />
     <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" />
     <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <PackageReference Include="Zafiro.DivineBytes" />
   </ItemGroup>
   <ItemGroup>
