@@ -52,6 +52,7 @@ public static class MsixCommand
                 else
                 {
                     logger.Information("Success");
+                    LogSigningInfo(logger, signing, metadata);
                 }
             });
         });
@@ -116,8 +117,62 @@ public static class MsixCommand
                 logger);
 
             result.WriteResult();
+            if (result.IsSuccess)
+            {
+                LogSigningInfo(logger, signing, metadata);
+            }
         });
         msixCommand.Add(fromProject);
+    }
+
+    private static void LogSigningInfo(ILogger logger, Maybe<SigningOptions> signing, Maybe<AppManifestMetadata> metadata)
+    {
+        if (!signing.HasValue)
+        {
+            logger.Warning("Package was NOT signed. Use --sign to enable signing (default) or provide --pfx for a custom certificate.");
+            return;
+        }
+
+        var publisher = signing.Value.PublisherCN
+            ?? metadata.Map(m => m.Publisher).GetValueOrDefault(MsixOptionSet.DefaultPublisher);
+        var usedPfx = signing.Value.PfxPath.HasValue;
+
+        logger.Information("");
+        logger.Information("============================================================");
+        logger.Information("  MSIX SIGNING SUMMARY");
+        logger.Information("============================================================");
+
+        if (usedPfx)
+        {
+            logger.Information("  Signed with PFX certificate: {PfxPath}", signing.Value.PfxPath.Value);
+        }
+        else
+        {
+            logger.Information("  Signed with a self-signed certificate ({Publisher}).", publisher);
+            logger.Information("  This is fine for development and for Microsoft Store submission.");
+        }
+
+        logger.Information("");
+        logger.Information("  MICROSOFT STORE SUBMISSION");
+        logger.Information("  --------------------------");
+        logger.Information("  The Store will REPLACE your signature with its own. However,");
+        logger.Information("  the Publisher identity in the manifest MUST match the one");
+        logger.Information("  assigned to you in Partner Center.");
+        logger.Information("");
+        logger.Information("  To find your Publisher ID:");
+        logger.Information("    1. Go to https://partner.microsoft.com");
+        logger.Information("    2. Navigate to your app > Product Identity");
+        logger.Information("    3. Copy the 'Package/Identity/Publisher' value (e.g. CN=XXXXXXXX-...)");
+        logger.Information("");
+        logger.Information("  Then re-package with:");
+        logger.Information("    --publisher \"CN=YOUR-PARTNER-CENTER-PUBLISHER-ID\"");
+        logger.Information("");
+        logger.Information("  OTHER OPTIONS");
+        logger.Information("  -------------");
+        logger.Information("  Custom certificate:  --pfx mycert.pfx --pfx-password secret");
+        logger.Information("  Skip signing:        --sign false");
+        logger.Information("  Set app identity:    --appId com.company.myapp --version 1.0.0.0");
+        logger.Information("============================================================");
     }
 }
 
@@ -136,6 +191,8 @@ public class MsixOptionSet
     public Option<string?> PfxPassword { get; } = new("--pfx-password") { Description = "Password for PFX certificate" };
     public Option<string> BackgroundColor { get; } = new("--background-color") { Description = "Tile background color (default: transparent)" };
     public Option<bool> Sign { get; } = new("--sign") { Description = "Sign the package (default: true)", DefaultValueFactory = _ => true };
+
+    internal const string DefaultPublisher = "CN=DeveloperPackage";
 
     public MsixOptionSet()
     {
@@ -162,10 +219,16 @@ public class MsixOptionSet
     public Maybe<AppManifestMetadata> Bind(ParseResult parseResult)
     {
         var publisher = parseResult.GetValue(Publisher);
-        if (string.IsNullOrWhiteSpace(publisher))
+        var sign = parseResult.GetValue(Sign);
+
+        var effectivePublisher = !string.IsNullOrWhiteSpace(publisher)
+            ? publisher
+            : sign ? DefaultPublisher : null;
+
+        if (effectivePublisher == null)
             return Maybe<AppManifestMetadata>.None;
 
-        var metadata = new AppManifestMetadata { Publisher = publisher };
+        var metadata = new AppManifestMetadata { Publisher = effectivePublisher };
 
         var name = parseResult.GetValue(ApplicationName);
         if (!string.IsNullOrWhiteSpace(name))
@@ -178,6 +241,8 @@ public class MsixOptionSet
         var pubDisplay = parseResult.GetValue(PublisherDisplayName);
         if (!string.IsNullOrWhiteSpace(pubDisplay))
             metadata.PublisherDisplayName = pubDisplay;
+        else if (!string.IsNullOrWhiteSpace(publisher))
+            metadata.PublisherDisplayName = publisher.Replace("CN=", "");
 
         var version = parseResult.GetValue(Version);
         if (!string.IsNullOrWhiteSpace(version))
@@ -215,19 +280,17 @@ public class MsixOptionSet
         var pfx = parseResult.GetValue(Pfx);
         var sign = parseResult.GetValue(Sign);
 
-        var hasPfx = pfx != null;
-        var hasPublisher = !string.IsNullOrWhiteSpace(publisher);
-
-        if (!sign && !hasPfx)
+        if (!sign && pfx == null)
             return Maybe<SigningOptions>.None;
 
-        if (!hasPublisher && !hasPfx)
-            return Maybe<SigningOptions>.None;
+        var effectivePublisher = !string.IsNullOrWhiteSpace(publisher)
+            ? publisher
+            : DefaultPublisher;
 
         var options = new SigningOptions
         {
-            PublisherCN = publisher,
-            PfxPath = hasPfx ? Maybe<string>.From(pfx!.FullName) : Maybe<string>.None,
+            PublisherCN = effectivePublisher,
+            PfxPath = pfx != null ? Maybe<string>.From(pfx.FullName) : Maybe<string>.None,
             PfxPassword = Maybe<string>.From(parseResult.GetValue(PfxPassword) ?? string.Empty),
         };
 
