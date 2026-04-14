@@ -97,27 +97,74 @@ internal static class Compressor
         });
     }
 
+    /// <summary>
+    /// Splits the source into 64KB blocks and compresses them using a single
+    /// DeflateStream with Flush() (Z_SYNC_FLUSH) between blocks, matching the
+    /// MSIX SDK's approach (Z_FULL_FLUSH). The result is a single valid deflate
+    /// stream that can be decompressed end-to-end. A final block with empty
+    /// OriginalData is emitted for the stream terminator (Z_FINISH).
+    /// </summary>
     public static IObservable<MsixBlock> CompressionBlocks(this IObservable<byte[]> bytes)
     {
-        return bytes.Flatten().Buffer(BlockSize).Select(chunk =>
+        return Observable.Create<MsixBlock>(observer =>
         {
-            var original = chunk.ToArray();
-            var compressed = DeflateBlock(original);
-            return new MsixBlock
-            {
-                OriginalData = original,
-                CompressedData = compressed,
-            };
-        });
-    }
+            var output = new MemoryStream();
+            var deflate = new DeflateStream(output, CompressionLevel.Optimal, leaveOpen: true);
 
-    private static byte[] DeflateBlock(byte[] data)
-    {
-        using var output = new MemoryStream();
-        using (var deflate = new DeflateStream(output, CompressionLevel.Optimal, leaveOpen: true))
-        {
-            deflate.Write(data, 0, data.Length);
-        }
-        return output.ToArray();
+            return bytes.Flatten().Buffer(BlockSize).Subscribe(
+                chunk =>
+                {
+                    try
+                    {
+                        var original = chunk.ToArray();
+                        var startPos = output.Position;
+
+                        deflate.Write(original, 0, original.Length);
+                        deflate.Flush();
+
+                        var compressed = output.GetBuffer().AsSpan((int)startPos, (int)(output.Position - startPos)).ToArray();
+
+                        observer.OnNext(new MsixBlock
+                        {
+                            OriginalData = original,
+                            CompressedData = compressed,
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        observer.OnError(ex);
+                    }
+                },
+                ex =>
+                {
+                    try { deflate.Dispose(); } catch { }
+                    observer.OnError(ex);
+                },
+                () =>
+                {
+                    try
+                    {
+                        var finishStart = output.Position;
+                        deflate.Dispose();
+                        var finishEnd = output.Position;
+
+                        if (finishEnd > finishStart)
+                        {
+                            var finishBytes = output.GetBuffer().AsSpan((int)finishStart, (int)(finishEnd - finishStart)).ToArray();
+                            observer.OnNext(new MsixBlock
+                            {
+                                OriginalData = Array.Empty<byte>(),
+                                CompressedData = finishBytes,
+                            });
+                        }
+
+                        observer.OnCompleted();
+                    }
+                    catch (Exception ex)
+                    {
+                        observer.OnError(ex);
+                    }
+                });
+        });
     }
 }

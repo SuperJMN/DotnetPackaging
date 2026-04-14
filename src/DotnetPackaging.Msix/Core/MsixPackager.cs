@@ -108,16 +108,14 @@ internal class MsixPackager(Maybe<X509Certificate2> certificate, Maybe<ILogger> 
             }
             else
             {
-                var compressionBlocks = file.Bytes.CompressionBlocks();
+                blocks = await file.Bytes.CompressionBlocks().ToList();
                 entry = new MsixEntry
                 {
                     Original = file,
-                    Compressed = ByteSource.FromByteObservable(compressionBlocks.Select(x => x.CompressedData)),
+                    Compressed = ByteSource.FromBytes(blocks.SelectMany(b => b.CompressedData).ToArray()),
                     FullPath = file.FullPath(),
                     CompressionLevel = CompressionLevel.Optimal,
                 };
-
-                blocks = await compressionBlocks.ToList();
             }
 
             PopulateEntryMetadata(entry, blocks);

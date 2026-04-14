@@ -34,7 +34,9 @@ internal class BlockMapSerializer(Maybe<ILogger> logger)
 
             sb.Append($"<File Name=\"{fileName}\" Size=\"{size}\" LfhSize=\"{lfhSize}\">");
 
-            foreach (var block in fileInfo.Blocks)
+            var dataBlocks = fileInfo.Blocks.Where(b => b.OriginalData.Length > 0).ToList();
+
+            foreach (var block in dataBlocks)
             {
                 var blockHash = Convert.ToBase64String(SHA256.HashData(block.OriginalData));
                 sb.Append($"<Block Hash=\"{blockHash}\"");
@@ -47,7 +49,7 @@ internal class BlockMapSerializer(Maybe<ILogger> logger)
                 sb.Append("/>");
             }
 
-            if (fileInfo.Blocks.Count > 1)
+            if (dataBlocks.Count > 1)
             {
                 var fileHash = ComputeFileHash(fileInfo.Blocks);
                 sb.Append($"<b4:FileHash Hash=\"{fileHash}\"/>");
