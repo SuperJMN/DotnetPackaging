@@ -1,12 +1,13 @@
 ﻿using System.IO.Pipelines;
 using System.Reactive.Disposables;
-using BlockCompressor;
 using Zafiro.Reactive;
 
 namespace DotnetPackaging.Msix.Core.Compression;
 
 internal static class Compressor
 {
+    private const int BlockSize = 64 * 1024;
+
     public static async Task<byte[]> Uncompress(byte[] compressedData)
     {
         using (var ms = new MemoryStream(compressedData))
@@ -26,17 +27,13 @@ internal static class Compressor
     {
         return Observable.Create<byte[]>(observer =>
         {
-            // Increase buffer size to avoid blocking
-            var pipeOptions = new PipeOptions(pauseWriterThreshold: 1024 * 1024); // 1MB
+            var pipeOptions = new PipeOptions(pauseWriterThreshold: 1024 * 1024);
             var pipe = new Pipe(pipeOptions);
 
-            // First configure the read subscription to ensure data is consumed
             var readSubscription = pipe.Reader.AsStream().ToObservable().Subscribe(observer);
 
-            // Create DeflateStream after configuring the read
             var deflateStream = new DeflateStream(pipe.Writer.AsStream(), compressionLevel, leaveOpen: true);
 
-            // Suscribirse a la fuente
             var subscription = source.Subscribe(
                 block =>
                 {
@@ -44,8 +41,8 @@ internal static class Compressor
                     {
                         var array = block.ToArray();
                         deflateStream.Write(array, 0, array.Length);
-                        deflateStream.Flush(); // Hacer flush del DeflateStream
-                        pipe.Writer.FlushAsync().GetAwaiter().GetResult(); // Hacer flush del PipeWriter
+                        deflateStream.Flush();
+                        pipe.Writer.FlushAsync().GetAwaiter().GetResult();
                     }
                     catch (Exception ex)
                     {
@@ -100,8 +97,27 @@ internal static class Compressor
         });
     }
 
-    public static IObservable<DeflateBlock> CompressionBlocks(this IObservable<byte[]> bytes)
+    public static IObservable<MsixBlock> CompressionBlocks(this IObservable<byte[]> bytes)
     {
-        return BlockCompressor.Compressed.Blocks(bytes);
+        return bytes.Flatten().Buffer(BlockSize).Select(chunk =>
+        {
+            var original = chunk.ToArray();
+            var compressed = DeflateBlock(original);
+            return new MsixBlock
+            {
+                OriginalData = original,
+                CompressedData = compressed,
+            };
+        });
+    }
+
+    private static byte[] DeflateBlock(byte[] data)
+    {
+        using var output = new MemoryStream();
+        using (var deflate = new DeflateStream(output, CompressionLevel.Optimal, leaveOpen: true))
+        {
+            deflate.Write(data, 0, data.Length);
+        }
+        return output.ToArray();
     }
 }

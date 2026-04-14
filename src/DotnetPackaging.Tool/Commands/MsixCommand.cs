@@ -135,7 +135,7 @@ public class MsixOptionSet
     public Option<FileInfo?> Pfx { get; } = new("--pfx") { Description = "PFX certificate file for signing (optional; self-signed if omitted)" };
     public Option<string?> PfxPassword { get; } = new("--pfx-password") { Description = "Password for PFX certificate" };
     public Option<string> BackgroundColor { get; } = new("--background-color") { Description = "Tile background color (default: transparent)" };
-    public Option<bool> Sign { get; } = new("--sign") { Description = "Sign the package (default: true if --publisher is provided)" };
+    public Option<bool> Sign { get; } = new("--sign") { Description = "Sign the package (default: true)", DefaultValueFactory = _ => true };
 
     public MsixOptionSet()
     {

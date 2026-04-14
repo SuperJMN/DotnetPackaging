@@ -2,8 +2,8 @@ using System;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
-using BlockCompressor;
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Msix.Core.Compression;
 using Zafiro.Mixins;
 
 namespace DotnetPackaging.Msix.Core.BlockMap;
@@ -65,7 +65,7 @@ internal class BlockMapSerializer(Maybe<ILogger> logger)
         return SecurityElement.Escape(value) ?? value;
     }
 
-    private static string ComputeFileHash(IList<DeflateBlock> blocks)
+    private static string ComputeFileHash(IList<MsixBlock> blocks)
     {
         using var sha = SHA256.Create();
         foreach (var block in blocks)

@@ -8,7 +8,6 @@
   <ItemGroup>
     <PackageReference Include="System.IO.Hashing" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" />
-    <PackageReference Include="DeflateBlockCompressor" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DotnetPackaging\DotnetPackaging.csproj" />

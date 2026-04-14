@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using BlockCompressor;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Msix.Core.BlockMap;
 using DotnetPackaging.Msix.Core.Compression;
@@ -89,7 +88,7 @@ internal class MsixPackager(Maybe<X509Certificate2> certificate, Maybe<ILogger> 
         {
             logger.Debug("Processing {File}", file.FullPath());
             MsixEntry entry;
-            IList<DeflateBlock> blocks;
+            IList<MsixBlock> blocks;
 
             if (ShouldStore(file.Name))
             {
@@ -101,7 +100,7 @@ internal class MsixPackager(Maybe<X509Certificate2> certificate, Maybe<ILogger> 
                     CompressionLevel = CompressionLevel.NoCompression,
                 };
 
-                blocks = await file.Bytes.Flatten().Buffer(64 * 1024).Select(list => new DeflateBlock
+                blocks = await file.Bytes.Flatten().Buffer(64 * 1024).Select(list => new MsixBlock
                 {
                     CompressedData = list.ToArray(),
                     OriginalData = list.ToArray(),
@@ -134,7 +133,7 @@ internal class MsixPackager(Maybe<X509Certificate2> certificate, Maybe<ILogger> 
         return await AddBlockMap(msix, blockInfos);
     }
 
-    private static void PopulateEntryMetadata(MsixEntry entry, IList<DeflateBlock> blocks)
+    private static void PopulateEntryMetadata(MsixEntry entry, IList<MsixBlock> blocks)
     {
         var crc32 = new System.IO.Hashing.Crc32();
         long uncompressed = 0;
