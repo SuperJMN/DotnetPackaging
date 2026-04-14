@@ -1,17 +1,19 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using BlockCompressor;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Msix.Core.BlockMap;
 using DotnetPackaging.Msix.Core.Compression;
 using DotnetPackaging.Msix.Core.ContentTypes;
+using DotnetPackaging.Msix.Core.Signing;
 using Zafiro.Mixins;
 using Zafiro.Reactive;
 
 namespace DotnetPackaging.Msix.Core;
 
-internal class MsixPackager(Maybe<ILogger> logger)
+internal class MsixPackager(Maybe<X509Certificate2> certificate, Maybe<ILogger> logger)
 {
     private static readonly HashSet<string> NonCompressibleExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -44,10 +46,23 @@ internal class MsixPackager(Maybe<ILogger> logger)
             .OrderBy(file => file, FileOrderingComparer)
             .ToList();
 
+        string blockMapXml;
         await using (var zipper = new MsixBuilder(zipStream, logger))
         {
-            await WritePayload(orderedFiles, zipper);
+            blockMapXml = await WritePayload(orderedFiles, zipper);
             await WriteContentTypes(orderedFiles, zipper);
+
+            if (certificate.HasValue)
+            {
+                var blockMapBytes = Encoding.UTF8.GetBytes(blockMapXml);
+                var signResult = MsixSigner.Sign(blockMapBytes, certificate.Value);
+                if (signResult.IsSuccess)
+                {
+                    await zipper.PutNextEntry(MsixEntryFactory.Compress(
+                        "AppxSignature.p7x",
+                        ByteSource.FromBytes(signResult.Value)));
+                }
+            }
         }
 
         var finalStream = new MemoryStream();
@@ -66,7 +81,7 @@ internal class MsixPackager(Maybe<ILogger> logger)
         await msix.PutNextEntry(MsixEntryFactory.Compress("[Content_Types].xml", ByteSource.FromString(xml, Encoding.UTF8)));
     }
 
-    private async Task WritePayload(IEnumerable<INamedByteSourceWithPath> files, MsixBuilder msix)
+    private async Task<string> WritePayload(IEnumerable<INamedByteSourceWithPath> files, MsixBuilder msix)
     {
         var blockInfos = new List<FileBlockInfo>();
 
@@ -116,7 +131,7 @@ internal class MsixPackager(Maybe<ILogger> logger)
             blockInfos.Add(fileBlockInfo);
         }
 
-        await AddBlockMap(msix, blockInfos);
+        return await AddBlockMap(msix, blockInfos);
     }
 
     private static void PopulateEntryMetadata(MsixEntry entry, IList<DeflateBlock> blocks)
@@ -257,7 +272,7 @@ internal class MsixPackager(Maybe<ILogger> logger)
         return (left.Length - indexLeft).CompareTo(right.Length - indexRight);
     }
 
-    private async Task AddBlockMap(MsixBuilder msix, List<FileBlockInfo> blockInfos)
+    private async Task<string> AddBlockMap(MsixBuilder msix, List<FileBlockInfo> blockInfos)
     {
         logger.Debug("Adding Block Map");
         var blockMapModel = new BlockMapModel("SHA256", blockInfos.ToImmutableList());
@@ -268,5 +283,6 @@ internal class MsixPackager(Maybe<ILogger> logger)
         logger.Debug("Adding Block Map entry to package");
         await msix.PutNextEntry(MsixEntryFactory.Compress("AppxBlockMap.xml", ByteSource.FromString(blockMapXml, Encoding.UTF8)));
         logger.Debug("Block map added");
+        return blockMapXml;
     }
 }

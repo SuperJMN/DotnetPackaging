@@ -13,13 +13,36 @@ internal static class ContentTypesGenerator
     {
         { "pdb", "application/octet-stream" },
         { "exe", "application/x-msdownload" },
+        { "dll", "application/x-msdownload" },
         { "png", "image/png" },
-        { "xml", "application/vnd.ms-appx.manifest+xml" }
+        { "jpg", "image/jpeg" },
+        { "jpeg", "image/jpeg" },
+        { "gif", "image/gif" },
+        { "svg", "image/svg+xml" },
+        { "ico", "image/x-icon" },
+        { "xml", "application/vnd.ms-appx.manifest+xml" },
+        { "json", "application/json" },
+        { "config", "application/xml" },
+        { "pri", "application/vnd.ms-appx.resource+xml" },
+        { "resw", "application/xml" },
+        { "txt", "text/plain" },
+        { "htm", "text/html" },
+        { "html", "text/html" },
+        { "css", "text/css" },
+        { "js", "application/javascript" },
+        { "ttf", "application/x-font-ttf" },
+        { "otf", "font/otf" },
+        { "woff", "application/font-woff" },
+        { "woff2", "font/woff2" },
+        { "mp4", "video/mp4" },
+        { "mp3", "audio/mpeg" },
+        { "wav", "audio/wav" },
     };
 
     private static readonly Dictionary<string, string> OverrideMappings = new(StringComparer.OrdinalIgnoreCase)
     {
-        { "/AppxBlockMap.xml", "application/vnd.ms-appx.blockmap+xml" }
+        { "/AppxBlockMap.xml", "application/vnd.ms-appx.blockmap+xml" },
+        { "/AppxSignature.p7x", "application/vnd.ms-appx.signature" },
     };
 
     public static ContentTypesModel Create(IEnumerable<string> partNames)

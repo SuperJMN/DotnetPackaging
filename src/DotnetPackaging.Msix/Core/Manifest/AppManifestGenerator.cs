@@ -4,7 +4,7 @@ using System.Xml.Linq;
 namespace DotnetPackaging.Msix.Core.Manifest;
 
 /// <summary>
-/// Class to store essential metadata for AppManifest.xml
+/// Metadata for generating a Store-compliant AppxManifest.xml.
 /// </summary>
 public class AppManifestMetadata
 {
@@ -12,94 +12,92 @@ public class AppManifestMetadata
     public string Name { get; set; } = "com.example.app";
     public string Publisher { get; set; } = "CN=Publisher";
     public string Version { get; set; } = "1.0.0.0";
+    public string ProcessorArchitecture { get; set; } = "x64";
 
     // Properties
     public string DisplayName { get; set; } = "App Name";
     public string PublisherDisplayName { get; set; } = "Publisher Name";
-    public string Logo { get; set; } = "Assets\\StoreLogo.png";
+    public string Logo { get; set; } = @"Assets\StoreLogo.png";
+
+    // Phone Identity (required by Partner Center)
+    public string PhoneIdentity { get; set; } = Guid.NewGuid().ToString("D");
 
     // Application
     public string AppId { get; set; } = "App";
     public string Executable { get; set; } = "MyApp.exe";
     public string AppDisplayName { get; set; } = "Application Display Name";
     public string AppDescription { get; set; } = "Application Description";
-    public string Square150x150Logo { get; set; } = "Assets\\Square150x150Logo.png";
-    public string Square44x44Logo { get; set; } = "Assets\\Square44x44Logo.png";
+    public string Square150x150Logo { get; set; } = @"Assets\Square150x150Logo.png";
+    public string Square44x44Logo { get; set; } = @"Assets\Square44x44Logo.png";
+    public string Wide310x150Logo { get; set; } = @"Assets\Wide310x150Logo.png";
+    public string Square310x310Logo { get; set; } = @"Assets\Square310x310Logo.png";
+    public string SplashScreen { get; set; } = @"Assets\SplashScreen.png";
     public string BackgroundColor { get; set; } = "transparent";
+    public string ShortName { get; set; } = "App";
+
+    // Dependencies
+    public string MinVersion { get; set; } = "10.0.17763.0";
+    public string MaxVersionTested { get; set; } = "10.0.22621.0";
 
     // Capabilities
     public bool InternetClient { get; set; } = true;
     public bool RunFullTrust { get; set; } = true;
+
+    // Languages
+    public IList<string> Languages { get; set; } = new List<string> { "x-generate" };
 }
 
 internal class AppManifestGenerator
 {
-    /// <summary>
-    /// Generates a string with the XML content of the AppManifest from the provided metadata
-    /// </summary>
-    /// <param name="metadata">Metadata for the AppManifest</param>
-    /// <returns>String with the XML content of the AppManifest</returns>
     public static string GenerateAppManifest(AppManifestMetadata metadata)
     {
-        using (var memoryStream = new MemoryStream())
-        {
-            WriteToStream(metadata, memoryStream);
-            memoryStream.Position = 0;
-            using (var reader = new StreamReader(memoryStream))
-            {
-                return reader.ReadToEnd();
-            }
-        }
+        using var memoryStream = new MemoryStream();
+        WriteToStream(metadata, memoryStream);
+        memoryStream.Position = 0;
+        using var reader = new StreamReader(memoryStream);
+        return reader.ReadToEnd();
     }
 
-    /// <summary>
-    /// Writes the XML content of the AppManifest to a stream
-    /// </summary>
-    /// <param name="metadata">Metadata for the AppManifest</param>
-    /// <param name="stream">Stream where the XML will be written</param>
     public static void WriteToStream(AppManifestMetadata metadata, Stream stream)
     {
         XNamespace ns = "http://schemas.microsoft.com/appx/manifest/foundation/windows10";
+        XNamespace mp = "http://schemas.microsoft.com/appx/2014/phone/manifest";
         XNamespace uap = "http://schemas.microsoft.com/appx/manifest/uap/windows10";
         XNamespace rescap = "http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities";
 
-        // Crear el documento XML
-        XDocument doc = new XDocument(
+        var doc = new XDocument(
             new XDeclaration("1.0", "utf-8", null),
             new XElement(ns + "Package",
+                new XAttribute(XNamespace.Xmlns + "mp", mp),
                 new XAttribute(XNamespace.Xmlns + "uap", uap),
                 new XAttribute(XNamespace.Xmlns + "rescap", rescap),
-                new XAttribute("IgnorableNamespaces", "uap rescap"),
+                new XAttribute("IgnorableNamespaces", "uap rescap mp"),
 
-                // Identity
                 new XElement(ns + "Identity",
                     new XAttribute("Name", metadata.Name),
                     new XAttribute("Publisher", metadata.Publisher),
-                    new XAttribute("Version", metadata.Version)),
+                    new XAttribute("Version", metadata.Version),
+                    new XAttribute("ProcessorArchitecture", metadata.ProcessorArchitecture)),
 
-                // Properties
+                new XElement(mp + "PhoneIdentity",
+                    new XAttribute("PhoneProductId", metadata.PhoneIdentity),
+                    new XAttribute("PhonePublisherId", "00000000-0000-0000-0000-000000000000")),
+
                 new XElement(ns + "Properties",
                     new XElement(ns + "DisplayName", metadata.DisplayName),
                     new XElement(ns + "PublisherDisplayName", metadata.PublisherDisplayName),
                     new XElement(ns + "Logo", metadata.Logo)),
 
-                // Dependencies
                 new XElement(ns + "Dependencies",
                     new XElement(ns + "TargetDeviceFamily",
-                        new XAttribute("Name", "Windows.Universal"),
-                        new XAttribute("MinVersion", "10.0.0.0"),
-                        new XAttribute("MaxVersionTested", "10.0.0.0")),
-                    new XElement(ns + "TargetDeviceFamily",
                         new XAttribute("Name", "Windows.Desktop"),
-                        new XAttribute("MinVersion", "10.0.14393.0"),
-                        new XAttribute("MaxVersionTested", "10.0.14393.0"))),
+                        new XAttribute("MinVersion", metadata.MinVersion),
+                        new XAttribute("MaxVersionTested", metadata.MaxVersionTested))),
 
-                // Resources
                 new XElement(ns + "Resources",
-                    new XElement(ns + "Resource",
-                        new XAttribute("Language", "en-US"))),
+                    metadata.Languages.Select(lang =>
+                        new XElement(ns + "Resource", new XAttribute("Language", lang)))),
 
-                // Applications
                 new XElement(ns + "Applications",
                     new XElement(ns + "Application",
                         new XAttribute("Id", metadata.AppId),
@@ -110,9 +108,14 @@ internal class AppManifestGenerator
                             new XAttribute("Description", metadata.AppDescription),
                             new XAttribute("BackgroundColor", metadata.BackgroundColor),
                             new XAttribute("Square150x150Logo", metadata.Square150x150Logo),
-                            new XAttribute("Square44x44Logo", metadata.Square44x44Logo)))),
+                            new XAttribute("Square44x44Logo", metadata.Square44x44Logo),
+                            new XElement(uap + "DefaultTile",
+                                new XAttribute("Wide310x150Logo", metadata.Wide310x150Logo),
+                                new XAttribute("Square310x310Logo", metadata.Square310x310Logo),
+                                new XAttribute("ShortName", metadata.ShortName)),
+                            new XElement(uap + "SplashScreen",
+                                new XAttribute("Image", metadata.SplashScreen))))),
 
-                // Capabilities
                 new XElement(ns + "Capabilities",
                     metadata.InternetClient ? new XElement(ns + "Capability", new XAttribute("Name", "internetClient")) : null,
                     metadata.RunFullTrust ? new XElement(rescap + "Capability", new XAttribute("Name", "runFullTrust")) : null)
@@ -126,9 +129,7 @@ internal class AppManifestGenerator
             Encoding = System.Text.Encoding.UTF8
         };
 
-        using (var xmlWriter = XmlWriter.Create(stream, settings))
-        {
-            doc.Save(xmlWriter);
-        }
+        using var xmlWriter = XmlWriter.Create(stream, settings);
+        doc.Save(xmlWriter);
     }
 }

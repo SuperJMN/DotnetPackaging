@@ -53,6 +53,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
     <PackageVersion Include="System.IO.Hashing" Version="10.0.0" />
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.0" />
     <PackageVersion Include="DeflateBlockCompressor" Version="0.0.13" />
     <PackageVersion Include="NuGet.Versioning" Version="7.0.1" />
     <PackageVersion Include="Zafiro.Avalonia.Generators" Version="44.0.2" />
