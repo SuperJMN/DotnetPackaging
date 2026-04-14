@@ -15,7 +15,7 @@ internal static class CertificateProvider
 
     private static Result<X509Certificate2> LoadFromPfx(string path, string password)
     {
-        return Result.Try(() => new X509Certificate2(path, password, X509KeyStorageFlags.Exportable));
+        return Result.Try(() => X509CertificateLoader.LoadPkcs12FromFile(path, password, X509KeyStorageFlags.Exportable));
     }
 
     private static Result<X509Certificate2> GenerateSelfSigned(string subjectName)
@@ -38,7 +38,7 @@ internal static class CertificateProvider
             var notAfter = DateTimeOffset.UtcNow.AddYears(1);
             var cert = request.CreateSelfSigned(notBefore, notAfter);
 
-            return new X509Certificate2(cert.Export(X509ContentType.Pfx), (string?)null, X509KeyStorageFlags.Exportable);
+            return X509CertificateLoader.LoadPkcs12(cert.Export(X509ContentType.Pfx), null, X509KeyStorageFlags.Exportable);
         });
     }
 }
