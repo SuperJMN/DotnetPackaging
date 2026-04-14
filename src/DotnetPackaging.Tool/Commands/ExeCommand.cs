@@ -46,6 +46,16 @@ public static class ExeCommand
             Required = false
         };
         exVendor.Aliases.Add("--company");
+        var pfxOption = new Option<FileInfo?>("--pfx")
+        {
+            Description = "Path to a PFX code signing certificate. All PE files and the final installer will be Authenticode-signed."
+        };
+        pfxOption.Recursive = true;
+        var pfxPasswordOption = new Option<string?>("--pfx-password")
+        {
+            Description = "Password for the PFX certificate file"
+        };
+        pfxPasswordOption.Recursive = true;
 
         var metadata = new MetadataOptionSet();
         var optionsBinder = metadata.CreateBinder();
@@ -64,6 +74,8 @@ public static class ExeCommand
         metadata.AddTo(exeCommand);
         exeCommand.Add(exVendor);
         exeCommand.Add(exArchTop);
+        exeCommand.Add(pfxOption);
+        exeCommand.Add(pfxPasswordOption);
 
         exeCommand.SetAction(async parseResult =>
         {
@@ -75,6 +87,8 @@ public static class ExeCommand
             var opt = optionsBinder.Bind(parseResult);
             var vendorOpt = parseResult.GetValue(exVendor);
             var archOpt = parseResult.GetValue(exArchTop);
+            var pfx = parseResult.GetValue(pfxOption);
+            var pfxPwd = parseResult.GetValue(pfxPasswordOption);
 
             await ExecutionWrapper.ExecuteWithLogging("exe", outFile.FullName, async logger =>
             {
@@ -104,7 +118,9 @@ public static class ExeCommand
                     RuntimeIdentifier = Maybe.From(ridResult.Value),
                     Stub = stubBytes == null ? Maybe<IByteSource>.None : Maybe.From(stubBytes),
                     SetupLogo = logoBytes == null ? Maybe<IByteSource>.None : Maybe.From(logoBytes),
-                    OutputName = Maybe.From(outFile.Name)
+                    OutputName = Maybe.From(outFile.Name),
+                    PfxPath = pfx != null ? Maybe.From(pfx.FullName) : Maybe<string>.None,
+                    PfxPassword = pfxPwd != null ? Maybe.From(pfxPwd) : Maybe<string>.None
                 };
 
                 var result = await packager.Pack(containerResult, exeMetadata);
@@ -159,6 +175,8 @@ public static class ExeCommand
         fromDirectory.Add(fdSetupLogo);
         fromDirectory.Add(exVendor);
         fromDirectory.Add(fdArch);
+        fromDirectory.Add(pfxOption);
+        fromDirectory.Add(pfxPasswordOption);
         fdMetadata.AddTo(fromDirectory);
 
         fromDirectory.SetAction(async parseResult =>
@@ -170,6 +188,8 @@ public static class ExeCommand
             var opt = fdBinder.Bind(parseResult);
             var vendorOpt = parseResult.GetValue(exVendor);
             var archOpt = parseResult.GetValue(fdArch);
+            var pfx = parseResult.GetValue(pfxOption);
+            var pfxPwd = parseResult.GetValue(pfxPasswordOption);
 
             await ExecutionWrapper.ExecuteWithLogging("exe", outFile.FullName, async logger =>
             {
@@ -199,7 +219,9 @@ public static class ExeCommand
                     RuntimeIdentifier = Maybe.From(ridResult.Value),
                     Stub = stubBytes == null ? Maybe<IByteSource>.None : Maybe.From(stubBytes),
                     SetupLogo = logoBytes == null ? Maybe<IByteSource>.None : Maybe.From(logoBytes),
-                    OutputName = Maybe.From(outFile.Name)
+                    OutputName = Maybe.From(outFile.Name),
+                    PfxPath = pfx != null ? Maybe.From(pfx.FullName) : Maybe<string>.None,
+                    PfxPassword = pfxPwd != null ? Maybe.From(pfxPwd) : Maybe<string>.None
                 };
 
                 var result = await packager.Pack(containerResult, exeMetadata);
@@ -238,6 +260,8 @@ public static class ExeCommand
         project.AddTo(exFromProject);
         exFromProject.Add(exStub);
         exFromProject.Add(exSetupLogo);
+        exFromProject.Add(pfxOption);
+        exFromProject.Add(pfxPasswordOption);
 
         exFromProject.SetAction(async parseResult =>
         {
@@ -250,6 +274,8 @@ public static class ExeCommand
             var extrasStub = parseResult.GetValue(exStub);
             var extrasLogo = parseResult.GetValue(exSetupLogo);
             var vendorOpt = parseResult.GetValue(exVendor);
+            var pfx = parseResult.GetValue(pfxOption);
+            var pfxPwd = parseResult.GetValue(pfxPasswordOption);
             var opt = optionsBinder.Bind(parseResult);
             var logger = Log.ForContext("command", "exe-from-project");
 
@@ -282,6 +308,8 @@ public static class ExeCommand
                     exeMetadata.SetupLogo = logoBytes == null ? Maybe<IByteSource>.None : Maybe.From(logoBytes);
                     exeMetadata.RuntimeIdentifier = ridHint;
                     exeMetadata.OutputName = Maybe.From(extrasOutput.Name);
+                    exeMetadata.PfxPath = pfx != null ? Maybe.From(pfx.FullName) : Maybe<string>.None;
+                    exeMetadata.PfxPassword = pfxPwd != null ? Maybe.From(pfxPwd) : Maybe<string>.None;
                 },
                 pub =>
                 {

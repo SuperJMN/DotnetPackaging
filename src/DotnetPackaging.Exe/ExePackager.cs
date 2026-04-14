@@ -1,7 +1,9 @@
+using System.Security.Cryptography.X509Certificates;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
 using DotnetPackaging.Exe.Metadata;
 using DotnetPackaging.Publish;
+using DotnetPackaging.Signing;
 using Serilog;
 using System.Net.Http;
 using Zafiro.DivineBytes;
@@ -39,6 +41,23 @@ public sealed class ExePackager
             throw new ArgumentNullException(nameof(metadata));
         }
 
+        var certificateResult = ResolveCertificate(metadata);
+        if (certificateResult.IsFailure)
+        {
+            return Task.FromResult(Result.Failure<IByteSource>(certificateResult.Error));
+        }
+
+        var certificate = certificateResult.Value;
+
+        if (certificate.HasNoValue)
+        {
+            logger.Warning(
+                "⚠ No code signing certificate provided (--pfx). " +
+                "The resulting installer and application will be unsigned. " +
+                "Windows SmartScreen will likely block execution and show security warnings to users. " +
+                "For production distribution, provide a code signing certificate (--pfx <path>).");
+        }
+
         var rid = metadata.RuntimeIdentifier.GetValueOrDefault("win-x64");
         return GetRid(rid).Bind(async validRid =>
         {
@@ -60,10 +79,22 @@ public sealed class ExePackager
                 stub,
                 setupLogo,
                 metadata.ProjectName,
-                metadata.ProjectMetadata);
+                metadata.ProjectMetadata,
+                certificate);
 
             return result.Map(package => (IByteSource)package);
         });
+    }
+
+    private Result<Maybe<X509Certificate2>> ResolveCertificate(ExePackagerMetadata metadata)
+    {
+        if (metadata.PfxPath.HasNoValue)
+            return Result.Success(Maybe<X509Certificate2>.None);
+
+        return CertificateProvider.LoadFromPfx(
+                metadata.PfxPath.Value,
+                metadata.PfxPassword.GetValueOrDefault(string.Empty))
+            .Map(cert => Maybe<X509Certificate2>.From(cert));
     }
 
     private static Result<string> GetRid(string rid)

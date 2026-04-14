@@ -14,4 +14,6 @@ public sealed class ExePackagerMetadata
     public Maybe<IByteSource> Stub { get; set; } = Maybe<IByteSource>.None;
     public Maybe<IByteSource> SetupLogo { get; set; } = Maybe<IByteSource>.None;
     public Maybe<ProjectMetadata> ProjectMetadata { get; set; } = Maybe<ProjectMetadata>.None;
+    public Maybe<string> PfxPath { get; set; } = Maybe<string>.None;
+    public Maybe<string> PfxPassword { get; set; } = Maybe<string>.None;
 }

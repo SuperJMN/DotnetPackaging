@@ -5,11 +5,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.IO.Compression;
 
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Exe.Artifacts;
 using DotnetPackaging.Exe.Metadata;
+using DotnetPackaging.Exe.Signing;
 using Zafiro.DivineBytes;
 
 using System.Reactive.Linq;
@@ -24,33 +26,64 @@ internal static class SimpleExePacker
         IByteSource stub,
         IContainer publishDirectory,
         InstallerMetadata metadata,
-        Maybe<IByteSource> logoBytes)
+        Maybe<IByteSource> logoBytes,
+        Maybe<X509Certificate2> certificate = default)
     {
         return Result.Try(async () =>
         {
             var metadataSource = CreateMetadataSource(metadata);
 
             var uninstallerPayload = await CreateUninstallerPayload(metadataSource, stub);
-            var uninstaller = await AppendPayload(stub, uninstallerPayload);
+            var uninstallerRaw = await AppendPayload(stub, uninstallerPayload);
+            var uninstaller = await SignExeIfCertificate(uninstallerRaw, certificate);
 
-            var installerPayload = await CreateInstallerPayload(publishDirectory, metadataSource, uninstaller, logoBytes);
-            var installer = await AppendPayload(stub, installerPayload);
+            var installerPayload = await CreateInstallerPayload(publishDirectory, metadataSource, uninstaller, logoBytes, certificate);
+            var installerRaw = await AppendPayload(stub, installerPayload);
+            var installer = await SignExeIfCertificate(installerRaw, certificate);
 
             return new ExeBuildArtifacts(installer, uninstaller);
         }, ex => ex.Message);
+    }
+
+    private static async Task<IByteSource> SignExeIfCertificate(IByteSource source, Maybe<X509Certificate2> certificate)
+    {
+        if (certificate.HasNoValue)
+            return source;
+
+        var bytes = await ToBytes(source);
+        var result = PeSigner.SignIfPe(bytes, certificate.Value);
+        if (result.IsFailure)
+            throw new InvalidOperationException($"Failed to sign PE: {result.Error}");
+
+        return ByteSource.FromBytes(result.Value);
     }
 
     private static async Task<IByteSource> CreateInstallerPayload(
         IContainer publishDirectory,
         IByteSource metadata,
         IByteSource uninstaller,
-        Maybe<IByteSource> logoBytes)
+        Maybe<IByteSource> logoBytes,
+        Maybe<X509Certificate2> certificate)
     {
         var files = publishDirectory
             .ResourcesWithPathsRecursive()
             .ToDictionary(
                 file => $"Content/{file.FullPath().ToString().Replace('\\', '/')}",
                 file => (IByteSource)file);
+
+        // Sign all PE files in the publish directory before packaging
+        if (certificate.HasValue)
+        {
+            var signedFiles = new Dictionary<string, IByteSource>(files.Count, StringComparer.Ordinal);
+            foreach (var file in files)
+            {
+                var bytes = await ToBytes(file.Value);
+                var signed = PeSigner.SignIfPe(bytes, certificate.Value);
+                signedFiles[file.Key] = ByteSource.FromBytes(signed.IsSuccess ? signed.Value : bytes);
+            }
+
+            files = signedFiles;
+        }
 
         files["metadata.json"] = metadata;
         files["Support/Uninstaller.exe"] = uninstaller;

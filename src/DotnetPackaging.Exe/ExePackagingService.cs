@@ -2,6 +2,7 @@ using System;
 using CSharpFunctionalExtensions;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 using DotnetPackaging;
 using DotnetPackaging.Exe.Metadata;
 using DotnetPackaging.Publish;
@@ -37,7 +38,8 @@ internal sealed class ExePackagingService
         string? vendor,
         string? runtimeIdentifier,
         IByteSource? stubFile,
-        IByteSource? setupLogo)
+        IByteSource? setupLogo,
+        Maybe<X509Certificate2> certificate = default)
     {
         var request = new ExePackagingRequest(
             publishDirectory,
@@ -48,7 +50,8 @@ internal sealed class ExePackagingService
             ToMaybe(stubFile),
             Maybe<string>.None,
             Maybe<ProjectMetadata>.None,
-            ToMaybe(setupLogo));
+            ToMaybe(setupLogo),
+            certificate);
 
         return Build(request).Bind(container => ToPackage(container, outputName, null));
     }
@@ -62,7 +65,8 @@ internal sealed class ExePackagingService
         IByteSource? stubFile,
         IByteSource? setupLogo,
         Maybe<string> projectName,
-        Maybe<ProjectMetadata> projectMetadata)
+        Maybe<ProjectMetadata> projectMetadata,
+        Maybe<X509Certificate2> certificate = default)
     {
         var request = new ExePackagingRequest(
             publishDirectory,
@@ -73,7 +77,8 @@ internal sealed class ExePackagingService
             ToMaybe(stubFile),
             projectName,
             projectMetadata,
-            ToMaybe(setupLogo));
+            ToMaybe(setupLogo),
+            certificate);
 
         return Build(request).Bind(container => ToPackage(container, outputName, null));
     }
@@ -89,7 +94,8 @@ internal sealed class ExePackagingService
         Options options,
         string? vendor,
         IByteSource? stubFile,
-        IByteSource? setupLogo)
+        IByteSource? setupLogo,
+        Maybe<X509Certificate2> certificate = default)
     {
         var publishRequest = new ProjectPublishRequest(projectFile.FullName)
         {
@@ -117,7 +123,8 @@ internal sealed class ExePackagingService
             ToMaybe(stubFile),
             Maybe<string>.From(Path.GetFileNameWithoutExtension(projectFile.Name)),
             projectMetadata,
-            ToMaybe(setupLogo));
+            ToMaybe(setupLogo),
+            certificate);
 
         var buildResult = await Build(request);
         if (buildResult.IsFailure)
@@ -153,9 +160,14 @@ internal sealed class ExePackagingService
             request.ProjectMetadata,
             request.SetupLogo);
 
+        if (request.Certificate.HasValue)
+        {
+            logger.Information("Code signing enabled. All PE files and the final installer will be signed.");
+        }
+
         async Task<Result<IContainer>> BuildWithStub(IByteSource stubBytes)
         {
-            var buildResult = await SimpleExePacker.Build(stubBytes, request.PublishDirectory, metadata, request.SetupLogo);
+            var buildResult = await SimpleExePacker.Build(stubBytes, request.PublishDirectory, metadata, request.SetupLogo, request.Certificate);
             if (buildResult.IsFailure)
             {
                 return Result.Failure<IContainer>(buildResult.Error);
@@ -365,5 +377,6 @@ internal sealed class ExePackagingService
         Maybe<IByteSource> Stub,
         Maybe<string> ProjectName,
         Maybe<ProjectMetadata> ProjectMetadata,
-        Maybe<IByteSource> SetupLogo);
+        Maybe<IByteSource> SetupLogo,
+        Maybe<X509Certificate2> Certificate);
 }
