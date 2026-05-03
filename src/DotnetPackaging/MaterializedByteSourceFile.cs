@@ -1,3 +1,4 @@
+using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging;
@@ -36,7 +37,7 @@ public sealed class MaterializedByteSourceFile : IDisposable
 
     public IByteSource ToByteSource()
     {
-        return ByteSource.FromStreamFactory(OpenRead).WithLength(Length);
+        return ByteSource.FromStreamFactory(OpenRead, Maybe.From(Length));
     }
 
     public void Dispose()

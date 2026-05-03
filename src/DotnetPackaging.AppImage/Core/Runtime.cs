@@ -13,6 +13,6 @@ internal class Runtime(IByteSource source, Architecture architecture) : IRuntime
         return Source.Subscribe(observer);
     }
 
-    public IObservable<byte[]> Bytes => Source;
-    public Maybe<long> Length => Source.KnownLength();
+    public IObservable<byte[]> Bytes => Source.Bytes;
+    public Maybe<long> Length => Source.Length;
 }

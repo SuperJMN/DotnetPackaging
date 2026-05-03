@@ -18,7 +18,7 @@ public sealed class Package : IPackage
     public string Name { get; }
 
     public IObservable<byte[]> Bytes => source.Bytes;
-    public Maybe<long> Length => source.KnownLength();
+    public Maybe<long> Length => source.Length;
 
     public IDisposable Subscribe(IObserver<byte[]> observer) => source.Subscribe(observer);
 

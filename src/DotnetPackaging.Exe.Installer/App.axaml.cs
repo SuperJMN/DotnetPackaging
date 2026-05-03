@@ -41,7 +41,7 @@ public sealed class App : Application
             Opacity = 0,
             WindowStartupLocation = WindowStartupLocation.CenterScreen,
             CanResize = false,
-            SystemDecorations = SystemDecorations.None,
+            WindowDecorations = WindowDecorations.None,
             ShowInTaskbar = false
         };
         desktopLifetime.MainWindow = mainWindow;

@@ -1,8 +1,8 @@
 using System.Diagnostics;
-using System.Reactive.Linq;
 using System.Text.Json;
 using FluentAssertions;
 using DotnetPackaging.Publish;
+using Zafiro.DivineBytes;
 using Path = System.IO.Path;
 
 namespace DotnetPackaging.Exe.Tests;
@@ -30,10 +30,8 @@ public class ExeSfxEndToEndTests
         using var package = result.Value;
 
         await using var output = File.Create(outputExe);
-        await foreach (var chunk in package.Bytes.ToAsyncEnumerable())
-        {
-            await output.WriteAsync(chunk, 0, chunk.Length);
-        }
+        var write = await package.WriteTo(output);
+        write.IsSuccess.Should().BeTrue(write.IsFailure ? write.Error : string.Empty);
 
         // Run the produced installer with the env hook to dump metadata and exit
         var psi = new ProcessStartInfo

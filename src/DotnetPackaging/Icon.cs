@@ -24,12 +24,12 @@ public class Icon : IIcon
             var icon = image.Iconize();
             await icon.SaveAsync(memoryStream, PngFormat.Instance);
             var bytes = memoryStream.ToArray();
-            return (IIcon)new Icon(ByteSource.FromBytes(bytes).WithLength(bytes.LongLength), icon.Width);
+            return (IIcon)new Icon(ByteSource.FromBytes(bytes), icon.Width);
         });
     }
 
     public IObservable<byte[]> Bytes => source.Bytes;
-    public Maybe<long> Length => source.KnownLength();
+    public Maybe<long> Length => source.Length;
 
     public IDisposable Subscribe(IObserver<byte[]> observer)
     {

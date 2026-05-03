@@ -43,7 +43,7 @@ public static class WritingByteSource
             });
         });
 
-        return ByteSource.FromByteObservable(bytes).WithLength(length);
+        return ByteSource.FromByteObservable(bytes, length);
     }
 
     private sealed class ObserverStream(IObserver<byte[]> observer, CancellationToken cancellationToken) : Stream

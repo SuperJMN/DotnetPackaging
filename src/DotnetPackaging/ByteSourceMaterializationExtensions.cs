@@ -4,6 +4,13 @@ namespace DotnetPackaging;
 
 public static class ByteSourceMaterializationExtensions
 {
+    /// <summary>
+    /// Opens a readable stream for APIs that require <see cref="Stream.Length"/>.
+    /// </summary>
+    /// <remarks>
+    /// Known-length sources are adapted without disk I/O. A temporary file is a deliberate fallback only when
+    /// length metadata is unavailable; do not force this path by stripping or recomputing <see cref="IByteSource.Length"/>.
+    /// </remarks>
     public static async Task<Result<ByteSourceReadLease>> OpenReadWithLength(
         this IByteSource source,
         string extension = "",
@@ -26,6 +33,13 @@ public static class ByteSourceMaterializationExtensions
         return new ByteSourceReadLease(tempFile.Value.OpenRead(), tempFile.Value.Length, tempFile.Value);
     }
 
+    /// <summary>
+    /// Materializes a byte source to a temporary file.
+    /// </summary>
+    /// <remarks>
+    /// This is the expensive escape hatch for length-seeking APIs. Prefer preserving <see cref="IByteSource.Length"/>
+    /// on composed byte sources so callers can avoid this method for large payloads.
+    /// </remarks>
     public static async Task<Result<MaterializedByteSourceFile>> ToTempFile(
         this IByteSource source,
         string extension = "",
