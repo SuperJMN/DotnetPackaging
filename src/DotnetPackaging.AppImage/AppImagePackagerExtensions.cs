@@ -27,18 +27,47 @@ public static class AppImagePackagerExtensions
 
         var log = logger ?? Log.Logger;
         var publisher = new DotnetPublisher(Maybe<ILogger>.From(logger));
-        var projectFile = new FileInfo(projectPath);
+        var context = ProjectPackagingContext.FromProject(projectPath, log);
+        if (context.IsFailure)
+        {
+            return PackagingByteSource.FromFailure(context.Error);
+        }
 
         return ByteSource.FromDisposableAsync(
             () => publisher.Publish(publishRequest),
-            container =>
-            {
-                var resolvedOptions = ProjectMetadataDefaults.ResolveFromProject(metadata.PackageOptions, projectFile, log);
-                var resolvedMetadata = new AppImagePackagerMetadata();
-                resolvedMetadata.PackageOptions.ApplyOverrides(resolvedOptions);
-                resolvedMetadata.AppImageOptions.IconNameOverride = metadata.AppImageOptions.IconNameOverride;
-                return packager.Pack(container, resolvedMetadata, log);
-            });
+            container => packager.FromPublishedProject(container, context.Value, metadata, log));
+    }
+
+    public static IByteSource FromPublishedProject(
+        this AppImagePackager packager,
+        IContainer publishedProject,
+        ProjectPackagingContext context,
+        AppImagePackagerMetadata? metadata = null,
+        ILogger? logger = null)
+    {
+        if (packager == null) throw new ArgumentNullException(nameof(packager));
+        if (publishedProject == null) throw new ArgumentNullException(nameof(publishedProject));
+        if (context == null) throw new ArgumentNullException(nameof(context));
+
+        var log = logger ?? Log.Logger;
+        var source = metadata ?? new AppImagePackagerMetadata();
+        var resolvedOptions = context.ResolveFromDirectoryOptions(source.PackageOptions);
+        var resolvedMetadata = new AppImagePackagerMetadata();
+        resolvedMetadata.PackageOptions.ApplyOverrides(resolvedOptions);
+        resolvedMetadata.AppImageOptions.IconNameOverride = source.AppImageOptions.IconNameOverride;
+        return PackagingByteSource.FromResultFactory(() => packager.Pack(publishedProject, resolvedMetadata, log));
+    }
+
+    public static Task<Result> PackPublishedProject(
+        this AppImagePackager packager,
+        IContainer publishedProject,
+        ProjectPackagingContext context,
+        string outputPath,
+        AppImagePackagerMetadata? metadata = null,
+        ILogger? logger = null)
+    {
+        var source = packager.FromPublishedProject(publishedProject, context, metadata, logger);
+        return source.WriteTo(outputPath);
     }
 
     public static Task<Result> PackProject(

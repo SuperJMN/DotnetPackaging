@@ -29,18 +29,51 @@ public static class ExePackagerExtensions
 
         var log = logger ?? Log.Logger;
         var publisher = new DotnetPublisher(Maybe<ILogger>.From(logger));
-        var projectFile = new FileInfo(projectPath);
+        var context = ProjectPackagingContext.FromProject(projectPath, log);
+        if (context.IsFailure)
+        {
+            return PackagingByteSource.FromFailure(context.Error);
+        }
 
         if (metadata.RuntimeIdentifier.HasNoValue && publishRequest.Rid.HasValue)
         {
             metadata.RuntimeIdentifier = publishRequest.Rid;
         }
 
-        ApplyProjectDefaults(metadata, projectFile, log);
+        ApplyProjectDefaults(metadata, context.Value);
 
         return ByteSource.FromDisposableAsync(
             () => publisher.Publish(publishRequest),
             container => packager.Pack(container, metadata));
+    }
+
+    public static IByteSource FromPublishedProject(
+        this ExePackager packager,
+        IContainer publishedProject,
+        ProjectPackagingContext context,
+        Action<ExePackagerMetadata>? configure = null,
+        ILogger? logger = null)
+    {
+        if (packager == null) throw new ArgumentNullException(nameof(packager));
+        if (publishedProject == null) throw new ArgumentNullException(nameof(publishedProject));
+        if (context == null) throw new ArgumentNullException(nameof(context));
+
+        var metadata = new ExePackagerMetadata();
+        configure?.Invoke(metadata);
+        ApplyProjectDefaults(metadata, context);
+        return PackagingByteSource.FromResultFactory(() => packager.Pack(publishedProject, metadata));
+    }
+
+    public static Task<Result> PackPublishedProject(
+        this ExePackager packager,
+        IContainer publishedProject,
+        ProjectPackagingContext context,
+        string outputPath,
+        Action<ExePackagerMetadata>? configure = null,
+        ILogger? logger = null)
+    {
+        var source = packager.FromPublishedProject(publishedProject, context, configure, logger);
+        return source.WriteTo(outputPath);
     }
 
     public static Task<Result> PackProject(
@@ -70,6 +103,25 @@ public static class ExePackagerExtensions
         if (metadata.OutputName.HasNoValue)
         {
             var projectBase = metadata.ProjectName.GetValueOrDefault(System.IO.Path.GetFileNameWithoutExtension(projectFile.Name));
+            metadata.OutputName = Maybe.From(projectBase + ".exe");
+        }
+    }
+
+    private static void ApplyProjectDefaults(ExePackagerMetadata metadata, ProjectPackagingContext context)
+    {
+        if (metadata.ProjectMetadata.HasNoValue)
+        {
+            metadata.ProjectMetadata = context.ProjectMetadata;
+        }
+
+        if (metadata.ProjectName.HasNoValue)
+        {
+            metadata.ProjectName = context.InferExecutableName();
+        }
+
+        if (metadata.OutputName.HasNoValue)
+        {
+            var projectBase = metadata.ProjectName.GetValueOrDefault(System.IO.Path.GetFileNameWithoutExtension(context.ProjectFile.Name));
             metadata.OutputName = Maybe.From(projectBase + ".exe");
         }
     }

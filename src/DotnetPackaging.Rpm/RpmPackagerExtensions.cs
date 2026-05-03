@@ -28,15 +28,43 @@ public static class RpmPackagerExtensions
 
         var log = logger ?? Log.Logger;
         var publisher = new DotnetPublisher(Maybe<ILogger>.From(logger));
-        var projectFile = new FileInfo(projectPath);
+        var context = ProjectPackagingContext.FromProject(projectPath, log);
+        if (context.IsFailure)
+        {
+            return PackagingByteSource.FromFailure(context.Error);
+        }
 
         return ByteSource.FromDisposableAsync(
             () => publisher.Publish(publishRequest),
-            container =>
-            {
-                var resolved = ProjectMetadataDefaults.ResolveFromProject(options, projectFile, log);
-                return packager.Pack(container, resolved, log);
-            });
+            container => packager.FromPublishedProject(container, context.Value, options, log));
+    }
+
+    public static IByteSource FromPublishedProject(
+        this RpmPackager packager,
+        IContainer publishedProject,
+        ProjectPackagingContext context,
+        FromDirectoryOptions? overrides = null,
+        ILogger? logger = null)
+    {
+        if (packager == null) throw new ArgumentNullException(nameof(packager));
+        if (publishedProject == null) throw new ArgumentNullException(nameof(publishedProject));
+        if (context == null) throw new ArgumentNullException(nameof(context));
+
+        var log = logger ?? Log.Logger;
+        var resolved = context.ResolveFromDirectoryOptions(overrides ?? new FromDirectoryOptions());
+        return PackagingByteSource.FromResultFactory(() => packager.Pack(publishedProject, resolved, log));
+    }
+
+    public static Task<Result> PackPublishedProject(
+        this RpmPackager packager,
+        IContainer publishedProject,
+        ProjectPackagingContext context,
+        string outputPath,
+        FromDirectoryOptions? overrides = null,
+        ILogger? logger = null)
+    {
+        var source = packager.FromPublishedProject(publishedProject, context, overrides, logger);
+        return source.WriteTo(outputPath);
     }
 
     public static async Task<Result> PackProject(

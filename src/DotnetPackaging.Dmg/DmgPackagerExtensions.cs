@@ -28,15 +28,43 @@ public static class DmgPackagerExtensions
 
         var log = logger ?? Log.Logger;
         var publisher = new DotnetPublisher(Maybe<ILogger>.From(logger));
-        var projectFile = new FileInfo(projectPath);
+        var context = ProjectPackagingContext.FromProject(projectPath, log);
+        if (context.IsFailure)
+        {
+            return PackagingByteSource.FromFailure(context.Error);
+        }
 
         return ByteSource.FromDisposableAsync(
             () => publisher.Publish(publishRequest),
-            container =>
-            {
-                var resolved = ResolveFromProject(metadata, projectFile, log);
-                return packager.Pack(container, resolved, log);
-            });
+            container => packager.FromPublishedProject(container, context.Value, metadata, log));
+    }
+
+    public static IByteSource FromPublishedProject(
+        this DmgPackager packager,
+        IContainer publishedProject,
+        ProjectPackagingContext context,
+        DmgPackagerMetadata? metadata = null,
+        ILogger? logger = null)
+    {
+        if (packager == null) throw new ArgumentNullException(nameof(packager));
+        if (publishedProject == null) throw new ArgumentNullException(nameof(publishedProject));
+        if (context == null) throw new ArgumentNullException(nameof(context));
+
+        var log = logger ?? Log.Logger;
+        var resolved = ResolveFromProject(metadata ?? new DmgPackagerMetadata(), context);
+        return PackagingByteSource.FromResultFactory(() => packager.Pack(publishedProject, resolved, log));
+    }
+
+    public static Task<Result> PackPublishedProject(
+        this DmgPackager packager,
+        IContainer publishedProject,
+        ProjectPackagingContext context,
+        string outputPath,
+        DmgPackagerMetadata? metadata = null,
+        ILogger? logger = null)
+    {
+        var source = packager.FromPublishedProject(publishedProject, context, metadata, logger);
+        return source.WriteTo(outputPath);
     }
 
     public static Task<Result> PackProject(
@@ -56,6 +84,17 @@ public static class DmgPackagerExtensions
         var projectMetadata = ProjectMetadataReader.TryRead(projectFile, logger);
         var inferred = ProjectMetadataDefaults.InferExecutableName(projectMetadata, projectFile);
 
+        return ResolveFromProject(source, inferred);
+    }
+
+    private static DmgPackagerMetadata ResolveFromProject(DmgPackagerMetadata source, ProjectPackagingContext context)
+    {
+        var inferred = context.InferExecutableName();
+        return ResolveFromProject(source, inferred);
+    }
+
+    private static DmgPackagerMetadata ResolveFromProject(DmgPackagerMetadata source, Maybe<string> inferred)
+    {
         return new DmgPackagerMetadata
         {
             VolumeName = source.VolumeName.Or(inferred),
