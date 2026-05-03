@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
+using DotnetPackaging.Deb;
+using Serilog.Core;
 using TarEntry = System.Formats.Tar.TarEntry;
 using TarReader = System.Formats.Tar.TarReader;
 using Zafiro.DivineBytes;
@@ -63,7 +65,7 @@ public class DebPackageIntegrityTests
 
         var files = new Dictionary<string, IByteSource>(StringComparer.Ordinal)
         {
-            ["sample-app"] = ByteSource.FromStreamFactory(() => File.OpenRead("/bin/echo")),
+            ["sample-app"] = FileByteSource.OpenRead("/bin/echo"),
             ["very/long/" + new string('a', 80) + "/" + new string('b', 80) + "/deep/" + new string('c', 60) + ".txt"] = ByteSource.FromString("content")
         };
 
@@ -94,6 +96,58 @@ public class DebPackageIntegrityTests
         }
 
         await AssertDpkgAccepts(path);
+    }
+
+    [Fact]
+    public async Task FromPublishedProject_WriteTo_Completes_WithCurrentThreadScheduledSources()
+    {
+        var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"deb-lazy-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var projectPath = System.IO.Path.Combine(tempDir, "SampleApp.csproj");
+        await File.WriteAllTextAsync(projectPath, """
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework>net10.0</TargetFramework>
+                <OutputType>Exe</OutputType>
+                <AssemblyName>sample-app</AssemblyName>
+                <Product>Sample App</Product>
+                <Description>Sample package for tests</Description>
+              </PropertyGroup>
+            </Project>
+            """);
+
+        try
+        {
+            var files = new Dictionary<string, IByteSource>(StringComparer.Ordinal)
+            {
+                ["sample-app"] = ByteSource.FromBytes(CreateElfStub()),
+                ["config/settings.json"] = ByteSource.FromString("{ \"name\": \"demo\" }")
+            };
+
+            var container = files.ToRootContainer().Value;
+            var context = ProjectPackagingContext.FromProject(projectPath, Logger.None).Value;
+            var options = new FromDirectoryOptions();
+            options.From(new Options
+            {
+                Name = Maybe.From("Sample App"),
+                Version = Maybe.From("1.0.0"),
+                ExecutableName = Maybe.From("sample-app")
+            });
+
+            var outputPath = System.IO.Path.Combine(tempDir, "sample.deb");
+            var source = new DebPackager().FromPublishedProject(container, context, options, Logger.None);
+            var writeTask = Task.Run(() => source.WriteTo(outputPath));
+
+            var completed = await Task.WhenAny(writeTask, Task.Delay(TimeSpan.FromSeconds(5)));
+            completed.Should().Be(writeTask, "lazy package byte sources must not block while materializing tar entries");
+            var write = await writeTask;
+            write.IsSuccess.Should().BeTrue(write.IsFailure ? write.Error : "");
+            new FileInfo(outputPath).Length.Should().BeGreaterThan(0);
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, recursive: true); } catch { }
+        }
     }
 
     private static IReadOnlyList<string> ReadTarNames(byte[] tarBytes)
@@ -142,5 +196,19 @@ public class DebPackageIntegrityTests
 
         await process.WaitForExitAsync();
         return process.ExitCode;
+    }
+
+    private static byte[] CreateElfStub()
+    {
+        var bytes = new byte[64];
+        bytes[0] = 0x7F;
+        bytes[1] = (byte)'E';
+        bytes[2] = (byte)'L';
+        bytes[3] = (byte)'F';
+        bytes[4] = 2;
+        bytes[5] = 1;
+        BitConverter.GetBytes((ushort)2).CopyTo(bytes, 16);
+        BitConverter.GetBytes((ushort)0x3E).CopyTo(bytes, 18);
+        return bytes;
     }
 }

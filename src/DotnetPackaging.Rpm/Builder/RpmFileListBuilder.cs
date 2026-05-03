@@ -1,12 +1,13 @@
 using System.Security.Cryptography;
 using System.Text;
+using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Rpm.Builder;
 
 internal static class RpmFileListBuilder
 {
-    public static RpmFileList Build(RpmLayout layout, DateTimeOffset modificationTime)
+    public static async Task<Result<RpmFileList>> Build(RpmLayout layout, DateTimeOffset modificationTime)
     {
         var entries = new List<RpmFileEntry>();
         var dirNames = new List<string>();
@@ -24,9 +25,22 @@ internal static class RpmFileListBuilder
                 ? 0x4000 | entry.Properties.FileMode
                 : 0x8000 | entry.Properties.FileMode;
 
-            var data = entry.Type == RpmEntryType.File
-                ? entry.Content?.Array() ?? throw new InvalidOperationException($"Entry '{entry.Path}' is missing content")
-                : Array.Empty<byte>();
+            var data = Array.Empty<byte>();
+            if (entry.Type == RpmEntryType.File)
+            {
+                if (entry.Content is null)
+                {
+                    return Result.Failure<RpmFileList>($"Entry '{entry.Path}' is missing content");
+                }
+
+                var read = await entry.Content.ReadAll().ConfigureAwait(false);
+                if (read.IsFailure)
+                {
+                    return Result.Failure<RpmFileList>($"Could not read RPM entry '{entry.Path}': {read.Error}");
+                }
+
+                data = read.Value;
+            }
 
             var digest = entry.Type == RpmEntryType.File ? ComputeSha256Hex(data) : string.Empty;
             var size = entry.Type == RpmEntryType.File ? data.Length : 0;

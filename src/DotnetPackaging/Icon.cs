@@ -1,4 +1,5 @@
 using System.Reactive.Linq;
+using CSharpFunctionalExtensions;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using Zafiro.DivineBytes;
@@ -23,11 +24,12 @@ public class Icon : IIcon
             var icon = image.Iconize();
             await icon.SaveAsync(memoryStream, PngFormat.Instance);
             var bytes = memoryStream.ToArray();
-            return (IIcon)new Icon(ByteSource.FromStreamFactory(() => new MemoryStream(bytes)), icon.Width);
+            return (IIcon)new Icon(ByteSource.FromBytes(bytes).WithLength(bytes.LongLength), icon.Width);
         });
     }
 
     public IObservable<byte[]> Bytes => source.Bytes;
+    public Maybe<long> Length => source.KnownLength();
 
     public IDisposable Subscribe(IObserver<byte[]> observer)
     {

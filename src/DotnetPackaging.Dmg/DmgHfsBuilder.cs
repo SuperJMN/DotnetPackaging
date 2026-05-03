@@ -176,7 +176,7 @@ internal static class DmgHfsBuilder
         var pngIcon = FindPngIcon(sourceFolder);
         if (pngIcon != null)
         {
-            var iconResult = await Icon.FromByteSource(ByteSource.FromStreamFactory(() => File.OpenRead(pngIcon)));
+            var iconResult = await Icon.FromByteSource(FileByteSource.OpenRead(pngIcon));
             if (iconResult.IsSuccess)
             {
                 return await CreateIcns(iconResult.Value, resources);

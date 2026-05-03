@@ -55,7 +55,7 @@ public static class BuildUtils
         {
             var rasterIcon = setup.Icon.Value;
             var iconKey = $"usr/share/icons/hicolor/256x256/apps/{package.ToLowerInvariant()}.png";
-            var rasterSource = ByteSource.FromByteObservable(rasterIcon.Bytes);
+            var rasterSource = ByteSource.FromByteObservable(rasterIcon.Bytes).WithLength(rasterIcon.KnownLength());
             iconFiles[iconKey] = rasterSource;
             discoveredIcon = Maybe<IIcon>.From(rasterIcon);
             if (dirIcon.HasNoValue)

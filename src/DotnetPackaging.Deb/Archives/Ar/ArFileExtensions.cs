@@ -1,5 +1,6 @@
-using System.Reactive.Linq;
 using System.Text;
+using CSharpFunctionalExtensions;
+using DotnetPackaging;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Deb.Archives.Ar;
@@ -10,23 +11,76 @@ public static class ArFileExtensions
 
     public static IByteSource ToByteSource(this ArFile arFile)
     {
-        var parts = new List<IObservable<byte[]>> { ByteSource.FromString(Signature, Encoding.ASCII).Bytes };
+        if (arFile.Entries.All(entry => entry.Content.KnownLength().HasValue))
+        {
+            return arFile.ToStreamingByteSource();
+        }
+
+        return ByteSourceMaterializationExtensions.FromTempFileFactory(() => arFile.ToMaterializedByteSource());
+    }
+
+    private static IByteSource ToStreamingByteSource(this ArFile arFile)
+    {
+        var parts = new List<IByteSource>
+        {
+            Bytes(Encoding.ASCII.GetBytes(Signature))
+        };
 
         foreach (var entry in arFile.Entries)
         {
-            var size = entry.Content.GetSize().GetAwaiter().GetResult();
-            var header = BuildHeader(entry, size);
+            var contentLength = entry.Content.KnownLength().Value;
+            parts.Add(Bytes(Encoding.ASCII.GetBytes(BuildHeader(entry, contentLength))));
+            parts.Add(entry.Content);
 
-            parts.Add(ByteSource.FromString(header, Encoding.ASCII).Bytes);
-            parts.Add(entry.Content.Bytes);
-
-            if (size % 2 != 0)
+            if (contentLength % 2 != 0)
             {
-                parts.Add(ByteSource.FromBytes(new[] { (byte)'\n' }).Bytes);
+                parts.Add(Bytes([(byte)'\n']));
             }
         }
 
-        return ByteSource.FromByteObservable(parts.Aggregate(Observable.Concat));
+        return parts.ConcatWithLength();
+    }
+
+    private static IByteSource Bytes(byte[] bytes)
+    {
+        return ByteSource.FromBytes(bytes).WithLength(bytes.LongLength);
+    }
+
+    private static async Task<Result<MaterializedByteSourceFile>> ToMaterializedByteSource(this ArFile arFile)
+    {
+        var output = MaterializedByteSourceFile.Create(".ar");
+        try
+        {
+            await using var stream = File.Open(output.Path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            await stream.WriteAsync(Encoding.ASCII.GetBytes(Signature)).ConfigureAwait(false);
+
+            foreach (var entry in arFile.Entries)
+            {
+                var content = await entry.Content.OpenReadWithLength(".ar-entry").ConfigureAwait(false);
+                if (content.IsFailure)
+                {
+                    output.Dispose();
+                    return Result.Failure<MaterializedByteSourceFile>($"Could not read ar entry '{entry.Name}': {content.Error}");
+                }
+
+                using var contentLease = content.Value;
+                var header = BuildHeader(entry, contentLease.Length);
+                await stream.WriteAsync(Encoding.ASCII.GetBytes(header)).ConfigureAwait(false);
+                await contentLease.Stream.CopyToAsync(stream).ConfigureAwait(false);
+
+                if (contentLease.Length % 2 != 0)
+                {
+                    stream.WriteByte((byte)'\n');
+                }
+            }
+
+            return output;
+        }
+        catch (Exception ex)
+        {
+            output.Dispose();
+            return Result.Failure<MaterializedByteSourceFile>($"Could not write ar archive: {ex.Message}");
+        }
     }
 
     private static string BuildHeader(ArEntry entry, long size)

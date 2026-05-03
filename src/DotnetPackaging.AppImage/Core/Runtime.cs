@@ -1,3 +1,4 @@
+using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.AppImage.Core;
@@ -13,4 +14,5 @@ internal class Runtime(IByteSource source, Architecture architecture) : IRuntime
     }
 
     public IObservable<byte[]> Bytes => Source;
+    public Maybe<long> Length => Source.KnownLength();
 }

@@ -48,7 +48,7 @@ public sealed class DmgPackager
                 metadata.Icon,
                 metadata.ExecutableName.GetValueOrDefault(null));
 
-            return Result.Success<IByteSource>(ByteSource.FromStreamFactory(() => System.IO.File.OpenRead(dmgPath)));
+            return Result.Success<IByteSource>(FileByteSource.OpenRead(dmgPath));
         }
         finally
         {

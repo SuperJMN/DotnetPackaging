@@ -173,9 +173,9 @@ internal class AppImageFactory
 
         var desktopFile = appImageMetadata.ToDesktopFile(execTargetPath);
 
-        var appRunContent = ByteSource.FromString($"#!/bin/bash\nexec \"$APPDIR/usr/bin/{executableName}\" \"$@\"");
-        var desktopContent = ByteSource.FromString(MetadataGenerator.DesktopFileContents(desktopFile));
-        var appdataContent = ByteSource.FromString(MetadataGenerator.AppStreamXml(appImageMetadata.ToAppStream()));
+        var appRunContent = Utf8ByteSource($"#!/bin/bash\nexec \"$APPDIR/usr/bin/{executableName}\" \"$@\"");
+        var desktopContent = Utf8ByteSource(MetadataGenerator.DesktopFileContents(desktopFile));
+        var appdataContent = Utf8ByteSource(MetadataGenerator.AppStreamXml(appImageMetadata.ToAppStream()));
 
         var namedByteSourceWithPaths = applicationRoot.ResourcesWithPathsRecursive().ToList();
 
@@ -234,6 +234,11 @@ internal class AppImageFactory
                 root));
 
         return Task.FromResult(planResult);
+    }
+
+    private static IByteSource Utf8ByteSource(string value)
+    {
+        return ByteSource.FromString(value).WithLength(System.Text.Encoding.UTF8.GetByteCount(value));
     }
 
     private static async Task<Result<INamedByteSourceWithPath>> GetExecutableFromAppDir(IContainer appDir, string? executableRelativePath)

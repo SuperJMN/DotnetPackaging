@@ -24,7 +24,7 @@ internal sealed class InstallerStubProvider(ILogger logger, IHttpClientFactory h
             .Bind(maybeLocal => maybeLocal.HasValue
                 ? Task.FromResult(Result.Success(maybeLocal.Value))
                 : GetStub(rid, versionOverride)
-                    .Map(path => ByteSource.FromStreamFactory(() => File.OpenRead(path))));
+                    .Map(FileByteSource.OpenRead));
     }
 
     public Task<Result<string>> GetStub(string rid, string? versionOverride = null)
@@ -290,7 +290,8 @@ internal sealed class InstallerStubProvider(ILogger logger, IHttpClientFactory h
             {
                 stream.Write(chunk, 0, chunk.Length);
             }
-            return Result.Success(Maybe<IByteSource>.From(ByteSource.FromBytes(stream.ToArray())));
+            var bytes = stream.ToArray();
+            return Result.Success(Maybe<IByteSource>.From(ByteSource.FromBytes(bytes).WithLength(bytes.LongLength)));
         }
     }
 

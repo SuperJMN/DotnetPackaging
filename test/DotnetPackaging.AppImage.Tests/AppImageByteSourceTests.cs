@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using CSharpFunctionalExtensions;
 using DotnetPackaging;
 using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.AppImage.Metadata;
@@ -40,6 +41,9 @@ public class AppImageByteSourceTests
         var combined = byteSourceResult.Value.Array();
 
         runtime.SubscriptionCount.Should().Be(1);
+        var length = byteSourceResult.Value.KnownLength();
+        length.HasValue.Should().BeTrue();
+        length.Value.Should().Be(combined.Length);
         combined.Take(runtimeBytes.Length).Should().Equal(runtimeBytes);
         combined.Length.Should().BeGreaterThan(runtimeBytes.Length);
     }
@@ -68,6 +72,7 @@ public class AppImageByteSourceTests
         public Architecture Architecture => Architecture.X64;
         public int SubscriptionCount => inner.SubscriptionCount;
         public IObservable<byte[]> Bytes => inner.Bytes;
+        public Maybe<long> Length => inner.KnownLength();
         public IDisposable Subscribe(IObserver<byte[]> observer) => inner.Subscribe(observer);
     }
 
@@ -88,6 +93,7 @@ public class AppImageByteSourceTests
         }
 
         public int SubscriptionCount { get; private set; }
+        public Maybe<long> Length => Maybe.From(chunks.Sum(chunk => (long)chunk.Length));
 
         public IObservable<byte[]> Bytes => Observable.Create<byte[]>(observer =>
         {

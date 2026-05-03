@@ -103,11 +103,11 @@ public static class ExeCommand
                 var containerResult = new DirectoryContainer(new DirectoryInfoWrapper(new FileSystem(), inDir)).AsRoot();
 
                 var stubBytes = stub != null
-                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(stub.FullName))
+                    ? FileByteSource.OpenRead(stub)
                     : null;
 
                 var logoBytes = logo != null
-                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(logo.FullName))
+                    ? FileByteSource.OpenRead(logo)
                     : null;
 
                 var packager = new ExePackager(logger: logger);
@@ -204,11 +204,11 @@ public static class ExeCommand
                 var containerResult = new DirectoryContainer(new DirectoryInfoWrapper(new FileSystem(), inDir)).AsRoot();
 
                 var stubBytes = stub != null
-                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(stub.FullName))
+                    ? FileByteSource.OpenRead(stub)
                     : null;
 
                 var logoBytes = logo != null
-                    ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(logo.FullName))
+                    ? FileByteSource.OpenRead(logo)
                     : null;
 
                 var packager = new ExePackager(logger: logger);
@@ -280,11 +280,11 @@ public static class ExeCommand
             var logger = Log.ForContext("command", "exe-from-project");
 
             var stubBytes = extrasStub != null
-                ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasStub.FullName))
+                ? FileByteSource.OpenRead(extrasStub)
                 : null;
 
             var logoBytes = extrasLogo != null
-                ? (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(extrasLogo.FullName))
+                ? FileByteSource.OpenRead(extrasLogo)
                 : null;
 
             var ridHint = Maybe<string>.None;

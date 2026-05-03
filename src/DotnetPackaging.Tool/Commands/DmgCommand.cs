@@ -167,7 +167,7 @@ public static class DmgCommand
             return Maybe<IIcon>.None;
         }
 
-        var iconResult = await DotnetPackaging.Icon.FromByteSource(ByteSource.FromStreamFactory(() => File.OpenRead(candidate)));
+        var iconResult = await DotnetPackaging.Icon.FromByteSource(FileByteSource.OpenRead(candidate));
         if (iconResult.IsFailure)
         {
             logger.Warning("Icon autodiscovery failed for {IconPath}: {Error}", candidate, iconResult.Error);

@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Text;
+using CSharpFunctionalExtensions;
 
 namespace DotnetPackaging.Rpm.Builder;
 
@@ -8,13 +9,18 @@ internal static class RpmArchiveWriter
 {
     private static readonly byte[] LeadMagic = { 0xED, 0xAB, 0xEE, 0xDB };
 
-    public static byte[] Build(PackageMetadata metadata, RpmLayout layout)
+    public static async Task<Result<byte[]>> Build(PackageMetadata metadata, RpmLayout layout)
     {
-        var fileList = RpmFileListBuilder.Build(layout, metadata.ModificationTime);
-        var payload = CpioArchiveWriter.Build(fileList.Entries);
+        var fileList = await RpmFileListBuilder.Build(layout, metadata.ModificationTime).ConfigureAwait(false);
+        if (fileList.IsFailure)
+        {
+            return Result.Failure<byte[]>(fileList.Error);
+        }
+
+        var payload = CpioArchiveWriter.Build(fileList.Value.Entries);
         var compressedPayload = CompressGzip(payload);
 
-        var header = RpmHeaderWriter.BuildMetadataHeader(metadata, fileList, payload.Length, compressedPayload);
+        var header = RpmHeaderWriter.BuildMetadataHeader(metadata, fileList.Value, payload.Length, compressedPayload);
 
         var signature = RpmHeaderWriter.BuildSignatureHeader(header, compressedPayload);
         var signaturePadded = PadToEight(signature);

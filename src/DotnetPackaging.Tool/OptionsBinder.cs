@@ -110,7 +110,7 @@ public class OptionsBinder
 
         try
         {
-            var iconResult = DotnetPackaging.Icon.FromByteSource(ByteSource.FromStreamFactory(() => fileInfo.OpenRead())).GetAwaiter().GetResult();
+            var iconResult = DotnetPackaging.Icon.FromByteSource(FileByteSource.OpenRead(fileInfo.FullName)).GetAwaiter().GetResult();
             if (iconResult.IsFailure)
             {
                 result.AddError($"Invalid icon '{iconPath}': {iconResult.Error}");

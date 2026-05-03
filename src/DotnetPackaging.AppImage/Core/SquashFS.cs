@@ -8,52 +8,81 @@ namespace DotnetPackaging.AppImage.Core;
 
 internal static class SquashFS
 {
-    public static Result<IByteSource> Create(UnixDirectory container)
+    public static async Task<Result<IByteSource>> Create(UnixDirectory container)
     {
         var builder = new SquashFsBuilder(SqCompressionType.Gzip);
+        var created = await CreateRecursive(container, "", builder).ConfigureAwait(false);
+        if (created.IsFailure)
+        {
+            return Result.Failure<IByteSource>(created.Error);
+        }
+
         return Result
-            .Try(() => CreateRecursive(container, "", builder))
-            .MapTry(() => builder.GetFilesystemImage())
-            .Map(bytes => ByteSource.FromBytes(bytes));
+            .Try(builder.GetFilesystemImage)
+            .Map(bytes => ByteSource.FromBytes(bytes).WithLength(bytes.LongLength));
     }
 
-    public static void CreateRecursive(UnixDirectory unixDir, string currentPath, SquashFsBuilder builder)
+    private static async Task<Result> CreateRecursive(UnixDirectory unixDir, string currentPath, SquashFsBuilder builder)
     {
-        // Always create the directory, including root directory
-        string dirPath;
-        if (string.IsNullOrEmpty(unixDir.Name))
+        var createdDirectory = Result.Try(() =>
         {
-            // This is the root directory
-            dirPath = "/";
-            builder.Directory(dirPath, (uint)unixDir.OwnerId, (uint)unixDir.OwnerId, GetFileMode(unixDir.Permissions));
-            currentPath = "";
-        }
-        else
-        {
+            // Always create the directory, including root directory
+            if (string.IsNullOrEmpty(unixDir.Name))
+            {
+                // This is the root directory
+                builder.Directory("/", (uint)unixDir.OwnerId, (uint)unixDir.OwnerId, GetFileMode(unixDir.Permissions));
+                return "";
+            }
+
             // Regular directory
-            dirPath = string.IsNullOrEmpty(currentPath) ? unixDir.Name : currentPath + "/" + unixDir.Name;
+            var dirPath = string.IsNullOrEmpty(currentPath) ? unixDir.Name : currentPath + "/" + unixDir.Name;
             builder.Directory(dirPath, (uint)unixDir.OwnerId, (uint)unixDir.OwnerId, GetFileMode(unixDir.Permissions));
-            currentPath = dirPath;
+            return dirPath;
+        });
+
+        if (createdDirectory.IsFailure)
+        {
+            return Result.Failure(createdDirectory.Error);
         }
+
+        currentPath = createdDirectory.Value;
 
         // Create all files in the current directory
         foreach (var file in unixDir.Files)
         {
-            CreateFile(file, currentPath, builder);
+            var createdFile = await CreateFile(file, currentPath, builder).ConfigureAwait(false);
+            if (createdFile.IsFailure)
+            {
+                return createdFile;
+            }
         }
 
         // Recursively create subdirectories
         foreach (var subDir in unixDir.Subdirectories)
         {
-            CreateRecursive(subDir, currentPath, builder);
+            var createdSubdirectory = await CreateRecursive(subDir, currentPath, builder).ConfigureAwait(false);
+            if (createdSubdirectory.IsFailure)
+            {
+                return createdSubdirectory;
+            }
         }
+
+        return Result.Success();
     }
 
-    private static void CreateFile(UnixFile unixFile, string currentPath, SquashFsBuilder builder)
+    private static async Task<Result> CreateFile(UnixFile unixFile, string currentPath, SquashFsBuilder builder)
     {
-        var filePath = string.IsNullOrEmpty(currentPath) ? unixFile.Name : currentPath + "/" + unixFile.Name;
-        var content = unixFile.Bytes.Array();
-        builder.File(filePath, content, (uint)unixFile.OwnerId, (uint)unixFile.OwnerId, GetFileMode(unixFile.Permissions));
+        var content = await unixFile.ReadAll().ConfigureAwait(false);
+        if (content.IsFailure)
+        {
+            return Result.Failure($"Could not read AppImage entry '{unixFile.Name}': {content.Error}");
+        }
+
+        return Result.Try(() =>
+        {
+            var filePath = string.IsNullOrEmpty(currentPath) ? unixFile.Name : currentPath + "/" + unixFile.Name;
+            builder.File(filePath, content.Value, (uint)unixFile.OwnerId, (uint)unixFile.OwnerId, GetFileMode(unixFile.Permissions));
+        });
     }
 
     private static uint GetFileMode(UnixPermissions unixFilePermissions)

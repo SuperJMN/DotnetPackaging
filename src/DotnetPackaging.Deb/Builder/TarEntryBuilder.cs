@@ -26,15 +26,17 @@ internal static class TarEntryBuilder
 
         if (!isService)
         {
+            var desktopContents = TextTemplates.DesktopFileContents(executablePath, metadata);
             entries.Add(new FileTarEntry(
                 $"./usr/share/applications/{metadata.Package.ToLowerInvariant()}.desktop",
-                ByteSource.FromString(TextTemplates.DesktopFileContents(executablePath, metadata), Encoding.ASCII),
+                AsciiByteSource(desktopContents),
                 Misc.RegularFileProperties()));
         }
 
+        var runScript = TextTemplates.RunScript(executablePath);
         entries.Add(new FileTarEntry(
             $"./usr/bin/{metadata.Package.ToLowerInvariant()}",
-            ByteSource.FromString(TextTemplates.RunScript(executablePath), Encoding.ASCII),
+            AsciiByteSource(runScript),
             Misc.ExecutableFileProperties()));
 
         if (isService)
@@ -43,7 +45,7 @@ internal static class TarEntryBuilder
             var unitContent = TextTemplates.SystemdUnitFile(executablePath, appDir, metadata);
             entries.Add(new FileTarEntry(
                 $"./lib/systemd/system/{metadata.Package.ToLowerInvariant()}.service",
-                ByteSource.FromString(unitContent, Encoding.ASCII),
+                AsciiByteSource(unitContent),
                 Misc.RegularFileProperties()));
         }
 
@@ -88,6 +90,11 @@ internal static class TarEntryBuilder
         }
 
         return normalized;
+    }
+
+    private static IByteSource AsciiByteSource(string value)
+    {
+        return ByteSource.FromString(value, Encoding.ASCII).WithLength(Encoding.ASCII.GetByteCount(value));
     }
 
     private static TarFileProperties GetFileProperties(INamedByteSourceWithPath file, INamedByteSourceWithPath executable)

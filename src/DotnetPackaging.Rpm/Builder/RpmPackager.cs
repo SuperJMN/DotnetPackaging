@@ -5,7 +5,7 @@ namespace DotnetPackaging.Rpm.Builder;
 
 internal static class RpmPackager
 {
-    public static Task<Result<IByteSource>> CreatePackage(PackageMetadata metadata, RpmLayout layout)
+    public static async Task<Result<IByteSource>> CreatePackage(PackageMetadata metadata, RpmLayout layout)
     {
         if (metadata == null)
         {
@@ -19,12 +19,12 @@ internal static class RpmPackager
 
         try
         {
-            var bytes = RpmArchiveWriter.Build(metadata, layout);
-            return Task.FromResult(Result.Success<IByteSource>(ByteSource.FromBytes(bytes)));
+            var bytes = await RpmArchiveWriter.Build(metadata, layout).ConfigureAwait(false);
+            return bytes.Map(data => ByteSource.FromBytes(data).WithLength(data.LongLength));
         }
         catch (Exception ex)
         {
-            return Task.FromResult(Result.Failure<IByteSource>(ex.Message));
+            return Result.Failure<IByteSource>(ex.Message);
         }
     }
 }

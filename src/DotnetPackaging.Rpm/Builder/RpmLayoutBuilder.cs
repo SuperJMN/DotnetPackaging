@@ -27,9 +27,8 @@ internal static class RpmLayoutBuilder
             {
                 var relative = resource.Path == DivinePath.Empty ? resource.Name : resource.FullPath().ToString();
                 var path = NormalizePath($"{appDir}/{relative}");
-                var data = ByteSource.FromBytes(resource.Array());
                 var properties = GetFileProperties(resource, executable);
-                return new RpmEntry(path, properties, data, RpmEntryType.File);
+                return new RpmEntry(path, properties, resource, RpmEntryType.File);
             });
     }
 
@@ -64,8 +63,7 @@ internal static class RpmLayoutBuilder
         foreach (var icon in metadata.IconFiles)
         {
             var iconPath = NormalizePath($"/{icon.Key}");
-            var iconData = ByteSource.FromBytes(icon.Value.Array());
-            result.Add(new RpmEntry(iconPath, UnixFileProperties.RegularFileProperties(), iconData, RpmEntryType.File));
+            result.Add(new RpmEntry(iconPath, UnixFileProperties.RegularFileProperties(), icon.Value, RpmEntryType.File));
         }
 
         return result;

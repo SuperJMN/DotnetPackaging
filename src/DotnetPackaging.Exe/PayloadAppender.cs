@@ -1,5 +1,7 @@
 using System.Text;
+using System.Reactive.Linq;
 using CSharpFunctionalExtensions;
+using DotnetPackaging;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Exe;
@@ -8,34 +10,29 @@ internal static class PayloadAppender
 {
     private const string Magic = "DPACKEXE1";
 
-    public static async Task<Result<IByteSource>> Append(IByteSource stub, IByteSource payload)
+    public static Task<Result<IByteSource>> Append(IByteSource stub, IByteSource payload)
     {
-        try
+        var payloadLength = payload.KnownLength();
+        if (payloadLength.HasValue)
         {
-            var stubBytes = await ToBytes(stub);
-            var payloadBytes = await ToBytes(payload);
-            var lengthBytes = BitConverter.GetBytes((long)payloadBytes.Length);
-            var magicBytes = Encoding.ASCII.GetBytes(Magic);
-
-            await using var output = new MemoryStream();
-            await output.WriteAsync(stubBytes);
-            await output.WriteAsync(payloadBytes);
-            await output.WriteAsync(lengthBytes);
-            await output.WriteAsync(magicBytes);
-
-            return Result.Success((IByteSource)ByteSource.FromBytes(output.ToArray()));
+            return Task.FromResult(Result.Success<IByteSource>(
+                new[] { stub, payload, Footer(payloadLength.Value) }.ConcatWithLength()));
         }
-        catch (Exception ex)
-        {
-            return Result.Failure<IByteSource>(ex.Message);
-        }
+
+        return Task.FromResult(Result.Success<IByteSource>(ByteSource.FromDisposableAsync(
+            () => payload.ToTempFile(".exe-payload"),
+            payloadFile =>
+            {
+                var footer = Footer(payloadFile.Length);
+                return new[] { stub, payloadFile.ToByteSource(), footer }.ConcatWithLength();
+            })));
     }
 
-    private static async Task<byte[]> ToBytes(IByteSource source)
+    private static IByteSource Footer(long payloadLength)
     {
-        await using var stream = source.ToStreamSeekable();
-        await using var buffer = new MemoryStream();
-        await stream.CopyToAsync(buffer);
-        return buffer.ToArray();
+        var lengthBytes = BitConverter.GetBytes(payloadLength);
+        var magicBytes = Encoding.ASCII.GetBytes(Magic);
+        var footerBytes = lengthBytes.Concat(magicBytes).ToArray();
+        return ByteSource.FromBytes(footerBytes).WithLength(footerBytes.LongLength);
     }
 }

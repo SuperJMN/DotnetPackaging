@@ -38,9 +38,7 @@ internal static class CpioArchiveReader
             position += 110;
             var name = Encoding.UTF8.GetString(payload, position, nameSize - 1);
             position += nameSize;
-            // Padding is based on nameSize, not on absolute position
-            var namePadding = nameSize % 4 == 0 ? 0 : 4 - (nameSize % 4);
-            position += namePadding;
+            position = AlignToFour(position);
 
             if (name == "TRAILER!!!")
             {
@@ -49,9 +47,7 @@ internal static class CpioArchiveReader
 
             var data = payload.AsSpan(position, fileSize).ToArray();
             position += fileSize;
-            // Padding is based on fileSize, not on absolute position
-            var filePadding = fileSize % 4 == 0 ? 0 : 4 - (fileSize % 4);
-            position += filePadding;
+            position = AlignToFour(position);
 
             entries.Add(new CpioEntry(name, data, mode, uid, gid, mtime, inode, nlink, devMajor, devMinor, rdevMajor, rdevMinor, check));
         }
@@ -65,7 +61,10 @@ internal static class CpioArchiveReader
         return int.Parse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
     }
 
-
+    private static int AlignToFour(int position)
+    {
+        return position % 4 == 0 ? position : position + 4 - position % 4;
+    }
 }
 
 public sealed record CpioEntry(

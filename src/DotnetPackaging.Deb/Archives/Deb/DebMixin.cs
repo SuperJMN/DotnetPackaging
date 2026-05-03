@@ -26,7 +26,7 @@ internal static class DebMixin
 
         var signature = "2.0\n";
 
-        return new ArEntry("debian-binary", ByteSource.FromString(signature), properties);
+        return new ArEntry("debian-binary", Utf8ByteSource(signature), properties);
     }
 
     private static ArEntry ControlTar(DebFile debFile)
@@ -81,7 +81,7 @@ internal static class DebMixin
 
         var content = items.Compose() + "\n";
 
-        var file = ByteSource.FromString(content);
+        var file = Utf8ByteSource(content);
 
         var entries = new List<TarEntry>
         {
@@ -91,17 +91,17 @@ internal static class DebMixin
 
         if (deb.Scripts.PostInst.HasValue)
         {
-            entries.Add(new FileTarEntry("./postinst", ByteSource.FromString(deb.Scripts.PostInst.Value), executableProperties));
+            entries.Add(new FileTarEntry("./postinst", Utf8ByteSource(deb.Scripts.PostInst.Value), executableProperties));
         }
 
         if (deb.Scripts.PreRm.HasValue)
         {
-            entries.Add(new FileTarEntry("./prerm", ByteSource.FromString(deb.Scripts.PreRm.Value), executableProperties));
+            entries.Add(new FileTarEntry("./prerm", Utf8ByteSource(deb.Scripts.PreRm.Value), executableProperties));
         }
 
         if (deb.Scripts.PostRm.HasValue)
         {
-            entries.Add(new FileTarEntry("./postrm", ByteSource.FromString(deb.Scripts.PostRm.Value), executableProperties));
+            entries.Add(new FileTarEntry("./postrm", Utf8ByteSource(deb.Scripts.PostRm.Value), executableProperties));
         }
 
         // TODO: Add other properties, too
@@ -114,6 +114,11 @@ internal static class DebMixin
 
         var controlTarFile = new TarFile(entries.ToArray());
         return controlTarFile;
+    }
+
+    private static IByteSource Utf8ByteSource(string value)
+    {
+        return ByteSource.FromString(value).WithLength(System.Text.Encoding.UTF8.GetByteCount(value));
     }
 
     private static UnixFileProperties DefaultProperties(DebFile debFile)

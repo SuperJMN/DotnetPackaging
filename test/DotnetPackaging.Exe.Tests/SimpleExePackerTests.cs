@@ -295,9 +295,11 @@ public class SimpleExePackerTests
 
         containerResult.IsSuccess.Should().BeTrue(containerResult.IsFailure ? containerResult.Error : string.Empty);
 
-        var stub = ByteSource.FromBytes(new byte[] { 1, 2, 3, 4 });
+        var stubBytes = new byte[] { 1, 2, 3, 4 };
+        var stub = ByteSource.FromBytes(stubBytes).WithLength(stubBytes.LongLength);
         var buildResult = await SimpleExePacker.Build(stub, containerResult.Value, metadata, Maybe<IByteSource>.None);
         buildResult.IsSuccess.Should().BeTrue(buildResult.IsFailure ? buildResult.Error : string.Empty);
+        buildResult.Value.Installer.KnownLength().HasValue.Should().BeTrue();
 
         await using var stream = buildResult.Value.Installer.ToStreamSeekable();
         var payloadBytesMaybe = ExtractPayloadBytes(stream);
@@ -328,7 +330,7 @@ public class SimpleExePackerTests
     private async Task<ExeBuildArtifacts> BuildArtifacts(DirectoryInfo publishDir, ExeInstallerMetadata metadata, Maybe<IByteSource>? logo = null)
     {
         var container = BuildContainer(publishDir);
-        var stub = ByteSource.FromStreamFactory(() => File.OpenRead(ResolveStubPath()));
+        var stub = FileByteSource.OpenRead(ResolveStubPath());
         var buildResult = await SimpleExePacker.Build(stub, container, metadata, logo ?? Maybe<IByteSource>.None);
         buildResult.IsSuccess.Should().BeTrue(buildResult.IsFailure ? buildResult.Error : string.Empty);
         return buildResult.Value;
@@ -340,7 +342,7 @@ public class SimpleExePackerTests
             .EnumerateFiles(publishDir.FullName, "*", SearchOption.AllDirectories)
             .ToDictionary(
                 file => Path.GetRelativePath(publishDir.FullName, file).Replace('\\', '/'),
-                file => (IByteSource)ByteSource.FromStreamFactory(() => File.OpenRead(file)),
+                file => FileByteSource.OpenRead(file),
                 StringComparer.Ordinal);
 
         var containerResult = files.ToRootContainer();

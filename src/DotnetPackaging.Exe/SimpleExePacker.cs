@@ -6,15 +6,12 @@ using System.Threading.Tasks;
 using System.IO.Compression;
 
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Text.Json;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Exe.Artifacts;
 using DotnetPackaging.Exe.Metadata;
 using DotnetPackaging.Exe.Signing;
 using Zafiro.DivineBytes;
-
-using System.Reactive.Linq;
 
 namespace DotnetPackaging.Exe;
 
@@ -55,7 +52,7 @@ internal static class SimpleExePacker
         if (result.IsFailure)
             throw new InvalidOperationException($"Failed to sign PE: {result.Error}");
 
-        return ByteSource.FromBytes(result.Value);
+        return ByteSource.FromBytes(result.Value).WithLength(result.Value.LongLength);
     }
 
     private static async Task<IByteSource> CreateInstallerPayload(
@@ -79,7 +76,8 @@ internal static class SimpleExePacker
             {
                 var bytes = await ToBytes(file.Value);
                 var signed = PeSigner.SignIfPe(bytes, certificate.Value);
-                signedFiles[file.Key] = ByteSource.FromBytes(signed.IsSuccess ? signed.Value : bytes);
+                var signedBytes = signed.IsSuccess ? signed.Value : bytes;
+                signedFiles[file.Key] = ByteSource.FromBytes(signedBytes).WithLength(signedBytes.LongLength);
             }
 
             files = signedFiles;
@@ -142,26 +140,30 @@ internal static class SimpleExePacker
             }
         }
 
-        return ByteSource.FromBytes(stream.ToArray());
+        var bytes = stream.ToArray();
+        return ByteSource.FromBytes(bytes).WithLength(bytes.LongLength);
     }
 
     private static async Task<IByteSource> AppendPayload(IByteSource stub, IByteSource payload)
     {
-        var payloadBytes = await ToBytes(payload);
-        var lengthBytes = BitConverter.GetBytes((long)payloadBytes.Length);
-        var magicBytes = Encoding.ASCII.GetBytes("DPACKEXE1");
+        var append = await PayloadAppender.Append(stub, payload).ConfigureAwait(false);
+        if (append.IsFailure)
+        {
+            throw new InvalidOperationException(append.Error);
+        }
 
-        var footer = ByteSource.FromBytes(lengthBytes.Concat(magicBytes).ToArray());
-
-        return ByteSource.FromByteObservable(stub.Bytes.Concat(ByteSource.FromBytes(payloadBytes).Bytes).Concat(footer.Bytes));
+        return append.Value;
     }
 
     private static async Task<byte[]> ToBytes(IByteSource source)
     {
-        await using var stream = source.ToStreamSeekable();
-        await using var buffer = new MemoryStream();
-        await stream.CopyToAsync(buffer);
-        return buffer.ToArray();
+        var bytes = await source.ReadAll().ConfigureAwait(false);
+        if (bytes.IsFailure)
+        {
+            throw new InvalidOperationException(bytes.Error);
+        }
+
+        return bytes.Value;
     }
 
     private static IByteSource CreateMetadataSource(InstallerMetadata metadata)
@@ -172,6 +174,6 @@ internal static class SimpleExePacker
             WriteIndented = false
         });
 
-        return ByteSource.FromBytes(bytes);
+        return ByteSource.FromBytes(bytes).WithLength(bytes.LongLength);
     }
 }

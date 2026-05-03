@@ -1,3 +1,4 @@
+using CSharpFunctionalExtensions;
 using Zafiro.DivineBytes;
 
 namespace DotnetPackaging;
@@ -17,6 +18,7 @@ public sealed class Package : IPackage
     public string Name { get; }
 
     public IObservable<byte[]> Bytes => source.Bytes;
+    public Maybe<long> Length => source.KnownLength();
 
     public IDisposable Subscribe(IObserver<byte[]> observer) => source.Subscribe(observer);
 
