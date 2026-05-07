@@ -1,7 +1,9 @@
 using System.Buffers.Binary;
+using System.Reactive.Linq;
 using DotnetPackaging.Dmg.Hfs.Builder;
 using FluentAssertions;
 using Xunit;
+using Zafiro.DivineBytes;
 
 namespace DotnetPackaging.Hfs.Tests;
 
@@ -207,5 +209,125 @@ public class HfsVolumeTests
         var usedBlocks = totalBlocks - freeBlocks;
         usedBlocks.Should().BeGreaterThan(0);
         usedBlocks.Should().BeLessThan(totalBlocks);
+    }
+
+    [Fact]
+    public async Task HfsVolumeWriter_ShouldWriteKnownLengthByteSourcesToSeekableStreamWithoutFullVolumeBuffer()
+    {
+        var payload = Enumerable.Range(0, 16)
+            .Select(index => Enumerable.Repeat((byte)index, 4096).ToArray())
+            .ToArray();
+        var source = new TrackingByteSource(payload);
+        var volume = HfsVolumeBuilder.Create("Test")
+            .AddFile("payload.bin", source, source.Length.Value)
+            .Build();
+        await using var output = new TrackingSeekableStream();
+
+        await HfsVolumeWriter.WriteToAsync(volume, output);
+
+        output.Length.Should().BeGreaterThan(payload.Sum(chunk => chunk.Length));
+        output.MaxWriteSize.Should().BeLessThan(payload.Sum(chunk => chunk.Length), "file payload chunks should be streamed instead of writing one full volume buffer");
+        source.Subscriptions.Should().Be(1);
+        output.ReadUInt16BigEndian(1024).Should().Be(0x482B);
+    }
+
+    private sealed class TrackingByteSource(byte[][] chunks) : IByteSource
+    {
+        public int Subscriptions { get; private set; }
+
+        public IObservable<byte[]> Bytes => Observable.Defer(() =>
+        {
+            Subscriptions++;
+            return chunks.ToObservable();
+        });
+
+        public CSharpFunctionalExtensions.Maybe<long> Length { get; } = CSharpFunctionalExtensions.Maybe.From(chunks.Sum(chunk => (long)chunk.Length));
+
+        public IDisposable Subscribe(IObserver<byte[]> observer) => Bytes.Subscribe(observer);
+    }
+
+    private sealed class TrackingSeekableStream : Stream
+    {
+        private readonly Dictionary<long, byte> bytes = new();
+        private long position;
+        private long length;
+
+        public int MaxWriteSize { get; private set; }
+
+        public override bool CanRead => true;
+        public override bool CanSeek => true;
+        public override bool CanWrite => true;
+        public override long Length => length;
+
+        public override long Position
+        {
+            get => position;
+            set => position = value;
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var read = 0;
+            while (read < count && position < Length)
+            {
+                buffer[offset + read] = bytes.GetValueOrDefault(position);
+                position++;
+                read++;
+            }
+
+            return read;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            position = origin switch
+            {
+                SeekOrigin.Begin => offset,
+                SeekOrigin.Current => position + offset,
+                SeekOrigin.End => Length + offset,
+                _ => throw new ArgumentOutOfRangeException(nameof(origin), origin, null)
+            };
+
+            return position;
+        }
+
+        public override void SetLength(long value)
+        {
+            length = value;
+            if (position > value)
+            {
+                position = value;
+            }
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            MaxWriteSize = Math.Max(MaxWriteSize, count);
+
+            for (var i = 0; i < count; i++)
+            {
+                var value = buffer[offset + i];
+                if (value != 0)
+                {
+                    bytes[position] = value;
+                }
+
+                position++;
+            }
+
+            length = Math.Max(length, position);
+        }
+
+        public ushort ReadUInt16BigEndian(long offset)
+        {
+            Span<byte> buffer = stackalloc byte[2];
+            buffer[0] = bytes.GetValueOrDefault(offset);
+            buffer[1] = bytes.GetValueOrDefault(offset + 1);
+            return BinaryPrimitives.ReadUInt16BigEndian(buffer);
+        }
     }
 }

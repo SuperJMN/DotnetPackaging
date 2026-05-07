@@ -3,6 +3,7 @@ using System.Reactive.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Dmg;
+using DotnetPackaging.Dmg.Hfs.Files;
 using DotnetPackaging.Dmg.Verification;
 using DotnetPackaging.Formats.Dmg.Udif;
 using FluentAssertions;
@@ -469,6 +470,61 @@ public class DmgHfsBuilderTests
     }
 
     [Fact]
+    public async Task BuildVolume_ShouldPreserveSourceFilesAsLazyFileBackedByteSources()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+
+        var payloadPath = Path.Combine(publish, "payload.bin");
+        await File.WriteAllBytesAsync(payloadPath, "original payload"u8.ToArray());
+
+        var volume = await DmgHfsBuilder.BuildVolume(publish, "Lazy Payload", includeDefaultLayout: false);
+        await File.WriteAllBytesAsync(payloadPath, "updated payload!"u8.ToArray());
+
+        var file = FindFile(volume.Root, "payload.bin");
+        file.Size.Should().Be(new FileInfo(payloadPath).Length);
+        file.Content.KnownLength().Value.Should().Be(new FileInfo(payloadPath).Length);
+        var content = await file.Content.ReadAll();
+        content.Value.Should().Equal("updated payload!"u8.ToArray(), "source bytes should not be captured while building the HFS model");
+    }
+
+    [Fact]
+    public async Task BuildVolume_ShouldPreserveCustomDmgAdornmentsAsLazyFileBackedByteSources()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+        await File.WriteAllTextAsync(Path.Combine(publish, "App"), "exe");
+
+        var dsStorePath = Path.Combine(publish, ".DS_Store");
+        var volumeIconPath = Path.Combine(publish, ".VolumeIcon.icns");
+        var background = Path.Combine(publish, ".background");
+        Directory.CreateDirectory(background);
+        var backgroundPath = Path.Combine(background, "Custom.bin");
+
+        var dsStoreOriginal = Enumerable.Repeat((byte)0x11, 16).ToArray();
+        var volumeIconOriginal = Enumerable.Repeat((byte)0x22, 24).ToArray();
+        var backgroundOriginal = Enumerable.Repeat((byte)0x33, 32).ToArray();
+        await File.WriteAllBytesAsync(dsStorePath, dsStoreOriginal);
+        await File.WriteAllBytesAsync(volumeIconPath, volumeIconOriginal);
+        await File.WriteAllBytesAsync(backgroundPath, backgroundOriginal);
+
+        var volume = await DmgHfsBuilder.BuildVolume(publish, "Custom", includeDefaultLayout: false);
+
+        var dsStoreUpdated = Enumerable.Repeat((byte)0x44, dsStoreOriginal.Length).ToArray();
+        var volumeIconUpdated = Enumerable.Repeat((byte)0x55, volumeIconOriginal.Length).ToArray();
+        var backgroundUpdated = Enumerable.Repeat((byte)0x66, backgroundOriginal.Length).ToArray();
+        await File.WriteAllBytesAsync(dsStorePath, dsStoreUpdated);
+        await File.WriteAllBytesAsync(volumeIconPath, volumeIconUpdated);
+        await File.WriteAllBytesAsync(backgroundPath, backgroundUpdated);
+
+        await AssertFileBackedContent(volume.Root, ".DS_Store", dsStoreUpdated);
+        await AssertFileBackedContent(volume.Root, ".VolumeIcon.icns", volumeIconUpdated);
+        await AssertFileBackedContent(volume.Root, ".background/Custom.bin", backgroundUpdated);
+    }
+
+    [Fact]
     public async Task HfsPlus_header_has_correct_version()
     {
         using var tempRoot = new TempDir();
@@ -670,5 +726,77 @@ public class DmgHfsBuilderTests
     private static int ReadNodeRecordOffset(ReadOnlySpan<byte> node, int nodeSize, int recordIndex)
     {
         return BinaryPrimitives.ReadUInt16BigEndian(node.Slice(nodeSize - 2 - recordIndex * 2, 2));
+    }
+
+    private static async Task AssertFileBackedContent(HfsDirectory directory, string path, byte[] expectedContent)
+    {
+        var file = FindFile(directory, path);
+        file.Size.Should().Be(expectedContent.Length);
+        file.Content.KnownLength().Value.Should().Be(expectedContent.Length);
+
+        var content = await file.Content.ReadAll();
+        content.Value.Should().Equal(expectedContent, $"source bytes for {path} should not be captured while building the HFS model");
+    }
+
+    private static HfsFile FindFile(HfsDirectory directory, string path)
+    {
+        var current = directory;
+        var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+        for (var i = 0; i < parts.Length; i++)
+        {
+            var child = current.Children.SingleOrDefault(x => x.Name == parts[i]);
+            if (child == null)
+            {
+                break;
+            }
+
+            if (i == parts.Length - 1 && child is HfsFile file)
+            {
+                return file;
+            }
+
+            if (child is not HfsDirectory subDirectory)
+            {
+                break;
+            }
+
+            current = subDirectory;
+        }
+
+        return FindFileByName(directory, path);
+    }
+
+    private static HfsFile FindFileByName(HfsDirectory directory, string name)
+    {
+        var found = FindFileByNameOrNull(directory, name);
+        if (found is not null)
+        {
+            return found;
+        }
+
+        throw new InvalidOperationException($"File '{name}' was not found.");
+    }
+
+    private static HfsFile? FindFileByNameOrNull(HfsDirectory directory, string name)
+    {
+        foreach (var child in directory.Children)
+        {
+            switch (child)
+            {
+                case HfsFile file when file.Name == name:
+                    return file;
+                case HfsDirectory subDirectory:
+                    var found = FindFileByNameOrNull(subDirectory, name);
+                    if (found is not null)
+                    {
+                        return found;
+                    }
+
+                    break;
+            }
+        }
+
+        return null;
     }
 }

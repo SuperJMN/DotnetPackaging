@@ -51,6 +51,45 @@ internal static class DmgHfsBuilder
         Maybe<string> bundleIdentifier = default,
         Maybe<string> bundleVersion = default)
     {
+        var volume = await BuildVolume(
+            sourceFolder,
+            volumeName,
+            addApplicationsSymlink,
+            includeDefaultLayout,
+            icon,
+            executableName,
+            infoPlist,
+            bundleIdentifier,
+            bundleVersion).ConfigureAwait(false);
+
+        using var hfsFile = MaterializedByteSourceFile.Create(".hfs");
+        await using (var hfsOutput = File.Open(hfsFile.Path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None))
+        {
+            await HfsVolumeWriter.WriteToAsync(volume, hfsOutput).ConfigureAwait(false);
+        }
+
+        await using var hfsStream = File.Open(hfsFile.Path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        await using var dmgStream = File.Open(outputPath, FileMode.Create, FileAccess.Write, FileShare.None);
+
+        var udifWriter = new UdifWriter
+        {
+            CompressionType = compress ? CompressionType.Zlib : CompressionType.Raw
+        };
+
+        udifWriter.Create(hfsStream, dmgStream);
+    }
+
+    internal static async Task<HfsVolume> BuildVolume(
+        string sourceFolder,
+        string volumeName,
+        bool addApplicationsSymlink = false,
+        bool includeDefaultLayout = true,
+        Maybe<IIcon> icon = default,
+        string? executableName = null,
+        Maybe<IByteSource> infoPlist = default,
+        Maybe<string> bundleIdentifier = default,
+        Maybe<string> bundleVersion = default)
+    {
         var builder = HfsVolumeBuilder.Create(SanitizeVolumeName(volumeName));
 
         // Add Applications symlink if requested
@@ -71,7 +110,7 @@ internal static class DmgHfsBuilder
                 if (bundleName == null) continue;
                 
                 var appDir = builder.AddDirectory(bundleName);
-                await AddDirectoryContentsRecursive(appDir, bundle);
+                AddDirectoryContentsRecursive(appDir, bundle);
             }
         }
         else
@@ -85,7 +124,7 @@ internal static class DmgHfsBuilder
             var exeName = executableName ?? GuessExecutableName(sourceFolder, volumeName);
 
             // Add all files to MacOS folder
-            await AddDirectoryContents(
+            AddDirectoryContents(
                 macOsDir,
                 sourceFolder,
                 path => path.EndsWith(".app", StringComparison.OrdinalIgnoreCase) || 
@@ -102,32 +141,17 @@ internal static class DmgHfsBuilder
             contentsDir.AddFile("PkgInfo", Encoding.ASCII.GetBytes("APPL????"));
         }
 
-        await AddDmgAdornments(builder, sourceFolder, includeDefaultLayout);
+        AddDmgAdornments(builder, sourceFolder, includeDefaultLayout);
 
-        // Build the HFS+ volume
-        var volume = builder.Build();
-        var hfsBytes = HfsVolumeWriter.WriteToBytes(volume);
-        
-        // Wrap HFS+ volume in UDIF format (DMG)
-        using var hfsStream = new MemoryStream(hfsBytes);
-        using var dmgStream = new MemoryStream();
-        
-        var udifWriter = new UdifWriter
-        {
-            CompressionType = compress ? CompressionType.Zlib : CompressionType.Raw
-        };
-        
-        udifWriter.Create(hfsStream, dmgStream);
-        
-        await File.WriteAllBytesAsync(outputPath, dmgStream.ToArray());
+        return builder.Build();
     }
 
-    private static async Task AddDirectoryContentsRecursive(HfsDirectory target, string sourcePath)
+    private static void AddDirectoryContentsRecursive(HfsDirectory target, string sourcePath)
     {
-        await AddDirectoryContentsRecursive(target, sourcePath, GetFileMode);
+        AddDirectoryContentsRecursive(target, sourcePath, GetFileMode);
     }
 
-    private static async Task AddDirectoryContentsRecursive(HfsDirectory target, string sourcePath, Func<string, ushort> getFileMode)
+    private static void AddDirectoryContentsRecursive(HfsDirectory target, string sourcePath, Func<string, ushort> getFileMode)
     {
         foreach (var dir in Directory.EnumerateDirectories(sourcePath))
         {
@@ -135,7 +159,7 @@ internal static class DmgHfsBuilder
             if (dirName == null) continue;
 
             var subDir = target.AddDirectory(dirName);
-            await AddDirectoryContentsRecursive(subDir, dir, getFileMode);
+            AddDirectoryContentsRecursive(subDir, dir, getFileMode);
         }
 
         foreach (var file in Directory.EnumerateFiles(sourcePath))
@@ -143,12 +167,11 @@ internal static class DmgHfsBuilder
             var fileName = Path.GetFileName(file);
             if (fileName == null) continue;
 
-            var fileBytes = await File.ReadAllBytesAsync(file);
-            target.AddFile(fileName, fileBytes, getFileMode(file));
+            AddFileFromPath(target, fileName, file, getFileMode(file));
         }
     }
 
-    private static async Task AddDirectoryContents(
+    private static void AddDirectoryContents(
         HfsDirectory target,
         string sourcePath,
         Func<string, bool>? shouldSkip = null,
@@ -162,7 +185,7 @@ internal static class DmgHfsBuilder
             if (dirName == null) continue;
 
             var subDir = target.AddDirectory(dirName);
-            await AddDirectoryContentsRecursive(subDir, dir, getRecursiveFileMode ?? getFileMode ?? GetFileMode);
+            AddDirectoryContentsRecursive(subDir, dir, getRecursiveFileMode ?? getFileMode ?? GetFileMode);
         }
 
         foreach (var file in Directory.EnumerateFiles(sourcePath))
@@ -171,8 +194,7 @@ internal static class DmgHfsBuilder
             var fileName = Path.GetFileName(file);
             if (fileName == null) continue;
 
-            var fileBytes = await File.ReadAllBytesAsync(file);
-            target.AddFile(fileName, fileBytes, getFileMode?.Invoke(file) ?? GetFileMode(file));
+            AddFileFromPath(target, fileName, file, getFileMode?.Invoke(file) ?? GetFileMode(file));
         }
     }
 
@@ -230,7 +252,7 @@ internal static class DmgHfsBuilder
         return IsRootEntry(sourceFolder, path, "Info.plist");
     }
 
-    private static async Task AddDmgAdornments(HfsVolumeBuilder builder, string sourceFolder, bool includeDefaultLayout)
+    private static void AddDmgAdornments(HfsVolumeBuilder builder, string sourceFolder, bool includeDefaultLayout)
     {
         var backgroundPath = Path.Combine(sourceFolder, BackgroundDirectoryName);
         var hasCustomBackground = Directory.Exists(backgroundPath);
@@ -239,7 +261,7 @@ internal static class DmgHfsBuilder
             var backgroundDir = builder.AddDirectory(BackgroundDirectoryName);
             if (hasCustomBackground)
             {
-                await AddDirectoryContentsRecursive(backgroundDir, backgroundPath);
+                AddDirectoryContentsRecursive(backgroundDir, backgroundPath);
             }
 
             var defaultBackgroundPath = Path.Combine(backgroundPath, DefaultBackgroundFileName);
@@ -252,7 +274,7 @@ internal static class DmgHfsBuilder
         var dsStorePath = Path.Combine(sourceFolder, DsStoreFileName);
         if (File.Exists(dsStorePath))
         {
-            builder.AddFile(DsStoreFileName, await File.ReadAllBytesAsync(dsStorePath));
+            AddFileFromPath(builder.Root, DsStoreFileName, dsStorePath);
         }
         else if (includeDefaultLayout)
         {
@@ -262,7 +284,7 @@ internal static class DmgHfsBuilder
         var volumeIconPath = Path.Combine(sourceFolder, VolumeIconFileName);
         if (File.Exists(volumeIconPath))
         {
-            builder.AddFile(VolumeIconFileName, await File.ReadAllBytesAsync(volumeIconPath));
+            AddFileFromPath(builder.Root, VolumeIconFileName, volumeIconPath);
         }
     }
 
@@ -299,6 +321,12 @@ internal static class DmgHfsBuilder
         return HfsFileModes.Regular0644;
     }
 
+    private static void AddFileFromPath(HfsDirectory target, string fileName, string path, ushort? fileMode = null)
+    {
+        var fileInfo = new FileInfo(path);
+        target.AddFile(fileName, FileByteSource.OpenRead(fileInfo), fileInfo.Length, fileMode ?? GetFileMode(path));
+    }
+
     private static async Task<Maybe<string>> PrepareAppIcon(string sourceFolder, HfsDirectory resources, Maybe<IIcon> providedIcon)
     {
         if (providedIcon.HasValue)
@@ -310,8 +338,7 @@ internal static class DmgHfsBuilder
         if (existingIcns != null)
         {
             var fileName = Path.GetFileName(existingIcns)!;
-            var iconBytes = await File.ReadAllBytesAsync(existingIcns);
-            resources.AddFile(fileName, iconBytes);
+            AddFileFromPath(resources, fileName, existingIcns);
             return Path.GetFileNameWithoutExtension(existingIcns);
         }
 

@@ -29,8 +29,22 @@ public static class HfsVolumeWriter
     /// </summary>
     public static IByteSource Write(HfsVolume volume)
     {
-        var bytes = WriteToBytes(volume);
-        return ByteSource.FromBytes(bytes);
+        return ByteSourceMaterializationExtensions.FromTempFileFactory(async () =>
+        {
+            var file = MaterializedByteSourceFile.Create(".hfs");
+
+            try
+            {
+                await using var output = File.Open(file.Path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
+                await WriteToAsync(volume, output).ConfigureAwait(false);
+                return file;
+            }
+            catch (Exception ex)
+            {
+                file.Dispose();
+                return Result.Failure<MaterializedByteSourceFile>(ex.Message);
+            }
+        });
     }
 
     /// <summary>
@@ -41,11 +55,28 @@ public static class HfsVolumeWriter
     /// </summary>
     public static byte[] WriteToBytes(HfsVolume volume)
     {
+        using var stream = new MemoryStream();
+        WriteToAsync(volume, stream).GetAwaiter().GetResult();
+        return stream.ToArray();
+    }
+
+    public static async Task WriteToAsync(HfsVolume volume, Stream output, CancellationToken cancellationToken = default)
+    {
+        if (!output.CanSeek)
+        {
+            throw new ArgumentException("HFS+ volume output must be seekable.", nameof(output));
+        }
+
+        if (!output.CanWrite)
+        {
+            throw new ArgumentException("HFS+ volume output must be writable.", nameof(output));
+        }
+
         var blockSize = volume.BlockSize;
         var (fileCount, folderCount) = volume.CountEntries();
 
-        // Collect all files and their data
-        var fileDataList = new List<(HfsFile file, byte[] data, uint startBlock, uint blockCount)>();
+        // Collect file metadata without reading source bytes.
+        var fileDataList = new List<FileData>();
         var symlinkDataList = new List<(HfsSymlink symlink, byte[] data, uint startBlock, uint blockCount)>();
         
         CollectFileData(volume.Root, fileDataList, symlinkDataList);
@@ -74,7 +105,7 @@ public static class HfsVolumeWriter
         var attributesBlocks = 1u; // Minimum 1 block
         
         // Calculate data blocks
-        var dataBlocksNeeded = (uint)fileDataList.Sum(f => (f.data.Length + (long)blockSize - 1) / blockSize)
+        var dataBlocksNeeded = (uint)fileDataList.Sum(f => (f.Length + (long)blockSize - 1) / blockSize)
                              + (uint)symlinkDataList.Sum(s => (s.data.Length + (long)blockSize - 1) / blockSize);
 
         // 3. Iterate to find TotalBlocks (converge on AllocationFile size)
@@ -134,9 +165,9 @@ public static class HfsVolumeWriter
         // Allocate Files
         for (var i = 0; i < fileDataList.Count; i++)
         {
-            var (file, data, _, _) = fileDataList[i];
-            var blocks = (uint)((data.Length + blockSize - 1) / blockSize);
-            fileDataList[i] = (file, data, Allocate(blocks), blocks);
+            var fileData = fileDataList[i];
+            var blocks = (uint)((fileData.Length + blockSize - 1) / blockSize);
+            fileDataList[i] = fileData with { StartBlock = Allocate(blocks), BlockCount = blocks };
         }
 
         for (var i = 0; i < symlinkDataList.Count; i++)
@@ -170,47 +201,58 @@ public static class HfsVolumeWriter
             AttributesFile = ForkData.FromExtent(blockSize, attributesStartBlock, attributesBlocks) with { ClumpSize = blockSize }
         };
 
-        // 7. Write Result Buffer
-        // Total size is exactly TotalBlocks * BlockSize
+        // 7. Write Result Stream
+        // Total size is exactly TotalBlocks * BlockSize. Seekable streams keep unwritten padding zeroed.
         var totalSizeBytes = (long)totalBlocks * blockSize;
-        var buffer = new byte[totalSizeBytes];
+        output.SetLength(totalSizeBytes);
 
-        // Helper to write data at block offset
-        void WriteAtBlock(uint blockIdx, byte[] data)
+        async Task WriteAtBlock(uint blockIdx, byte[] data)
         {
             if (blockIdx == 0 && data.Length == 0) return;
-             // Determine exact byte offset
-            var offset = (long)blockIdx * blockSize;
-            data.CopyTo(buffer.AsSpan((int)offset)); // Assuming DMG < 2GB for array
+            output.Position = (long)blockIdx * blockSize;
+            await output.WriteAsync(data, cancellationToken).ConfigureAwait(false);
         }
         
         // Write Headers
         // Boot blocks are 0-1024 (Zeroed)
         // Volume header is 1024-1536
-        header.WriteTo(buffer.AsSpan(VolumeHeaderOffset, VolumeHeader.Size));
+        var volumeHeaderBytes = new byte[VolumeHeader.Size];
+        header.WriteTo(volumeHeaderBytes);
+        output.Position = VolumeHeaderOffset;
+        await output.WriteAsync(volumeHeaderBytes, cancellationToken).ConfigureAwait(false);
 
         // Write Metadata
-        WriteAtBlock(allocationStartBlock, allocation.ToBytes());
-        WriteAtBlock(extentsStartBlock, extents.ToBytes()); // if size > 0
-        WriteAtBlock(catalogStartBlock, catalog.ToBytes());
-        WriteAtBlock(attributesStartBlock, attributes.ToBytes());
+        await WriteAtBlock(allocationStartBlock, allocation.ToBytes()).ConfigureAwait(false);
+        await WriteAtBlock(extentsStartBlock, extents.ToBytes()).ConfigureAwait(false);
+        await WriteAtBlock(catalogStartBlock, catalog.ToBytes()).ConfigureAwait(false);
+        await WriteAtBlock(attributesStartBlock, attributes.ToBytes()).ConfigureAwait(false);
         
         // Write Files
-        foreach (var (_, data, start, _) in fileDataList) WriteAtBlock(start, data);
-        foreach (var (_, data, start, _) in symlinkDataList) WriteAtBlock(start, data);
+        foreach (var fileData in fileDataList)
+        {
+            output.Position = (long)fileData.StartBlock * blockSize;
+            var write = await fileData.File.Content.WriteTo(output, cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (write.IsFailure)
+            {
+                throw new InvalidOperationException($"Could not write HFS+ file '{fileData.File.Name}': {write.Error}");
+            }
+        }
+
+        foreach (var (_, data, start, _) in symlinkDataList)
+        {
+            await WriteAtBlock(start, data).ConfigureAwait(false);
+        }
 
         // Write Alt Header
         // Located in second-to-last 512-byte sector.
         // Offset = TotalSizeBytes - 1024
-        var altHeaderOffset = (int)(totalSizeBytes - 1024);
-        header.WriteTo(buffer.AsSpan(altHeaderOffset, VolumeHeader.Size));
-
-        return buffer;
+        output.Position = totalSizeBytes - 1024;
+        await output.WriteAsync(volumeHeaderBytes, cancellationToken).ConfigureAwait(false);
     }
 
     private static void CollectFileData(
         HfsDirectory dir,
-        List<(HfsFile file, byte[] data, uint startBlock, uint blockCount)> fileDataList,
+        List<FileData> fileDataList,
         List<(HfsSymlink symlink, byte[] data, uint startBlock, uint blockCount)> symlinkDataList)
     {
         foreach (var entry in dir.Children)
@@ -218,8 +260,7 @@ public static class HfsVolumeWriter
             switch (entry)
             {
                 case HfsFile file:
-                    var fileData = file.Content.ToStream().ReadAllBytes();
-                    fileDataList.Add((file, fileData, 0, 0));
+                    fileDataList.Add(new FileData(file, file.Size, 0, 0));
                     break;
                 case HfsSymlink symlink:
                     var linkData = System.Text.Encoding.UTF8.GetBytes(symlink.Target);
@@ -234,7 +275,7 @@ public static class HfsVolumeWriter
 
     private static CatalogBTree BuildCatalog(
         HfsVolume volume,
-        List<(HfsFile file, byte[] data, uint startBlock, uint blockCount)> fileDataList,
+        List<FileData> fileDataList,
         List<(HfsSymlink symlink, byte[] data, uint startBlock, uint blockCount)> symlinkDataList,
         out uint nextCnid)
     {
@@ -253,7 +294,7 @@ public static class HfsVolumeWriter
 
     private static CatalogBTree BuildCatalogWithBlocks(
         HfsVolume volume,
-        List<(HfsFile file, byte[] data, uint startBlock, uint blockCount)> fileDataList,
+        List<FileData> fileDataList,
         List<(HfsSymlink symlink, byte[] data, uint startBlock, uint blockCount)> symlinkDataList,
         out uint nextCnid)
     {
@@ -274,7 +315,7 @@ public static class HfsVolumeWriter
         CatalogBTree catalog,
         CatalogNodeId parentId,
         HfsDirectory dir,
-        List<(HfsFile file, byte[] data, uint startBlock, uint blockCount)> fileDataList,
+        List<FileData> fileDataList,
         List<(HfsSymlink symlink, byte[] data, uint startBlock, uint blockCount)> symlinkDataList,
         ref uint nextCnid,
         uint blockSize)
@@ -321,7 +362,7 @@ public static class HfsVolumeWriter
         CatalogBTree catalog,
         CatalogNodeId parentId,
         HfsDirectory dir,
-        List<(HfsFile file, byte[] data, uint startBlock, uint blockCount)> fileDataList,
+        List<FileData> fileDataList,
         List<(HfsSymlink symlink, byte[] data, uint startBlock, uint blockCount)> symlinkDataList,
         ref uint nextCnid,
         uint blockSize)
@@ -345,14 +386,14 @@ public static class HfsVolumeWriter
                     break;
 
                 case HfsFile file:
-                    var fileInfo = fileDataList.FirstOrDefault(f => f.file == file);
+                    var fileInfo = fileDataList.First(f => f.File == file);
                     var fileRecord = new CatalogFileRecord
                     {
                         FileId = cnid,
                         CreateDate = entry.CreateDate,
                         ContentModDate = entry.ModifyDate,
                         Permissions = BsdInfo.ForFile(file.FileMode),
-                        DataFork = ForkData.FromExtent((ulong)file.Size, fileInfo.startBlock, fileInfo.blockCount)
+                        DataFork = ForkData.FromExtent((ulong)file.Size, fileInfo.StartBlock, fileInfo.BlockCount)
                     };
                     catalog.AddFile(parentId, entry.Name, fileRecord);
                     break;
@@ -375,20 +416,6 @@ public static class HfsVolumeWriter
             }
         }
     }
-}
 
-/// <summary>
-/// Extension methods for Stream.
-/// </summary>
-internal static class StreamExtensions
-{
-    public static byte[] ReadAllBytes(this Stream stream)
-    {
-        if (stream is MemoryStream ms)
-            return ms.ToArray();
-
-        using var memoryStream = new MemoryStream();
-        stream.CopyTo(memoryStream);
-        return memoryStream.ToArray();
-    }
+    private sealed record FileData(HfsFile File, long Length, uint StartBlock, uint BlockCount);
 }
