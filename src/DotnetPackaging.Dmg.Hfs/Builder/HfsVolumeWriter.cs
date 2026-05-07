@@ -303,6 +303,7 @@ public static class HfsVolumeWriter
                         FileId = cnid,
                         CreateDate = entry.CreateDate,
                         ContentModDate = entry.ModifyDate,
+                        Permissions = BsdInfo.ForFile(file.FileMode),
                         DataFork = new ForkData { LogicalSize = (ulong)file.Size }
                     };
                     catalog.AddFile(parentId, entry.Name, fileRecord);
@@ -350,6 +351,7 @@ public static class HfsVolumeWriter
                         FileId = cnid,
                         CreateDate = entry.CreateDate,
                         ContentModDate = entry.ModifyDate,
+                        Permissions = BsdInfo.ForFile(file.FileMode),
                         DataFork = ForkData.FromExtent((ulong)file.Size, fileInfo.startBlock, fileInfo.blockCount)
                     };
                     catalog.AddFile(parentId, entry.Name, fileRecord);

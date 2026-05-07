@@ -7,6 +7,9 @@ using DotnetPackaging.Dmg.Hfs.Files;
 using DotnetPackaging.Formats.Dmg.Udif;
 using Zafiro.DivineBytes;
 using Path = System.IO.Path;
+#if NET6_0_OR_GREATER
+using System.Runtime.InteropServices;
+#endif
 
 namespace DotnetPackaging.Dmg;
 
@@ -79,19 +82,22 @@ internal static class DmgHfsBuilder
             var contentsDir = appDir.AddDirectory("Contents");
             var macOsDir = contentsDir.AddDirectory("MacOS");
             var resourcesDir = contentsDir.AddDirectory("Resources");
+            var exeName = executableName ?? GuessExecutableName(sourceFolder, volumeName);
 
             // Add all files to MacOS folder
-            await AddDirectoryContents(macOsDir, sourceFolder, 
+            await AddDirectoryContents(
+                macOsDir,
+                sourceFolder,
                 path => path.EndsWith(".app", StringComparison.OrdinalIgnoreCase) || 
                         path.EndsWith(".icns", StringComparison.OrdinalIgnoreCase) ||
                         IsRootInfoPlist(sourceFolder, path) ||
-                        IsDmgAdornment(sourceFolder, path));
+                        IsDmgAdornment(sourceFolder, path),
+                path => IsExecutablePath(sourceFolder, path, exeName) ? HfsFileModes.Regular0755 : HfsFileModes.Regular0644,
+                _ => HfsFileModes.Regular0644);
 
             // Handle icon
             var appIcon = await PrepareAppIcon(sourceFolder, resourcesDir, icon);
 
-            // Generate Info.plist
-            var exeName = executableName ?? GuessExecutableName(sourceFolder, volumeName);
             await AddInfoPlist(contentsDir, sourceFolder, infoPlist, volumeName, exeName, appIcon, bundleIdentifier, bundleVersion);
             contentsDir.AddFile("PkgInfo", Encoding.ASCII.GetBytes("APPL????"));
         }
@@ -118,13 +124,18 @@ internal static class DmgHfsBuilder
 
     private static async Task AddDirectoryContentsRecursive(HfsDirectory target, string sourcePath)
     {
+        await AddDirectoryContentsRecursive(target, sourcePath, GetFileMode);
+    }
+
+    private static async Task AddDirectoryContentsRecursive(HfsDirectory target, string sourcePath, Func<string, ushort> getFileMode)
+    {
         foreach (var dir in Directory.EnumerateDirectories(sourcePath))
         {
             var dirName = Path.GetFileName(dir);
             if (dirName == null) continue;
 
             var subDir = target.AddDirectory(dirName);
-            await AddDirectoryContentsRecursive(subDir, dir);
+            await AddDirectoryContentsRecursive(subDir, dir, getFileMode);
         }
 
         foreach (var file in Directory.EnumerateFiles(sourcePath))
@@ -133,11 +144,16 @@ internal static class DmgHfsBuilder
             if (fileName == null) continue;
 
             var fileBytes = await File.ReadAllBytesAsync(file);
-            target.AddFile(fileName, fileBytes);
+            target.AddFile(fileName, fileBytes, getFileMode(file));
         }
     }
 
-    private static async Task AddDirectoryContents(HfsDirectory target, string sourcePath, Func<string, bool>? shouldSkip = null)
+    private static async Task AddDirectoryContents(
+        HfsDirectory target,
+        string sourcePath,
+        Func<string, bool>? shouldSkip = null,
+        Func<string, ushort>? getFileMode = null,
+        Func<string, ushort>? getRecursiveFileMode = null)
     {
         foreach (var dir in Directory.EnumerateDirectories(sourcePath))
         {
@@ -146,7 +162,7 @@ internal static class DmgHfsBuilder
             if (dirName == null) continue;
 
             var subDir = target.AddDirectory(dirName);
-            await AddDirectoryContentsRecursive(subDir, dir);
+            await AddDirectoryContentsRecursive(subDir, dir, getRecursiveFileMode ?? getFileMode ?? GetFileMode);
         }
 
         foreach (var file in Directory.EnumerateFiles(sourcePath))
@@ -156,7 +172,7 @@ internal static class DmgHfsBuilder
             if (fileName == null) continue;
 
             var fileBytes = await File.ReadAllBytesAsync(file);
-            target.AddFile(fileName, fileBytes);
+            target.AddFile(fileName, fileBytes, getFileMode?.Invoke(file) ?? GetFileMode(file));
         }
     }
 
@@ -261,6 +277,26 @@ internal static class DmgHfsBuilder
     {
         return string.Equals(Path.GetFileName(path), name, StringComparison.OrdinalIgnoreCase)
                && string.Equals(Path.GetDirectoryName(path), sourceFolder, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsExecutablePath(string sourceFolder, string path, string executableName)
+    {
+        return string.Equals(Path.GetFileName(path), executableName, StringComparison.Ordinal)
+               && string.Equals(Path.GetDirectoryName(path), sourceFolder, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static ushort GetFileMode(string path)
+    {
+#if NET6_0_OR_GREATER
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            var mode = File.GetUnixFileMode(path);
+            var permissions = (ushort)((uint)mode & 0x01FF);
+            return HfsFileModes.Regular(permissions);
+        }
+#endif
+
+        return HfsFileModes.Regular0644;
     }
 
     private static async Task<Maybe<string>> PrepareAppIcon(string sourceFolder, HfsDirectory resources, Maybe<IIcon> providedIcon)
