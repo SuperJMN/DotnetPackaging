@@ -140,6 +140,7 @@ public class PackagingTests : IDisposable
             "--arch", "x64",
             "--appId", "com.example.cli",
             "--version", "2.0.0",
+            "--vendor", "Example Vendor",
             "--info-plist", plistPath
         };
 

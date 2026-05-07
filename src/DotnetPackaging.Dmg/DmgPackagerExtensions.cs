@@ -115,7 +115,8 @@ public static class DmgPackagerExtensions
             Icon = source.Icon,
             InfoPlist = source.InfoPlist.Or(() => FindProjectInfoPlist(projectDirectory)),
             BundleIdentifier = source.BundleIdentifier.Or(projectMetadata.Bind(metadata => metadata.PackageId)),
-            BundleVersion = source.BundleVersion.Or(projectMetadata.Bind(metadata => metadata.Version))
+            BundleVersion = source.BundleVersion.Or(projectMetadata.Bind(metadata => metadata.Version)),
+            Vendor = source.Vendor.Or(projectMetadata.Bind(metadata => metadata.Company))
         };
     }
 

@@ -81,6 +81,7 @@ public static class DmgCommand
             InfoPlist = options.InfoPlist,
             BundleIdentifier = options.Id,
             BundleVersion = options.Version,
+            Vendor = options.Vendor,
             Icon = options.Icon,
             Compress = Maybe.From(true),
             AddApplicationsSymlink = Maybe.From(true)
@@ -141,6 +142,7 @@ public static class DmgCommand
                     dmgOpt.InfoPlist = Maybe.From(infoPlist);
                     dmgOpt.BundleIdentifier = opt.Id;
                     dmgOpt.BundleVersion = opt.Version;
+                    dmgOpt.Vendor = opt.Vendor;
                 },
                 pub =>
                 {
