@@ -61,7 +61,8 @@ internal static class DmgHfsBuilder
             executableName,
             infoPlist,
             bundleIdentifier,
-            bundleVersion).ConfigureAwait(false);
+            bundleVersion,
+            vendor).ConfigureAwait(false);
 
         using var hfsFile = MaterializedByteSourceFile.Create(".hfs");
         await using (var hfsOutput = File.Open(hfsFile.Path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None))
@@ -89,7 +90,8 @@ internal static class DmgHfsBuilder
         string? executableName = null,
         Maybe<IByteSource> infoPlist = default,
         Maybe<string> bundleIdentifier = default,
-        Maybe<string> bundleVersion = default)
+        Maybe<string> bundleVersion = default,
+        Maybe<string> vendor = default)
     {
         var builder = HfsVolumeBuilder.Create(SanitizeVolumeName(volumeName));
 
