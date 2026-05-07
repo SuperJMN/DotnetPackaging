@@ -8,38 +8,29 @@ namespace DotnetPackaging.Dmg.Tests;
 
 public class InspectDmgTests
 {
-    private readonly ITestOutputHelper _output;
-    private readonly StringBuilder _sb = new();
+    private const string InspectPathVariable = "DOTNETPACKAGING_DMG_INSPECT_PATH";
+    private readonly ITestOutputHelper output;
+    private readonly StringBuilder logBuffer = new();
 
     public InspectDmgTests(ITestOutputHelper output)
     {
-        _output = output;
+        this.output = output;
     }
     
     private void Log(string msg)
     {
-        _output.WriteLine(msg);
-        _sb.AppendLine(msg);
+        output.WriteLine(msg);
+        logBuffer.AppendLine(msg);
     }
 
-    [Fact]
+    [SkippableFact]
     public void InspectCatalogRootNode()
     {
-        // Must convert first!
-        // var dmgPath = "/Users/jmn/RiderProjects/DotnetPackaging/Output_raw.dmg.cdr";
-        // Assuming user runs hdiutil convert manually or we use Output.dmg if we fix the reader.
-        // For now, let's keep it pointing to cdr but note it might be stale unless we reconvert.
-        var dmgPath = "/Users/jmn/RiderProjects/DotnetPackaging/Output_raw.dmg.cdr";
-        if (!File.Exists(dmgPath))
-        {
-            Log("Output.dmg not found.");
-            Assert.Fail($"Output.dmg not found at {dmgPath}"); 
-            return;
-        }
+        var dmgPath = Environment.GetEnvironmentVariable(InspectPathVariable);
+        Skip.If(string.IsNullOrWhiteSpace(dmgPath), $"Set {InspectPathVariable} to inspect a local raw HFS image.");
+        Skip.IfNot(File.Exists(dmgPath), $"Inspection file not found at {dmgPath}.");
 
-        using var stream = File.OpenRead(dmgPath);
-        var buffer = new byte[stream.Length];
-        stream.Read(buffer);
+        var buffer = File.ReadAllBytes(dmgPath);
 
         // Debug: Print first 16 bytes and VH start
         var head = BitConverter.ToString(buffer.AsSpan(0, 16).ToArray());
@@ -198,6 +189,6 @@ public class InspectDmgTests
             }
         }
         
-        File.WriteAllText("debug_tree.txt", _sb.ToString());
+        File.WriteAllText("debug_tree.txt", logBuffer.ToString());
     }
 }
