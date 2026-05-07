@@ -20,7 +20,7 @@ public static class DmgVerifier
             using var fs = File.OpenRead(dmgPath);
             if (IsIso9660(fs))
             {
-                return Result.Success("ISO/UDTO DMG detected (content not enumerated)");
+                return Result.Success("ISO/UDTO DMG structural-only validation OK (content not enumerated)");
             }
         }
         catch (Exception ex)
@@ -43,7 +43,7 @@ public static class DmgVerifier
                 return Result.Failure<string>("UDIF detected but HFS+ signature not found");
             }
 
-            return Result.Success($"UDIF DMG OK (runs={udif.Runs.Count}, sectors={udif.Trailer.SectorCount})");
+            return Result.Success($"UDIF DMG structural-only validation OK (runs={udif.Runs.Count}, sectors={udif.Trailer.SectorCount})");
         }
         catch (Exception ex) when (ex is InvalidDataException || ex is IOException)
         {

@@ -8,16 +8,19 @@ namespace DotnetPackaging.Dmg.Tests;
 
 public class HfsCorruptionTests
 {
-    private readonly ITestOutputHelper _output;
+    private readonly ITestOutputHelper output;
 
     public HfsCorruptionTests(ITestOutputHelper output)
     {
-        _output = output;
+        this.output = output;
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ShouldCreateValidHfsVolume()
     {
+        var fsck = ExternalDmgValidationTools.FindHfsFsck();
+        Skip.If(fsck == null, "Requires fsck_hfs on macOS or fsck.hfsplus on Linux.");
+
         // Assemble
         var builder = HfsVolumeBuilder.Create("TestHFS")
             .WithBlockSize(4096);
@@ -50,17 +53,17 @@ public class HfsCorruptionTests
         try
         {
             await File.WriteAllBytesAsync(imgPath, bytes);
-            _output.WriteLine($"Generated HFS+ image at: {imgPath}");
+            output.WriteLine($"Generated HFS+ image at: {imgPath}");
 
             // Verify
-            var (exitCode, stdout, stderr) = await RunFsck(imgPath);
+            var (exitCode, stdout, stderr) = await RunFsck(fsck, imgPath);
             
-            _output.WriteLine("fsck_hfs output:");
-            _output.WriteLine(stdout);
+            output.WriteLine("HFS+ fsck output:");
+            output.WriteLine(stdout);
             if (!string.IsNullOrEmpty(stderr))
             {
-                _output.WriteLine("fsck_hfs errors:");
-                _output.WriteLine(stderr);
+                output.WriteLine("HFS+ fsck errors:");
+                output.WriteLine(stderr);
             }
 
             // Assert
@@ -75,17 +78,18 @@ public class HfsCorruptionTests
         }
     }
 
-    private async Task<(int ExitCode, string StdOut, string StdErr)> RunFsck(string imagePath)
+    private static async Task<(int ExitCode, string StdOut, string StdErr)> RunFsck(string fsck, string imagePath)
     {
         var startInfo = new ProcessStartInfo
         {
-            FileName = "fsck_hfs",
-            Arguments = $"-n \"{imagePath}\"",
+            FileName = fsck,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+        startInfo.ArgumentList.Add("-n");
+        startInfo.ArgumentList.Add(imagePath);
 
         using var process = new Process { StartInfo = startInfo };
         process.Start();

@@ -79,21 +79,21 @@ public class BTreeTests
 
         // Assert
         // Node Descriptor = 14 bytes.
-        // Record 0 starts at 14. Len 3. Ends at 17.
-        // Record 1 starts at 17. Len 2. Ends at 19.
-        // Free space starts at 19.
+        // Record 0 starts at 14. Len 3 plus 1 byte of HFS+ even-byte alignment. Ends at 18.
+        // Record 1 starts at 18. Len 2. Ends at 20.
+        // Free space starts at 20.
         
         // Offsets at end of node:
         // 510-511: Offset 0 (14)
-        // 508-509: Offset 1 (17)
-        // 506-507: Offset 2 (19) - Start of free space
+        // 508-509: Offset 1 (18)
+        // 506-507: Offset 2 (20) - Start of free space
         
         BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(510, 2)).Should().Be(14);
-        BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(508, 2)).Should().Be(17);
-        BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(506, 2)).Should().Be(19);
+        BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(508, 2)).Should().Be(18);
+        BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(506, 2)).Should().Be(20);
 
         // Verify content
         bytes[14].Should().Be(0xAA);
-        bytes[17].Should().Be(0x11);
+        bytes[18].Should().Be(0x11);
     }
 }
