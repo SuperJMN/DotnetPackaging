@@ -106,6 +106,47 @@ public class PackagingTests : IDisposable
         File.Exists(output).Should().BeTrue();
     }
 
+    [Fact]
+    public async Task Can_create_Dmg_with_info_plist()
+    {
+        var plistPath = Path.Combine(temp.Path, "Info.plist");
+        File.WriteAllText(plistPath, """
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.example.e2eplist</string></dict></plist>
+""");
+
+        var output = Path.Combine(temp.Path, "TestAppWithInfoPlist.dmg");
+        await ExecutePackagingCommand("dmg", output, $"--arch x64 --info-plist \"{plistPath}\"");
+
+        File.Exists(output).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Dmg_from_project_command_should_accept_info_plist()
+    {
+        var plistPath = Path.Combine(temp.Path, "Info.plist");
+        File.WriteAllText(plistPath, """
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict /></plist>
+""");
+
+        var command = DmgCommand.GetCommand();
+        var args = new[]
+        {
+            "from-project",
+            "--project", projectPath,
+            "--output", Path.Combine(temp.Path, "TestApp.dmg"),
+            "--arch", "x64",
+            "--appId", "com.example.cli",
+            "--version", "2.0.0",
+            "--info-plist", plistPath
+        };
+
+        var parseResult = command.Parse(args);
+        parseResult.Errors.Should().BeEmpty();
+        parseResult.UnmatchedTokens.Should().BeEmpty();
+    }
+
     private async Task ExecutePackagingCommand(string format, string outputPath, string extraArgs)
     {
         var toolProject = Path.Combine(repoRoot, "src", "DotnetPackaging.Tool", "DotnetPackaging.Tool.csproj");

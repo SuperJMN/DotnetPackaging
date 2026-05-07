@@ -38,7 +38,10 @@ internal static class DmgHfsBuilder
         bool addApplicationsSymlink = false, 
         bool includeDefaultLayout = true, 
         Maybe<IIcon> icon = default,
-        string? executableName = null)
+        string? executableName = null,
+        Maybe<IByteSource> infoPlist = default,
+        Maybe<string> bundleIdentifier = default,
+        Maybe<string> bundleVersion = default)
     {
         var builder = HfsVolumeBuilder.Create(SanitizeVolumeName(volumeName));
 
@@ -75,15 +78,15 @@ internal static class DmgHfsBuilder
             // Add all files to MacOS folder
             await AddDirectoryContents(macOsDir, sourceFolder, 
                 path => path.EndsWith(".app", StringComparison.OrdinalIgnoreCase) || 
-                        path.EndsWith(".icns", StringComparison.OrdinalIgnoreCase));
+                        path.EndsWith(".icns", StringComparison.OrdinalIgnoreCase) ||
+                        IsRootInfoPlist(sourceFolder, path));
 
             // Handle icon
             var appIcon = await PrepareAppIcon(sourceFolder, resourcesDir, icon);
 
             // Generate Info.plist
             var exeName = executableName ?? GuessExecutableName(sourceFolder, volumeName);
-            var plist = GenerateMinimalPlist(volumeName, exeName, appIcon.HasValue ? appIcon.Value : null);
-            contentsDir.AddFile("Info.plist", Encoding.UTF8.GetBytes(plist));
+            await AddInfoPlist(contentsDir, sourceFolder, infoPlist, volumeName, exeName, appIcon, bundleIdentifier, bundleVersion);
             contentsDir.AddFile("PkgInfo", Encoding.ASCII.GetBytes("APPL????"));
         }
 
@@ -155,6 +158,61 @@ internal static class DmgHfsBuilder
             var fileBytes = await File.ReadAllBytesAsync(file);
             target.AddFile(fileName, fileBytes);
         }
+    }
+
+    private static async Task AddInfoPlist(
+        HfsDirectory contentsDir,
+        string sourceFolder,
+        Maybe<IByteSource> providedInfoPlist,
+        string volumeName,
+        string executableName,
+        Maybe<string> appIcon,
+        Maybe<string> bundleIdentifier,
+        Maybe<string> bundleVersion)
+    {
+        var sourceInfoPlistPath = FindSourceInfoPlist(sourceFolder);
+        var sourceInfoPlist = sourceInfoPlistPath.HasValue
+            ? Maybe<IByteSource>.From(FileByteSource.OpenRead(sourceInfoPlistPath.Value))
+            : Maybe<IByteSource>.None;
+        var customInfoPlist = providedInfoPlist.Or(sourceInfoPlist);
+
+        if (customInfoPlist.HasValue)
+        {
+            await AddFile(contentsDir, "Info.plist", customInfoPlist.Value);
+            return;
+        }
+
+        var plist = GenerateMinimalPlist(
+            volumeName,
+            executableName,
+            appIcon.HasValue ? appIcon.Value : null,
+            bundleIdentifier,
+            bundleVersion);
+        contentsDir.AddFile("Info.plist", Encoding.UTF8.GetBytes(plist));
+    }
+
+    private static async Task AddFile(HfsDirectory target, string name, IByteSource source)
+    {
+        if (source.Length.HasValue)
+        {
+            target.AddFile(name, source, source.Length.Value);
+            return;
+        }
+
+        var chunks = await source.Bytes.ToList();
+        target.AddFile(name, chunks.SelectMany(bytes => bytes).ToArray());
+    }
+
+    private static Maybe<string> FindSourceInfoPlist(string sourceFolder)
+    {
+        var path = Path.Combine(sourceFolder, "Info.plist");
+        return File.Exists(path) ? Maybe.From(path) : Maybe<string>.None;
+    }
+
+    private static bool IsRootInfoPlist(string sourceFolder, string path)
+    {
+        return string.Equals(Path.GetFileName(path), "Info.plist", StringComparison.OrdinalIgnoreCase)
+               && string.Equals(Path.GetDirectoryName(path), sourceFolder, StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task<Maybe<string>> PrepareAppIcon(string sourceFolder, HfsDirectory resources, Maybe<IIcon> providedIcon)
@@ -295,9 +353,16 @@ internal static class DmgHfsBuilder
         return match;
     }
 
-    private static string GenerateMinimalPlist(string displayName, string executable, string? iconName)
+    private static string GenerateMinimalPlist(
+        string displayName,
+        string executable,
+        string? iconName,
+        Maybe<string> bundleIdentifier = default,
+        Maybe<string> bundleVersion = default)
     {
-        var identifier = $"com.{SanitizeBundleName(displayName).Trim('-').Trim('_').ToLowerInvariant()}";
+        var fallbackIdentifier = $"com.{SanitizeBundleName(displayName).Trim('-').Trim('_').ToLowerInvariant()}";
+        var identifier = bundleIdentifier.GetValueOrDefault(fallbackIdentifier);
+        var version = bundleVersion.GetValueOrDefault("1.0");
         return $"""
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -308,9 +373,9 @@ internal static class DmgHfsBuilder
     <key>CFBundleIdentifier</key>
     <string>{System.Security.SecurityElement.Escape(identifier)}</string>
     <key>CFBundleVersion</key>
-    <string>1.0</string>
+    <string>{System.Security.SecurityElement.Escape(version)}</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>{System.Security.SecurityElement.Escape(version)}</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleExecutable</key>

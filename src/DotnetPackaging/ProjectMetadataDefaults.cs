@@ -39,6 +39,14 @@ public static class ProjectMetadataDefaults
             {
                 metadata.Company.Execute(c => resolved.WithVendor(c));
             }
+            if (resolved.Id.HasNoValue)
+            {
+                metadata.PackageId.Execute(id => resolved.WithId(id));
+            }
+            if (resolved.Version.HasNoValue)
+            {
+                metadata.Version.Execute(version => resolved.WithVersion(version));
+            }
             if (resolved.Url.HasNoValue)
             {
                 metadata.PackageProjectUrl

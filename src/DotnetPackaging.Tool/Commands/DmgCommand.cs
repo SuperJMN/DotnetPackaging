@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.CommandLine.Parsing;
 using System.IO;
 using CSharpFunctionalExtensions;
 using DotnetPackaging;
@@ -23,6 +24,7 @@ public static class DmgCommand
             Description = "Add a default Finder layout (background image, Applications link positioning) when none is provided"
         };
         defaultLayoutOption.DefaultValueFactory = _ => true;
+        var infoPlistOption = CreateInfoPlistOption();
 
         var commands = CommandFactory.CreateCommand(
             "dmg",
@@ -31,8 +33,10 @@ public static class DmgCommand
             CreateDmg,
             "Create a macOS disk image (.dmg) with a native HFS+ payload wrapped in UDIF (DMG) format.",
             defaultLayoutOption,
-            null,
+            (options, parseResult) => options.InfoPlist = Maybe.From(parseResult.GetValue(infoPlistOption)),
             "pack-dmg");
+        commands.Root.Add(infoPlistOption);
+        commands.FromDirectory.Add(infoPlistOption);
 
         AddDmgFromProjectSubcommand(commands.Root);
 
@@ -79,6 +83,9 @@ public static class DmgCommand
             VolumeName = options.Name.Or(Maybe.From(inputDir.Name)),
             ExecutableName = options.ExecutableName,
             IncludeDefaultLayout = options.UseDefaultLayout,
+            InfoPlist = options.InfoPlist,
+            BundleIdentifier = options.Id,
+            BundleVersion = options.Version,
             Icon = options.Icon,
             Compress = Maybe.From(true),
             AddApplicationsSymlink = Maybe.From(true)
@@ -98,6 +105,7 @@ public static class DmgCommand
         compress.DefaultValueFactory = _ => true;
         var defaultLayoutOption = new Option<bool>("--with-default-layout") { Description = "Add a default Finder layout (background image, Applications link positioning) when none is provided" };
         defaultLayoutOption.DefaultValueFactory = _ => true;
+        var infoPlistOption = CreateInfoPlistOption();
 
         var binder = metadata.CreateBinder(defaultLayoutOption);
 
@@ -106,6 +114,7 @@ public static class DmgCommand
         metadata.AddTo(fromProject);
         fromProject.Add(compress);
         fromProject.Add(defaultLayoutOption);
+        fromProject.Add(infoPlistOption);
 
         fromProject.SetAction(async parseResult =>
         {
@@ -117,6 +126,7 @@ public static class DmgCommand
             var opt = binder.Bind(parseResult);
             var ridVal = parseResult.GetValue(project.Arch);
             var compressVal = parseResult.GetValue(compress);
+            var infoPlist = parseResult.GetValue(infoPlistOption);
             var useDefaultLayout = opt.UseDefaultLayout.GetValueOrDefault(true);
             var logger = Log.ForContext("command", "dmg-from-project");
 
@@ -133,6 +143,9 @@ public static class DmgCommand
                     dmgOpt.Compress = Maybe.From(compressVal);
                     dmgOpt.IncludeDefaultLayout = Maybe.From(useDefaultLayout);
                     dmgOpt.Icon = icon;
+                    dmgOpt.InfoPlist = Maybe.From(infoPlist);
+                    dmgOpt.BundleIdentifier = opt.Id;
+                    dmgOpt.BundleVersion = opt.Version;
                 },
                 pub =>
                 {
@@ -152,6 +165,34 @@ public static class DmgCommand
         });
 
         dmgCommand.Add(fromProject);
+    }
+
+    private static Option<IByteSource?> CreateInfoPlistOption()
+    {
+        var option = new Option<IByteSource?>("--info-plist")
+        {
+            Required = false,
+            Description = "Path to a custom Info.plist to embed in the generated .app bundle"
+        };
+        option.CustomParser = ParseInfoPlist;
+        return option;
+    }
+
+    private static IByteSource? ParseInfoPlist(ArgumentResult result)
+    {
+        if (result.Tokens.Count == 0)
+        {
+            return null;
+        }
+
+        var path = result.Tokens[0].Value;
+        if (!File.Exists(path))
+        {
+            result.AddError($"Invalid Info.plist '{path}': File not found");
+            return null;
+        }
+
+        return FileByteSource.OpenRead(path);
     }
 
     private static async Task<Maybe<IIcon>> ResolveIcon(Options options, DirectoryInfo projectDirectory, ILogger logger)

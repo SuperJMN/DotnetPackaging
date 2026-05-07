@@ -84,16 +84,20 @@ public static class DmgPackagerExtensions
         var projectMetadata = ProjectMetadataReader.TryRead(projectFile, logger);
         var inferred = ProjectMetadataDefaults.InferExecutableName(projectMetadata, projectFile);
 
-        return ResolveFromProject(source, inferred);
+        return ResolveFromProject(source, inferred, projectMetadata, projectFile.Directory);
     }
 
     private static DmgPackagerMetadata ResolveFromProject(DmgPackagerMetadata source, ProjectPackagingContext context)
     {
         var inferred = context.InferExecutableName();
-        return ResolveFromProject(source, inferred);
+        return ResolveFromProject(source, inferred, context.ProjectMetadata, context.ProjectFile.Directory);
     }
 
-    private static DmgPackagerMetadata ResolveFromProject(DmgPackagerMetadata source, Maybe<string> inferred)
+    private static DmgPackagerMetadata ResolveFromProject(
+        DmgPackagerMetadata source,
+        Maybe<string> inferred,
+        Maybe<ProjectMetadata> projectMetadata = default,
+        DirectoryInfo? projectDirectory = null)
     {
         return new DmgPackagerMetadata
         {
@@ -102,7 +106,23 @@ public static class DmgPackagerExtensions
             Compress = source.Compress,
             AddApplicationsSymlink = source.AddApplicationsSymlink,
             IncludeDefaultLayout = source.IncludeDefaultLayout,
-            Icon = source.Icon
+            Icon = source.Icon,
+            InfoPlist = source.InfoPlist.Or(() => FindProjectInfoPlist(projectDirectory)),
+            BundleIdentifier = source.BundleIdentifier.Or(projectMetadata.Bind(metadata => metadata.PackageId)),
+            BundleVersion = source.BundleVersion.Or(projectMetadata.Bind(metadata => metadata.Version))
         };
+    }
+
+    private static Maybe<IByteSource> FindProjectInfoPlist(DirectoryInfo? projectDirectory)
+    {
+        if (projectDirectory == null)
+        {
+            return Maybe<IByteSource>.None;
+        }
+
+        var path = System.IO.Path.Combine(projectDirectory.FullName, "Info.plist");
+        return File.Exists(path)
+            ? Maybe<IByteSource>.From(FileByteSource.OpenRead(path))
+            : Maybe<IByteSource>.None;
     }
 }

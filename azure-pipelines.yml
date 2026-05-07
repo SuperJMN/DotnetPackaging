@@ -27,8 +27,14 @@ steps:
       $ErrorActionPreference = 'Stop'
       dotnet tool install --global GitVersion.Tool --version 6.*
       $env:PATH += ";$env:USERPROFILE\\.dotnet\\tools"
-      $json = dotnet-gitversion /output json
-      if (-not $json) { throw 'GitVersion returned no output' }
+      $raw = dotnet-gitversion /output json 2>&1 | Out-String
+      if (-not $raw) { throw 'GitVersion returned no output' }
+      $start = $raw.IndexOf('{')
+      $end = $raw.LastIndexOf('}')
+      if ($start -lt 0 -or $end -lt $start) {
+        throw "GitVersion did not emit a JSON object. Output: $raw"
+      }
+      $json = $raw.Substring($start, $end - $start + 1)
       $gv = $json | ConvertFrom-Json
       # Use strictly MajorMinorPatch for package Version (no prerelease/metadata)
       $version = $gv.MajorMinorPatch

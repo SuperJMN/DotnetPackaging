@@ -141,6 +141,8 @@ Every format command offers two subcommands:
 
 Run `dotnetpackager <command> --help` to see the full list of shared options (`--application-name`, `--comment`, `--homepage`, `--keywords`, `--icon`, `--is-terminal`, etc.).
 
+DMG packages auto-generate an `.app/Contents/Info.plist` when the published directory does not already contain an `.app` bundle. By default the generated plist uses CLI/project metadata such as `--application-name`, `--appId`, `--version` and `--executable-name`. To take full control, pass `--info-plist ./Info.plist` to `dmg from-directory` or `dmg from-project`; that file has precedence over generated metadata. If no CLI plist is supplied, a root `Info.plist` next to the publish output or project is used before falling back to generated metadata.
+
 ### Examples
 Build an AppImage from a published directory:
 ```bash
