@@ -89,7 +89,7 @@ public class PackagingTests : IDisposable
     }
 
     [Fact]
-    public async Task Can_create_Dmg()
+    public async Task Can_create_and_verify_Dmg()
     {
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
@@ -104,6 +104,7 @@ public class PackagingTests : IDisposable
         // Let's use osx-x64 for DMG.
         await ExecutePackagingCommand("dmg", output, "--arch x64");
         File.Exists(output).Should().BeTrue();
+        await ExecuteDmgVerifyCommand(output);
     }
 
     private async Task ExecutePackagingCommand(string format, string outputPath, string extraArgs)
@@ -112,6 +113,15 @@ public class PackagingTests : IDisposable
         await Execute(
             "dotnet",
             $"run --project \"{toolProject}\" -- {format} from-project --project \"{projectPath}\" --output \"{outputPath}\" {extraArgs}",
+            repoRoot);
+    }
+
+    private async Task ExecuteDmgVerifyCommand(string dmgPath)
+    {
+        var toolProject = Path.Combine(repoRoot, "src", "DotnetPackaging.Tool", "DotnetPackaging.Tool.csproj");
+        await Execute(
+            "dotnet",
+            $"run --project \"{toolProject}\" -- dmg verify --file \"{dmgPath}\"",
             repoRoot);
     }
 
