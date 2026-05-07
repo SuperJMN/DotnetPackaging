@@ -11,6 +11,7 @@ public class MetadataOptionSet
     public Option<IEnumerable<string>> Keywords { get; }
     public Option<string> Comment { get; }
     public Option<string> Version { get; }
+    public Option<string>? Vendor { get; }
     public Option<Uri> HomePage { get; }
     public Option<string> License { get; }
     public Option<IEnumerable<Uri>> ScreenshotUrls { get; }
@@ -20,7 +21,7 @@ public class MetadataOptionSet
     public Option<bool> IsTerminal { get; }
     public Option<IIcon?> Icon { get; }
 
-    public MetadataOptionSet()
+    public MetadataOptionSet(bool includeVendor = true)
     {
         ApplicationName = new Option<string>("--application-name") { Description = "Application name", Required = false };
         ApplicationName.Aliases.Add("--productName");
@@ -31,6 +32,11 @@ public class MetadataOptionSet
         Keywords = new Option<IEnumerable<string>>("--keywords") { Description = "Keywords", Required = false, Arity = ArgumentArity.ZeroOrMore, AllowMultipleArgumentsPerToken = true };
         Comment = new Option<string>("--comment") { Description = "Comment", Required = false };
         Version = new Option<string>("--version") { Description = "Version", Required = false };
+        if (includeVendor)
+        {
+            Vendor = new Option<string>("--vendor") { Description = "Vendor/Publisher", Required = false };
+            Vendor.Aliases.Add("--company");
+        }
         HomePage = new Option<Uri>("--homepage") { Description = "Home page of the application", Required = false };
         HomePage.CustomParser = OptionsBinder.GetUri;
         License = new Option<string>("--license") { Description = "License of the application", Required = false };
@@ -53,6 +59,10 @@ public class MetadataOptionSet
         command.Add(Keywords);
         command.Add(Comment);
         command.Add(Version);
+        if (Vendor != null)
+        {
+            command.Add(Vendor);
+        }
         command.Add(HomePage);
         command.Add(License);
         command.Add(ScreenshotUrls);
@@ -66,5 +76,5 @@ public class MetadataOptionSet
     public OptionsBinder CreateBinder(Option<bool>? defaultLayout = null) =>
         new(ApplicationName, WmClass, Keywords, Comment, MainCategory,
             AdditionalCategories, Icon, Version, HomePage, License, ScreenshotUrls,
-            Summary, AppId, ExecutableName, IsTerminal, defaultLayout);
+            Summary, AppId, ExecutableName, IsTerminal, Vendor, defaultLayout);
 }

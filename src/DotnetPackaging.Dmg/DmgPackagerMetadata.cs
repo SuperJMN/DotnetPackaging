@@ -15,4 +15,5 @@ public sealed class DmgPackagerMetadata
     public Maybe<IByteSource> InfoPlist { get; set; } = Maybe<IByteSource>.None;
     public Maybe<string> BundleIdentifier { get; set; } = Maybe<string>.None;
     public Maybe<string> BundleVersion { get; set; } = Maybe<string>.None;
+    public Maybe<string> Vendor { get; set; } = Maybe<string>.None;
 }

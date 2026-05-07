@@ -7,6 +7,7 @@ public class Options
     public Maybe<string> Name { get; set; }
     public Maybe<string> Id { get; set; }
     public Maybe<string> Version { get; set; }
+    public Maybe<string> Vendor { get; set; }
     public Maybe<MainCategory> MainCategory { get; set; }
     public Maybe<string> StartupWmClass { get; set; }
     public Maybe<IEnumerable<string>> Keywords { get; set; }

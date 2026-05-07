@@ -49,7 +49,8 @@ internal static class DmgHfsBuilder
         string? executableName = null,
         Maybe<IByteSource> infoPlist = default,
         Maybe<string> bundleIdentifier = default,
-        Maybe<string> bundleVersion = default)
+        Maybe<string> bundleVersion = default,
+        Maybe<string> vendor = default)
     {
         var volume = await BuildVolume(
             sourceFolder,
@@ -60,7 +61,8 @@ internal static class DmgHfsBuilder
             executableName,
             infoPlist,
             bundleIdentifier,
-            bundleVersion).ConfigureAwait(false);
+            bundleVersion,
+            vendor).ConfigureAwait(false);
 
         using var hfsFile = MaterializedByteSourceFile.Create(".hfs");
         await using (var hfsOutput = File.Open(hfsFile.Path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None))
@@ -88,7 +90,8 @@ internal static class DmgHfsBuilder
         string? executableName = null,
         Maybe<IByteSource> infoPlist = default,
         Maybe<string> bundleIdentifier = default,
-        Maybe<string> bundleVersion = default)
+        Maybe<string> bundleVersion = default,
+        Maybe<string> vendor = default)
     {
         var builder = HfsVolumeBuilder.Create(SanitizeVolumeName(volumeName));
 
@@ -137,7 +140,7 @@ internal static class DmgHfsBuilder
             // Handle icon
             var appIcon = await PrepareAppIcon(sourceFolder, resourcesDir, icon);
 
-            await AddInfoPlist(contentsDir, sourceFolder, infoPlist, volumeName, exeName, appIcon, bundleIdentifier, bundleVersion);
+            await AddInfoPlist(contentsDir, sourceFolder, infoPlist, volumeName, exeName, appIcon, bundleIdentifier, bundleVersion, vendor);
             contentsDir.AddFile("PkgInfo", Encoding.ASCII.GetBytes("APPL????"));
         }
 
@@ -206,7 +209,8 @@ internal static class DmgHfsBuilder
         string executableName,
         Maybe<string> appIcon,
         Maybe<string> bundleIdentifier,
-        Maybe<string> bundleVersion)
+        Maybe<string> bundleVersion,
+        Maybe<string> vendor)
     {
         var sourceInfoPlistPath = FindSourceInfoPlist(sourceFolder);
         var sourceInfoPlist = sourceInfoPlistPath.HasValue
@@ -225,7 +229,8 @@ internal static class DmgHfsBuilder
             executableName,
             appIcon.HasValue ? appIcon.Value : null,
             bundleIdentifier,
-            bundleVersion);
+            bundleVersion,
+            vendor);
         contentsDir.AddFile("Info.plist", Encoding.UTF8.GetBytes(plist));
     }
 
@@ -469,7 +474,8 @@ internal static class DmgHfsBuilder
         string executable,
         string? iconName,
         Maybe<string> bundleIdentifier = default,
-        Maybe<string> bundleVersion = default)
+        Maybe<string> bundleVersion = default,
+        Maybe<string> vendor = default)
     {
         var fallbackIdentifier = $"com.{SanitizeBundleName(displayName).Trim('-').Trim('_').ToLowerInvariant()}";
         var identifier = bundleIdentifier.GetValueOrDefault(fallbackIdentifier);
@@ -491,6 +497,7 @@ internal static class DmgHfsBuilder
     <string>APPL</string>
     <key>CFBundleExecutable</key>
     <string>{System.Security.SecurityElement.Escape(executable)}</string>
+{(vendor.HasValue ? $"    <key>CFBundleGetInfoString</key>\n    <string>{System.Security.SecurityElement.Escape(vendor.Value)}</string>\n" : string.Empty)}
 {(iconName == null ? string.Empty : $"    <key>CFBundleIconFile</key>\n    <string>{System.Security.SecurityElement.Escape(iconName)}</string>\n")}  </dict>
 </plist>
 """;

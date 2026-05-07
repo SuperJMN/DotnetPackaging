@@ -5,6 +5,7 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging.Formats.Dmg.Udif;
 using DotnetPackaging.Publish;
 using FluentAssertions;
+using Serilog.Core;
 using Zafiro.DivineBytes;
 using Path = System.IO.Path;
 
@@ -85,7 +86,8 @@ public class DmgPackagerTests
             VolumeName = Maybe.From("Test App"),
             ExecutableName = Maybe.From("TestApp"),
             BundleIdentifier = Maybe.From("com.example.packagermetadata"),
-            BundleVersion = Maybe.From("3.2.1")
+            BundleVersion = Maybe.From("3.2.1"),
+            Vendor = Maybe.From("Packager Vendor")
         };
 
         var result = await new DmgPackager().Pack(container, metadata);
@@ -98,6 +100,8 @@ public class DmgPackagerTests
         var text = Encoding.UTF8.GetString(await ExtractVolumeBytes(output));
         text.Should().Contain("com.example.packagermetadata");
         text.Should().Contain("3.2.1");
+        text.Should().Contain("CFBundleGetInfoString");
+        text.Should().Contain("Packager Vendor");
     }
 
     [Fact]
@@ -207,10 +211,70 @@ public class DmgPackagerTests
         modes["NOTICE"].Should().Be(0x81A4);
     }
 
-    private static IContainer CreateContainer(IByteSource source)
+    [Fact]
+    public async Task From_published_project_should_map_project_company_to_generated_info_plist()
+    {
+        using var tempRoot = new TempDir();
+        var projectPath = CreateProject(tempRoot.Path, "Project Vendor");
+        var context = ProjectPackagingContext.FromProject(projectPath, Logger.None);
+        context.IsSuccess.Should().BeTrue(context.IsFailure ? context.Error : "");
+
+        var container = CreateContainer(ByteSource.FromBytes("exe"u8.ToArray()), "sample-runner");
+        var source = new DmgPackager().FromPublishedProject(container, context.Value, logger: Logger.None);
+
+        var output = Path.Combine(tempRoot.Path, "ProjectVendor.dmg");
+        var write = await source.WriteTo(output);
+
+        write.IsSuccess.Should().BeTrue(write.IsFailure ? write.Error : "");
+        var text = Encoding.UTF8.GetString(await ExtractVolumeBytes(output));
+        text.Should().Contain("Project Vendor");
+    }
+
+    [Fact]
+    public async Task From_published_project_should_prefer_metadata_vendor_over_project_company()
+    {
+        using var tempRoot = new TempDir();
+        var projectPath = CreateProject(tempRoot.Path, "Project Vendor");
+        var context = ProjectPackagingContext.FromProject(projectPath, Logger.None);
+        context.IsSuccess.Should().BeTrue(context.IsFailure ? context.Error : "");
+        var metadata = new DmgPackagerMetadata { Vendor = Maybe.From("CLI Vendor") };
+
+        var container = CreateContainer(ByteSource.FromBytes("exe"u8.ToArray()), "sample-runner");
+        var source = new DmgPackager().FromPublishedProject(container, context.Value, metadata, Logger.None);
+
+        var output = Path.Combine(tempRoot.Path, "CliVendor.dmg");
+        var write = await source.WriteTo(output);
+
+        write.IsSuccess.Should().BeTrue(write.IsFailure ? write.Error : "");
+        var text = Encoding.UTF8.GetString(await ExtractVolumeBytes(output));
+        text.Should().Contain("CLI Vendor");
+        text.Should().NotContain("Project Vendor");
+    }
+
+    private static string CreateProject(string directory, string company)
+    {
+        var projectPath = Path.Combine(directory, "SampleApp.csproj");
+        File.WriteAllText(projectPath, $"""
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>sample-runner</AssemblyName>
+    <Product>Sample App</Product>
+    <Company>{company}</Company>
+    <PackageId>com.example.sample</PackageId>
+    <Version>4.5.6</Version>
+  </PropertyGroup>
+</Project>
+""");
+
+        return projectPath;
+    }
+
+    private static IContainer CreateContainer(IByteSource source, string fileName = "TestApp")
     {
         return new RootContainer(
-            new[] { new NamedByteSource("TestApp", source) },
+            new[] { new NamedByteSource(fileName, source) },
             Enumerable.Empty<INamedContainer>());
     }
 
