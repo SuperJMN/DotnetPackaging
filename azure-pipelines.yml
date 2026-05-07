@@ -27,21 +27,34 @@ steps:
       $ErrorActionPreference = 'Stop'
       dotnet tool install --global GitVersion.Tool --version 6.*
       $env:PATH += ";$env:USERPROFILE\\.dotnet\\tools"
-      $raw = dotnet-gitversion /output json 2>&1 | Out-String
+      $raw = & dotnet-gitversion /output json 2>&1 | Out-String
+      $gitVersionExitCode = $LASTEXITCODE
       if (-not $raw) { throw 'GitVersion returned no output' }
       $start = $raw.IndexOf('{')
       $end = $raw.LastIndexOf('}')
-      if ($start -lt 0 -or $end -lt $start) {
+      if (($gitVersionExitCode -ne 0 -or $start -lt 0 -or $end -lt $start) -and "$(Build.Reason)" -eq "PullRequest") {
+        Write-Warning "GitVersion failed for PR validation. Falling back to latest tag-based build version. Output: $raw"
+        $tag = git tag --list "v[0-9]*" --sort=-v:refname | Select-Object -First 1
+        if (-not $tag) {
+          $version = "0.1.0"
+        } else {
+          $version = ($tag -replace "^[vV]", "") -replace "-.*$", ""
+        }
+        $semVer = "$version-pr.$env:BUILD_BUILDID"
+      } elseif ($start -lt 0 -or $end -lt $start) {
         throw "GitVersion did not emit a JSON object. Output: $raw"
-      }
-      $json = $raw.Substring($start, $end - $start + 1)
-      $gv = $json | ConvertFrom-Json
-      # Use strictly MajorMinorPatch for package Version (no prerelease/metadata)
-      $version = $gv.MajorMinorPatch
-      if (-not $version) { throw 'Could not determine version from GitVersion output' }
+      } elseif ($gitVersionExitCode -ne 0) {
+        throw "GitVersion failed with exit code $gitVersionExitCode. Output: $raw"
+      } else {
+        $json = $raw.Substring($start, $end - $start + 1)
+        $gv = $json | ConvertFrom-Json
+        # Use strictly MajorMinorPatch for package Version (no prerelease/metadata)
+        $version = $gv.MajorMinorPatch
+        if (-not $version) { throw 'Could not determine version from GitVersion output' }
 
-      $semVer = $gv.SemVer
-      if (-not $semVer) { $semVer = $gv.MajorMinorPatch }
+        $semVer = $gv.SemVer
+        if (-not $semVer) { $semVer = $gv.MajorMinorPatch }
+      }
 
       Write-Host "GitVersion Version: $version, SemVer: $semVer"
       Write-Host "##vso[task.setvariable variable=Version]$version"
