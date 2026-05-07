@@ -117,7 +117,7 @@ public class PackagingTests : IDisposable
 """);
 
         var output = Path.Combine(temp.Path, "TestAppWithInfoPlist.dmg");
-        await ExecutePackagingCommand("dmg", output, $"--arch x64 --info-plist \"{plistPath}\"");
+        await ExecutePackagingCommand("dmg", output, $"--arch x64 --vendor \"Example Vendor\" --info-plist \"{plistPath}\"");
 
         File.Exists(output).Should().BeTrue();
     }
@@ -149,6 +149,43 @@ public class PackagingTests : IDisposable
         parseResult.UnmatchedTokens.Should().BeEmpty();
     }
 
+    [Fact]
+    public void Dmg_from_project_command_should_accept_company_alias()
+    {
+        var command = DmgCommand.GetCommand();
+        var args = new[]
+        {
+            "from-project",
+            "--project", projectPath,
+            "--output", Path.Combine(temp.Path, "TestApp.dmg"),
+            "--arch", "x64",
+            "--company", "Example Company"
+        };
+
+        var parseResult = command.Parse(args);
+        parseResult.Errors.Should().BeEmpty();
+        parseResult.UnmatchedTokens.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Vendor_and_company_options_should_appear_once_in_help()
+    {
+        var commands = new[]
+        {
+            "exe --help",
+            "exe from-directory --help",
+            "exe from-project --help",
+            "dmg from-project --help"
+        };
+
+        foreach (var command in commands)
+        {
+            var help = await ExecuteToolForOutput(command);
+            CountOccurrences(help, "--vendor").Should().Be(1, command);
+            CountOccurrences(help, "--company").Should().Be(1, command);
+        }
+    }
+
     private async Task ExecutePackagingCommand(string format, string outputPath, string extraArgs)
     {
         var toolProject = Path.Combine(repoRoot, "src", "DotnetPackaging.Tool", "DotnetPackaging.Tool.csproj");
@@ -164,6 +201,15 @@ public class PackagingTests : IDisposable
         await Execute(
             "dotnet",
             $"run --project \"{toolProject}\" -- dmg verify --file \"{dmgPath}\"",
+            repoRoot);
+    }
+
+    private async Task<string> ExecuteToolForOutput(string arguments)
+    {
+        var toolProject = Path.Combine(repoRoot, "src", "DotnetPackaging.Tool", "DotnetPackaging.Tool.csproj");
+        return await ExecuteForOutput(
+            "dotnet",
+            $"run --project \"{toolProject}\" -- {arguments}",
             repoRoot);
     }
 
@@ -186,6 +232,11 @@ public class PackagingTests : IDisposable
 
     private static async Task Execute(string fileName, string arguments, string workingDirectory)
     {
+        _ = await ExecuteForOutput(fileName, arguments, workingDirectory);
+    }
+
+    private static async Task<string> ExecuteForOutput(string fileName, string arguments, string workingDirectory)
+    {
         var startInfo = new ProcessStartInfo(fileName, arguments)
         {
             RedirectStandardOutput = true,
@@ -206,6 +257,21 @@ public class PackagingTests : IDisposable
             throw new XunitException(
                 $"Command '{fileName} {arguments}' failed with exit code {process.ExitCode}.{Environment.NewLine}STDOUT:{Environment.NewLine}{stdOut}{Environment.NewLine}STDERR:{Environment.NewLine}{stdErr}");
         }
+
+        return $"{await stdOutTask}{Environment.NewLine}{await stdErrTask}";
+    }
+
+    private static int CountOccurrences(string value, string search)
+    {
+        var count = 0;
+        var index = 0;
+        while ((index = value.IndexOf(search, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += search.Length;
+        }
+
+        return count;
     }
 
     public void Dispose()

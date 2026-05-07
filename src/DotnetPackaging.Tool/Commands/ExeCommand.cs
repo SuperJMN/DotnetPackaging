@@ -57,7 +57,7 @@ public static class ExeCommand
         };
         pfxPasswordOption.Recursive = true;
 
-        var metadata = new MetadataOptionSet();
+        var metadata = new MetadataOptionSet(includeVendor: false);
         var optionsBinder = metadata.CreateBinder();
 
         exeCommand.Add(exeInputDir);
@@ -165,7 +165,7 @@ public static class ExeCommand
         {
             Description = "Target architecture for the stub (x64, arm64)"
         };
-        var fdMetadata = new MetadataOptionSet();
+        var fdMetadata = new MetadataOptionSet(includeVendor: false);
         var fdBinder = fdMetadata.CreateBinder();
 
         var fromDirectory = new Command("from-directory") { Description = "Create a Windows self-extracting installer (.exe) from a published application directory." };
@@ -173,7 +173,6 @@ public static class ExeCommand
         fromDirectory.Add(fdOutput);
         fromDirectory.Add(fdStub);
         fromDirectory.Add(fdSetupLogo);
-        fromDirectory.Add(exVendor);
         fromDirectory.Add(fdArch);
         fromDirectory.Add(pfxOption);
         fromDirectory.Add(pfxPasswordOption);

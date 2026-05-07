@@ -23,7 +23,7 @@ public class OptionsBinder
     private readonly Option<string> appIdOption;
     private readonly Option<string> executableName;
     private readonly Option<bool> isTerminal;
-    private readonly Option<string> vendorOption;
+    private readonly Option<string>? vendorOption;
     private readonly Option<bool>? defaultLayout;
 
     public OptionsBinder(
@@ -42,7 +42,7 @@ public class OptionsBinder
         Option<string> appIdOption,
         Option<string> executableName,
         Option<bool> isTerminal,
-        Option<string> vendorOption,
+        Option<string>? vendorOption = null,
         Option<bool>? defaultLayout = null)
     {
         this.appNameOption = appNameOption;
@@ -78,7 +78,7 @@ public class OptionsBinder
             AdditionalCategories = MaybeList(parseResult, additionalCategoriesOption),
             Icon = Maybe<IIcon>.From(icon!),
             Version = Maybe.From(parseResult.GetValue(versionOption)!),
-            Vendor = Maybe.From(parseResult.GetValue(vendorOption)!),
+            Vendor = BindVendor(parseResult),
             HomePage = Maybe.From(parseResult.GetValue(homePageOption)!),
             License = Maybe.From(parseResult.GetValue(licenseOption)!),
             ScreenshotUrls = MaybeList(parseResult, screenshotUrlsOption),
@@ -88,6 +88,13 @@ public class OptionsBinder
             IsTerminal = Maybe.From(parseResult.GetValue(isTerminal)),
             UseDefaultLayout = defaultLayout == null ? Maybe<bool>.None : Maybe.From(parseResult.GetValue(defaultLayout))
         };
+    }
+
+    private Maybe<string> BindVendor(ParseResult parseResult)
+    {
+        return vendorOption == null
+            ? Maybe<string>.None
+            : Maybe.From(parseResult.GetValue(vendorOption)!);
     }
 
     private Maybe<IEnumerable<T>> MaybeList<T>(ParseResult parseResult, Option<IEnumerable<T>> option)
