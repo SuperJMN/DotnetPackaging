@@ -24,19 +24,21 @@ public sealed class DmgPackager
             throw new ArgumentNullException(nameof(metadata));
         }
 
-        var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), System.Guid.NewGuid().ToString("N"));
-        var dmgPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dp-dmg-{System.Guid.NewGuid():N}.dmg");
+        var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var dmgPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"dp-dmg-{Guid.NewGuid():N}.dmg");
         try
         {
             var writeResult = await container.WriteTo(tempDir);
             if (writeResult.IsFailure)
             {
+                TryDeleteFile(dmgPath);
                 return Result.Failure<IByteSource>(writeResult.Error);
             }
 
             var volumeName = metadata.VolumeName
                 .Or(metadata.ExecutableName)
                 .GetValueOrDefault("Application");
+            var executableName = metadata.ExecutableName.HasValue ? metadata.ExecutableName.Value : null;
 
             await DmgHfsBuilder.Create(
                 tempDir,
@@ -46,16 +48,35 @@ public sealed class DmgPackager
                 metadata.AddApplicationsSymlink.GetValueOrDefault(true),
                 metadata.IncludeDefaultLayout.GetValueOrDefault(true),
                 metadata.Icon,
-                metadata.ExecutableName.GetValueOrDefault(null));
+                executableName);
 
-            return Result.Success<IByteSource>(FileByteSource.OpenRead(dmgPath));
+            return Result.Success<IByteSource>(TemporaryFileByteSource.OpenReadAndDelete(dmgPath));
+        }
+        catch (Exception ex)
+        {
+            TryDeleteFile(dmgPath);
+            return Result.Failure<IByteSource>(ex.Message);
         }
         finally
         {
-            if (System.IO.Directory.Exists(tempDir))
+            if (Directory.Exists(tempDir))
             {
-                System.IO.Directory.Delete(tempDir, true);
+                Directory.Delete(tempDir, true);
             }
+        }
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch
+        {
         }
     }
 }
