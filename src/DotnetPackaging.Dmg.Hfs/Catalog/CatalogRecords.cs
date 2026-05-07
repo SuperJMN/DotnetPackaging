@@ -1,5 +1,6 @@
 using DotnetPackaging.Dmg.Hfs.Encoding;
 using DotnetPackaging.Dmg.Hfs.Extents;
+using DotnetPackaging.Dmg.Hfs.Files;
 
 namespace DotnetPackaging.Dmg.Hfs.Catalog;
 
@@ -25,22 +26,27 @@ public sealed record BsdInfo
     public uint GroupId { get; init; } = 99;   // nobody
     public byte AdminFlags { get; init; }
     public byte OwnerFlags { get; init; }
-    public ushort FileMode { get; init; } = 0x81ED; // -rwxr-xr-x (regular file, 0755)
+    public ushort FileMode { get; init; } = HfsFileModes.Regular0644; // -rw-r--r--
     public uint Special { get; init; }  // device ID or link count
 
     public static BsdInfo ForDirectory() => new()
     {
-        FileMode = 0x41ED // drwxr-xr-x (directory, 0755)
+        FileMode = HfsFileModes.Directory0755 // drwxr-xr-x
     };
 
     public static BsdInfo ForFile() => new()
     {
-        FileMode = 0x81ED // -rwxr-xr-x (regular file, 0755)
+        FileMode = HfsFileModes.Regular0644 // -rw-r--r--
+    };
+
+    public static BsdInfo ForFile(ushort fileMode) => new()
+    {
+        FileMode = fileMode
     };
 
     public static BsdInfo ForSymlink() => new()
     {
-        FileMode = 0xA1ED // lrwxr-xr-x (symlink, 0755)
+        FileMode = HfsFileModes.Symlink0755 // lrwxr-xr-x
     };
 
     public void WriteTo(Span<byte> buffer)

@@ -44,12 +44,24 @@ public sealed class HfsVolumeBuilder
         return this;
     }
 
+    public HfsVolumeBuilder AddFile(string name, IByteSource content, long size, ushort fileMode)
+    {
+        root.AddFile(name, content, size, fileMode);
+        return this;
+    }
+
     /// <summary>
     /// Adds a file with byte array content to the root directory.
     /// </summary>
     public HfsVolumeBuilder AddFile(string name, byte[] content)
     {
         root.AddFile(name, content);
+        return this;
+    }
+
+    public HfsVolumeBuilder AddFile(string name, byte[] content, ushort fileMode)
+    {
+        root.AddFile(name, content, fileMode);
         return this;
     }
 

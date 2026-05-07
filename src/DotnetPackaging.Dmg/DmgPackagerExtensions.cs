@@ -52,6 +52,12 @@ public static class DmgPackagerExtensions
 
         var log = logger ?? Log.Logger;
         var resolved = ResolveFromProject(metadata ?? new DmgPackagerMetadata(), context);
+        if (publishedProject is DisposableDirectoryContainer publishedDirectory)
+        {
+            return PackagingByteSource.FromResultFactory(() =>
+                packager.PackDirectory(new DirectoryInfo(publishedDirectory.OutputPath), resolved, log));
+        }
+
         return PackagingByteSource.FromResultFactory(() => packager.Pack(publishedProject, resolved, log));
     }
 

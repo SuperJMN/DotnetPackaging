@@ -7,15 +7,12 @@ using DotnetPackaging.Dmg;
 using DotnetPackaging.Dmg.Verification;
 using Serilog;
 using Zafiro.DivineBytes;
-using Zafiro.DivineBytes.System.IO;
 using Path = System.IO.Path;
 
 namespace DotnetPackaging.Tool.Commands;
 
 public static class DmgCommand
 {
-    private static readonly System.IO.Abstractions.FileSystem FileSystem = new();
-
     public static Command GetCommand()
     {
         // DMG command (experimental, cross-platform)
@@ -75,8 +72,6 @@ public static class DmgCommand
     private static Task CreateDmg(DirectoryInfo inputDir, FileInfo outputFile, Options options, ILogger logger)
     {
         logger.Debug("Packaging DMG artifact from {Directory}", inputDir.FullName);
-        var dirInfo = FileSystem.DirectoryInfo.New(inputDir.FullName);
-        var container = new DirectoryContainer(dirInfo).AsRoot();
 
         var metadata = new DmgPackagerMetadata
         {
@@ -92,7 +87,7 @@ public static class DmgCommand
         };
 
         var packager = new DmgPackager();
-        return packager.Pack(container, metadata, logger)
+        return packager.PackDirectory(inputDir, metadata, logger)
             .Bind(bytes => bytes.WriteTo(outputFile.FullName))
             .WriteResult();
     }

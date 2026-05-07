@@ -60,6 +60,7 @@ steps:
       Write-Host "##vso[task.setvariable variable=Version]$version"
       Write-Host "##vso[task.setvariable variable=TagName]v$semVer"
       Write-Host "##vso[build.updatebuildnumber]DotnetPackaging-$version"
+      $global:LASTEXITCODE = 0
     displayName: 'Compute version with GitVersion'
 
   # Restore, build and pack using GitVersioned $(Version)
