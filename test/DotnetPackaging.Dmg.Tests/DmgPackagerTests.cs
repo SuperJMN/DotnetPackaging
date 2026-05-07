@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Reactive.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
@@ -98,6 +99,76 @@ public class DmgPackagerTests
         text.Should().Contain("3.2.1");
     }
 
+    [Fact]
+    public async Task Pack_directory_preserves_existing_app_source_file_modes()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        var macOs = Path.Combine(publish, "MyApp.app", "Contents", "MacOS");
+        var resources = Path.Combine(publish, "MyApp.app", "Contents", "Resources");
+        Directory.CreateDirectory(macOs);
+        Directory.CreateDirectory(resources);
+
+        var executable = Path.Combine(macOs, "MyApp");
+        var settings = Path.Combine(resources, "settings.json");
+        await File.WriteAllTextAsync(executable, "exe");
+        await File.WriteAllTextAsync(settings, "{}");
+        SetUnixMode(executable, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+        SetUnixMode(settings, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+
+        var metadata = new DmgPackagerMetadata
+        {
+            VolumeName = Maybe.From("My App"),
+            IncludeDefaultLayout = Maybe.From(false),
+            AddApplicationsSymlink = Maybe.From(false)
+        };
+
+        var result = await new DmgPackager().PackDirectory(new DirectoryInfo(publish), metadata);
+        result.IsSuccess.Should().BeTrue(result.IsFailure ? result.Error : string.Empty);
+
+        var output = Path.Combine(tempRoot.Path, "MyApp.dmg");
+        var write = await result.Value.WriteTo(output);
+
+        write.IsSuccess.Should().BeTrue();
+        var modes = ReadCatalogFileModes(await ExtractVolumeBytes(output));
+        modes["MyApp"].Should().Be(0x81ED);
+        modes["settings.json"].Should().Be(0x8180);
+    }
+
+    [Fact]
+    public async Task Pack_directory_generated_app_bundle_keeps_license_and_notice_non_executable()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+
+        var executable = Path.Combine(publish, "TestApp");
+        await File.WriteAllTextAsync(executable, "exe");
+        await File.WriteAllTextAsync(Path.Combine(publish, "LICENSE"), "license");
+        await File.WriteAllTextAsync(Path.Combine(publish, "NOTICE"), "notice");
+        SetUnixMode(executable, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+
+        var metadata = new DmgPackagerMetadata
+        {
+            VolumeName = Maybe.From("Test App"),
+            ExecutableName = Maybe.From("TestApp"),
+            IncludeDefaultLayout = Maybe.From(false),
+            AddApplicationsSymlink = Maybe.From(false)
+        };
+
+        var result = await new DmgPackager().PackDirectory(publish, metadata);
+        result.IsSuccess.Should().BeTrue(result.IsFailure ? result.Error : string.Empty);
+
+        var output = Path.Combine(tempRoot.Path, "TestApp.dmg");
+        var write = await result.Value.WriteTo(output);
+
+        write.IsSuccess.Should().BeTrue();
+        var modes = ReadCatalogFileModes(await ExtractVolumeBytes(output));
+        modes["TestApp"].Should().Be(0x81ED);
+        modes["LICENSE"].Should().Be(0x81A4);
+        modes["NOTICE"].Should().Be(0x81A4);
+    }
+
     private static IContainer CreateContainer(IByteSource source)
     {
         return new RootContainer(
@@ -123,5 +194,58 @@ public class DmgPackagerTests
     {
         var udif = await UdifImage.Load(dmgPath);
         return await udif.ExtractDataFork();
+    }
+
+    private static void SetUnixMode(string path, UnixFileMode mode)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(path, mode);
+        }
+    }
+
+    private static Dictionary<string, ushort> ReadCatalogFileModes(byte[] volume)
+    {
+        var blockSize = BinaryPrimitives.ReadUInt32BigEndian(volume.AsSpan(1024 + 40, 4));
+        var catalogFork = volume.AsSpan(1024 + 272, 80);
+        var catalogStartBlock = BinaryPrimitives.ReadUInt32BigEndian(catalogFork[16..20]);
+        var catalogOffset = checked((int)(catalogStartBlock * blockSize));
+        var headerRecord = volume.AsSpan(catalogOffset + 14, 106);
+        var firstLeafNode = BinaryPrimitives.ReadUInt32BigEndian(headerRecord[10..14]);
+        var nodeSize = BinaryPrimitives.ReadUInt16BigEndian(headerRecord[18..20]);
+        var result = new Dictionary<string, ushort>(StringComparer.Ordinal);
+
+        for (var nodeIndex = firstLeafNode; nodeIndex != 0;)
+        {
+            var node = volume.AsSpan(catalogOffset + checked((int)(nodeIndex * nodeSize)), nodeSize);
+            var forwardLink = BinaryPrimitives.ReadUInt32BigEndian(node[0..4]);
+            var recordCount = BinaryPrimitives.ReadUInt16BigEndian(node[10..12]);
+
+            for (var i = 0; i < recordCount; i++)
+            {
+                var start = ReadNodeRecordOffset(node, nodeSize, i);
+                var end = ReadNodeRecordOffset(node, nodeSize, i + 1);
+                var record = node[start..end];
+                var keyLength = BinaryPrimitives.ReadUInt16BigEndian(record[0..2]);
+                var nameLength = BinaryPrimitives.ReadUInt16BigEndian(record[6..8]);
+                var name = Encoding.BigEndianUnicode.GetString(record.Slice(8, nameLength * 2));
+                var recordData = record[(2 + keyLength)..];
+                var recordType = BinaryPrimitives.ReadInt16BigEndian(recordData[0..2]);
+
+                if (recordType == 0x0002)
+                {
+                    result[name] = BinaryPrimitives.ReadUInt16BigEndian(recordData[42..44]);
+                }
+            }
+
+            nodeIndex = forwardLink;
+        }
+
+        return result;
+    }
+
+    private static int ReadNodeRecordOffset(ReadOnlySpan<byte> node, int nodeSize, int recordIndex)
+    {
+        return BinaryPrimitives.ReadUInt16BigEndian(node.Slice(nodeSize - 2 - recordIndex * 2, 2));
     }
 }
