@@ -128,8 +128,8 @@ public class DmgHfsBuilderTests
 
         var modes = ReadCatalogFileModes(await ExtractVolumeBytes(outDmg));
 
-        modes["MyApp"].Should().Be(0x81ED);
-        modes["settings.json"].Should().Be(0x81A4);
+        modes["MyApp"].Should().Be(ExpectedSourceMode(0x81ED));
+        modes["settings.json"].Should().Be(ExpectedSourceMode(0x81A4));
     }
 
     [Fact]
@@ -620,6 +620,11 @@ public class DmgHfsBuilderTests
         {
             File.SetUnixFileMode(path, mode);
         }
+    }
+
+    private static ushort ExpectedSourceMode(ushort unixMode)
+    {
+        return OperatingSystem.IsWindows() ? (ushort)0x81A4 : unixMode;
     }
 
     private static Dictionary<string, ushort> ReadCatalogFileModes(byte[] volume)

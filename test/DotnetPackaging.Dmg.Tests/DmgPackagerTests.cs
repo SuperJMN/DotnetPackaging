@@ -3,6 +3,7 @@ using System.Reactive.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Formats.Dmg.Udif;
+using DotnetPackaging.Publish;
 using FluentAssertions;
 using Zafiro.DivineBytes;
 using Path = System.IO.Path;
@@ -131,8 +132,45 @@ public class DmgPackagerTests
 
         write.IsSuccess.Should().BeTrue();
         var modes = ReadCatalogFileModes(await ExtractVolumeBytes(output));
-        modes["MyApp"].Should().Be(0x81ED);
-        modes["settings.json"].Should().Be(0x8180);
+        modes["MyApp"].Should().Be(ExpectedSourceMode(0x81ED));
+        modes["settings.json"].Should().Be(ExpectedSourceMode(0x8180));
+    }
+
+    [Fact]
+    public async Task Pack_preserves_directory_backed_container_source_file_modes()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        var macOs = Path.Combine(publish, "MyApp.app", "Contents", "MacOS");
+        var resources = Path.Combine(publish, "MyApp.app", "Contents", "Resources");
+        Directory.CreateDirectory(macOs);
+        Directory.CreateDirectory(resources);
+
+        var executable = Path.Combine(macOs, "MyApp");
+        var settings = Path.Combine(resources, "settings.json");
+        await File.WriteAllTextAsync(executable, "exe");
+        await File.WriteAllTextAsync(settings, "{}");
+        SetUnixMode(executable, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+        SetUnixMode(settings, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+
+        using var container = new DisposableDirectoryContainer(publish, Serilog.Core.Logger.None);
+        var metadata = new DmgPackagerMetadata
+        {
+            VolumeName = Maybe.From("My App"),
+            IncludeDefaultLayout = Maybe.From(false),
+            AddApplicationsSymlink = Maybe.From(false)
+        };
+
+        var result = await new DmgPackager().Pack(container, metadata);
+        result.IsSuccess.Should().BeTrue(result.IsFailure ? result.Error : string.Empty);
+
+        var output = Path.Combine(tempRoot.Path, "MyApp.dmg");
+        var write = await result.Value.WriteTo(output);
+
+        write.IsSuccess.Should().BeTrue();
+        var modes = ReadCatalogFileModes(await ExtractVolumeBytes(output));
+        modes["MyApp"].Should().Be(ExpectedSourceMode(0x81ED));
+        modes["settings.json"].Should().Be(ExpectedSourceMode(0x81A4));
     }
 
     [Fact]
@@ -202,6 +240,11 @@ public class DmgPackagerTests
         {
             File.SetUnixFileMode(path, mode);
         }
+    }
+
+    private static ushort ExpectedSourceMode(ushort unixMode)
+    {
+        return OperatingSystem.IsWindows() ? (ushort)0x81A4 : unixMode;
     }
 
     private static Dictionary<string, ushort> ReadCatalogFileModes(byte[] volume)

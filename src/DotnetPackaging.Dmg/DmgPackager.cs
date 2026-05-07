@@ -1,4 +1,5 @@
 using CSharpFunctionalExtensions;
+using DotnetPackaging.Publish;
 using Serilog;
 using Zafiro.DivineBytes;
 
@@ -22,6 +23,11 @@ public sealed class DmgPackager
         if (metadata == null)
         {
             throw new ArgumentNullException(nameof(metadata));
+        }
+
+        if (container is DisposableDirectoryContainer directoryContainer)
+        {
+            return await PackDirectory(directoryContainer.OutputPath, metadata, logger);
         }
 
         var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString("N"));
