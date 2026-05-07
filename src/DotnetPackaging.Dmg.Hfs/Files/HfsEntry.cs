@@ -34,6 +34,11 @@ public sealed record HfsDirectory : HfsEntry
 
     public HfsDirectory AddFile(string name, IByteSource content, long size, ushort fileMode)
     {
+        if (size < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(size), size, $"HFS+ file '{name}' cannot have a negative size.");
+        }
+
         Children.Add(new HfsFile { Name = name, Content = content, Size = size, FileMode = fileMode });
         return this;
     }
