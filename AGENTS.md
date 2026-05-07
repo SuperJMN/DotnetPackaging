@@ -137,8 +137,8 @@ Packaging formats: status and details
   - Defaults: freedesktop runtime 24.08 (runtime/sdk), branch=stable, common permissions (network/ipc, wayland/x11/pulseaudio, dri, filesystem=home). Command defaults to AppId.
 - DMG .dmg (macOS)
   - Status: experimental cross-platform builder. Library: src/DotnetPackaging.Dmg.
-  - How it works: emits an ISO9660/Joliet image (UDTO) with optional .app scaffolding if none exists. Special adornments like .VolumeIcon.icns and .background are hoisted to the image root when present.
-  - Notes: intended for simple drag-and-drop installs. Not a full UDIF/UDZO implementation; signing and advanced Finder layouts are out of scope for now.
+  - How it works: emits a native HFS+ payload wrapped in UDIF (DMG) format, with optional .app scaffolding if none exists. Root-level adornments like .background, .DS_Store, and .VolumeIcon.icns are preserved at the image root when present.
+  - Notes: intended for simple drag-and-drop installs. Embedded default layout files fill only missing pieces when enabled; signing, notarization, and advanced Finder layouts are out of scope for now.
 - Windows EXE (.exe) — preview
   - Status: preview. Dotnet-only SFX builder. Library: src/DotnetPackaging.Exe. Stub Avalonia: src/DotnetPackaging.Exe.Installer (esqueleto WIP).
   - How it works: produces a self-extracting installer by concatenating [stub.exe][payload.zip][Int64 length]["DPACKEXE1"]. The payload contains metadata.json and Content/ (publish output). The stub leerá metadata y realizará la instalación.

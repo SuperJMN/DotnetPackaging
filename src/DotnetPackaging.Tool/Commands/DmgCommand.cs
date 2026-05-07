@@ -21,7 +21,7 @@ public static class DmgCommand
         // DMG command (experimental, cross-platform)
         var defaultLayoutOption = new Option<bool>("--with-default-layout")
         {
-            Description = "Add a default Finder layout (background image, Applications link positioning) when none is provided"
+            Description = "Fill missing Finder layout files with embedded defaults while preserving user-provided DMG adornments"
         };
         defaultLayoutOption.DefaultValueFactory = _ => true;
         var infoPlistOption = CreateInfoPlistOption();
@@ -103,7 +103,7 @@ public static class DmgCommand
         var project = new ProjectOptionSet(".dmg", singleFileDefault: true);
         var compress = new Option<bool>("--compress") { Description = "Compress the DMG payload (bzip2/UDZO-like)" };
         compress.DefaultValueFactory = _ => true;
-        var defaultLayoutOption = new Option<bool>("--with-default-layout") { Description = "Add a default Finder layout (background image, Applications link positioning) when none is provided" };
+        var defaultLayoutOption = new Option<bool>("--with-default-layout") { Description = "Fill missing Finder layout files with embedded defaults while preserving user-provided DMG adornments" };
         defaultLayoutOption.DefaultValueFactory = _ => true;
         var infoPlistOption = CreateInfoPlistOption();
 

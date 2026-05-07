@@ -16,6 +16,11 @@ namespace DotnetPackaging.Dmg;
 /// </summary>
 internal static class DmgHfsBuilder
 {
+    private const string BackgroundDirectoryName = ".background";
+    private const string DefaultBackgroundFileName = "Background.png";
+    private const string DsStoreFileName = ".DS_Store";
+    private const string VolumeIconFileName = ".VolumeIcon.icns";
+
     private static readonly IReadOnlyDictionary<int, string> IcnsChunkTypes = new Dictionary<int, string>
     {
         [16] = "icp4",
@@ -79,7 +84,8 @@ internal static class DmgHfsBuilder
             await AddDirectoryContents(macOsDir, sourceFolder, 
                 path => path.EndsWith(".app", StringComparison.OrdinalIgnoreCase) || 
                         path.EndsWith(".icns", StringComparison.OrdinalIgnoreCase) ||
-                        IsRootInfoPlist(sourceFolder, path));
+                        IsRootInfoPlist(sourceFolder, path) ||
+                        IsDmgAdornment(sourceFolder, path));
 
             // Handle icon
             var appIcon = await PrepareAppIcon(sourceFolder, resourcesDir, icon);
@@ -90,13 +96,7 @@ internal static class DmgHfsBuilder
             contentsDir.AddFile("PkgInfo", Encoding.ASCII.GetBytes("APPL????"));
         }
 
-        // Add DMG adornments (background, .DS_Store)
-        if (includeDefaultLayout)
-        {
-            var backgroundDir = builder.AddDirectory(".background");
-            backgroundDir.AddFile("Background.png", DefaultDmgLayout.BackgroundPng.ToStream().ReadAllBytes());
-            builder.AddFile(".DS_Store", DefaultDmgLayout.DsStore.ToStream().ReadAllBytes());
-        }
+        await AddDmgAdornments(builder, sourceFolder, includeDefaultLayout);
 
         // Build the HFS+ volume
         var volume = builder.Build();
@@ -211,7 +211,55 @@ internal static class DmgHfsBuilder
 
     private static bool IsRootInfoPlist(string sourceFolder, string path)
     {
-        return string.Equals(Path.GetFileName(path), "Info.plist", StringComparison.OrdinalIgnoreCase)
+        return IsRootEntry(sourceFolder, path, "Info.plist");
+    }
+
+    private static async Task AddDmgAdornments(HfsVolumeBuilder builder, string sourceFolder, bool includeDefaultLayout)
+    {
+        var backgroundPath = Path.Combine(sourceFolder, BackgroundDirectoryName);
+        var hasCustomBackground = Directory.Exists(backgroundPath);
+        if (hasCustomBackground || includeDefaultLayout)
+        {
+            var backgroundDir = builder.AddDirectory(BackgroundDirectoryName);
+            if (hasCustomBackground)
+            {
+                await AddDirectoryContentsRecursive(backgroundDir, backgroundPath);
+            }
+
+            var defaultBackgroundPath = Path.Combine(backgroundPath, DefaultBackgroundFileName);
+            if (includeDefaultLayout && !File.Exists(defaultBackgroundPath))
+            {
+                backgroundDir.AddFile(DefaultBackgroundFileName, DefaultDmgLayout.BackgroundPng.ToStream().ReadAllBytes());
+            }
+        }
+
+        var dsStorePath = Path.Combine(sourceFolder, DsStoreFileName);
+        if (File.Exists(dsStorePath))
+        {
+            builder.AddFile(DsStoreFileName, await File.ReadAllBytesAsync(dsStorePath));
+        }
+        else if (includeDefaultLayout)
+        {
+            builder.AddFile(DsStoreFileName, DefaultDmgLayout.DsStore.ToStream().ReadAllBytes());
+        }
+
+        var volumeIconPath = Path.Combine(sourceFolder, VolumeIconFileName);
+        if (File.Exists(volumeIconPath))
+        {
+            builder.AddFile(VolumeIconFileName, await File.ReadAllBytesAsync(volumeIconPath));
+        }
+    }
+
+    private static bool IsDmgAdornment(string sourceFolder, string path)
+    {
+        return IsRootEntry(sourceFolder, path, BackgroundDirectoryName)
+               || IsRootEntry(sourceFolder, path, DsStoreFileName)
+               || IsRootEntry(sourceFolder, path, VolumeIconFileName);
+    }
+
+    private static bool IsRootEntry(string sourceFolder, string path, string name)
+    {
+        return string.Equals(Path.GetFileName(path), name, StringComparison.OrdinalIgnoreCase)
                && string.Equals(Path.GetDirectoryName(path), sourceFolder, StringComparison.OrdinalIgnoreCase);
     }
 

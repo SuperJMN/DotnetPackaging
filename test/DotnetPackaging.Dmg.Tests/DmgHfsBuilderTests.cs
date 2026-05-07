@@ -332,6 +332,83 @@ public class DmgHfsBuilderTests
     }
 
     [Fact]
+    public async Task Preserves_custom_dmg_adornments_at_volume_root_when_wrapping_publish_output()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+        await File.WriteAllTextAsync(Path.Combine(publish, "App"), "exe");
+
+        var customDsStore = Encoding.UTF8.GetBytes("custom ds store issue 180");
+        var customVolumeIcon = Encoding.UTF8.GetBytes("custom volume icon issue 180");
+        var customBackground = Encoding.UTF8.GetBytes("custom background issue 180");
+        await File.WriteAllBytesAsync(Path.Combine(publish, ".DS_Store"), customDsStore);
+        await File.WriteAllBytesAsync(Path.Combine(publish, ".VolumeIcon.icns"), customVolumeIcon);
+        var background = Path.Combine(publish, ".background");
+        Directory.CreateDirectory(background);
+        await File.WriteAllBytesAsync(Path.Combine(background, "Custom.txt"), customBackground);
+
+        var outDmg = Path.Combine(tempRoot.Path, "Custom.dmg");
+        await DmgHfsBuilder.Create(publish, outDmg, "Custom");
+
+        var catalog = await ReadCatalog(outDmg);
+        catalog.ReadFile(".DS_Store").Should().Equal(customDsStore);
+        catalog.ReadFile(".VolumeIcon.icns").Should().Equal(customVolumeIcon);
+        catalog.ReadFile(".background/Custom.txt").Should().Equal(customBackground);
+        catalog.ReadFile(".background/Background.png").Should().NotBeNull("the default layout fills the missing background image");
+    }
+
+    [Fact]
+    public async Task Preserves_custom_dmg_adornments_at_volume_root_with_existing_app_bundle()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(Path.Combine(publish, "MyApp.app", "Contents", "MacOS"));
+        await File.WriteAllTextAsync(Path.Combine(publish, "MyApp.app", "Contents", "MacOS", "MyApp"), "exe");
+
+        var customDsStore = Encoding.UTF8.GetBytes("app bundle ds store issue 180");
+        var customVolumeIcon = Encoding.UTF8.GetBytes("app bundle volume icon issue 180");
+        var customBackground = Encoding.UTF8.GetBytes("app bundle background issue 180");
+        await File.WriteAllBytesAsync(Path.Combine(publish, ".DS_Store"), customDsStore);
+        await File.WriteAllBytesAsync(Path.Combine(publish, ".VolumeIcon.icns"), customVolumeIcon);
+        var background = Path.Combine(publish, ".background");
+        Directory.CreateDirectory(background);
+        await File.WriteAllBytesAsync(Path.Combine(background, "Custom.txt"), customBackground);
+
+        var outDmg = Path.Combine(tempRoot.Path, "ExistingApp.dmg");
+        await DmgHfsBuilder.Create(publish, outDmg, "Existing App");
+
+        var catalog = await ReadCatalog(outDmg);
+        catalog.ReadFile(".DS_Store").Should().Equal(customDsStore);
+        catalog.ReadFile(".VolumeIcon.icns").Should().Equal(customVolumeIcon);
+        catalog.ReadFile(".background/Custom.txt").Should().Equal(customBackground);
+    }
+
+    [Fact]
+    public async Task Preserves_custom_dmg_adornments_without_injecting_defaults_when_default_layout_is_disabled()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+        await File.WriteAllTextAsync(Path.Combine(publish, "App"), "exe");
+
+        var customDsStore = Encoding.UTF8.GetBytes("no default ds store issue 180");
+        var customBackground = Encoding.UTF8.GetBytes("no default background issue 180");
+        await File.WriteAllBytesAsync(Path.Combine(publish, ".DS_Store"), customDsStore);
+        var background = Path.Combine(publish, ".background");
+        Directory.CreateDirectory(background);
+        await File.WriteAllBytesAsync(Path.Combine(background, "Custom.txt"), customBackground);
+
+        var outDmg = Path.Combine(tempRoot.Path, "NoDefault.dmg");
+        await DmgHfsBuilder.Create(publish, outDmg, "No Default", includeDefaultLayout: false);
+
+        var catalog = await ReadCatalog(outDmg);
+        catalog.ReadFile(".DS_Store").Should().Equal(customDsStore);
+        catalog.ReadFile(".background/Custom.txt").Should().Equal(customBackground);
+        catalog.ReadFile(".background/Background.png").Should().BeNull("disabled default layout must not inject embedded assets");
+    }
+
+    [Fact]
     public async Task HfsPlus_header_has_correct_version()
     {
         using var tempRoot = new TempDir();
@@ -363,5 +440,117 @@ public class DmgHfsBuilderTests
         await using var output = File.Create(dmgPath);
         using var input = new MemoryStream(volume);
         new UdifWriter { CompressionType = CompressionType.Raw }.Create(input, output);
+    }
+
+    private static async Task<HfsCatalogSnapshot> ReadCatalog(string dmgPath)
+    {
+        var volumeBytes = await ExtractVolumeBytes(dmgPath);
+        return HfsCatalogSnapshot.Read(volumeBytes);
+    }
+
+    private sealed class HfsCatalogSnapshot
+    {
+        private const int VolumeHeaderOffset = 1024;
+        private const int CatalogForkOffset = 272;
+        private const uint RootFolderId = 2;
+        private readonly IReadOnlyList<HfsCatalogEntry> entries;
+
+        private HfsCatalogSnapshot(IReadOnlyList<HfsCatalogEntry> entries)
+        {
+            this.entries = entries;
+        }
+
+        public static HfsCatalogSnapshot Read(byte[] volumeBytes)
+        {
+            var blockSize = BinaryPrimitives.ReadUInt32BigEndian(volumeBytes.AsSpan(VolumeHeaderOffset + 40, 4));
+            var catalogStartBlock = BinaryPrimitives.ReadUInt32BigEndian(volumeBytes.AsSpan(VolumeHeaderOffset + CatalogForkOffset + 16, 4));
+            var catalogBlockCount = BinaryPrimitives.ReadUInt32BigEndian(volumeBytes.AsSpan(VolumeHeaderOffset + CatalogForkOffset + 20, 4));
+            var catalogOffset = checked((int)(catalogStartBlock * blockSize));
+            var catalogLength = checked((int)(catalogBlockCount * blockSize));
+            var catalogBytes = volumeBytes.AsSpan(catalogOffset, catalogLength);
+
+            var nodeSize = BinaryPrimitives.ReadUInt16BigEndian(catalogBytes[32..34]);
+            var totalNodes = BinaryPrimitives.ReadUInt32BigEndian(catalogBytes[36..40]);
+            var entries = new List<HfsCatalogEntry>();
+
+            for (var nodeId = 0; nodeId < totalNodes; nodeId++)
+            {
+                var node = catalogBytes.Slice(checked((int)(nodeId * nodeSize)), nodeSize);
+                if (node[8] != 0xFF)
+                {
+                    continue;
+                }
+
+                var recordCount = BinaryPrimitives.ReadUInt16BigEndian(node[10..12]);
+                for (var recordIndex = 0; recordIndex < recordCount; recordIndex++)
+                {
+                    var offset = BinaryPrimitives.ReadUInt16BigEndian(node.Slice(nodeSize - 2 - recordIndex * 2, 2));
+                    var record = node[offset..];
+                    var keyLength = BinaryPrimitives.ReadUInt16BigEndian(record[..2]);
+                    var parentId = BinaryPrimitives.ReadUInt32BigEndian(record[2..6]);
+                    var nameLength = BinaryPrimitives.ReadUInt16BigEndian(record[6..8]);
+                    var name = Encoding.BigEndianUnicode.GetString(record.Slice(8, nameLength * 2));
+                    var dataOffset = 2 + keyLength;
+                    var recordType = BinaryPrimitives.ReadInt16BigEndian(record.Slice(dataOffset, 2));
+
+                    switch (recordType)
+                    {
+                        case 1:
+                            var folderId = BinaryPrimitives.ReadUInt32BigEndian(record.Slice(dataOffset + 8, 4));
+                            entries.Add(HfsCatalogEntry.Directory(parentId, name, folderId));
+                            break;
+                        case 2:
+                            var dataForkOffset = dataOffset + 88;
+                            var logicalSize = BinaryPrimitives.ReadUInt64BigEndian(record.Slice(dataForkOffset, 8));
+                            var startBlock = BinaryPrimitives.ReadUInt32BigEndian(record.Slice(dataForkOffset + 16, 4));
+                            var contentOffset = checked((int)(startBlock * blockSize));
+                            var content = volumeBytes.AsSpan(contentOffset, checked((int)logicalSize)).ToArray();
+                            entries.Add(HfsCatalogEntry.File(parentId, name, content));
+                            break;
+                    }
+                }
+            }
+
+            return new HfsCatalogSnapshot(entries);
+        }
+
+        public byte[]? ReadFile(string path)
+        {
+            var currentParentId = RootFolderId;
+            var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+            for (var i = 0; i < parts.Length; i++)
+            {
+                var isLast = i == parts.Length - 1;
+                var entry = entries.SingleOrDefault(x => x.ParentId == currentParentId && x.Name == parts[i]);
+                if (entry == null)
+                {
+                    return null;
+                }
+
+                if (isLast)
+                {
+                    return entry.Content;
+                }
+
+                if (entry.FolderId == null)
+                {
+                    return null;
+                }
+
+                currentParentId = entry.FolderId.Value;
+            }
+
+            return null;
+        }
+    }
+
+    private sealed record HfsCatalogEntry(uint ParentId, string Name, uint? FolderId, byte[]? Content)
+    {
+        public static HfsCatalogEntry Directory(uint parentId, string name, uint folderId)
+            => new(parentId, name, folderId, null);
+
+        public static HfsCatalogEntry File(uint parentId, string name, byte[] content)
+            => new(parentId, name, null, content);
     }
 }
