@@ -3,6 +3,7 @@ using System.Reactive.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Dmg;
+using DotnetPackaging.Dmg.Verification;
 using DotnetPackaging.Formats.Dmg.Udif;
 using FluentAssertions;
 using Zafiro.DivineBytes;
@@ -232,6 +233,66 @@ public class DmgHfsBuilderTests
     }
 
     [Fact]
+    public async Task Hfs_file_count_includes_applications_symlink_once()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+
+        await File.WriteAllTextAsync(Path.Combine(publish, "TestApp"), "exe");
+
+        var outDmg = Path.Combine(tempRoot.Path, "Test.dmg");
+        await DmgHfsBuilder.Create(publish, outDmg, "Test App", addApplicationsSymlink: true);
+
+        var data = await ExtractVolumeBytes(outDmg);
+        var fileCount = BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(1024 + 32, 4));
+
+        fileCount.Should().Be(6);
+    }
+
+    [Fact]
+    public async Task Dmg_verify_accepts_matching_hfs_file_count()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+
+        await File.WriteAllTextAsync(Path.Combine(publish, "TestApp"), "exe");
+
+        var outDmg = Path.Combine(tempRoot.Path, "Test.dmg");
+        await DmgHfsBuilder.Create(publish, outDmg, "Test App", addApplicationsSymlink: true);
+
+        var result = await DmgVerifier.Verify(outDmg);
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Dmg_verify_rejects_mismatched_hfs_file_count()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+
+        await File.WriteAllTextAsync(Path.Combine(publish, "TestApp"), "exe");
+
+        var outDmg = Path.Combine(tempRoot.Path, "Test.dmg");
+        await DmgHfsBuilder.Create(publish, outDmg, "Test App", addApplicationsSymlink: true);
+
+        var volume = await ExtractVolumeBytes(outDmg);
+        var fileCount = BinaryPrimitives.ReadUInt32BigEndian(volume.AsSpan(1024 + 32, 4));
+        BinaryPrimitives.WriteUInt32BigEndian(volume.AsSpan(1024 + 32, 4), fileCount + 1);
+
+        var corruptDmg = Path.Combine(tempRoot.Path, "Corrupt.dmg");
+        await WriteVolumeBytesToDmg(volume, corruptDmg);
+
+        var result = await DmgVerifier.Verify(corruptDmg);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("HFS+ file count mismatch");
+    }
+
+    [Fact]
     public async Task Volume_name_is_sanitized_correctly()
     {
         using var tempRoot = new TempDir();
@@ -295,5 +356,12 @@ public class DmgHfsBuilderTests
     {
         var udif = await UdifImage.Load(dmgPath);
         return await udif.ExtractDataFork();
+    }
+
+    private static async Task WriteVolumeBytesToDmg(byte[] volume, string dmgPath)
+    {
+        await using var output = File.Create(dmgPath);
+        using var input = new MemoryStream(volume);
+        new UdifWriter { CompressionType = CompressionType.Raw }.Create(input, output);
     }
 }

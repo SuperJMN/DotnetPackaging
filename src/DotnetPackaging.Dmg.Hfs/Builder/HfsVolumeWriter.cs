@@ -156,7 +156,7 @@ public static class HfsVolumeWriter
             CreateDate = now,
             ModifyDate = now,
             CheckedDate = now,
-            FileCount = fileCount + (uint)symlinkDataList.Count,
+            FileCount = fileCount,
             FolderCount = folderCount, // Remove +1 as fsck counts 13 matching folderCount
             BlockSize = blockSize,
             TotalBlocks = totalBlocks,

@@ -43,7 +43,13 @@ public static class DmgVerifier
                 return Result.Failure<string>("UDIF detected but HFS+ signature not found");
             }
 
-            return Result.Success($"UDIF DMG structural-only validation OK (runs={udif.Runs.Count}, sectors={udif.Trailer.SectorCount})");
+            var hfsVerification = HfsPlusVerifier.Verify(dataFork);
+            if (hfsVerification.IsFailure)
+            {
+                return Result.Failure<string>(hfsVerification.Error);
+            }
+
+            return Result.Success($"UDIF DMG OK (runs={udif.Runs.Count}, sectors={udif.Trailer.SectorCount}, files={hfsVerification.Value.FileCount})");
         }
         catch (Exception ex) when (ex is InvalidDataException || ex is IOException)
         {
