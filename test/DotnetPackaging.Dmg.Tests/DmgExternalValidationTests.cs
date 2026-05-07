@@ -144,7 +144,14 @@ public class DmgExternalValidationTests
         var device = devices.FirstOrDefault()?.Device;
         if (!string.IsNullOrWhiteSpace(device))
         {
-            await ExternalDmgValidationTools.Run(hdiutil, "detach", device, "-force");
+            var detach = await ExternalDmgValidationTools.Run(hdiutil, "detach", device, "-force");
+            detach.ExitCode.Should().Be(
+                0,
+                "hdiutil detach failed for {0}.{1}stdout:{1}{2}{1}stderr:{1}{3}",
+                device,
+                Environment.NewLine,
+                detach.StdOut,
+                detach.StdErr);
         }
     }
 }
