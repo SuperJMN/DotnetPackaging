@@ -8,6 +8,34 @@ namespace DotnetPackaging.Dmg.Tests;
 
 public class DmgExternalValidationTests
 {
+    [Fact]
+    public void Hdiutil_plist_parser_reads_attached_hfs_devices()
+    {
+        const string plist = """
+                             <?xml version="1.0" encoding="UTF-8"?>
+                             <plist version="1.0">
+                             <dict>
+                                 <key>system-entities</key>
+                                 <array>
+                                     <dict>
+                                         <key>dev-entry</key>
+                                         <string>/dev/disk5</string>
+                                         <key>mount-point</key>
+                                         <string>/Volumes/Test App</string>
+                                         <key>content-hint</key>
+                                         <string>Apple_HFS</string>
+                                     </dict>
+                                 </array>
+                             </dict>
+                             </plist>
+                             """;
+
+        var devices = ExternalDmgValidationTools.ParseHdiutilDevices(plist);
+
+        devices.Should().ContainSingle().Which.Should().Be(
+            new HdiutilDevice("/dev/disk5", "/Volumes/Test App", "Apple_HFS"));
+    }
+
     [SkippableFact]
     public async Task Default_packager_dmg_validates_with_external_hfs_tool_when_available()
     {
@@ -31,8 +59,7 @@ public class DmgExternalValidationTests
         var hdiutil = ExternalDmgValidationTools.FindHdiutil();
         if (hdiutil != null)
         {
-            var verify = await ExternalDmgValidationTools.Run(hdiutil, "verify", outDmg);
-            verify.ExitCode.Should().Be(0, verify.StdOut + verify.StdErr);
+            await ValidateWithHdiutil(hdiutil, outDmg, tempRoot.Path);
             return;
         }
 
@@ -46,5 +73,78 @@ public class DmgExternalValidationTests
 
         var check = await ExternalDmgValidationTools.Run(fsck, "-n", outImg);
         check.ExitCode.Should().Be(0, check.StdOut + check.StdErr);
+    }
+
+    private static async Task ValidateWithHdiutil(string hdiutil, string dmgPath, string tempRoot)
+    {
+        var verify = await ExternalDmgValidationTools.Run(hdiutil, "verify", dmgPath);
+        verify.ExitCode.Should().Be(0, verify.StdOut + verify.StdErr);
+
+        await ValidateMountability(hdiutil, dmgPath, tempRoot);
+        await ValidateHfsVolume(hdiutil, dmgPath);
+    }
+
+    private static async Task ValidateMountability(string hdiutil, string dmgPath, string tempRoot)
+    {
+        var mountPath = Path.Combine(tempRoot, "mount");
+        Directory.CreateDirectory(mountPath);
+
+        IReadOnlyList<HdiutilDevice> devices = [];
+        try
+        {
+            var attach = await ExternalDmgValidationTools.Run(
+                hdiutil,
+                "attach",
+                "-readonly",
+                "-nobrowse",
+                "-plist",
+                "-mountpoint",
+                mountPath,
+                dmgPath);
+            attach.ExitCode.Should().Be(0, attach.StdOut + attach.StdErr);
+
+            devices = ExternalDmgValidationTools.ParseHdiutilDevices(attach.StdOut);
+            var mountedDevice = devices.FirstOrDefault(device => !string.IsNullOrWhiteSpace(device.MountPoint));
+            mountedDevice.Should().NotBeNull(attach.StdOut + attach.StdErr);
+            Directory.Exists(mountedDevice!.MountPoint).Should().BeTrue(attach.StdOut + attach.StdErr);
+        }
+        finally
+        {
+            await DetachDevices(hdiutil, devices);
+        }
+    }
+
+    private static async Task ValidateHfsVolume(string hdiutil, string dmgPath)
+    {
+        var fsck = ExternalDmgValidationTools.FindHfsFsck();
+        Skip.If(fsck == null, "Requires fsck_hfs for mounted DMG HFS+ validation.");
+
+        IReadOnlyList<HdiutilDevice> devices = [];
+        try
+        {
+            var attach = await ExternalDmgValidationTools.Run(hdiutil, "attach", "-readonly", "-nomount", "-plist", dmgPath);
+            attach.ExitCode.Should().Be(0, attach.StdOut + attach.StdErr);
+
+            devices = ExternalDmgValidationTools.ParseHdiutilDevices(attach.StdOut);
+            var hfsDevice = devices.FirstOrDefault(device =>
+                device.ContentHint?.Contains("HFS", StringComparison.OrdinalIgnoreCase) == true);
+
+            hfsDevice.Should().NotBeNull(attach.StdOut + attach.StdErr);
+            var check = await ExternalDmgValidationTools.Run(fsck, "-n", hfsDevice!.Device!);
+            check.ExitCode.Should().Be(0, check.StdOut + check.StdErr);
+        }
+        finally
+        {
+            await DetachDevices(hdiutil, devices);
+        }
+    }
+
+    private static async Task DetachDevices(string hdiutil, IReadOnlyList<HdiutilDevice> devices)
+    {
+        var device = devices.FirstOrDefault()?.Device;
+        if (!string.IsNullOrWhiteSpace(device))
+        {
+            await ExternalDmgValidationTools.Run(hdiutil, "detach", device, "-force");
+        }
     }
 }

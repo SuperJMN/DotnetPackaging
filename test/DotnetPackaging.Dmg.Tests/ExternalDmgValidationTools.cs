@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Xml.Linq;
 
 namespace DotnetPackaging.Dmg.Tests;
 
@@ -45,6 +46,50 @@ internal static class ExternalDmgValidationTools
         return new ProcessResult(process.ExitCode, await stdout, await stderr);
     }
 
+    public static IReadOnlyList<HdiutilDevice> ParseHdiutilDevices(string plist)
+    {
+        var document = XDocument.Parse(plist);
+        var rootDictionary = document.Root?.Element("dict");
+        var entities = FindValue(rootDictionary, "system-entities");
+        if (entities?.Name != "array")
+        {
+            return [];
+        }
+
+        return entities.Elements("dict")
+            .Select(device => new HdiutilDevice(
+                ReadString(device, "dev-entry"),
+                ReadString(device, "mount-point"),
+                ReadString(device, "content-hint")))
+            .Where(device => !string.IsNullOrWhiteSpace(device.Device))
+            .ToArray();
+    }
+
+    private static XElement? FindValue(XElement? dictionary, string key)
+    {
+        if (dictionary == null)
+        {
+            return null;
+        }
+
+        var elements = dictionary.Elements().ToArray();
+        for (var i = 0; i < elements.Length - 1; i++)
+        {
+            if (elements[i].Name == "key" && elements[i].Value == key)
+            {
+                return elements[i + 1];
+            }
+        }
+
+        return null;
+    }
+
+    private static string? ReadString(XElement dictionary, string key)
+    {
+        var value = FindValue(dictionary, key);
+        return value?.Name == "string" ? value.Value : null;
+    }
+
     private static string? FindExecutable(string name)
     {
         var path = Environment.GetEnvironmentVariable("PATH");
@@ -53,7 +98,12 @@ internal static class ExternalDmgValidationTools
             return null;
         }
 
-        foreach (var directory in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        var directories = path
+            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+            .Concat(["/sbin", "/usr/sbin", "/bin", "/usr/bin"])
+            .Distinct();
+
+        foreach (var directory in directories)
         {
             var candidate = Path.Combine(directory, name);
             if (File.Exists(candidate))
@@ -67,3 +117,5 @@ internal static class ExternalDmgValidationTools
 }
 
 internal sealed record ProcessResult(int ExitCode, string StdOut, string StdErr);
+
+internal sealed record HdiutilDevice(string? Device, string? MountPoint, string? ContentHint);
