@@ -23,6 +23,8 @@ public class ProjectPackagingContextTests
                 <Authors>Sample Authors</Authors>
                 <PackageLicenseExpression>MIT</PackageLicenseExpression>
                 <PackageProjectUrl>https://example.com/sample</PackageProjectUrl>
+                <PackageId>com.example.sample</PackageId>
+                <Version>4.5.6</Version>
               </PropertyGroup>
             </Project>
             """);
@@ -38,6 +40,8 @@ public class ProjectPackagingContextTests
             options.Description.GetValueOrDefault().Should().Be("Sample description");
             options.Maintainer.GetValueOrDefault().Should().Be("Sample Authors");
             options.Vendor.GetValueOrDefault().Should().Be("Sample Company");
+            options.Id.GetValueOrDefault().Should().Be("com.example.sample");
+            options.Version.GetValueOrDefault().Should().Be("4.5.6");
             options.License.GetValueOrDefault().Should().Be("MIT");
             options.Url.GetValueOrDefault()?.ToString().Should().Be("https://example.com/sample");
             options.IsTerminal.GetValueOrDefault().Should().BeTrue();

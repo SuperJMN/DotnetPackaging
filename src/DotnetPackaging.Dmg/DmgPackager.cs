@@ -48,7 +48,10 @@ public sealed class DmgPackager
                 metadata.AddApplicationsSymlink.GetValueOrDefault(true),
                 metadata.IncludeDefaultLayout.GetValueOrDefault(true),
                 metadata.Icon,
-                executableName);
+                executableName,
+                metadata.InfoPlist,
+                metadata.BundleIdentifier,
+                metadata.BundleVersion);
 
             return Result.Success<IByteSource>(TemporaryFileByteSource.OpenReadAndDelete(dmgPath));
         }
@@ -92,4 +95,7 @@ internal class DmgOptions
     public bool AddApplicationsSymlink { get; set; } = true;
     public bool IncludeDefaultLayout { get; set; } = true;
     public Maybe<IIcon> Icon { get; set; } = Maybe<IIcon>.None;
+    public Maybe<IByteSource> InfoPlist { get; set; } = Maybe<IByteSource>.None;
+    public Maybe<string> BundleIdentifier { get; set; } = Maybe<string>.None;
+    public Maybe<string> BundleVersion { get; set; } = Maybe<string>.None;
 }

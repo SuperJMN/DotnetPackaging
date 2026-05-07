@@ -1,4 +1,6 @@
-﻿namespace DotnetPackaging;
+﻿using Zafiro.DivineBytes;
+
+namespace DotnetPackaging;
 
 public class Options
 {
@@ -18,6 +20,7 @@ public class Options
     public Maybe<string> ExecutableName { get; set; }
     public Maybe<bool> IsTerminal { get; set; }
     public Maybe<bool> UseDefaultLayout { get; set; }
+    public Maybe<IByteSource> InfoPlist { get; set; }
     public Maybe<bool> IsService { get; set; }
     public Maybe<ServiceType> ServiceType { get; set; }
     public Maybe<RestartPolicy> ServiceRestart { get; set; }

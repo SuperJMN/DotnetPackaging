@@ -1,7 +1,11 @@
 using System.Buffers.Binary;
+using System.Reactive.Linq;
+using System.Text;
+using CSharpFunctionalExtensions;
 using DotnetPackaging.Dmg;
 using DotnetPackaging.Formats.Dmg.Udif;
 using FluentAssertions;
+using Zafiro.DivineBytes;
 using Path = System.IO.Path;
 
 namespace DotnetPackaging.Dmg.Tests;
@@ -65,6 +69,147 @@ public class DmgHfsBuilderTests
         var data = await ExtractVolumeBytes(outDmg);
         data.Length.Should().BeGreaterThan(1000, "dmg should contain app bundle content");
         BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(1024, 2)).Should().Be(0x482B);
+    }
+
+    [Fact]
+    public async Task Uses_custom_info_plist_when_wrapping_publish_output()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+
+        await File.WriteAllTextAsync(Path.Combine(publish, "TestApp"), "exe");
+        var plist = """
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.example.customplist</string>
+    <key>CFBundleExecutable</key>
+    <string>TestApp</string>
+  </dict>
+</plist>
+""";
+
+        var outDmg = Path.Combine(tempRoot.Path, "Custom.dmg");
+        await DmgHfsBuilder.Create(
+            publish,
+            outDmg,
+            "Test App",
+            infoPlist: Maybe.From(ByteSource.FromString(plist)));
+
+        var data = await ExtractVolumeBytes(outDmg);
+        Encoding.UTF8.GetString(data).Should().Contain("com.example.customplist");
+    }
+
+    [Fact]
+    public async Task Custom_info_plist_with_known_length_is_consumed_once()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+
+        await File.WriteAllTextAsync(Path.Combine(publish, "TestApp"), "exe");
+        var plistBytes = """
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict><key>CFBundleExecutable</key><string>TestApp</string></dict></plist>
+"""u8.ToArray();
+        var subscriptions = 0;
+        var plistSource = ByteSource.FromByteObservable(
+            Observable.Defer(() =>
+            {
+                subscriptions++;
+                return Observable.Return(plistBytes);
+            }),
+            plistBytes.LongLength);
+
+        var outDmg = Path.Combine(tempRoot.Path, "Custom.dmg");
+        await DmgHfsBuilder.Create(
+            publish,
+            outDmg,
+            "Test App",
+            infoPlist: Maybe.From(plistSource));
+
+        subscriptions.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Custom_info_plist_without_known_length_is_consumed_once()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+
+        await File.WriteAllTextAsync(Path.Combine(publish, "TestApp"), "exe");
+        var plistBytes = """
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.example.unknownlength</string></dict></plist>
+"""u8.ToArray();
+        var subscriptions = 0;
+        var plistSource = ByteSource.FromByteObservable(
+            Observable.Defer(() =>
+            {
+                subscriptions++;
+                return Observable.Return(plistBytes);
+            }));
+
+        var outDmg = Path.Combine(tempRoot.Path, "Custom.dmg");
+        await DmgHfsBuilder.Create(
+            publish,
+            outDmg,
+            "Test App",
+            infoPlist: Maybe.From(plistSource));
+
+        var data = await ExtractVolumeBytes(outDmg);
+        Encoding.UTF8.GetString(data).Should().Contain("com.example.unknownlength");
+        subscriptions.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Uses_source_info_plist_when_wrapping_publish_output()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+
+        await File.WriteAllTextAsync(Path.Combine(publish, "TestApp"), "exe");
+        await File.WriteAllTextAsync(
+            Path.Combine(publish, "Info.plist"),
+            """
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.example.sourceplist</string></dict></plist>
+""");
+
+        var outDmg = Path.Combine(tempRoot.Path, "Source.dmg");
+        await DmgHfsBuilder.Create(publish, outDmg, "Test App");
+
+        var data = await ExtractVolumeBytes(outDmg);
+        Encoding.UTF8.GetString(data).Should().Contain("com.example.sourceplist");
+    }
+
+    [Fact]
+    public async Task Generated_info_plist_uses_metadata_when_no_custom_plist_is_supplied()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+
+        await File.WriteAllTextAsync(Path.Combine(publish, "TestApp"), "exe");
+
+        var outDmg = Path.Combine(tempRoot.Path, "Metadata.dmg");
+        await DmgHfsBuilder.Create(
+            publish,
+            outDmg,
+            "Test App",
+            executableName: "TestApp",
+            bundleIdentifier: Maybe.From("com.example.metadata"),
+            bundleVersion: Maybe.From("2.3.4"));
+
+        var data = await ExtractVolumeBytes(outDmg);
+        var text = Encoding.UTF8.GetString(data);
+        text.Should().Contain("com.example.metadata");
+        text.Should().Contain("2.3.4");
     }
 
     [Fact]

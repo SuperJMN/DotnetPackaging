@@ -12,6 +12,8 @@ public sealed record ProjectMetadata(
     Maybe<string> Copyright,
     Maybe<string> PackageLicenseExpression,
     Maybe<string> PackageProjectUrl,
+    Maybe<string> PackageId,
+    Maybe<string> Version,
     Maybe<string> RepositoryUrl,
     Maybe<string> AssemblyName,
     Maybe<string> AssemblyTitle,
@@ -21,7 +23,7 @@ public static class ProjectMetadataReader
 {
     private static readonly string[] PropertiesToRead = new[]
     {
-        "Product", "Company", "Description", "Authors", "Copyright", "PackageLicenseExpression", "PackageProjectUrl", "RepositoryUrl", "AssemblyName", "AssemblyTitle", "OutputType"
+        "Product", "Company", "Description", "Authors", "Copyright", "PackageLicenseExpression", "PackageProjectUrl", "PackageId", "Version", "RepositoryUrl", "AssemblyName", "AssemblyTitle", "OutputType"
     };
 
     public static Result<ProjectMetadata> Read(FileInfo projectFile)
@@ -102,12 +104,14 @@ public static class ProjectMetadataReader
             var copyright = values.GetValueOrDefault("Copyright");
             var license = values.GetValueOrDefault("PackageLicenseExpression");
             var url = values.GetValueOrDefault("PackageProjectUrl");
+            var packageId = values.GetValueOrDefault("PackageId");
+            var version = values.GetValueOrDefault("Version");
             var repo = values.GetValueOrDefault("RepositoryUrl");
             var assemblyName = values.GetValueOrDefault("AssemblyName");
             var assemblyTitle = values.GetValueOrDefault("AssemblyTitle");
             var outputType = values.GetValueOrDefault("OutputType");
 
-            return Result.Success(new ProjectMetadata(product, company, description, authors, copyright, license, url, repo, assemblyName, assemblyTitle, outputType));
+            return Result.Success(new ProjectMetadata(product, company, description, authors, copyright, license, url, packageId, version, repo, assemblyName, assemblyTitle, outputType));
         }
         catch (Exception ex)
         {
@@ -126,11 +130,13 @@ public static class ProjectMetadataReader
         var copyright = ReadProperty(document, "Copyright");
         var license = ReadProperty(document, "PackageLicenseExpression");
         var url = ReadProperty(document, "PackageProjectUrl");
+        var packageId = ReadProperty(document, "PackageId");
+        var version = ReadProperty(document, "Version");
         var repo = ReadProperty(document, "RepositoryUrl");
         var assemblyName = ReadProperty(document, "AssemblyName");
         var assemblyTitle = ReadProperty(document, "AssemblyTitle");
         var outputType = ReadProperty(document, "OutputType");
-        return new ProjectMetadata(product, company, description, authors, copyright, license, url, repo, assemblyName, assemblyTitle, outputType);
+        return new ProjectMetadata(product, company, description, authors, copyright, license, url, packageId, version, repo, assemblyName, assemblyTitle, outputType);
     }
 
     private static Dictionary<string, Maybe<string>> ParseMsbuildOutput(string output, IEnumerable<string> propertyNames)
