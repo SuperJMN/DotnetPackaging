@@ -3,6 +3,7 @@ using System.Reactive.Linq;
 using System.Text;
 using CSharpFunctionalExtensions;
 using DotnetPackaging.Dmg;
+using DotnetPackaging.Dmg.Hfs.Builder;
 using DotnetPackaging.Dmg.Hfs.Files;
 using DotnetPackaging.Dmg.Verification;
 using DotnetPackaging.Formats.Dmg.Udif;
@@ -490,6 +491,44 @@ public class DmgHfsBuilderTests
     }
 
     [Fact]
+    public async Task BuildVolume_ShouldRejectFileBackedSourceThatGrowsAfterVolumeIsBuilt()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+
+        var payloadPath = Path.Combine(publish, "payload.bin");
+        await File.WriteAllBytesAsync(payloadPath, "tiny"u8.ToArray());
+
+        var volume = await DmgHfsBuilder.BuildVolume(publish, "Growing Payload", includeDefaultLayout: false);
+        await File.WriteAllBytesAsync(payloadPath, "this payload is longer"u8.ToArray());
+
+        var act = async () => await WriteVolumeToMemory(volume);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*payload.bin*exceeded its declared size*Declared size: 4 bytes*");
+    }
+
+    [Fact]
+    public async Task BuildVolume_ShouldRejectFileBackedSourceThatShrinksAfterVolumeIsBuilt()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+
+        var payloadPath = Path.Combine(publish, "payload.bin");
+        await File.WriteAllBytesAsync(payloadPath, "this payload is longer"u8.ToArray());
+
+        var volume = await DmgHfsBuilder.BuildVolume(publish, "Shrinking Payload", includeDefaultLayout: false);
+        await File.WriteAllBytesAsync(payloadPath, "tiny"u8.ToArray());
+
+        var act = async () => await WriteVolumeToMemory(volume);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*payload.bin*ended before its declared size*Declared size: 22 bytes*emitted/written bytes: 4 bytes*");
+    }
+
+    [Fact]
     public async Task BuildVolume_ShouldPreserveCustomDmgAdornmentsAsLazyFileBackedByteSources()
     {
         using var tempRoot = new TempDir();
@@ -556,6 +595,12 @@ public class DmgHfsBuilderTests
         await using var output = File.Create(dmgPath);
         using var input = new MemoryStream(volume);
         new UdifWriter { CompressionType = CompressionType.Raw }.Create(input, output);
+    }
+
+    private static async Task WriteVolumeToMemory(HfsVolume volume)
+    {
+        await using var output = new MemoryStream();
+        await HfsVolumeWriter.WriteToAsync(volume, output);
     }
 
     private static async Task<HfsCatalogSnapshot> ReadCatalog(string dmgPath)

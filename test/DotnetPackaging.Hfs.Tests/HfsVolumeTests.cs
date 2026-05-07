@@ -231,6 +231,49 @@ public class HfsVolumeTests
         output.ReadUInt16BigEndian(1024).Should().Be(0x482B);
     }
 
+    [Fact]
+    public async Task HfsVolumeWriter_ShouldRejectSourceOverrunBeforeWritingOverflowBytes()
+    {
+        var overflowMarker = new byte[] { 0xFA, 0xFB, 0xFC, 0xFD };
+        var source = new TrackingByteSource(["data"u8.ToArray(), overflowMarker]);
+        var volume = HfsVolumeBuilder.Create("Test")
+            .AddFile("payload.bin", source, 4)
+            .Build();
+        await using var output = new TrackingSeekableStream();
+
+        var act = async () => await HfsVolumeWriter.WriteToAsync(volume, output);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*payload.bin*Declared size: 4 bytes*emitted bytes: 8 bytes*written bytes: 4 bytes*");
+        output.ContainsSequence(overflowMarker).Should().BeFalse("overflow bytes must be rejected before they reach the HFS output stream");
+    }
+
+    [Fact]
+    public async Task HfsVolumeWriter_ShouldRejectSourceUnderrunAfterCompletion()
+    {
+        var source = new TrackingByteSource(["abc"u8.ToArray()]);
+        var volume = HfsVolumeBuilder.Create("Test")
+            .AddFile("payload.bin", source, 5)
+            .Build();
+
+        var act = async () => await HfsVolumeWriter.WriteToAsync(volume, new MemoryStream());
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*payload.bin*Declared size: 5 bytes*emitted/written bytes: 3 bytes*");
+    }
+
+    [Fact]
+    public void HfsDirectory_ShouldRejectNegativeFileSize()
+    {
+        var source = ByteSource.FromBytes("payload"u8.ToArray());
+        var builder = HfsVolumeBuilder.Create("Test");
+
+        var act = () => builder.AddFile("payload.bin", source, -1);
+
+        act.Should().Throw<ArgumentOutOfRangeException>()
+            .WithMessage("*payload.bin*negative size*");
+    }
+
     private sealed class TrackingByteSource(byte[][] chunks) : IByteSource
     {
         public int Subscriptions { get; private set; }
@@ -328,6 +371,34 @@ public class HfsVolumeTests
             buffer[0] = bytes.GetValueOrDefault(offset);
             buffer[1] = bytes.GetValueOrDefault(offset + 1);
             return BinaryPrimitives.ReadUInt16BigEndian(buffer);
+        }
+
+        public bool ContainsSequence(byte[] sequence)
+        {
+            if (sequence.Length == 0)
+            {
+                return true;
+            }
+
+            for (var offset = 0L; offset <= Length - sequence.Length; offset++)
+            {
+                var matches = true;
+                for (var i = 0; i < sequence.Length; i++)
+                {
+                    if (bytes.GetValueOrDefault(offset + i) != sequence[i])
+                    {
+                        matches = false;
+                        break;
+                    }
+                }
+
+                if (matches)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

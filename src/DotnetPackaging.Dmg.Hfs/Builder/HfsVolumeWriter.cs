@@ -50,9 +50,6 @@ public static class HfsVolumeWriter
     /// <summary>
     /// Writes an HFS+ volume to a byte array.
     /// </summary>
-    /// <summary>
-    /// Writes an HFS+ volume to a byte array.
-    /// </summary>
     public static byte[] WriteToBytes(HfsVolume volume)
     {
         using var stream = new MemoryStream();
@@ -231,11 +228,7 @@ public static class HfsVolumeWriter
         foreach (var fileData in fileDataList)
         {
             output.Position = (long)fileData.StartBlock * blockSize;
-            var write = await fileData.File.Content.WriteTo(output, cancellationToken: cancellationToken).ConfigureAwait(false);
-            if (write.IsFailure)
-            {
-                throw new InvalidOperationException($"Could not write HFS+ file '{fileData.File.Name}': {write.Error}");
-            }
+            await WriteFileContent(fileData.File, output, cancellationToken).ConfigureAwait(false);
         }
 
         foreach (var (_, data, start, _) in symlinkDataList)
@@ -260,6 +253,11 @@ public static class HfsVolumeWriter
             switch (entry)
             {
                 case HfsFile file:
+                    if (file.Size < 0)
+                    {
+                        throw new InvalidOperationException($"HFS+ file '{file.Name}' cannot have a negative size ({file.Size}).");
+                    }
+
                     fileDataList.Add(new FileData(file, file.Size, 0, 0));
                     break;
                 case HfsSymlink symlink:
@@ -417,5 +415,86 @@ public static class HfsVolumeWriter
         }
     }
 
+    private static async Task WriteFileContent(HfsFile file, Stream output, CancellationToken cancellationToken)
+    {
+        var boundedOutput = new DeclaredLengthWriteStream(output, file.Name, file.Size);
+        var write = await file.Content.WriteTo(boundedOutput, cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (write.IsFailure)
+        {
+            throw new InvalidOperationException($"Could not write HFS+ file '{file.Name}': {write.Error}");
+        }
+
+        if (boundedOutput.BytesWritten != file.Size)
+        {
+            throw new InvalidOperationException(
+                $"HFS+ file '{file.Name}' ended before its declared size. Declared size: {file.Size} bytes; emitted/written bytes: {boundedOutput.BytesWritten} bytes.");
+        }
+    }
+
     private sealed record FileData(HfsFile File, long Length, uint StartBlock, uint BlockCount);
+
+    private sealed class DeclaredLengthWriteStream(Stream inner, string fileName, long declaredSize) : Stream
+    {
+        public long BytesWritten { get; private set; }
+
+        public override bool CanRead => false;
+        public override bool CanSeek => false;
+        public override bool CanWrite => inner.CanWrite;
+        public override long Length => inner.Length;
+
+        public override long Position
+        {
+            get => inner.Position;
+            set => inner.Position = value;
+        }
+
+        public override void Flush() => inner.Flush();
+
+        public override Task FlushAsync(CancellationToken cancellationToken)
+        {
+            return inner.FlushAsync(cancellationToken);
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            ValidateWriteCount(count);
+            inner.Write(buffer, offset, count);
+            BytesWritten += count;
+        }
+
+        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            ValidateWriteCount(count);
+            await inner.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
+            BytesWritten += count;
+        }
+
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            ValidateWriteCount(buffer.Length);
+            inner.Write(buffer);
+            BytesWritten += buffer.Length;
+        }
+
+        public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            ValidateWriteCount(buffer.Length);
+            await inner.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
+            BytesWritten += buffer.Length;
+        }
+
+        private void ValidateWriteCount(int count)
+        {
+            var emittedBytes = BytesWritten + count;
+            if (emittedBytes > declaredSize)
+            {
+                throw new InvalidOperationException(
+                    $"HFS+ file '{fileName}' exceeded its declared size before writing the overflowing chunk. Declared size: {declaredSize} bytes; emitted bytes: {emittedBytes} bytes; written bytes: {BytesWritten} bytes.");
+            }
+        }
+    }
 }
