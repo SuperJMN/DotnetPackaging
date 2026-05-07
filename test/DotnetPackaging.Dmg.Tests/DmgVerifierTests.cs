@@ -7,7 +7,7 @@ namespace DotnetPackaging.Dmg.Tests;
 public class DmgVerifierTests
 {
     [Fact]
-    public async Task Verify_udif_dmg_reports_structural_only_validation()
+    public async Task Verify_udif_dmg_reports_udif_file_count_validation()
     {
         using var tempRoot = new TempDir();
         var publish = Path.Combine(tempRoot.Path, "publish");
@@ -20,6 +20,7 @@ public class DmgVerifierTests
         var result = await DmgVerifier.Verify(outDmg);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Contain("structural-only");
+        result.Value.Should().Contain("UDIF DMG OK");
+        result.Value.Should().Contain("files=");
     }
 }
