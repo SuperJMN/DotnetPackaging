@@ -87,6 +87,24 @@ public class DmgHfsBuilderTests
     }
 
     [Fact]
+    public async Task Hfs_file_count_includes_applications_symlink_once()
+    {
+        using var tempRoot = new TempDir();
+        var publish = Path.Combine(tempRoot.Path, "publish");
+        Directory.CreateDirectory(publish);
+
+        await File.WriteAllTextAsync(Path.Combine(publish, "TestApp"), "exe");
+
+        var outDmg = Path.Combine(tempRoot.Path, "Test.dmg");
+        await DmgHfsBuilder.Create(publish, outDmg, "Test App", addApplicationsSymlink: true);
+
+        var data = await ExtractVolumeBytes(outDmg);
+        var fileCount = BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(1024 + 32, 4));
+
+        fileCount.Should().Be(6);
+    }
+
+    [Fact]
     public async Task Volume_name_is_sanitized_correctly()
     {
         using var tempRoot = new TempDir();
