@@ -81,10 +81,18 @@ public class DmgHfsBuilderTests
 
         var executable = Path.Combine(publish, "TestApp");
         var config = Path.Combine(publish, "TestApp.deps.json");
+        var extensionlessHelper = Path.Combine(publish, "helper");
+        var nestedDir = Path.Combine(publish, "tools");
+        var nestedTool = Path.Combine(nestedDir, "nested-tool");
+        Directory.CreateDirectory(nestedDir);
         await File.WriteAllTextAsync(executable, "exe");
         await File.WriteAllTextAsync(config, "deps");
+        await File.WriteAllTextAsync(extensionlessHelper, "helper");
+        await File.WriteAllTextAsync(nestedTool, "nested");
         SetUnixMode(executable, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.OtherRead);
         SetUnixMode(config, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+        SetUnixMode(extensionlessHelper, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+        SetUnixMode(nestedTool, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
 
         var outDmg = Path.Combine(tempRoot.Path, "Test.dmg");
         await DmgHfsBuilder.Create(publish, outDmg, "Test App", executableName: "TestApp");
@@ -93,6 +101,8 @@ public class DmgHfsBuilderTests
 
         modes["TestApp"].Should().Be(0x81ED);
         modes["TestApp.deps.json"].Should().Be(0x81A4);
+        modes["helper"].Should().Be(0x81A4);
+        modes["nested-tool"].Should().Be(0x81A4);
         modes["Info.plist"].Should().Be(0x81A4);
     }
 
