@@ -2,6 +2,9 @@ using Avalonia;
 using DotnetPackaging.Exe.Installer.Core;
 using ReactiveUI.Avalonia;
 using Serilog;
+#if DEBUG
+using Zafiro.Avalonia.Mcp.AppHost;
+#endif
 
 namespace DotnetPackaging.Exe.Installer;
 
@@ -42,6 +45,7 @@ internal static class Program
             .WithInterFont()
 #if DEBUG
             .WithDeveloperTools()
+            .UseMcpDiagnostics()
 #endif
             .UseReactiveUI(_ => { });
 }
