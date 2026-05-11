@@ -2,6 +2,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Xaml.Behaviors.Interactivity"
+             xmlns:core="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Xaml.Behaviors.Interactions"
+             xmlns:custom="clr-namespace:Avalonia.Xaml.Interactions.Custom;assembly=Xaml.Behaviors.Interactions.Custom"
              xmlns:welcome="clr-namespace:DotnetPackaging.Exe.Installer.Flows"
              mc:Ignorable="d"
              x:Class="DotnetPackaging.Exe.Installer.Flows.Installation.Wizard.Welcome.WelcomeView"
@@ -16,12 +19,12 @@
         </Style>
     </UserControl.Styles>
 
-    <Interaction.Behaviors>
-        <LoadedTrigger>
-            <InvokeCommandAction Command="{Binding LoadMetadata}" />
-            <InvokeCommandAction Command="{Binding LoadLogo}" />
-        </LoadedTrigger>
-    </Interaction.Behaviors>
+    <i:Interaction.Behaviors>
+        <custom:LoadedTrigger>
+            <core:InvokeCommandAction Command="{Binding LoadMetadata}" />
+            <core:InvokeCommandAction Command="{Binding LoadLogo}" />
+        </custom:LoadedTrigger>
+    </i:Interaction.Behaviors>
 
     <Loading IsLoading="{Binding LoadMetadata.IsExecuting^}">
         <Grid ColumnDefinitions="Auto *" ColumnSpacing="25" Margin="10 20 20 20">

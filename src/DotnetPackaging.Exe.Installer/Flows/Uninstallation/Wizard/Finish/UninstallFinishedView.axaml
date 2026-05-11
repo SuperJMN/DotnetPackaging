@@ -6,11 +6,11 @@
              mc:Ignorable="d"
              x:Class="DotnetPackaging.Exe.Installer.Flows.Uninstallation.Wizard.Finish.UninstallFinishedView"
              x:DataType="finish:UninstallFinishedViewModel">
-    <StackPanel Spacing="10">
+    <StackPanel Margin="16 12 16 4" Spacing="10">
         <TextBlock TextWrapping="Wrap"
-                   Text="{Binding Result.Metadata.ApplicationName, StringFormat='{}{0} was removed successfully.'}" />
+                   Text="{Binding Result.Metadata.ApplicationName, StringFormat='{}{0} was removed successfully.', FallbackValue='Example App was removed successfully.'}" />
         <TextBlock TextWrapping="Wrap"
-                   Text="{Binding Result.InstallDirectory, StringFormat='Removed from {0}'}" />
+                   Text="{Binding Result.InstallDirectory, StringFormat='Removed from {0}', FallbackValue='Removed from C:/Users/Jane/AppData/Local/Programs/Example App'}" />
         <TextBlock>Click Close to exit.</TextBlock>
     </StackPanel>
 </UserControl>

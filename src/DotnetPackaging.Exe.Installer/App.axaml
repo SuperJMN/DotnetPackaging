@@ -1,5 +1,6 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:slim="clr-namespace:Zafiro.Avalonia.Controls.Wizards.Slim;assembly=Zafiro.Avalonia"
              x:Class="DotnetPackaging.Exe.Installer.App">
     
     <Application.DataTemplates>
@@ -14,9 +15,9 @@
     <FluentTheme />
     <StyleInclude Source="avares://Zafiro.Avalonia/Styles.axaml" />
     <StyleInclude Source="avares://Zafiro.Avalonia.Dialogs/Styles.axaml" />
-    <Style Selector=":is(UserControl)">
-        <Setter Property="Width" Value="500" />
-        <Setter Property="Height" Value="300" />
+    <Style Selector="slim|SlimWizardControl">
+        <Setter Property="MinWidth" Value="420" />
+        <Setter Property="MinHeight" Value="240" />
     </Style>
   </Application.Styles>
 </Application>

@@ -6,13 +6,19 @@
              mc:Ignorable="d" 
              x:Class="DotnetPackaging.Exe.Installer.Flows.Installation.Wizard.Location.LocationView"
              x:DataType="location1:ILocationViewModel">
-    <StackPanel Spacing="8" VerticalAlignment="Center">
+    <Design.DataContext>
+        <location1:LocationViewModelMock />
+    </Design.DataContext>
+
+    <StackPanel Margin="16 12 16 4" Spacing="8" VerticalAlignment="Center">
         <TextBlock Text="Select the installation folder" FontWeight="Bold"/>
-        <DockPanel HorizontalSpacing="8" VerticalSpacing="5">
-            <Button  HorizontalAlignment="Right" DockPanel.Dock="Bottom" Content="Browse…" Command="{Binding Browse}"/>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
             <TextBox
                 ToolTip.Tip="{Binding InstallDirectory}"
                 Text="{Binding InstallDirectory, Mode=TwoWay}"  />
-        </DockPanel>
+            <EnhancedButton Grid.Column="1"
+                            Content="Browse…"
+                            Command="{Binding Browse}" />
+        </Grid>
     </StackPanel>
 </UserControl>

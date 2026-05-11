@@ -6,18 +6,18 @@
              mc:Ignorable="d"
              x:Class="DotnetPackaging.Exe.Installer.Flows.Uninstallation.Wizard.Steps.UninstallView"
              x:DataType="steps:UninstallViewModel">
-    <StackPanel Spacing="10">
+    <StackPanel Margin="16 12 16 4" Spacing="10">
         <TextBlock TextWrapping="Wrap"
-                   Text="{Binding ApplicationName, StringFormat='Click Uninstall to remove {0} and delete its shortcuts.'}" />
+                   Text="{Binding ApplicationName, StringFormat='Click Uninstall to remove {0} and delete its shortcuts.', FallbackValue='Click Uninstall to remove Example App and delete its shortcuts.'}" />
 
-        <StackPanel Spacing="4" IsVisible="{Binding CanUninstall}">
+        <StackPanel Spacing="4" IsVisible="{Binding CanUninstall, FallbackValue=True}">
             <TextBlock FontWeight="Bold">Installation directory</TextBlock>
-            <TextBlock Text="{Binding InstallDirectory}" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding InstallDirectory, FallbackValue='C:/Users/Jane/AppData/Local/Programs/Example App'}" TextWrapping="Wrap" />
         </StackPanel>
 
         <TextBlock TextWrapping="Wrap"
                    VerticalAlignment="Center"
-                   IsVisible="{Binding InstallationMissing}"
+                   IsVisible="{Binding InstallationMissing, FallbackValue=False}"
                    TextTrimming="{x:Static TextTrimming.LeadingCharacterEllipsis}"
                    Text="{Binding ErrorMessage, StringFormat='Unable to locate an installation for this package: {0}'}" />
     </StackPanel>

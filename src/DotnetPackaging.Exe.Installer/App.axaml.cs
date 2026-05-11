@@ -26,12 +26,30 @@ public sealed class App : Application
             return;
         }
 
+        base.OnFrameworkInitializationCompleted();
+
+        if (Environment.GetEnvironmentVariable("ZAFIRO_AVALONIA_MCP_PREVIEW") == "1")
+        {
+            var previewWindow = new Window
+            {
+                Width = 1,
+                Height = 1,
+                Opacity = 0,
+                ShowInTaskbar = false
+            };
+
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime previewLifetime)
+            {
+                previewLifetime.MainWindow = previewWindow;
+            }
+
+            return;
+        }
+
         if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktopLifetime)
         {
             return;
         }
-
-        base.OnFrameworkInitializationCompleted();
 
         // Create and set MainWindow immediately - this keeps the app running
         var mainWindow = new Window

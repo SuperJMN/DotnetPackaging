@@ -14,12 +14,12 @@
         </DataTemplate>
     </UserControl.Resources>
 
-    <StackPanel Spacing="10" VerticalAlignment="Center">
+    <StackPanel Margin="16 12 16 4" Spacing="10" VerticalAlignment="Center">
         <Panel>
-            <TextBlock TextWrapping="Wrap" Margin="14 0" IsVisible="{Binding !Install.IsExecuting^}">We will now install the application. Click Install to proceed with the installation.</TextBlock>
-            <TextBlock HorizontalAlignment="Center" IsVisible="{Binding Install.IsExecuting^}">Installing...</TextBlock>
+            <TextBlock TextWrapping="Wrap" Margin="14 0" IsVisible="{Binding !Install.IsExecuting^, FallbackValue=True}">We will now install the application. Click Install to proceed with the installation.</TextBlock>
+            <TextBlock HorizontalAlignment="Center" IsVisible="{Binding Install.IsExecuting^, FallbackValue=False}">Installing...</TextBlock>
         </Panel>
-        <ProgressControl CurrentTemplate="{StaticResource DoubleToBytesTemplate}" TotalTemplate="{StaticResource DoubleToBytesTemplate}" Progress="{Binding Progress^}" IsVisible="{Binding Install.IsExecuting^}" />
+        <ProgressControl CurrentTemplate="{StaticResource DoubleToBytesTemplate}" TotalTemplate="{StaticResource DoubleToBytesTemplate}" Progress="{Binding Progress^}" IsVisible="{Binding Install.IsExecuting^, FallbackValue=False}" />
     </StackPanel>
 
 </UserControl>
