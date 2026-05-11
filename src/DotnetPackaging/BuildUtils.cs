@@ -81,7 +81,7 @@ public static class BuildUtils
             Id = setup.Id,
             Name = name,
             Categories = setup.Categories,
-            StartupWmClass = setup.StartupWmClass,
+            StartupWmClass = ResolveStartupWmClass(setup, exec, isTerminal),
             Comment = setup.Comment,
             Description = ResolveDescription(setup),
             Homepage = setup.Homepage,
@@ -193,8 +193,19 @@ public static class BuildUtils
 
     private static string ComputePackageName(FromDirectoryOptions setup, INamedByteSourceWithPath exec)
     {
-        var requested = setup.Package.Or(setup.Name).GetValueOrDefault(exec.Name.Replace(".Desktop", ""));
+        var fallback = DesktopHostNames.StripSuffix(exec.Name);
+        var requested = setup.Package.Or(setup.Name).GetValueOrDefault(fallback);
         return SanitizePackageName(requested);
+    }
+
+    private static Maybe<string> ResolveStartupWmClass(FromDirectoryOptions setup, INamedByteSource exec, bool isTerminal)
+    {
+        if (setup.StartupWmClass.HasValue)
+        {
+            return setup.StartupWmClass;
+        }
+
+        return isTerminal ? Maybe<string>.None : DesktopHostNames.TryStripSuffix(exec.Name);
     }
 
     private static string SanitizePackageName(string value)

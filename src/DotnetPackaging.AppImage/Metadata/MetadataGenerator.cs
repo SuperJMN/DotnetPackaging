@@ -13,7 +13,7 @@ public class MetadataGenerator
                                    Name={metadata.Name}
                                    Exec="{metadata.Exec}"
                                    Terminal={metadata.IsTerminal.ToString().ToLower()}
-                                   {metadata.StartupWmClass.Map(s => $"StartupWmClass={s}").GetValueOrDefault("")}
+                                   {metadata.StartupWmClass.Map(s => $"StartupWMClass={s}").GetValueOrDefault("")}
                                    {metadata.Icon.Map(s => $"Icon={s}").GetValueOrDefault("")}
                                    {metadata.Comment.Map(s => $"Comment={s}").GetValueOrDefault("")}
                                    {metadata.Categories.Map(s => $"Categories={s.JoinWith(";")};").GetValueOrDefault("")}

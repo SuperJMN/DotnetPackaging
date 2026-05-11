@@ -22,13 +22,19 @@ public static class ApplicationNameResolver
             return explicitName.Value;
         }
 
+        var assemblyName = projectMetadata.Bind(x => x.AssemblyName);
         var product = projectMetadata.Bind(x => x.Product);
-        if (product.HasValue)
+        if (product.HasValue && !IsImplicitSdkDisplayName(product.Value, assemblyName))
         {
             return product.Value;
         }
 
-        var assemblyName = projectMetadata.Bind(x => x.AssemblyName);
+        var assemblyTitle = projectMetadata.Bind(x => x.AssemblyTitle);
+        if (assemblyTitle.HasValue && !IsImplicitSdkDisplayName(assemblyTitle.Value, assemblyName))
+        {
+            return assemblyTitle.Value;
+        }
+
         if (assemblyName.HasValue)
         {
             return HumanizeExecutableName(assemblyName.Value);
@@ -39,7 +45,7 @@ public static class ApplicationNameResolver
 
     private static string HumanizeExecutableName(string value)
     {
-        var stripped = StripCommonSuffixes(RemoveExtension(value));
+        var stripped = StripCommonSuffixes(RemoveExecutableExtension(value));
         var cleaned = Regex.Replace(stripped, "[._-]+", " ");
         cleaned = Regex.Replace(cleaned, "\\s+", " ").Trim();
         if (string.IsNullOrWhiteSpace(cleaned))
@@ -47,14 +53,24 @@ public static class ApplicationNameResolver
             return "Application";
         }
 
-        var lower = cleaned.ToLowerInvariant();
         var textInfo = CultureInfo.CurrentCulture.TextInfo;
-        return textInfo.ToTitleCase(lower);
+        return string.Join(" ", cleaned.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => HumanizePart(part, textInfo)));
+    }
+
+    private static string HumanizePart(string part, TextInfo textInfo)
+    {
+        if (part.Any(char.IsUpper))
+        {
+            return part;
+        }
+
+        return textInfo.ToTitleCase(part.ToLowerInvariant());
     }
 
     private static string StripCommonSuffixes(string name)
     {
-        var result = name;
+        var result = DesktopHostNames.StripSuffix(name);
         var patterns = new[] { "-publish", "_publish", " publish", "-appdir", "_appdir", " appdir" };
         foreach (var p in patterns)
         {
@@ -68,9 +84,22 @@ public static class ApplicationNameResolver
         return result;
     }
 
-    private static string RemoveExtension(string value)
+    private static string RemoveExecutableExtension(string value)
     {
         var extension = Path.GetExtension(value);
-        return string.IsNullOrEmpty(extension) ? value : value[..^extension.Length];
+        return IsExecutableExtension(extension) ? value[..^extension.Length] : value;
+    }
+
+    private static bool IsExecutableExtension(string extension)
+    {
+        return string.Equals(extension, ".exe", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(extension, ".dll", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsImplicitSdkDisplayName(string value, Maybe<string> assemblyName)
+    {
+        return assemblyName.HasValue
+               && DesktopHostNames.TryStripSuffix(assemblyName.Value).HasValue
+               && string.Equals(value, assemblyName.Value, StringComparison.Ordinal);
     }
 }
