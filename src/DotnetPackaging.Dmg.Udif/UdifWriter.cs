@@ -177,9 +177,10 @@ namespace DotnetPackaging.Formats.Dmg.Udif
                 else if (CompressionType == CompressionType.Bzip2)
                 {
                     // UDBZ - bzip2 compression
-                    using (var bzip2 = new BZip2Stream(ms, SharpCompress.Compressors.CompressionMode.Compress, true))
+                    using (var bzip2 = BZip2Stream.Create(ms, SharpCompress.Compressors.CompressionMode.Compress, false, true))
                     {
                         bzip2.Write(buffer, 0, length);
+                        bzip2.Finish();
                     }
                 }
                 else
