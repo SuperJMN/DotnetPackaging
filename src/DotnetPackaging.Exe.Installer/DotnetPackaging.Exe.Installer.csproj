@@ -28,7 +28,6 @@
         <PackageReference Include="Avalonia.Desktop" />
         <PackageReference Include="Avalonia.Fonts.Inter" />
         <PackageReference Include="Avalonia.Themes.Fluent" />
-        <PackageReference Condition="'$(Configuration)' != 'Release'" Include="AvaloniaUI.DiagnosticsSupport" />
         <PackageReference Include="ReactiveProperty" />
         <PackageReference Include="ReactiveUI.Avalonia" />
         <PackageReference Include="ReactiveUI.Validation" />

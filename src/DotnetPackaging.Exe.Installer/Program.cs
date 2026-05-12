@@ -44,7 +44,6 @@ internal static class Program
             .UsePlatformDetect()
             .WithInterFont()
 #if DEBUG
-            .WithDeveloperTools()
             .UseMcpDiagnostics()
 #endif
             .UseReactiveUI(_ => { });
