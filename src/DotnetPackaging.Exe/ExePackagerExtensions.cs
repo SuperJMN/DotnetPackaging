@@ -90,6 +90,11 @@ public static class ExePackagerExtensions
 
     private static void ApplyProjectDefaults(ExePackagerMetadata metadata, FileInfo projectFile, ILogger logger)
     {
+        if (metadata.ProjectFile.HasNoValue)
+        {
+            metadata.ProjectFile = Maybe.From(projectFile);
+        }
+
         if (metadata.ProjectMetadata.HasNoValue)
         {
             metadata.ProjectMetadata = ProjectMetadataReader.TryRead(projectFile, logger);
@@ -109,6 +114,11 @@ public static class ExePackagerExtensions
 
     private static void ApplyProjectDefaults(ExePackagerMetadata metadata, ProjectPackagingContext context)
     {
+        if (metadata.ProjectFile.HasNoValue)
+        {
+            metadata.ProjectFile = Maybe.From(context.ProjectFile);
+        }
+
         if (metadata.ProjectMetadata.HasNoValue)
         {
             metadata.ProjectMetadata = context.ProjectMetadata;

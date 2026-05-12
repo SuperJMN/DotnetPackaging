@@ -80,6 +80,7 @@ public sealed class ExePackager
                 setupLogo,
                 metadata.ProjectName,
                 metadata.ProjectMetadata,
+                metadata.ProjectFile,
                 certificate);
 
             return result.Map(package => (IByteSource)package);

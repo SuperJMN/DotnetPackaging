@@ -52,7 +52,13 @@ public sealed class DotnetPublisher : IPublisher
             var args = BuildArgs(request, outputDir);
             LogPublishConfiguration(request);
 
-            var run = await command.Execute("dotnet", args);
+            var run = await command.Execute(
+                "dotnet",
+                args,
+                environmentVariables: new Dictionary<string, string>
+                {
+                    ["MSBUILDDISABLENODEREUSE"] = "1"
+                });
             if (run.IsFailure)
             {
                 var errorSummary = ExtractPublishErrors(run.Error);
@@ -206,6 +212,8 @@ public sealed class DotnetPublisher : IPublisher
         var sb = new System.Text.StringBuilder();
         sb.Append($"publish \"{r.ProjectPath}\" ");
         sb.Append($"-c {r.Configuration} ");
+        sb.Append("-m:1 ");
+        sb.Append("/nr:false ");
 
         if (r.Rid.HasValue)
         {
@@ -213,6 +221,7 @@ public sealed class DotnetPublisher : IPublisher
         }
 
         sb.Append(r.SelfContained ? "--self-contained true " : "--self-contained false ");
+        sb.Append("/p:UseSharedCompilation=false ");
         if (r.SingleFile) sb.Append("/p:PublishSingleFile=true ");
         if (r.Trimmed) sb.Append("/p:PublishTrimmed=true ");
         if (r.MsBuildProperties is not null)

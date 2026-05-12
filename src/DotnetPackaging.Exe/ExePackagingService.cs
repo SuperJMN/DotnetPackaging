@@ -19,7 +19,6 @@ namespace DotnetPackaging.Exe;
 
 internal sealed class ExePackagingService
 {
-    private const string BrandingLogoEntry = "Branding/logo.png";
     private readonly DotnetPublisher publisher;
     private readonly ILogger logger;
     private readonly InstallerStubProvider stubProvider;
@@ -50,6 +49,7 @@ internal sealed class ExePackagingService
             ToMaybe(stubFile),
             Maybe<string>.None,
             Maybe<ProjectMetadata>.None,
+            Maybe<FileInfo>.None,
             ToMaybe(setupLogo),
             certificate);
 
@@ -66,6 +66,7 @@ internal sealed class ExePackagingService
         IByteSource? setupLogo,
         Maybe<string> projectName,
         Maybe<ProjectMetadata> projectMetadata,
+        Maybe<FileInfo> projectFile = default,
         Maybe<X509Certificate2> certificate = default)
     {
         var request = new ExePackagingRequest(
@@ -77,6 +78,7 @@ internal sealed class ExePackagingService
             ToMaybe(stubFile),
             projectName,
             projectMetadata,
+            projectFile,
             ToMaybe(setupLogo),
             certificate);
 
@@ -123,6 +125,7 @@ internal sealed class ExePackagingService
             ToMaybe(stubFile),
             Maybe<string>.From(Path.GetFileNameWithoutExtension(projectFile.Name)),
             projectMetadata,
+            Maybe<FileInfo>.From(projectFile),
             ToMaybe(setupLogo),
             certificate);
 
@@ -144,6 +147,7 @@ internal sealed class ExePackagingService
     private async Task<Result<IContainer>> Build(ExePackagingRequest request)
     {
         var inferredExecutable = InferExecutableName(request.PublishDirectory, request.ProjectName);
+        var setupLogo = request.SetupLogo.Or(() => SetupLogoDiscovery.Discover(request.PublishDirectory, request.ProjectFile, logger));
 
         var primaryExecutable = request.Options.ExecutableName.Or(() => inferredExecutable);
         if (primaryExecutable.HasNoValue)
@@ -158,7 +162,7 @@ internal sealed class ExePackagingService
             inferredExecutable,
             request.ProjectName,
             request.ProjectMetadata,
-            request.SetupLogo);
+            setupLogo);
 
         if (request.Certificate.HasValue)
         {
@@ -167,7 +171,7 @@ internal sealed class ExePackagingService
 
         async Task<Result<IContainer>> BuildWithStub(IByteSource stubBytes)
         {
-            var buildResult = await SimpleExePacker.Build(stubBytes, request.PublishDirectory, metadata, request.SetupLogo, request.Certificate);
+            var buildResult = await SimpleExePacker.Build(stubBytes, request.PublishDirectory, metadata, setupLogo, request.Certificate);
             if (buildResult.IsFailure)
             {
                 return Result.Failure<IContainer>(buildResult.Error);
@@ -377,6 +381,7 @@ internal sealed class ExePackagingService
         Maybe<IByteSource> Stub,
         Maybe<string> ProjectName,
         Maybe<ProjectMetadata> ProjectMetadata,
+        Maybe<FileInfo> ProjectFile,
         Maybe<IByteSource> SetupLogo,
         Maybe<X509Certificate2> Certificate);
 }
