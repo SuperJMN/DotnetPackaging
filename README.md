@@ -1,236 +1,141 @@
 # DotnetPackaging
 
-DotnetPackaging helps you turn the publish output of a .NET application into ready-to-ship deliverables for Linux, Windows and macOS. The repository produces two related artifacts:
+Package your .NET app into the formats people actually install: AppImage, DEB, RPM, DMG, MSIX and Windows EXE installers, from one friendly .NET toolbox.
 
-- **NuGet libraries** (`DotnetPackaging`, `DotnetPackaging.AppImage`, `DotnetPackaging.Deb`, `DotnetPackaging.Msix`, `DotnetPackaging.Dmg`, `DotnetPackaging.Exe`) that expose packaging primitives for tool authors and CI integrations.
-- **A global `dotnet` tool** (`dotnetpackager`) that wraps those libraries with a scriptable command line experience.
+Use it however it fits your workflow:
 
-Supported formats today: `.AppImage`, `.deb`, `.rpm`, `.msix` (experimental), `.dmg` (experimental) and a Windows self-extracting `.exe` (preview).
+- **CLI:** install `DotnetPackaging.Tool` and run `dotnetpackager` from your terminal or CI.
+- **Libraries:** reference the NuGet packages directly and build packaging into your own tools.
 
-Both flavors share the same code paths, so whatever works in the CLI is also available from your own automation. The best part? Everything is pure .NET with zero native dependencies, so you can crank out packages from whatever OS you’re using without hunting for platform-specific toolchains.
+The nice part: the packagers are pure .NET. You can create Linux packages, Windows installers and even macOS DMGs from Windows, macOS, Linux or a CI runner without collecting a different native toolchain for every format.
 
-## Why DotnetPackaging
+## Supported formats
 
-Shipping .NET apps shouldn’t require juggling half a dozen platform tools. DotnetPackaging keeps things friendly by giving you one toolbox to generate installers and bundles for the ecosystems your users actually run. No extra daemons, no native SDK rabbit holes—just run the CLI or the libraries, and your bits are ready to share. It’s a laid-back, developer-first way to make sure your app lands everywhere it needs to.
+| Output | Great for | Status |
+|---|---|---|
+| `.AppImage` | Portable Linux desktop apps | Supported |
+| `.deb` | Debian, Ubuntu, Mint, Raspberry Pi OS | Supported |
+| `.rpm` | Fedora, openSUSE, RHEL-like distros | Supported |
+| `.dmg` | macOS drag-and-drop installers | Experimental |
+| `.msix` | Windows app packages | Experimental |
+| `.exe` | Windows self-extracting installers | Preview |
 
-## Repository layout
-- `src/DotnetPackaging`: core abstractions such as metadata models, ELF inspection, icon discovery and option builders.
-- `src/DotnetPackaging.AppImage`: AppImage-specific logic, including AppDir builders and runtime composition.
-- `src/DotnetPackaging.Deb`: helpers to produce Debian control/data archives and emit `.deb` files.
-- `src/DotnetPackaging.Tool`: the `dotnetpackager` CLI that consumes the libraries.
-- `src/DotnetPackaging.DeployerTool` and `src/DotnetPackaging.Deployment`: optional utilities for publishing packages from CI setups.
+DEB and RPM can also package Linux services with `--service`, so backend apps are covered too.
 
-All projects target .NET 10.
+## Install the CLI
 
-## Library usage
-
-Every library works with the `Zafiro` filesystem abstractions so you can build packages from real directories or in-memory containers. The helpers infer reasonable defaults (architecture, executable, icon files, metadata) while still letting you override everything. Use the `*Packager` classes as the entry point; extension methods provide `FromProject` and `PackProject` conveniences.
-
-### AppImage packages
-Key capabilities:
-- Build an AppImage straight from a published directory: no temporary copies, the directory is streamed into the SquashFS runtime.
-- Generate intermediate AppDir structures if you want to tweak the contents before producing the final AppImage.
-- Automatically detect the main executable (ELF inspection) and common icon files, with opt-in overrides.
-
-```csharp
-using DotnetPackaging.AppImage;
-using Zafiro.DivineBytes;
-using Zafiro.DivineBytes.System.IO;
-using Zafiro.FileSystem.Core;
-using Zafiro.FileSystem.Local;
-
-var publishDir = new Directory(new FileSystem().DirectoryInfo.New("./bin/Release/net10.0/linux-x64/publish"));
-var appRoot = (await publishDir.ToDirectory()).Value;
-var container = new DirectoryContainer(appRoot);
-
-var metadata = new AppImagePackagerMetadata();
-metadata.PackageOptions
-    .WithId("com.example.myapp")
-    .WithName("My App")
-    .WithPackage("my-app")
-    .WithVersion("1.0.0")
-    .WithSummary("Cross-platform sample")
-    .WithComment("Longer description shown in desktop menus");
-
-var packager = new AppImagePackager();
-var appImage = await packager.Pack(container.AsRoot(), metadata);
-if (appImage.IsSuccess)
-{
-    await appImage.Value.WriteTo("./artifacts/MyApp.appimage");
-}
-```
-
-For AppDir workflows, use the CLI subcommands (`appimage appdir` and `appimage from-appdir`).
-
-### Debian packages
-Key capabilities:
-- Build `.deb` archives from any container or directory that resembles the install root of your app.
-- Auto-detect the executable and architecture (with `FromDirectoryOptions` overrides when you know better).
-- Emit `IByteSource` streams so you can persist packages to disk, upload them elsewhere, or plug them into other pipelines.
-- **Install as a systemd service/daemon** with a single method call — generates the unit file, maintainer scripts, and automatic enable/start on install.
-
-```csharp
-using System.IO.Abstractions;
-using DotnetPackaging.Deb;
-using DotnetPackaging;
-using Zafiro.DivineBytes;
-using Zafiro.DivineBytes.System.IO;
-
-var publishDir = new DirectoryContainer(new FileSystem().DirectoryInfo.New("./bin/Release/net10.0/linux-x64/publish"));
-var options = new FromDirectoryOptions()
-    .WithName("My App")
-    .WithPackage("my-app")
-    .WithVersion("1.0.0")
-    .WithSummary("Cross-platform sample app");
-
-var packager = new DebPackager();
-var debResult = await packager.Pack(publishDir.AsRoot(), options);
-
-if (debResult.IsSuccess)
-{
-    await debResult.Value.WriteTo("./artifacts/MyApp_1.0.0_amd64.deb");
-}
-```
-
-To install the application as a systemd service, call `WithService()`:
-
-```csharp
-var options = new FromDirectoryOptions()
-    .WithName("My API")
-    .WithPackage("my-api")
-    .WithVersion("2.0.0")
-    .WithSummary("Web API backend")
-    .WithService(svc => svc
-        .WithType(ServiceType.Notify)
-        .WithRestart(RestartPolicy.Always)
-        .WithUser("www-data")
-        .WithEnvironment("DOTNET_ENVIRONMENT=Production", "ASPNETCORE_URLS=http://+:5000"));
-```
-
-The generated `.deb` will include a systemd unit file at `/lib/systemd/system/{package}.service` and maintainer scripts that `daemon-reload`, `enable`, and `start` the service on install, `stop` and `disable` on removal, and clean up on purge. This is the Linux equivalent of a Windows service — designed so .NET developers don't have to learn systemd internals.
-
-`FromDirectoryOptions` exposes many more helpers (`WithExecutableName`, `WithIcon`, `WithHomepage`, `WithCategories`, `WithMaintainer`, etc.) so you can describe the package metadata you need.
-
-
-
-## `dotnetpackager` CLI
-
-The CLI is published as `DotnetPackaging.Tool` and installs a `dotnetpackager` command that mirrors the library APIs.
-
-### Install
 ```bash
 dotnet tool install --global DotnetPackaging.Tool
 ```
 
-### Commands
+## Package a project
 
-Every format command offers two subcommands:
-- **`from-directory`** – package from a pre-published directory (the output of `dotnet publish`).
-- **`from-project`** – publish a .NET project and package in one step.
+Point `dotnetpackager` at a `.csproj` and it will publish and package the app in one go.
 
-> **Deprecation notice:** invoking the base command directly with `--directory` (e.g. `dotnetpackager deb --directory`) still works for backward compatibility but is deprecated. Use `deb from-directory` instead. A future release will remove the deprecated form.
-
-| Format | From directory | From project | Extra subcommands |
-|---|---|---|---|
-| **appimage** | `appimage from-directory` | `appimage from-project` | `appdir`, `from-appdir` |
-| **deb** | `deb from-directory` | `deb from-project` | — |
-| **rpm** | `rpm from-directory` | `rpm from-project` | — |
-| **dmg** | `dmg from-directory` | `dmg from-project` | `verify` |
-| **exe** | `exe from-directory` | `exe from-project` | — |
-| **msix** | `msix from-directory` | `msix from-project` | — |
-
-Run `dotnetpackager <command> --help` to see the full list of shared options (`--application-name`, `--comment`, `--homepage`, `--keywords`, `--icon`, `--is-terminal`, etc.).
-
-DMG packages auto-generate an `.app/Contents/Info.plist` when the published directory does not already contain an `.app` bundle. By default the generated plist uses CLI/project metadata such as `--application-name`, `--appId`, `--version`, `--vendor`/`--company`, and `--executable-name`. To take full control, pass `--info-plist ./Info.plist` to `dmg from-directory` or `dmg from-project`; that file has precedence over generated metadata. If no CLI plist is supplied, a root `Info.plist` next to the publish output or project is used before falling back to generated metadata. Inside generated metadata, explicit CLI options override project metadata, and project metadata overrides built-in defaults.
-
-DMG root adornments are preserved from the input directory. Root-level `.background`, `.DS_Store`, and `.VolumeIcon.icns` stay at the volume root whether the input already contains an `.app` bundle or DotnetPackaging generates one. With `--with-default-layout`, embedded defaults fill only missing layout pieces such as `.background/Background.png` or `.DS_Store`; with `--with-default-layout false`, no embedded layout files are injected.
-
-### Examples
-Build an AppImage from a published directory:
 ```bash
-dotnetpackager appimage from-directory \
-  --directory ./bin/Release/net10.0/linux-x64/publish \
-  --output ./artifacts/MyApp.appimage \
+dotnetpackager appimage from-project \
+  --project ./src/MyApp/MyApp.csproj \
+  --arch x64 \
+  --output ./artifacts/MyApp.AppImage \
   --application-name "My App" \
-  --summary "Cross-platform sample" \
-  --homepage https://example.com
-```
-
-Stage an AppDir and inspect it before packaging:
-```bash
-dotnetpackager appimage appdir \
-  --directory ./bin/Release/net10.0/linux-x64/publish \
-  --output-dir ./artifacts/MyApp.AppDir
-
-# ...modify the AppDir contents if needed...
-
-dotnetpackager appimage from-appdir \
-  --directory ./artifacts/MyApp.AppDir \
-  --output ./artifacts/MyApp.appimage
-```
-
-Produce a Debian package with a custom name and version:
-```bash
-dotnetpackager deb from-directory \
-  --directory ./bin/Release/net10.0/linux-x64/publish \
-  --output ./artifacts/MyApp_1.0.0_amd64.deb \
-  --application-name "My App" \
-  --summary "Cross-platform sample" \
-  --comment "Longer description" \
-  --homepage https://example.com \
-  --license MIT \
   --version 1.0.0
 ```
 
-Package a .NET project as a systemd service (publish + package in one step):
-```bash
-dotnetpackager deb from-project \
-  --project ./src/MyApi/MyApi.csproj \
-  --output ./artifacts/myapi.deb \
-  --service
-```
-
-That single `--service` flag generates a systemd unit file, maintainer scripts for `daemon-reload`/`enable`/`start` on install and `stop`/`disable` on removal. Sensible defaults (`Type=simple`, `Restart=on-failure`) mean you rarely need anything else, but you can fine-tune:
+The same shape works for the other package types:
 
 ```bash
 dotnetpackager deb from-project \
-  --project ./src/MyApi/MyApi.csproj \
-  --output ./artifacts/myapi.deb \
-  --service \
-  --service-type notify \
-  --service-restart always \
-  --service-user www-data \
-  --service-environment DOTNET_ENVIRONMENT=Production \
-  --service-environment ASPNETCORE_URLS=http://+:5000
+  --project ./src/MyApp/MyApp.csproj \
+  --arch x64 \
+  --output ./artifacts/myapp_1.0.0_amd64.deb \
+  --application-name "My App" \
+  --version 1.0.0
+
+dotnetpackager rpm from-project \
+  --project ./src/MyApp/MyApp.csproj \
+  --arch x64 \
+  --output ./artifacts/myapp-1.0.0-1.x86_64.rpm \
+  --application-name "My App" \
+  --version 1.0.0
 ```
 
-The `--service` flag also works from a pre-published directory:
+And yes, DMGs are just as straightforward:
+
 ```bash
-dotnetpackager deb from-directory \
-  --directory ./bin/Release/net10.0/linux-x64/publish \
-  --output ./artifacts/myapi.deb \
-  --application-name myapi \
-  --service
+dotnetpackager dmg from-project \
+  --project ./src/MyApp/MyApp.csproj \
+  --arch arm64 \
+  --output ./artifacts/MyApp.dmg \
+  --application-name "My App" \
+  --appId com.example.myapp \
+  --version 1.0.0
 ```
 
-| Service option | Default | Values |
-|---|---|---|
-| `--service` | *(off)* | Flag — enables systemd service mode |
-| `--service-type` | `simple` | `simple`, `notify`, `forking`, `oneshot`, `idle` |
-| `--service-restart` | `on-failure` | `no`, `always`, `on-failure`, `on-abnormal`, `on-abort`, `on-watchdog` |
-| `--service-user` | *(none)* | Any Linux username |
-| `--service-environment` | *(none)* | `KEY=VALUE` pairs (repeatable) |
+Windows installers follow the same pattern:
 
-All commands work on Windows, macOS or Linux, but the produced artifacts target Linux desktops (or Linux servers when using `--service`).
+```bash
+dotnetpackager exe from-project \
+  --project ./src/MyApp/MyApp.csproj \
+  --arch x64 \
+  --output ./artifacts/MyAppSetup.exe \
+  --application-name "My App" \
+  --appId com.example.myapp \
+  --vendor "Example Co." \
+  --version 1.0.0
+```
 
-## Working on the repository
-- Use the solution `DotnetPackaging.sln` and .NET SDK 10.0 or later.
-- Unit tests live under `test/` (AppImage, Deb, Msix, etc.).
-- `DotnetPackaging.DeployerTool` automates publishing NuGet packages and GitHub releases; see `azure-pipelines.yml` for a full CI example.
+## Package an existing publish folder
+
+Already have `dotnet publish` output? Use `from-directory`.
+
+```bash
+dotnet publish ./src/MyApp/MyApp.csproj -c Release -r linux-x64 --self-contained -o ./publish/MyApp
+
+dotnetpackager appimage from-directory \
+  --directory ./publish/MyApp \
+  --output ./artifacts/MyApp.AppImage \
+  --application-name "My App" \
+  --version 1.0.0
+```
+
+Swap `appimage` for `deb`, `rpm`, `dmg`, `msix` or `exe` when you want a different artifact.
+
+## Use it as a library
+
+The CLI is built on the same NuGet packages you can use in your own automation:
+
+- `DotnetPackaging`
+- `DotnetPackaging.AppImage`
+- `DotnetPackaging.Deb`
+- `DotnetPackaging.Rpm`
+- `DotnetPackaging.Dmg`
+- `DotnetPackaging.Msix`
+- `DotnetPackaging.Exe`
+
+Small example:
+
+```csharp
+using System.IO.Abstractions;
+using CSharpFunctionalExtensions;
+using DotnetPackaging;
+using DotnetPackaging.Deb;
+using Zafiro.DivineBytes;
+using Zafiro.DivineBytes.System.IO;
+
+var publishDir = new DirectoryContainer(new FileSystem().DirectoryInfo.New("./publish/MyApp"));
+var options = new FromDirectoryOptions()
+    .WithName("My App")
+    .WithPackage("myapp")
+    .WithVersion("1.0.0")
+    .WithSummary("A friendly .NET app");
+
+var result = await new DebPackager()
+    .Pack(publishDir.AsRoot(), options)
+    .Bind(package => package.WriteTo("./artifacts/myapp_1.0.0_amd64.deb"));
+```
+
+That is the basic idea everywhere: give DotnetPackaging a published app plus metadata, get back a package you can save, upload or release.
 
 ## License
-The entire project is distributed under the MIT License. See `LICENSE` for details.
 
-## Acknowledgements
-- SquashFS support relies on [NyaFS](https://github.com/teplofizik/nyafs) by Alexey Sonkin.
-- Filesystem abstractions come from the [Zafiro](https://github.com/SuperJMN/Zafiro) toolkit.
+MIT. See [LICENSE](LICENSE).
