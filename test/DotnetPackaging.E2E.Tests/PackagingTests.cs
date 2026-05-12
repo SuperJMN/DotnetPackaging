@@ -47,14 +47,6 @@ public class PackagingTests : IDisposable
     }
 
     [Fact]
-    public async Task Can_create_Flatpak()
-    {
-        var output = Path.Combine(temp.Path, "TestApp.flatpak");
-        await ExecutePackagingCommand("flatpak", output, ""); // Flatpak auto-detects or uses default
-        File.Exists(output).Should().BeTrue();
-    }
-
-    [Fact]
     public async Task Can_create_Exe()
     {
         var output = Path.Combine(temp.Path, "TestApp.exe");

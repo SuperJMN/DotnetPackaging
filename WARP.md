@@ -127,12 +127,6 @@ Packaging formats: status and details
   - Status: experimental/preview. Library: src/DotnetPackaging.Msix with tests in src/DotnetPackaging.Msix.Tests.
   - CLI: exposed via msix pack (from directory) and msix from-project (publishes then packs). Assumes a valid AppxManifest.xml and assets are present; metadata generation can be added.
   - Validation: tests unpack resulting MSIX using makeappx tooling in CI-like conditions.
-- Flatpak (Linux)
-  - Status: supported (bundle via system `flatpak`) with internal OSTree bundler fallback.
-  - Libraries: src/DotnetPackaging.Flatpak (Factory, Packer, OSTree scaffolding).
-  - How it works: builds a Flatpak layout (metadata at root, files/ subtree) from a publish directory; icons auto-detected and installed under files/share/icons/.../apps/<appId>.(svg/png). Desktop Icon is forced to <appId>.
-  - Bundling: prefers system `flatpak build-export/build-bundle`; if not available or fails, uses internal bundler to emit a single-file `.flatpak` (unsigned, for testing).
-  - Defaults: freedesktop runtime 24.08 (runtime/sdk), branch=stable, common permissions (network/ipc, wayland/x11/pulseaudio, dri, filesystem=home). Command defaults to AppId.
 - DMG .dmg (macOS)
   - Status: experimental cross-platform builder. Library: src/DotnetPackaging.Dmg.
   - How it works: emits a native HFS+ payload wrapped in UDIF (DMG) format, with optional .app scaffolding if none exists. Root-level adornments like .background, .DS_Store, and .VolumeIcon.icns are preserved at the image root when present.
@@ -153,14 +147,12 @@ CLI tool (dotnet tool)
   - deb from-project: publish a .NET project and build a .deb.
   - rpm: create an .rpm from a directory (dotnet publish output). Fully managed; avoids owning system dirs.
   - rpm from-project: publish a .NET project and build an .rpm.
-  - flatpak: layout, bundle (system or internal), repo, and pack (minimal UX).
-  - flatpak from-project: publish a .NET project and build a .flatpak bundle.
   - msix (experimental): msix pack (from directory) and msix from-project.
   - dmg (experimental): dmg (from directory) and dmg from-project (publishes then builds a .dmg).
   - exe (preview): Windows self-extracting installer (.exe) from directory; and exe from-project (publica y empaqueta). Si omites --stub, se descargará el stub apropiado automáticamente.
 - Common options (all commands share a metadata set):
   - --directory <dir> (required): input directory to package from.
-  - --output <file> (required): output file (.AppImage, .deb, .rpm, .msix, .flatpak, .dmg).
+  - --output <file> (required): output file (.AppImage, .deb, .rpm, .msix, .dmg).
   - --application-name, --wm-class, --main-category, --additional-categories, --keywords, --comment, --version,
     --homepage, --license, --screenshot-urls, --summary, --appId, --executable-name, --is-terminal, --icon <path>.
 - Examples (from a published folder):
@@ -170,9 +162,6 @@ CLI tool (dotnet tool)
   - Deb (project):  dotnetpackaging deb from-project --project /path/to/MyApp.csproj --output /path/out/myapp_1.0.0_amd64.deb --application-name "MyApp"
   - RPM (dir):      dotnetpackaging rpm      --directory /path/to/publish --output /path/out/myapp-1.0.0-1.x86_64.rpm --application-name "MyApp"
   - RPM (project):  dotnetpackaging rpm from-project --project /path/to/MyApp.csproj --output /path/out/myapp-1.0.0-1.x86_64.rpm --application-name "MyApp"
-  - Flatpak (minimal): dotnetpackaging flatpak pack --directory /path/to/publish --output-dir /path/out
-  - Flatpak (bundle):  dotnetpackaging flatpak bundle --directory /path/to/publish --output /path/out/MyApp.flatpak --system
-  - Flatpak (project): dotnetpackaging flatpak from-project --project /path/to/MyApp.csproj --output /path/out/MyApp.flatpak --system
   - MSIX (dir, experimental): dotnetpackaging msix pack --directory /path/to/publish --output /path/out/MyApp.msix
   - MSIX (project, experimental): dotnetpackaging msix from-project --project /path/to/MyApp.csproj --output /path/out/MyApp.msix
   - DMG (dir, experimental): dotnetpackaging dmg --directory /path/to/publish --output /path/out/MyApp.dmg --application-name "MyApp"
@@ -197,14 +186,13 @@ Tests
 
 Developer workflow tips
 - Publish input
-  - AppImage/Deb/RPM/Flatpak/MSIX consume a folder produced by dotnet publish. from-project subcommands invoke a minimal publisher and reuse the same pipelines.
+  - AppImage/Deb/RPM/MSIX consume a folder produced by dotnet publish. from-project subcommands invoke a minimal publisher and reuse the same pipelines.
   - For AppImage, ensure an ELF executable is present (self-contained single-file publish is acceptable). If not specified, the first eligible ELF is chosen.
 - RID/self-contained
   - from-project defaults:
     - rpm/deb/appimage: self-contained=true by default. Architecture is optional; if necesitas cross-publish, pasa --arch (x64/arm64) y se mapeara al RID correspondiente.
     - msix: self-contained=false by default. Architecture is optional; pasa --arch cuando cross-publishing (x64/arm64).
     - dmg: requires --arch (x64 o arm64). Host RID inference is intentionally not used to avoid producing non-mac binaries when running on Linux/Windows.
-    - flatpak: framework-dependent by default; uses its own runtime. You can still publish self-contained by passing --self-contained and --arch if needed.
 - RPM prerequisites
   - No external tooling required.
   - The RPM builder emits no auto-deps/provides, keeping self-contained .NET apps portable across distros.
@@ -221,7 +209,7 @@ Repository map (relevant)
 - src/DotnetPackaging.Msix: MSIX packaging (builder and helpers).
 - src/DotnetPackaging.Exe: Windows SFX packer (concatenation and metadata).
 - src/DotnetPackaging.Exe.Installer: Avalonia stub installer.
-- src/DotnetPackaging.Tool: CLI (dotnet tool) with commands appimage, deb, rpm, flatpak, msix, exe.
+- src/DotnetPackaging.Tool: CLI (dotnet tool) with commands appimage, deb, rpm, msix, exe.
 - test/*: AppImage and Deb tests; src/DotnetPackaging.Msix.Tests for MSIX; test/DotnetPackaging.Exe.Tests for EXE packaging.
 
 Backlog / Future work
