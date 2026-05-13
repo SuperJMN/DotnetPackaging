@@ -1,4 +1,5 @@
 using CSharpFunctionalExtensions;
+using DotnetProjectKit;
 using Serilog;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.System.IO;
@@ -41,6 +42,30 @@ internal static class SetupLogoDiscovery
         "packages",
         "node_modules"
     };
+
+    public static Maybe<IByteSource> Discover(Maybe<ApplicationInfo> applicationInfo, ILogger logger)
+    {
+        if (applicationInfo.HasNoValue || applicationInfo.Value.Logo is null)
+        {
+            return Maybe<IByteSource>.None;
+        }
+
+        var logoPath = applicationInfo.Value.Logo.Path;
+        if (!IsSupportedLogo(logoPath))
+        {
+            logger.Debug("Project logo {LogoPath} is not a supported setup logo.", logoPath);
+            return Maybe<IByteSource>.None;
+        }
+
+        if (!File.Exists(logoPath))
+        {
+            logger.Debug("Project logo {LogoPath} was resolved but no longer exists.", logoPath);
+            return Maybe<IByteSource>.None;
+        }
+
+        logger.Information("Using project setup logo {LogoPath}", logoPath);
+        return Maybe<IByteSource>.From(FileByteSource.OpenRead(logoPath));
+    }
 
     public static Maybe<IByteSource> Discover(IContainer publishDirectory, Maybe<FileInfo> projectFile, ILogger logger)
     {
@@ -224,6 +249,11 @@ internal static class SetupLogoDiscovery
                || fileName.Equals("icon.png", StringComparison.OrdinalIgnoreCase)
                || (fileName.Contains("logo", StringComparison.OrdinalIgnoreCase) && fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
                || (fileName.Contains("icon", StringComparison.OrdinalIgnoreCase) && fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsSupportedLogo(string path)
+    {
+        return string.Equals(Path.GetExtension(path), ".png", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string Normalize(string path)

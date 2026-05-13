@@ -149,7 +149,9 @@ internal sealed class ExePackagingService
     private async Task<Result<IContainer>> Build(ExePackagingRequest request)
     {
         var inferredExecutable = InferExecutableName(request.PublishDirectory, request.ProjectName);
-        var setupLogo = request.SetupLogo.Or(() => SetupLogoDiscovery.Discover(request.PublishDirectory, request.ProjectFile, logger));
+        var setupLogo = request.SetupLogo
+            .Or(() => SetupLogoDiscovery.Discover(request.ApplicationInfo, logger))
+            .Or(() => SetupLogoDiscovery.Discover(request.PublishDirectory, request.ProjectFile, logger));
 
         var primaryExecutable = request.Options.ExecutableName.Or(() => inferredExecutable);
         if (primaryExecutable.HasNoValue)

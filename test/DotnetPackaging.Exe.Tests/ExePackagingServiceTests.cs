@@ -183,6 +183,61 @@ public class ExePackagingServiceTests
         }
     }
 
+    [Fact]
+    public async Task From_published_project_prefers_application_info_logo_before_publish_output_logo()
+    {
+        var repo = Directory.CreateTempSubdirectory("dp-logo-appinfo-");
+        try
+        {
+            Directory.CreateDirectory(System.IO.Path.Combine(repo.FullName, ".git"));
+            var assets = Directory.CreateDirectory(System.IO.Path.Combine(repo.FullName, "assets"));
+            await File.WriteAllTextAsync(System.IO.Path.Combine(assets.FullName, "logo.png"), "project-logo");
+
+            var projectDirectory = Directory.CreateDirectory(System.IO.Path.Combine(repo.FullName, "src", "App.Desktop"));
+            var project = new FileInfo(System.IO.Path.Combine(projectDirectory.FullName, "App.Desktop.csproj"));
+            await File.WriteAllTextAsync(project.FullName, """
+                <Project>
+                  <PropertyGroup>
+                    <ApplicationLogo>..\..\assets\logo.png</ApplicationLogo>
+                  </PropertyGroup>
+                </Project>
+                """);
+
+            var context = ProjectPackagingContext.FromProject(project.FullName);
+            context.IsSuccess.Should().BeTrue(context.IsFailure ? context.Error : string.Empty);
+
+            var publishOutput = DotnetPublishOutputDouble.Simulate(
+                "App.Desktop.exe",
+                "Assets/logo.png");
+            var installer = new ExePackager(logger: Serilog.Log.Logger)
+                .FromPublishedProject(
+                    publishOutput,
+                    context.Value,
+                    metadata =>
+                    {
+                        metadata.Stub = Maybe.From((IByteSource)ByteSource.FromString("stub"));
+                        metadata.RuntimeIdentifier = Maybe.From("win-x64");
+                        metadata.OutputName = Maybe.From("setup.exe");
+                    },
+                    Serilog.Log.Logger);
+
+            var output = System.IO.Path.Combine(repo.FullName, "setup.exe");
+            var write = await installer.WriteTo(output);
+            write.IsSuccess.Should().BeTrue(write.IsFailure ? write.Error : string.Empty);
+
+            using var archive = new ZipArchive(new MemoryStream(ReadPayload(output)), ZipArchiveMode.Read);
+            var logo = archive.GetEntry("Branding/logo.png");
+            logo.Should().NotBeNull();
+            using var logoStream = logo!.Open();
+            using var reader = new StreamReader(logoStream);
+            (await reader.ReadToEndAsync()).Should().Be("project-logo");
+        }
+        finally
+        {
+            try { Directory.Delete(repo.FullName, true); } catch { }
+        }
+    }
+
     private static Maybe<string> InvokeInferExecutableName(ExePackagingService service, IContainer container, Maybe<string> projectName)
     {
         var result = InferExecutableNameMethod.Invoke(service, new object[] { container, projectName });
