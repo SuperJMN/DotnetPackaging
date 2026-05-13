@@ -205,7 +205,7 @@ public static class BuildUtils
             return setup.StartupWmClass;
         }
 
-        return isTerminal ? Maybe<string>.None : DesktopHostNames.TryStripSuffix(exec.Name);
+        return isTerminal ? Maybe<string>.None : Maybe.From(exec.Name);
     }
 
     private static string SanitizePackageName(string value)

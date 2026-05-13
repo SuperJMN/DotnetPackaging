@@ -13,7 +13,7 @@
     </PackageVersion>
     <PackageVersion Include="CSharpFunctionalExtensions" Version="3.7.0" />
     <PackageVersion Include="CSharpFunctionalExtensions.FluentAssertions" Version="3.6.0" />
-    <PackageVersion Include="DotnetProjectKit" Version="0.0.3" />
+    <PackageVersion Include="DotnetProjectKit" Version="0.0.4" />
     <PackageVersion Include="DotnetPackaging.Dmg.Iso" Version="0.0.9" />
     <PackageVersion Include="DotnetPackaging.Dmg.Udif" Version="0.0.9" />
     <PackageVersion Include="FluentAssertions" Version="8.8.0" />

@@ -9,7 +9,7 @@ namespace DotnetPackaging.AppImage.Tests;
 public class AppImageDesktopMetadataTests
 {
     [Fact]
-    public async Task CreateMetadata_strips_desktop_host_suffix_from_implicit_project_identity()
+    public async Task CreateMetadata_keeps_desktop_host_startup_wm_class_from_project_identity()
     {
         var root = CreateApplicationRoot("TestApp.Desktop");
         var executable = root.ResourcesWithPathsRecursive().Single();
@@ -18,7 +18,7 @@ public class AppImageDesktopMetadataTests
                 assemblyName: "TestApp.Desktop",
                 displayName: "TestApp",
                 packageName: "TestApp",
-                startupWmClass: "TestApp"));
+                startupWmClass: "TestApp.Desktop"));
 
         var metadata = await BuildUtils.CreateMetadata(
             options,
@@ -30,7 +30,26 @@ public class AppImageDesktopMetadataTests
 
         metadata.Name.Should().Be("TestApp");
         metadata.Package.Should().Be("testapp");
-        metadata.StartupWmClass.GetValueOrDefault().Should().Be("TestApp");
+        metadata.StartupWmClass.GetValueOrDefault().Should().Be("TestApp.Desktop");
+    }
+
+    [Fact]
+    public async Task CreateMetadata_uses_executable_name_as_default_startup_wm_class()
+    {
+        var root = CreateApplicationRoot("TestApp.Desktop");
+        var executable = root.ResourcesWithPathsRecursive().Single();
+
+        var metadata = await BuildUtils.CreateMetadata(
+            new FromDirectoryOptions(),
+            root,
+            Architecture.X64,
+            executable,
+            isTerminal: false,
+            containerName: Maybe<string>.None);
+
+        metadata.Name.Should().Be("TestApp");
+        metadata.Package.Should().Be("testapp");
+        metadata.StartupWmClass.GetValueOrDefault().Should().Be("TestApp.Desktop");
     }
 
     [Fact]
