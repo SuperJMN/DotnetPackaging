@@ -1,4 +1,5 @@
 using CSharpFunctionalExtensions;
+using DotnetPackaging;
 using DotnetPackaging.Msix.Core.Manifest;
 using DotnetPackaging.Publish;
 using Serilog;
@@ -44,6 +45,39 @@ public static class MsixPackagerExtensions
         ILogger? logger = null)
     {
         var source = packager.FromProject(projectPath, metadataConfigure, publishConfigure, signingOptions, sourceIcon, logger);
+        return source.WriteTo(outputPath);
+    }
+
+    public static IByteSource FromPublishedProject(
+        this MsixPackager packager,
+        IContainer publishedProject,
+        Action<AppManifestMetadata>? metadataConfigure = null,
+        Maybe<SigningOptions> signingOptions = default,
+        Maybe<byte[]> sourceIcon = default,
+        ILogger? logger = null)
+    {
+        if (packager == null)
+            throw new ArgumentNullException(nameof(packager));
+        if (publishedProject == null)
+            throw new ArgumentNullException(nameof(publishedProject));
+
+        var metadata = metadataConfigure != null
+            ? BuildMetadata(metadataConfigure)
+            : Maybe<AppManifestMetadata>.None;
+
+        return PackagingByteSource.FromResultFactory(() => packager.Pack(publishedProject, metadata, signingOptions, sourceIcon, logger));
+    }
+
+    public static Task<Result> PackPublishedProject(
+        this MsixPackager packager,
+        IContainer publishedProject,
+        string outputPath,
+        Action<AppManifestMetadata>? metadataConfigure = null,
+        Maybe<SigningOptions> signingOptions = default,
+        Maybe<byte[]> sourceIcon = default,
+        ILogger? logger = null)
+    {
+        var source = packager.FromPublishedProject(publishedProject, metadataConfigure, signingOptions, sourceIcon, logger);
         return source.WriteTo(outputPath);
     }
 

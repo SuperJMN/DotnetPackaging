@@ -38,7 +38,7 @@ public static class FromDirectoryOptionsExtensions
         if (source.VcsGit.HasValue) target.WithVcsGit(source.VcsGit.Value);
         if (source.InstalledSize.HasValue) target.WithInstalledSize(source.InstalledSize.Value);
         if (source.ModificationTime.HasValue) target.WithModificationTime(source.ModificationTime.Value);
-        if (source.ProjectMetadata.HasValue) target.WithProjectMetadata(source.ProjectMetadata.Value);
+        if (source.ApplicationInfo.HasValue) target.WithApplicationInfo(source.ApplicationInfo.Value);
         if (source.Vendor.HasValue) target.WithVendor(source.Vendor.Value);
         if (source.Url.HasValue) target.WithUrl(source.Url.Value);
         if (source.IsTerminal.HasValue) target.WithIsTerminal(source.IsTerminal.Value);

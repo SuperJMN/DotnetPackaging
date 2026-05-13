@@ -67,8 +67,8 @@ public static class BuildUtils
         var svgIcon = iconPlan.Svg.Map(svg => (IByteSource)svg);
         var icon = discoveredIcon;
         var version = setup.Version.GetValueOrDefault("1.0.0");
-        var name = setup.ProjectMetadata.HasValue
-            ? ApplicationNameResolver.FromProject(setup.Name, setup.ProjectMetadata, exec.Name)
+        var name = setup.ApplicationInfo.HasValue
+            ? ApplicationNameResolver.FromProject(setup.Name, setup.ApplicationInfo, exec.Name)
             : ApplicationNameResolver.FromDirectory(setup.Name, exec.Name);
 
         var packageMetadata = new PackageMetadata(name, architecture, isTerminal, package, version)

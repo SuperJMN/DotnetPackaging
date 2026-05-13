@@ -52,7 +52,8 @@ public static class DebPackagerExtensions
 
         var log = logger ?? Log.Logger;
         var resolved = context.ResolveFromDirectoryOptions(overrides ?? new FromDirectoryOptions());
-        return PackagingByteSource.FromResultFactory(() => packager.Pack(publishedProject, resolved, log));
+        var preparedProject = context.EnrichPublishedProjectWithProjectAssets(publishedProject);
+        return PackagingByteSource.FromResultFactory(() => packager.Pack(preparedProject, resolved, log));
     }
 
     public static Task<Result> PackPublishedProject(

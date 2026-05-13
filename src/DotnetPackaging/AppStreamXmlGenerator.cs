@@ -28,7 +28,7 @@ public static class AppStreamXmlGenerator
     {
         var screenshotsElement = new XElement("screenshots");
 
-        options.ScreenshotUrls.Execute(urls =>
+        options.ScreenshotUrls.Tap(urls =>
         {
             foreach (var url in urls)
             {

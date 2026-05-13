@@ -2,6 +2,13 @@
 
 ## Goal
 
+Long term, the project context should be backed by the shared `ApplicationInfo`
+model described in DotnetDeployer's `docs/shared-application-info-audit.md`.
+That model owns application metadata, assets, identity normalization and
+overrides; `ProjectPackagingContext` remains the packaging-facing adapter.
+
+## Original Goal
+
 Keep the useful behavior of `from-project` (project metadata, inferred executable, vendor, license, URL, terminal mode, etc.) while allowing higher-level tools such as DotnetDeployer to publish once and package several formats from the same publish output.
 
 DotnetPackaging remains responsible for packaging primitives and project-aware packaging conveniences. It must not learn about DotnetDeployer, Fleet, releases, workers, batches, or remote artifact storage.
@@ -112,4 +119,3 @@ Notes:
 - Set `NUGET_API_KEY` in the shell; do not write it to disk.
 - Use the same `VERSION` for every package in a coordinated release.
 - GitHub release assets, such as Windows stubs, can be generated and uploaded later when GitHub is available again.
-

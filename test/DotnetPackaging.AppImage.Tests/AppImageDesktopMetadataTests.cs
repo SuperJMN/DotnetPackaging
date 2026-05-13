@@ -1,4 +1,5 @@
 using CSharpFunctionalExtensions;
+using DotnetProjectKit;
 using DotnetPackaging.AppImage.Metadata;
 using FluentAssertions;
 using Zafiro.DivineBytes;
@@ -13,20 +14,11 @@ public class AppImageDesktopMetadataTests
         var root = CreateApplicationRoot("TestApp.Desktop");
         var executable = root.ResourcesWithPathsRecursive().Single();
         var options = new FromDirectoryOptions()
-            .WithProjectMetadata(new ProjectMetadata(
-                Product: Maybe.From("TestApp.Desktop"),
-                Company: Maybe<string>.None,
-                Description: Maybe<string>.None,
-                Authors: Maybe<string>.None,
-                Copyright: Maybe<string>.None,
-                PackageLicenseExpression: Maybe<string>.None,
-                PackageProjectUrl: Maybe<string>.None,
-                PackageId: Maybe<string>.None,
-                Version: Maybe<string>.None,
-                RepositoryUrl: Maybe<string>.None,
-                AssemblyName: Maybe.From("TestApp.Desktop"),
-                AssemblyTitle: Maybe<string>.None,
-                OutputType: Maybe.From("WinExe")));
+            .WithApplicationInfo(CreateApplicationInfo(
+                assemblyName: "TestApp.Desktop",
+                displayName: "TestApp",
+                packageName: "TestApp",
+                startupWmClass: "TestApp"));
 
         var metadata = await BuildUtils.CreateMetadata(
             options,
@@ -86,6 +78,31 @@ public class AppImageDesktopMetadataTests
         var rootResult = files.ToRootContainer();
         rootResult.Should().Succeed();
         return rootResult.Value;
+    }
+
+    private static ApplicationInfo CreateApplicationInfo(
+        string assemblyName,
+        string displayName,
+        string packageName,
+        string startupWmClass)
+    {
+        return new ApplicationInfo
+        {
+            ProjectPath = "TestApp.Desktop.csproj",
+            Metadata = ProjectMetadata.FromValues(new Dictionary<string, string>
+            {
+                ["AssemblyName"] = assemblyName,
+                ["Product"] = assemblyName,
+                ["OutputType"] = "WinExe"
+            }),
+            AssemblyName = new ResolvedValue<string>(assemblyName, ApplicationInfoSource.Msbuild),
+            ExecutableName = new ResolvedValue<string>(assemblyName, ApplicationInfoSource.Msbuild),
+            DisplayName = new ResolvedValue<string>(displayName, ApplicationInfoSource.Convention),
+            PackageName = new ResolvedValue<string>(packageName, ApplicationInfoSource.Convention),
+            Version = new ResolvedValue<string>("1.0.0", ApplicationInfoSource.Default),
+            StartupWmClass = new ResolvedValue<string>(startupWmClass, ApplicationInfoSource.Convention),
+            OutputType = new ResolvedValue<string>("WinExe", ApplicationInfoSource.Msbuild)
+        };
     }
 
     private static byte[] CreateElfBytes()

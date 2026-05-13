@@ -1,4 +1,5 @@
 using CSharpFunctionalExtensions;
+using DotnetProjectKit;
 using DotnetPackaging;
 using DotnetPackaging.Publish;
 using Serilog;
@@ -85,24 +86,16 @@ public static class DmgPackagerExtensions
         return source.WriteTo(outputPath);
     }
 
-    private static DmgPackagerMetadata ResolveFromProject(DmgPackagerMetadata source, FileInfo projectFile, ILogger logger)
-    {
-        var projectMetadata = ProjectMetadataReader.TryRead(projectFile, logger);
-        var inferred = ProjectMetadataDefaults.InferExecutableName(projectMetadata, projectFile);
-
-        return ResolveFromProject(source, inferred, projectMetadata, projectFile.Directory);
-    }
-
     private static DmgPackagerMetadata ResolveFromProject(DmgPackagerMetadata source, ProjectPackagingContext context)
     {
         var inferred = context.InferExecutableName();
-        return ResolveFromProject(source, inferred, context.ProjectMetadata, context.ProjectFile.Directory);
+        return ResolveFromProject(source, inferred, context.ApplicationInfo, context.ProjectFile.Directory);
     }
 
     private static DmgPackagerMetadata ResolveFromProject(
         DmgPackagerMetadata source,
         Maybe<string> inferred,
-        Maybe<ProjectMetadata> projectMetadata = default,
+        Maybe<ApplicationInfo> applicationInfo = default,
         DirectoryInfo? projectDirectory = null)
     {
         return new DmgPackagerMetadata
@@ -114,9 +107,9 @@ public static class DmgPackagerExtensions
             IncludeDefaultLayout = source.IncludeDefaultLayout,
             Icon = source.Icon,
             InfoPlist = source.InfoPlist.Or(() => FindProjectInfoPlist(projectDirectory)),
-            BundleIdentifier = source.BundleIdentifier.Or(projectMetadata.Bind(metadata => metadata.PackageId)),
-            BundleVersion = source.BundleVersion.Or(projectMetadata.Bind(metadata => metadata.Version)),
-            Vendor = source.Vendor.Or(projectMetadata.Bind(metadata => metadata.Company))
+            BundleIdentifier = source.BundleIdentifier.Or(applicationInfo.Map(info => (info.PackageId ?? info.PackageName).Value)),
+            BundleVersion = source.BundleVersion.Or(applicationInfo.Map(info => info.Version.Value)),
+            Vendor = source.Vendor.Or(applicationInfo.Bind(info => Maybe<string>.From(info.Company?.Value)))
         };
     }
 

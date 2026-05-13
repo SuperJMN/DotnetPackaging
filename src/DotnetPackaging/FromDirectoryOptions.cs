@@ -1,4 +1,6 @@
-﻿namespace DotnetPackaging;
+﻿using DotnetProjectKit;
+
+namespace DotnetPackaging;
 
 public class FromDirectoryOptions
 {
@@ -31,7 +33,7 @@ public class FromDirectoryOptions
     public Maybe<long> InstalledSize { get; private set; } = Maybe<long>.None;
     public Maybe<DateTimeOffset> ModificationTime { get; private set; } = Maybe<DateTimeOffset>.None;
     public Maybe<bool> IsTerminal { get; private set; } = Maybe<bool>.None;
-    public Maybe<ProjectMetadata> ProjectMetadata { get; private set; } = Maybe<ProjectMetadata>.None;
+    public Maybe<ApplicationInfo> ApplicationInfo { get; private set; } = Maybe<ApplicationInfo>.None;
     public Maybe<string> Vendor { get; private set; } = Maybe<string>.None;
     public Maybe<Uri> Url { get; private set; } = Maybe<Uri>.None;
     public Maybe<ServiceDefinition> Service { get; private set; } = Maybe<ServiceDefinition>.None;
@@ -241,9 +243,9 @@ public class FromDirectoryOptions
         IsTerminal = Maybe<bool>.From(isTerminalValue);
     }
 
-    public FromDirectoryOptions WithProjectMetadata(ProjectMetadata projectMetadata)
+    public FromDirectoryOptions WithApplicationInfo(ApplicationInfo applicationInfo)
     {
-        ProjectMetadata = Maybe<ProjectMetadata>.From(projectMetadata ?? throw new ArgumentNullException(nameof(projectMetadata)));
+        ApplicationInfo = Maybe<ApplicationInfo>.From(applicationInfo ?? throw new ArgumentNullException(nameof(applicationInfo)));
         return this;
     }
 

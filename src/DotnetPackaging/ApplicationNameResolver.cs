@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using DotnetProjectKit;
 
 namespace DotnetPackaging;
 
@@ -15,29 +16,16 @@ public static class ApplicationNameResolver
         return HumanizeExecutableName(executableName);
     }
 
-    public static string FromProject(Maybe<string> explicitName, Maybe<ProjectMetadata> projectMetadata, string executableName)
+    public static string FromProject(Maybe<string> explicitName, Maybe<ApplicationInfo> applicationInfo, string executableName)
     {
         if (explicitName.HasValue)
         {
             return explicitName.Value;
         }
 
-        var assemblyName = projectMetadata.Bind(x => x.AssemblyName);
-        var product = projectMetadata.Bind(x => x.Product);
-        if (product.HasValue && !IsImplicitSdkDisplayName(product.Value, assemblyName))
+        if (applicationInfo.HasValue)
         {
-            return product.Value;
-        }
-
-        var assemblyTitle = projectMetadata.Bind(x => x.AssemblyTitle);
-        if (assemblyTitle.HasValue && !IsImplicitSdkDisplayName(assemblyTitle.Value, assemblyName))
-        {
-            return assemblyTitle.Value;
-        }
-
-        if (assemblyName.HasValue)
-        {
-            return HumanizeExecutableName(assemblyName.Value);
+            return applicationInfo.Value.DisplayName.Value;
         }
 
         return HumanizeExecutableName(executableName);
@@ -94,12 +82,5 @@ public static class ApplicationNameResolver
     {
         return string.Equals(extension, ".exe", StringComparison.OrdinalIgnoreCase)
                || string.Equals(extension, ".dll", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsImplicitSdkDisplayName(string value, Maybe<string> assemblyName)
-    {
-        return assemblyName.HasValue
-               && DesktopHostNames.TryStripSuffix(assemblyName.Value).HasValue
-               && string.Equals(value, assemblyName.Value, StringComparison.Ordinal);
     }
 }

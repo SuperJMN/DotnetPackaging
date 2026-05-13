@@ -109,7 +109,7 @@ public sealed class DotnetPublisher : IPublisher
         }
         catch (Exception ex)
         {
-            logger.Execute(l => l.Warning(ex, "Failed to retrieve AssemblyName property"));
+            logger.Tap(l => l.Warning(ex, "Failed to retrieve AssemblyName property"));
         }
 
         try

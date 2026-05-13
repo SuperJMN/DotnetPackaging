@@ -63,9 +63,9 @@ public sealed class ExePackager
         {
             var outputName = metadata.OutputName.GetValueOrDefault("setup.exe");
             var options = metadata.Options;
-            var vendor = metadata.Vendor.GetValueOrDefault(null);
-            var stub = metadata.Stub.GetValueOrDefault(null);
-            var setupLogo = metadata.SetupLogo.GetValueOrDefault(null);
+            var vendor = metadata.Vendor.Match(value => value, () => (string?)null);
+            var stub = metadata.Stub.Match(value => value, () => (IByteSource?)null);
+            var setupLogo = metadata.SetupLogo.Match(value => value, () => (IByteSource?)null);
 
             var stubProvider = new InstallerStubProvider(logger, httpClientFactory, publisher);
             var exeService = new ExePackagingService(publisher, stubProvider, logger);
@@ -79,7 +79,7 @@ public sealed class ExePackager
                 stub,
                 setupLogo,
                 metadata.ProjectName,
-                metadata.ProjectMetadata,
+                metadata.ApplicationInfo,
                 metadata.ProjectFile,
                 certificate);
 
@@ -124,5 +124,5 @@ internal class ExeOptions
     public string? Vendor { get; set; }
     public IByteSource? Stub { get; set; }
     public IByteSource? SetupLogo { get; set; }
-    public Maybe<ProjectMetadata> ProjectMetadata { get; set; } = Maybe<ProjectMetadata>.None;
+    public Maybe<DotnetProjectKit.ApplicationInfo> ApplicationInfo { get; set; } = Maybe<DotnetProjectKit.ApplicationInfo>.None;
 }

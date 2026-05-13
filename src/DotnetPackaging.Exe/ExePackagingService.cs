@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using DotnetPackaging;
 using DotnetPackaging.Exe.Metadata;
 using DotnetPackaging.Publish;
+using DotnetProjectKit;
 using Serilog;
 using System.IO.Abstractions;
 using Zafiro.DivineBytes;
@@ -48,7 +49,7 @@ internal sealed class ExePackagingService
             ToMaybe(runtimeIdentifier),
             ToMaybe(stubFile),
             Maybe<string>.None,
-            Maybe<ProjectMetadata>.None,
+            Maybe<ApplicationInfo>.None,
             Maybe<FileInfo>.None,
             ToMaybe(setupLogo),
             certificate);
@@ -65,7 +66,7 @@ internal sealed class ExePackagingService
         IByteSource? stubFile,
         IByteSource? setupLogo,
         Maybe<string> projectName,
-        Maybe<ProjectMetadata> projectMetadata,
+        Maybe<ApplicationInfo> applicationInfo,
         Maybe<FileInfo> projectFile = default,
         Maybe<X509Certificate2> certificate = default)
     {
@@ -77,7 +78,7 @@ internal sealed class ExePackagingService
             ToMaybe(runtimeIdentifier),
             ToMaybe(stubFile),
             projectName,
-            projectMetadata,
+            applicationInfo,
             projectFile,
             ToMaybe(setupLogo),
             certificate);
@@ -114,7 +115,7 @@ internal sealed class ExePackagingService
             return Result.Failure<IPackage>(publishResult.Error);
         }
 
-        var projectMetadata = ReadProjectMetadata(projectFile);
+        var applicationInfo = ReadApplicationInfo(projectFile);
 
         var request = new ExePackagingRequest(
             publishResult.Value,
@@ -123,8 +124,8 @@ internal sealed class ExePackagingService
             ToMaybe(vendor),
             ToMaybe(runtimeIdentifier),
             ToMaybe(stubFile),
-            Maybe<string>.From(Path.GetFileNameWithoutExtension(projectFile.Name)),
-            projectMetadata,
+            ApplicationInfoDefaults.InferExecutableName(applicationInfo, projectFile),
+            applicationInfo,
             Maybe<FileInfo>.From(projectFile),
             ToMaybe(setupLogo),
             certificate);
@@ -139,9 +140,10 @@ internal sealed class ExePackagingService
         return ToPackage(buildResult.Value, outputName, publishResult.Value);
     }
 
-    private Maybe<ProjectMetadata> ReadProjectMetadata(FileInfo projectFile)
+    private Maybe<ApplicationInfo> ReadApplicationInfo(FileInfo projectFile)
     {
-        return ProjectMetadataReader.TryRead(projectFile, logger);
+        var result = new ApplicationInfoResolver().Resolve(projectFile.FullName, logger: logger);
+        return result.IsSuccess ? Maybe<ApplicationInfo>.From(result.Value) : Maybe<ApplicationInfo>.None;
     }
 
     private async Task<Result<IContainer>> Build(ExePackagingRequest request)
@@ -161,7 +163,7 @@ internal sealed class ExePackagingService
             request.Vendor,
             inferredExecutable,
             request.ProjectName,
-            request.ProjectMetadata,
+            request.ApplicationInfo,
             setupLogo);
 
         if (request.Certificate.HasValue)
@@ -246,15 +248,16 @@ internal sealed class ExePackagingService
         Maybe<string> vendor,
         Maybe<string> inferredExecutable,
         Maybe<string> projectName,
-        Maybe<ProjectMetadata> projectMetadata,
+        Maybe<ApplicationInfo> applicationInfo,
         Maybe<IByteSource> logoBytes)
     {
         var executableForName = options.ExecutableName
             .Or(() => inferredExecutable)
-            .Map(Path.GetFileName);
-        var appName = projectMetadata.HasValue
-            ? ApplicationNameResolver.FromProject(options.Name, projectMetadata, executableForName.GetValueOrDefault("Application"))
-            : ApplicationNameResolver.FromDirectory(options.Name, executableForName.GetValueOrDefault("Application"));
+            .Map(value => Path.GetFileName(value) ?? value);
+        var executableName = executableForName.Match(value => value, () => "Application");
+        var appName = applicationInfo.HasValue
+            ? ApplicationNameResolver.FromProject(options.Name, applicationInfo, executableName)
+            : ApplicationNameResolver.FromDirectory(options.Name, executableName);
         var packageName = appName.ToLowerInvariant().Replace(" ", string.Empty).Replace("-", string.Empty);
         var appId = options.Id.GetValueOrDefault($"com.{packageName}");
         var version = options.Version.GetValueOrDefault("1.0.0");
@@ -262,11 +265,7 @@ internal sealed class ExePackagingService
             .Or(() => inferredExecutable)
             .Map(NormalizeExecutableRelativePath)
             .Match(value => value, () => (string?)null);
-        var vendorFromProject = projectMetadata
-            .Bind(meta => meta.Company
-                .Or(() => meta.Product)
-                .Or(() => meta.AssemblyName)
-                .Or(() => meta.AssemblyTitle));
+        var vendorFromProject = applicationInfo.Bind(ResolveVendor);
 
         var effectiveVendor = vendor
             .Or(() => vendorFromProject)
@@ -274,6 +273,14 @@ internal sealed class ExePackagingService
         var description = options.Comment.Match(value => value, () => (string?)null);
 
         return new InstallerMetadata(appId, appName, version, effectiveVendor, description, executable, logoBytes.HasValue);
+    }
+
+    private static Maybe<string> ResolveVendor(ApplicationInfo applicationInfo)
+    {
+        return Maybe<string>.From(applicationInfo.Company?.Value)
+            .Or(Maybe<string>.From(applicationInfo.Metadata.Get("Product")))
+            .Or(Maybe<string>.From(applicationInfo.AssemblyName.Value))
+            .Or(Maybe<string>.From(applicationInfo.AssemblyTitle?.Value));
     }
 
     private Maybe<string> InferExecutableName(IContainer contextDir, Maybe<string> projectName)
@@ -380,7 +387,7 @@ internal sealed class ExePackagingService
         Maybe<string> RuntimeIdentifier,
         Maybe<IByteSource> Stub,
         Maybe<string> ProjectName,
-        Maybe<ProjectMetadata> ProjectMetadata,
+        Maybe<ApplicationInfo> ApplicationInfo,
         Maybe<FileInfo> ProjectFile,
         Maybe<IByteSource> SetupLogo,
         Maybe<X509Certificate2> Certificate);

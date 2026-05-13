@@ -5,7 +5,7 @@ namespace DotnetPackaging.Deb.Tests;
 public class ProjectPackagingContextTests
 {
     [Fact]
-    public void FromProject_ShouldResolvePackagingDefaultsFromProjectMetadata()
+    public void FromProject_ShouldResolvePackagingDefaultsFromApplicationInfo()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "dotnetpackaging-context-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDir);

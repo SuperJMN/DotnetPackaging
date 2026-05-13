@@ -25,14 +25,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Tool", "src
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Rpm", "src\DotnetPackaging.Rpm\DotnetPackaging.Rpm.csproj", "{62BDA166-63D6-4B38-B146-A868A392C5FC}"
 EndProject
-
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Dmg", "src\DotnetPackaging.Dmg\DotnetPackaging.Dmg.csproj", "{ECEE61A8-139B-4637-AAB4-B34182980779}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Exe.Installer", "src\DotnetPackaging.Exe.Installer\DotnetPackaging.Exe.Installer.csproj", "{538A5A7E-390A-93C3-9605-E6A477235F61}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Exe", "src\DotnetPackaging.Exe\DotnetPackaging.Exe.csproj", "{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}"
 EndProject
-
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.AppImage.Tests", "test\DotnetPackaging.AppImage.Tests\DotnetPackaging.AppImage.Tests.csproj", "{2BD66C13-3A2A-45B5-9E36-F25F77292B10}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Dmg.Tests", "test\DotnetPackaging.Dmg.Tests\DotnetPackaging.Dmg.Tests.csproj", "{D97A5E33-6621-44DD-83D0-65F55F56E487}"
@@ -46,7 +44,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Hfs.Tests", "test\DotnetPackaging.Hfs.Tests\DotnetPackaging.Hfs.Tests.csproj", "{36B6320D-7C18-4C3B-83BB-C70147356FF8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Rpm.Tests", "test\DotnetPackaging.Rpm.Tests\DotnetPackaging.Rpm.Tests.csproj", "{05602381-DD9E-4174-8EA0-6D2392B8D3E3}"
-EndProject
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotnetPackaging.Dmg.MachO", "src\DotnetPackaging.Dmg.MachO\DotnetPackaging.Dmg.MachO.csproj", "{3C7EA8CB-775E-4DF4-9571-C8A0867B058F}"
 EndProject
@@ -138,7 +135,6 @@ Global
 		{62BDA166-63D6-4B38-B146-A868A392C5FC}.Release|x64.Build.0 = Release|Any CPU
 		{62BDA166-63D6-4B38-B146-A868A392C5FC}.Release|x86.ActiveCfg = Release|Any CPU
 		{62BDA166-63D6-4B38-B146-A868A392C5FC}.Release|x86.Build.0 = Release|Any CPU
-
 		{ECEE61A8-139B-4637-AAB4-B34182980779}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{ECEE61A8-139B-4637-AAB4-B34182980779}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ECEE61A8-139B-4637-AAB4-B34182980779}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -175,7 +171,6 @@ Global
 		{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}.Release|x64.Build.0 = Release|Any CPU
 		{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}.Release|x86.ActiveCfg = Release|Any CPU
 		{E0875AD7-1D78-4FC3-EE2D-24AC1E066BFA}.Release|x86.Build.0 = Release|Any CPU
-
 		{2BD66C13-3A2A-45B5-9E36-F25F77292B10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2BD66C13-3A2A-45B5-9E36-F25F77292B10}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2BD66C13-3A2A-45B5-9E36-F25F77292B10}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -313,15 +308,14 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-
 		{2BD66C13-3A2A-45B5-9E36-F25F77292B10} = {7E0C2A39-1C29-4B5D-9D45-1B6B7E7A77B6}
 		{D97A5E33-6621-44DD-83D0-65F55F56E487} = {7E0C2A39-1C29-4B5D-9D45-1B6B7E7A77B6}
 		{DD050A6C-D84F-47AC-8453-18A57F751587} = {7E0C2A39-1C29-4B5D-9D45-1B6B7E7A77B6}
 		{C9B6586A-332B-40B0-9F2B-BBFFD7F5CFCB} = {7E0C2A39-1C29-4B5D-9D45-1B6B7E7A77B6}
 		{B9A9B63E-2D76-4BA5-BA23-8151082C9049} = {7E0C2A39-1C29-4B5D-9D45-1B6B7E7A77B6}
 		{36B6320D-7C18-4C3B-83BB-C70147356FF8} = {7E0C2A39-1C29-4B5D-9D45-1B6B7E7A77B6}
-		{8718730B-64B6-4A8D-AF0D-AB7805AB6F9E} = {7E0C2A39-1C29-4B5D-9D45-1B6B7E7A77B6}
 		{05602381-DD9E-4174-8EA0-6D2392B8D3E3} = {7E0C2A39-1C29-4B5D-9D45-1B6B7E7A77B6}
+		{8718730B-64B6-4A8D-AF0D-AB7805AB6F9E} = {7E0C2A39-1C29-4B5D-9D45-1B6B7E7A77B6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1D869DF1-9147-472D-A3D9-D519518A6951}

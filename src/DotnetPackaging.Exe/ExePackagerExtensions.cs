@@ -1,4 +1,5 @@
 using CSharpFunctionalExtensions;
+using DotnetProjectKit;
 using DotnetPackaging;
 using DotnetPackaging.Exe.Metadata;
 using DotnetPackaging.Publish;
@@ -88,30 +89,6 @@ public static class ExePackagerExtensions
         return source.WriteTo(outputPath);
     }
 
-    private static void ApplyProjectDefaults(ExePackagerMetadata metadata, FileInfo projectFile, ILogger logger)
-    {
-        if (metadata.ProjectFile.HasNoValue)
-        {
-            metadata.ProjectFile = Maybe.From(projectFile);
-        }
-
-        if (metadata.ProjectMetadata.HasNoValue)
-        {
-            metadata.ProjectMetadata = ProjectMetadataReader.TryRead(projectFile, logger);
-        }
-
-        if (metadata.ProjectName.HasNoValue)
-        {
-            metadata.ProjectName = ProjectMetadataDefaults.InferExecutableName(metadata.ProjectMetadata, projectFile);
-        }
-
-        if (metadata.OutputName.HasNoValue)
-        {
-            var projectBase = metadata.ProjectName.GetValueOrDefault(System.IO.Path.GetFileNameWithoutExtension(projectFile.Name));
-            metadata.OutputName = Maybe.From(projectBase + ".exe");
-        }
-    }
-
     private static void ApplyProjectDefaults(ExePackagerMetadata metadata, ProjectPackagingContext context)
     {
         if (metadata.ProjectFile.HasNoValue)
@@ -119,9 +96,9 @@ public static class ExePackagerExtensions
             metadata.ProjectFile = Maybe.From(context.ProjectFile);
         }
 
-        if (metadata.ProjectMetadata.HasNoValue)
+        if (metadata.ApplicationInfo.HasNoValue)
         {
-            metadata.ProjectMetadata = context.ProjectMetadata;
+            metadata.ApplicationInfo = context.ApplicationInfo;
         }
 
         if (metadata.ProjectName.HasNoValue)

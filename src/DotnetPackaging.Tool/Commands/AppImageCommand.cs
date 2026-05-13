@@ -4,6 +4,7 @@ using DotnetPackaging.AppImage;
 using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.AppImage.Metadata;
 using DotnetPackaging;
+using DotnetProjectKit;
 using Serilog;
 using Zafiro.DivineBytes.System.IO;
 using Zafiro.DivineBytes;
@@ -47,20 +48,20 @@ public static class AppImageCommand
             .WriteResult();
     }
 
-    private static Task<Result<AppImageMetadata>> BuildAppImageMetadata(Options options, IContainer applicationRoot, Maybe<ProjectMetadata> projectMetadata, ILogger logger)
+    private static Task<Result<AppImageMetadata>> BuildAppImageMetadata(Options options, IContainer applicationRoot, Maybe<ApplicationInfo> applicationInfo, ILogger logger)
     {
         var setup = new FromDirectoryOptions();
         setup.From(options);
-        if (projectMetadata.HasValue)
+        if (applicationInfo.HasValue)
         {
-            setup.WithProjectMetadata(projectMetadata.Value);
+            setup.WithApplicationInfo(applicationInfo.Value);
         }
 
         return BuildUtils.GetExecutable(applicationRoot, setup, logger)
             .Bind(exec =>
             {
-                var appName = projectMetadata.HasValue
-                    ? ApplicationNameResolver.FromProject(options.Name, projectMetadata, exec.Name)
+                var appName = applicationInfo.HasValue
+                    ? ApplicationNameResolver.FromProject(options.Name, applicationInfo, exec.Name)
                     : ApplicationNameResolver.FromDirectory(options.Name, exec.Name);
                 var packageName = appName.ToLowerInvariant().Replace(" ", "").Replace("-", "");
                 var appId = options.Id.GetValueOrDefault($"com.{packageName}");
@@ -142,7 +143,7 @@ public static class AppImageCommand
         var container = new DirectoryContainer(dirInfo);
         var root = container.AsRoot();
 
-        return BuildAppImageMetadata(options, root, Maybe<ProjectMetadata>.None, logger)
+        return BuildAppImageMetadata(options, root, Maybe<ApplicationInfo>.None, logger)
             .Bind(metadata => new AppImageFactory().BuildAppDir(root, metadata))
             .Bind(rootDir => rootDir.WriteTo(outputDir.FullName))
             .WriteResult();
@@ -155,7 +156,7 @@ public static class AppImageCommand
         var container = new DirectoryContainer(dirInfo);
         var root = container.AsRoot();
 
-        return BuildAppImageMetadata(options, root, Maybe<ProjectMetadata>.None, logger)
+        return BuildAppImageMetadata(options, root, Maybe<ApplicationInfo>.None, logger)
             .Bind(metadata => new AppImageFactory().CreateFromAppDir(root, metadata, executableRelativePath, null))
             .Bind(x => x.ToByteSource())
             .Bind(source => source.WriteTo(outputFile.FullName))

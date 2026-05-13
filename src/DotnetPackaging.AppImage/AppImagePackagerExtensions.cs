@@ -55,7 +55,8 @@ public static class AppImagePackagerExtensions
         var resolvedMetadata = new AppImagePackagerMetadata();
         resolvedMetadata.PackageOptions.ApplyOverrides(resolvedOptions);
         resolvedMetadata.AppImageOptions.IconNameOverride = source.AppImageOptions.IconNameOverride;
-        return PackagingByteSource.FromResultFactory(() => packager.Pack(publishedProject, resolvedMetadata, log));
+        var preparedProject = context.EnrichPublishedProjectWithProjectAssets(publishedProject);
+        return PackagingByteSource.FromResultFactory(() => packager.Pack(preparedProject, resolvedMetadata, log));
     }
 
     public static Task<Result> PackPublishedProject(
