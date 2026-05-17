@@ -70,6 +70,29 @@ public class AppImageDesktopMetadataTests
     }
 
     [Fact]
+    public async Task BuildPlan_writes_comment_and_appstream_description()
+    {
+        var root = CreateApplicationRoot("TestApp");
+        var metadata = new AppImageMetadata("com.example.testapp", "TestApp", "testapp")
+        {
+            Summary = Maybe.From("Short test summary"),
+            Comment = Maybe.From("Desktop test comment"),
+            Description = Maybe.From("Long test description")
+        };
+
+        var planResult = await new AppImageFactory().BuildPlan(root, metadata);
+
+        planResult.Should().Succeed();
+        var desktopContent = await ReadAllText(Find(planResult.Value, metadata.DesktopFileName));
+        desktopContent.Should().Contain("Comment=Desktop test comment");
+
+        var appStreamContent = await ReadAllText(Find(planResult.Value, $"usr/share/metainfo/{metadata.AppDataFileName}"));
+        appStreamContent.Should().Contain("<summary>Short test summary</summary>");
+        appStreamContent.Should().Contain("<description>");
+        appStreamContent.Should().Contain("<p>Long test description</p>");
+    }
+
+    [Fact]
     public void ToAppImageMetadata_preserves_startup_wm_class()
     {
         var packageMetadata = new PackageMetadata("TestApp", Architecture.X64, false, "testapp", "1.0.0")
@@ -85,6 +108,26 @@ public class AppImageDesktopMetadataTests
         var appImageMetadata = AppImagePackager.ToAppImageMetadata(packageMetadata);
 
         appImageMetadata.StartupWmClass.GetValueOrDefault().Should().Be("TestApp");
+    }
+
+    [Fact]
+    public void ToAppImageMetadata_prefers_comment_for_desktop_entry_and_preserves_description_for_appstream()
+    {
+        var packageMetadata = new PackageMetadata("TestApp", Architecture.X64, false, "testapp", "1.0.0")
+        {
+            Name = "TestApp",
+            Architecture = Architecture.X64,
+            Package = "testapp",
+            Version = "1.0.0",
+            Comment = Maybe.From("Desktop comment"),
+            Description = Maybe.From("AppStream description"),
+            ModificationTime = DateTimeOffset.UnixEpoch
+        };
+
+        var appImageMetadata = AppImagePackager.ToAppImageMetadata(packageMetadata);
+
+        appImageMetadata.Comment.GetValueOrDefault().Should().Be("Desktop comment");
+        appImageMetadata.Description.GetValueOrDefault().Should().Be("AppStream description");
     }
 
     private static RootContainer CreateApplicationRoot(string executableName)

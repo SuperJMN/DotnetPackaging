@@ -56,6 +56,11 @@ public static class ApplicationInfoDefaults
             resolved.WithDescription(applicationInfo.Description.Value);
         }
 
+        if (resolved.Comment.HasNoValue && applicationInfo.Description is not null)
+        {
+            resolved.WithComment(applicationInfo.Description.Value);
+        }
+
         if (resolved.Maintainer.HasNoValue && applicationInfo.Authors is not null)
         {
             resolved.WithMaintainer(applicationInfo.Authors.Value);

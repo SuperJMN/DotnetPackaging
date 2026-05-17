@@ -68,11 +68,15 @@ public sealed class AppImagePackager
     {
         var packageName = packageMetadata.Package;
         var appId = packageMetadata.Id.GetValueOrDefault($"com.{packageName.ToLowerInvariant()}");
+        var comment = packageMetadata.Comment
+            .Or(packageMetadata.Description)
+            .Or(packageMetadata.Summary);
 
         return new AppImageMetadata(appId, packageMetadata.Name, packageName)
         {
             Summary = packageMetadata.Summary,
-            Comment = packageMetadata.Description,
+            Comment = comment,
+            Description = packageMetadata.Description,
             Version = Maybe<string>.From(packageMetadata.Version),
             Homepage = packageMetadata.Homepage.Map(u => u.ToString()),
             ProjectLicense = packageMetadata.License,

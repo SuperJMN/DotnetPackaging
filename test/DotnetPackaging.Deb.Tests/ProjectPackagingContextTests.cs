@@ -38,6 +38,7 @@ public class ProjectPackagingContextTests
 
             options.ExecutableName.GetValueOrDefault().Should().Be("sample-runner");
             options.Description.GetValueOrDefault().Should().Be("Sample description");
+            options.Comment.GetValueOrDefault().Should().Be("Sample description");
             options.Maintainer.GetValueOrDefault().Should().Be("Sample Authors");
             options.Vendor.GetValueOrDefault().Should().Be("Sample Company");
             options.Id.GetValueOrDefault().Should().Be("com.example.sample");
