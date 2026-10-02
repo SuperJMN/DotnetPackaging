@@ -9,7 +9,6 @@
 	
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Http" />
-		<PackageReference Include="NyaFs" />
 		<PackageReference Include="System.Security.Permissions" />
 		<PackageReference Include="Zafiro.DivineBytes" />
 	</ItemGroup>

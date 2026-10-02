@@ -19,7 +19,6 @@
     <PackageVersion Include="FluentAssertions" Version="8.8.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
-    <PackageVersion Include="NyaFs" Version="1.0.8" />
     <PackageVersion Include="Octokit" Version="14.0.0" />
     <PackageVersion Include="Projektanker.Icons.Avalonia.FontAwesome" Version="9.6.2" />
     <PackageVersion Include="ReactiveProperty" Version="9.8.0" />
