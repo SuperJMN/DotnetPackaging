@@ -21,7 +21,8 @@ public class MetadataGenerator
                                    {metadata.Version.Map(s => $"X-AppImage-Version={s}").GetValueOrDefault("")}
                                    """;
 
-        return desktopFileContents;
+        // Raw literals take the line endings of the checkout (CRLF on Windows builds)
+        return desktopFileContents.ReplaceLineEndings("\n") + "\n";
     }
 
     public static string AppStreamXml(AppStream packageMetadata)
@@ -61,7 +62,7 @@ public class MetadataGenerator
             new XElement("id", packageMetadata.DesktopId.GetValueOrDefault($"{packageMetadata.Name}.desktop"))));
 
         var xElement = new XElement("component", elements);
-        return xElement.ToString();
+        return xElement.ToString().ReplaceLineEndings("\n");
     }
 
     // Método de conveniencia que usa AppImageMetadata directamente

@@ -33,7 +33,7 @@ public static class TextTemplates
 
     public static string AppStream(PackageMetadata packageMetadata)
     {
-        return AppStreamXmlGenerator.GenerateXml(packageMetadata).ToString();
+        return AppStreamXmlGenerator.GenerateXml(packageMetadata).ToString().ReplaceLineEndings("\n");
     }
 
     public static string SystemdUnitFile(string executablePath, string workingDirectory, PackageMetadata metadata)
@@ -88,6 +88,8 @@ public static class TextTemplates
         return string.Join("\n", lines);
     }
 
+    // Maintainer scripts are raw literals, which take the line endings of the checkout
+    // (CRLF on Windows builds); "#!/bin/sh\r" would not run.
     public static string PostInstScript(string package)
     {
         return $"""
@@ -98,7 +100,7 @@ public static class TextTemplates
                    systemctl enable {package}.service
                    systemctl start {package}.service
                fi
-               """;
+               """.ReplaceLineEndings("\n");
     }
 
     public static string PreRmScript(string package)
@@ -110,7 +112,7 @@ public static class TextTemplates
                    systemctl stop {package}.service || true
                    systemctl disable {package}.service || true
                fi
-               """;
+               """.ReplaceLineEndings("\n");
     }
 
     public static string PostRmScript(string package)
@@ -121,7 +123,7 @@ public static class TextTemplates
                if [ "$1" = "purge" ]; then
                    systemctl daemon-reload
                fi
-               """;
+               """.ReplaceLineEndings("\n");
     }
 
     private static string FormatServiceType(ServiceType type) => type switch
