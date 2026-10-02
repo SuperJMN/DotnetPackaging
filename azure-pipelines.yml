@@ -1,3 +1,6 @@
+# Builds the Windows installer stubs and publishes them to a GitHub Release.
+# NuGet packages are published by DotnetDeployer.Fleet (see deployer.yaml).
+
 variables:
   - group: api-keys
   - name: Agent.Source.Git.ShallowFetchDepth
@@ -69,22 +72,6 @@ steps:
 
   - pwsh: dotnet build -c $(BuildConfiguration) -p:ContinuousIntegrationBuild=true -p:Version=$(Version) --no-restore
     displayName: 'dotnet build'
-
-  - pwsh: |
-      dotnet pack -c $(BuildConfiguration) --no-build -p:IncludeSymbols=false -p:SymbolPackageFormat=snupkg -p:Version=$(Version) -o $(Build.SourcesDirectory)\artifacts\nuget
-    displayName: 'dotnet pack'
-
-  # Push NuGet packages on tagged builds
-  - pwsh: |
-      $ErrorActionPreference = 'Stop'
-      $pkgs = Get-ChildItem -Recurse -Path "$(Build.SourcesDirectory)\artifacts\nuget" -Include *.nupkg | Where-Object { $_.FullName -notlike '*.symbols.nupkg' }
-      if (-not $pkgs) { throw 'No packages found to push' }
-      foreach ($pkg in $pkgs) {
-        Write-Host "Pushing $($pkg.Name)"
-        dotnet nuget push "$($pkg.FullName)" --api-key "$(NuGetApiKey)" --source https://api.nuget.org/v3/index.json --skip-duplicate
-      }
-    displayName: 'Push packages to NuGet (on tag)'
-    condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
 
   # Build Windows stubs for x64 and arm64 (only on tags)
   - pwsh: |
