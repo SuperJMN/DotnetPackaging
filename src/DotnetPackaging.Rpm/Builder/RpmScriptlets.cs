@@ -11,7 +11,7 @@ internal static class RpmScriptlets
                if [ "$1" -eq 1 ]; then
                    systemctl start {package}.service
                fi
-               """;
+               """.ReplaceLineEndings("\n");
     }
 
     public static string PreUninstall(string package)
@@ -22,7 +22,7 @@ internal static class RpmScriptlets
                    systemctl stop {package}.service || true
                    systemctl disable {package}.service || true
                fi
-               """;
+               """.ReplaceLineEndings("\n");
     }
 
     public static string PostUninstall(string package)
@@ -30,6 +30,6 @@ internal static class RpmScriptlets
         return $"""
                #!/bin/sh
                systemctl daemon-reload
-               """;
+               """.ReplaceLineEndings("\n");
     }
 }
