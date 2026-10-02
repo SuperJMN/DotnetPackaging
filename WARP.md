@@ -69,22 +69,22 @@ CI pipeline (Azure Pipelines)
 - Definition: azure-pipelines.yml at repo root.
 - Agent: windows-latest.
 - Versioning: computed with GitVersion.Tool; packages use MajorMinorPatch as Version; GitHub Release tag uses v{SemVer}.
+- NuGet publication is not done here: DotnetDeployer.Fleet builds the repository with deployer.yaml and pushes the packages.
 - Behavior on master:
-  - Restore, build and pack all projects; push .nupkg (non-symbol) to NuGet (skip-duplicate) with $(NuGetApiKey).
+  - Restore and build all projects.
   - Publish Windows EXE stubs (DotnetPackaging.Exe.Installer) for win-x64 and win-arm64 as single-file self-extract apps (IncludeNativeLibrariesForSelfExtract/IncludeAllContentForSelfExtract, no trimming).
   - Produce .sha256 for each stub and upload both .exe and .sha256 to a GitHub Release tagged v{SemVer} using gh CLI.
-- Other branches/PRs: build and pack only (no push, no release).
+- Other branches/PRs: build only (no release).
 - Packable projects: every project with IsPackable/PackAsTool set. The CLI tool lives in src/DotnetPackaging.Tool (PackAsTool=true).
 
 Versioning (GitVersion)
 - GitVersion.Tool runs in CI to produce:
-  - Version: MajorMinorPatch (used for dotnet build/pack).
+  - Version: MajorMinorPatch (used for dotnet build).
   - TagName: v{SemVer} (used to create/update the GitHub Release).
-- Practical effect: merging to master triggers package publish to NuGet and stub upload to a GitHub Release for the computed tag.
+- Practical effect: merging to master triggers the stub upload to a GitHub Release for the computed tag; Fleet publishes the NuGet packages.
 
 Secrets
 - The pipeline expects a variable group named api-keys providing:
-  - NuGetApiKey: API key used to push packages to NuGet.
   - GitHubApiKey: token exposed as GITHUB_TOKEN to create/update releases and upload stub assets via gh.
 - Do not hardcode secrets. Locally, export environment variables and pass them to the CLI tools.
 
@@ -103,7 +103,7 @@ Local replication
   - gh release upload v1.2.3 ./artifacts/stubs/win-*/DotnetPackaging.Exe.Installer*.exe ./artifacts/stubs/win-*/DotnetPackaging.Exe.Installer*.exe.sha256 -R <owner>/<repo>
 
 Notes
-- Because the CLI is a dotnet tool (PackAsTool=true) and is included in the solution, CI will pack and publish it to NuGet alongside the libraries when running on master.
+- Because the CLI is a dotnet tool (PackAsTool=true) and is included in the solution, Fleet packs and publishes it to NuGet alongside the libraries.
 - The pipeline performs a shallow fetch depth override (full history) to ensure GitVersion/describe work correctly.
 
 Packaging formats: status and details
