@@ -1,5 +1,3 @@
-﻿using NyaFs.Filesystem.SquashFs;
-using NyaFs.Filesystem.SquashFs.Types;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.Unix;
 using UnixFile = Zafiro.DivineBytes.Unix.UnixFile;
@@ -10,84 +8,54 @@ internal static class SquashFS
 {
     public static async Task<Result<IByteSource>> Create(UnixDirectory container)
     {
-        var builder = new SquashFsBuilder(SqCompressionType.Gzip);
-        var created = await CreateRecursive(container, "", builder).ConfigureAwait(false);
-        if (created.IsFailure)
-        {
-            return Result.Failure<IByteSource>(created.Error);
-        }
+        var root = await ToNode(container).ConfigureAwait(false);
 
-        return Result
-            .Try(builder.GetFilesystemImage)
+        return root
+            .Bind(directory => Result.Try(() => SquashFsImage.Create(directory, DateTimeOffset.UtcNow)))
             .Map(bytes => ByteSource.FromBytes(bytes).WithLength(bytes.LongLength));
     }
 
-    private static async Task<Result> CreateRecursive(UnixDirectory unixDir, string currentPath, SquashFsBuilder builder)
+    private static async Task<Result<SquashFsDirectory>> ToNode(UnixDirectory unixDir)
     {
-        var createdDirectory = Result.Try(() =>
-        {
-            // Always create the directory, including root directory
-            if (string.IsNullOrEmpty(unixDir.Name))
-            {
-                // This is the root directory
-                builder.Directory("/", (uint)unixDir.OwnerId, (uint)unixDir.OwnerId, GetFileMode(unixDir.Permissions));
-                return "";
-            }
+        var children = new List<SquashFsNode>();
 
-            // Regular directory
-            var dirPath = string.IsNullOrEmpty(currentPath) ? unixDir.Name : currentPath + "/" + unixDir.Name;
-            builder.Directory(dirPath, (uint)unixDir.OwnerId, (uint)unixDir.OwnerId, GetFileMode(unixDir.Permissions));
-            return dirPath;
-        });
-
-        if (createdDirectory.IsFailure)
-        {
-            return Result.Failure(createdDirectory.Error);
-        }
-
-        currentPath = createdDirectory.Value;
-
-        // Create all files in the current directory
         foreach (var file in unixDir.Files)
         {
-            var createdFile = await CreateFile(file, currentPath, builder).ConfigureAwait(false);
-            if (createdFile.IsFailure)
+            var created = await ToNode(file).ConfigureAwait(false);
+            if (created.IsFailure)
             {
-                return createdFile;
+                return Result.Failure<SquashFsDirectory>(created.Error);
             }
+
+            children.Add(created.Value);
         }
 
-        // Recursively create subdirectories
         foreach (var subDir in unixDir.Subdirectories)
         {
-            var createdSubdirectory = await CreateRecursive(subDir, currentPath, builder).ConfigureAwait(false);
-            if (createdSubdirectory.IsFailure)
+            var created = await ToNode(subDir).ConfigureAwait(false);
+            if (created.IsFailure)
             {
-                return createdSubdirectory;
+                return created;
             }
+
+            children.Add(created.Value);
         }
 
-        return Result.Success();
+        return new SquashFsDirectory(unixDir.Name, GetFileMode(unixDir.Permissions), (uint)unixDir.OwnerId, children);
     }
 
-    private static async Task<Result> CreateFile(UnixFile unixFile, string currentPath, SquashFsBuilder builder)
+    private static async Task<Result<SquashFsNode>> ToNode(UnixFile unixFile)
     {
         var content = await unixFile.ReadAll().ConfigureAwait(false);
-        if (content.IsFailure)
-        {
-            return Result.Failure($"Could not read AppImage entry '{unixFile.Name}': {content.Error}");
-        }
 
-        return Result.Try(() =>
-        {
-            var filePath = string.IsNullOrEmpty(currentPath) ? unixFile.Name : currentPath + "/" + unixFile.Name;
-            builder.File(filePath, content.Value, (uint)unixFile.OwnerId, (uint)unixFile.OwnerId, GetFileMode(unixFile.Permissions));
-        });
+        return content
+            .MapError(error => $"Could not read AppImage entry '{unixFile.Name}': {error}")
+            .Map(SquashFsNode (bytes) => new SquashFsFile(unixFile.Name, GetFileMode(unixFile.Permissions), (uint)unixFile.OwnerId, bytes));
     }
 
-    private static uint GetFileMode(UnixPermissions unixFilePermissions)
+    private static ushort GetFileMode(UnixPermissions unixFilePermissions)
     {
-        uint mode = 0;
+        ushort mode = 0;
 
         // Owner
         if (unixFilePermissions.OwnerRead) mode |= 0b100_000_000; // 0o400
