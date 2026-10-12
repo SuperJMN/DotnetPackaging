@@ -88,7 +88,7 @@ public class SquashFSTests
     /// <summary>
     /// Minimal reader that resolves entries the way the Linux kernel does.
     /// </summary>
-    private static class SquashFsReader
+    internal static class SquashFsReader
     {
         public record Entry(string Path, uint EntryInodeNumber, uint InodeNumber, ushort Mode, byte[]? Content);
 

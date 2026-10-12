@@ -50,7 +50,7 @@ public sealed class AppImagePackager
                     Maybe<string>.None,
                     log);
 
-                var appImageMetadata = ToAppImageMetadata(packageMetadata);
+                var appImageMetadata = ToAppImageMetadata(packageMetadata, setup.Icon);
                 var appImageResult = await factory.Create(container, appImageMetadata, tuple.exec, tuple.arch, appImageOptions);
                 return await appImageResult.Bind(appImage => appImage.ToByteSource());
             });
@@ -64,7 +64,7 @@ public sealed class AppImagePackager
         };
     }
 
-    internal static AppImageMetadata ToAppImageMetadata(PackageMetadata packageMetadata)
+    internal static AppImageMetadata ToAppImageMetadata(PackageMetadata packageMetadata, Maybe<IIcon> icon = default)
     {
         var packageName = packageMetadata.Package;
         var appId = packageMetadata.Id.GetValueOrDefault($"com.{packageName.ToLowerInvariant()}");
@@ -83,6 +83,7 @@ public sealed class AppImagePackager
             Keywords = packageMetadata.Keywords,
             StartupWmClass = packageMetadata.StartupWmClass,
             IsTerminal = packageMetadata.IsTerminal,
+            Icon = icon,
             Categories = packageMetadata.Categories.HasValue
                 ? Maybe<IEnumerable<string>>.From(GetCategoryStrings(packageMetadata.Categories.Value))
                 : Maybe<IEnumerable<string>>.None

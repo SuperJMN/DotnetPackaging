@@ -8,6 +8,8 @@ using CSharpFunctionalExtensions;
 using DotnetPackaging.AppImage.Core;
 using DotnetPackaging.AppImage.Metadata;
 using FluentAssertions;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using Zafiro.DivineBytes;
 using Zafiro.DivineBytes.Unix;
 
@@ -54,6 +56,61 @@ public class AppImageEndToEndTests
         appImageBytes.Length.Should().BeGreaterThan(0);
     }
 
+    [Fact]
+    public async Task Pack_includes_the_icon_given_explicitly()
+    {
+        var root = Helpers.CreateApplicationRoot(withIcons: false);
+        var icon = await CreateIcon(new Rgba32(255, 0, 0));
+        var metadata = new AppImagePackagerMetadata();
+        metadata.PackageOptions.WithIcon(icon);
+
+        var files = await PackAndReadFiles(root, metadata);
+
+        files["/usr/share/icons/hicolor/256x256/apps/sampleapp.png"].Should().Equal(icon.Array());
+        files["/.DirIcon"].Should().Equal(icon.Array());
+    }
+
+    [Fact]
+    public async Task Pack_prefers_the_explicit_icon_over_discovered_ones()
+    {
+        var discoveredIcon = await CreateIcon(new Rgba32(0, 0, 255));
+        var rootResult = new Dictionary<string, IByteSource>
+        {
+            ["SampleApp"] = ByteSource.FromBytes(Helpers.CreateElfBytes()),
+            ["icon.svg"] = ByteSource.FromString("<svg>minimal-icon-content</svg>"),
+            ["icon.png"] = discoveredIcon,
+        }.ToRootContainer();
+        rootResult.Should().Succeed();
+        var icon = await CreateIcon(new Rgba32(255, 0, 0));
+        var metadata = new AppImagePackagerMetadata();
+        metadata.PackageOptions.WithIcon(icon);
+
+        var files = await PackAndReadFiles(rootResult.Value, metadata);
+
+        files["/usr/share/icons/hicolor/256x256/apps/sampleapp.png"].Should().Equal(icon.Array());
+        files["/.DirIcon"].Should().Equal(icon.Array());
+        files.Keys.Should().NotContain("/usr/share/icons/hicolor/scalable/apps/sampleapp.svg");
+    }
+
+    private static async Task<Dictionary<string, byte[]?>> PackAndReadFiles(IContainer root, AppImagePackagerMetadata metadata)
+    {
+        var packager = new AppImagePackager(new FakeRuntimeProvider());
+
+        var result = await packager.Pack(root, metadata);
+
+        result.Should().Succeed();
+        var squashFs = result.Value.Array().Skip("FAKE_RUNTIME".Length).ToArray();
+        return SquashFSTests.SquashFsReader.Walk(squashFs).ToDictionary(entry => entry.Path, entry => entry.Content);
+    }
+
+    private static async Task<IIcon> CreateIcon(Rgba32 color)
+    {
+        using var image = new Image<Rgba32>(64, 64, color);
+        var icon = await Icon.FromImage(image);
+        icon.Should().Succeed();
+        return icon.Value;
+    }
+
     private static IEnumerable<string> EnumeratePaths(UnixDirectory directory, string prefix = "")
     {
         foreach (var file in directory.Files)
@@ -96,22 +153,26 @@ public class AppImageEndToEndTests
 
     private static class Helpers
     {
-        public static RootContainer CreateApplicationRoot()
+        public static RootContainer CreateApplicationRoot(bool withIcons = true)
         {
             var files = new Dictionary<string, IByteSource>
             {
                 ["SampleApp"] = ByteSource.FromBytes(CreateElfBytes()),
                 ["config.json"] = ByteSource.FromString("{\"key\":\"value-with-length\"}"),
-                ["icon.svg"] = ByteSource.FromString("<svg>minimal-icon-content</svg>"),
-                ["icon.png"] = ByteSource.FromBytes(CreateFilledBytes(64, 0x42)),
             };
+
+            if (withIcons)
+            {
+                files["icon.svg"] = ByteSource.FromString("<svg>minimal-icon-content</svg>");
+                files["icon.png"] = ByteSource.FromBytes(CreateFilledBytes(64, 0x42));
+            }
 
             var rootResult = files.ToRootContainer();
             rootResult.Should().Succeed();
             return rootResult.Value;
         }
 
-        private static byte[] CreateElfBytes()
+        public static byte[] CreateElfBytes()
         {
             var bytes = new byte[32];
             bytes[0] = 0x7F;
