@@ -77,6 +77,7 @@ public static class AppImageCommand
                     Keywords = options.Keywords,
                     StartupWmClass = options.StartupWmClass,
                     IsTerminal = options.IsTerminal.GetValueOrDefault(false),
+                    Icon = options.Icon,
                     Categories = BuildCategories(options)
                 };
 

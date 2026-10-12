@@ -197,7 +197,7 @@ internal class AppImageFactory
         }
 
         var iconName = options.IconNameOverride.GetValueOrDefault(appImageMetadata.IconName);
-        var iconPlan = IconDiscovery.Discover(applicationRoot, iconName);
+        var iconPlan = ResolveIcons(applicationRoot, iconName, appImageMetadata.Icon);
 
         foreach (var icon in iconPlan.IconFiles)
         {
@@ -235,6 +235,24 @@ internal class AppImageFactory
 
         return Task.FromResult(planResult);
     }
+
+    private static IconSet ResolveIcons(IContainer applicationRoot, string iconName, Maybe<IIcon> explicitIcon)
+    {
+        return explicitIcon
+            .Map(icon => new IconSet(
+                new Dictionary<string, IByteSource>(StringComparer.Ordinal)
+                {
+                    [$"usr/share/icons/hicolor/256x256/apps/{iconName}.png"] = icon,
+                },
+                Maybe<IByteSource>.From(icon)))
+            .GetValueOrDefault(() =>
+            {
+                var discovered = IconDiscovery.Discover(applicationRoot, iconName);
+                return new IconSet(discovered.IconFiles, discovered.DirIcon);
+            });
+    }
+
+    private sealed record IconSet(IReadOnlyDictionary<string, IByteSource> IconFiles, Maybe<IByteSource> DirIcon);
 
     private static IByteSource Utf8ByteSource(string value)
     {

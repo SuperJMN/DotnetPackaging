@@ -19,6 +19,9 @@ public class AppImageMetadata
     public Maybe<string> StartupWmClass { get; init; } = Maybe<string>.None;
     public bool IsTerminal { get; init; } = false;
 
+    // Icon supplied explicitly by the user; it replaces the icons discovered in the application directory
+    public Maybe<IIcon> Icon { get; init; } = Maybe<IIcon>.None;
+
     public AppImageMetadata(string appId, string appName, string packageName)
     {
         AppId = appId;
